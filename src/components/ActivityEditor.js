@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Platform } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Platform, Keyboard } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 
 const COLORS = {
@@ -90,6 +90,18 @@ const ActivityEditor = ({ value, onChange }) => {
                     active={mode === 'numbered'}
                     onPress={() => switchMode('numbered')}
                 />
+                {Platform.OS !== 'web' && (
+                    <>
+                        <View style={styles.toolDivider} />
+                        <TouchableOpacity
+                            onPress={() => Keyboard.dismiss()}
+                            style={[styles.toolBtn, { backgroundColor: COLORS.goldLight, flex: 0.8, borderTopRightRadius: 12, borderBottomRightRadius: 12 }]}
+                        >
+                            <MaterialIcons name="keyboard-hide" size={18} color={COLORS.emerald} />
+                            <Text style={styles.toolBtnText}>DONE</Text>
+                        </TouchableOpacity>
+                    </>
+                )}
             </View>
 
             <View style={styles.editorBox}>

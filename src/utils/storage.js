@@ -1,4 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as SecureStore from 'expo-secure-store';
 
 const STORAGE_KEYS = {
   MILK_PCS_PROFILES: '@milk_pcs_profiles_map', // Store multiple centers: { name: profileData }
@@ -8,12 +9,39 @@ const STORAGE_KEYS = {
   MPCS_SOCIETY_PROFILES: '@mpcs_society_profiles_map',
 };
 
+// ─── INTERNAL HELPER (Secure Migration) ──────────────────────────────────────
+const setItemSecure = async (key, val) => {
+  try {
+    await SecureStore.setItemAsync(key, val);
+  } catch (e) {
+    // Falls back to AsyncStorage if SecureStore fails (e.g. storage limits)
+    await AsyncStorage.setItem(key, val);
+  }
+};
+
+const getItemSecure = async (key) => {
+  try {
+    let val = await SecureStore.getItemAsync(key);
+    // Migration: If not in SecureStore but exists in AsyncStorage, move it.
+    if (!val) {
+      val = await AsyncStorage.getItem(key);
+      if (val) {
+        await setItemSecure(key, val);
+        await AsyncStorage.removeItem(key);
+      }
+    }
+    return val;
+  } catch (e) {
+    return await AsyncStorage.getItem(key);
+  }
+};
+
 // ─── MILK PCS STORAGE ────────────────────────────────────────────────────────
 
 export const saveMilkPcsProfile = async (centerName, data) => {
   if (!centerName) return;
   try {
-    const existingProfilesJson = await AsyncStorage.getItem(STORAGE_KEYS.MILK_PCS_PROFILES);
+    const existingProfilesJson = await getItemSecure(STORAGE_KEYS.MILK_PCS_PROFILES);
     const profiles = existingProfilesJson ? JSON.parse(existingProfilesJson) : {};
     
     profiles[centerName] = {
@@ -34,7 +62,7 @@ export const saveMilkPcsProfile = async (centerName, data) => {
       loanAmount: data.loanAmount,
     };
     
-    await AsyncStorage.setItem(STORAGE_KEYS.MILK_PCS_PROFILES, JSON.stringify(profiles));
+    await setItemSecure(STORAGE_KEYS.MILK_PCS_PROFILES, JSON.stringify(profiles));
   } catch (e) {
     console.error('Error saving Milk PCS profile mapping:', e);
   }
@@ -43,7 +71,7 @@ export const saveMilkPcsProfile = async (centerName, data) => {
 export const loadMilkPcsProfileByName = async (centerName) => {
   if (!centerName) return null;
   try {
-    const jsonValue = await AsyncStorage.getItem(STORAGE_KEYS.MILK_PCS_PROFILES);
+    const jsonValue = await getItemSecure(STORAGE_KEYS.MILK_PCS_PROFILES);
     const profiles = jsonValue != null ? JSON.parse(jsonValue) : {};
     return profiles[centerName] || null;
   } catch (e) {
@@ -54,7 +82,7 @@ export const loadMilkPcsProfileByName = async (centerName) => {
 
 export const loadMilkCenters = async () => {
   try {
-    const jsonValue = await AsyncStorage.getItem(STORAGE_KEYS.MILK_CENTERS);
+    const jsonValue = await getItemSecure(STORAGE_KEYS.MILK_CENTERS);
     if (jsonValue == null) return [];
     const centers = JSON.parse(jsonValue);
     // Migration: ensure all centers are objects { name, district }
@@ -75,7 +103,7 @@ export const addMilkCenter = async (name, district) => {
     
     if (!exists) {
       const updated = [...centers, { name: cleanName, district: district || null }].sort((a, b) => a.name.localeCompare(b.name));
-      await AsyncStorage.setItem(STORAGE_KEYS.MILK_CENTERS, JSON.stringify(updated));
+      await setItemSecure(STORAGE_KEYS.MILK_CENTERS, JSON.stringify(updated));
       return updated;
     } else if (district) {
       // Update district if it was previously null
@@ -88,7 +116,7 @@ export const addMilkCenter = async (name, district) => {
         return c;
       });
       if (changed) {
-        await AsyncStorage.setItem(STORAGE_KEYS.MILK_CENTERS, JSON.stringify(updated));
+        await setItemSecure(STORAGE_KEYS.MILK_CENTERS, JSON.stringify(updated));
         return updated;
       }
     }
@@ -113,7 +141,7 @@ export const saveMpcsProfile = async (formData) => {
     staticIds.forEach(id => {
       if (formData[id]) profile[id] = formData[id];
     });
-    await AsyncStorage.setItem(STORAGE_KEYS.MPCS_PROFILE, JSON.stringify(profile));
+    await setItemSecure(STORAGE_KEYS.MPCS_PROFILE, JSON.stringify(profile));
   } catch (e) {
     console.error('Error saving MPCS profile:', e);
   }
@@ -121,7 +149,7 @@ export const saveMpcsProfile = async (formData) => {
 
 export const loadMpcsProfile = async () => {
   try {
-    const jsonValue = await AsyncStorage.getItem(STORAGE_KEYS.MPCS_PROFILE);
+    const jsonValue = await getItemSecure(STORAGE_KEYS.MPCS_PROFILE);
     return jsonValue != null ? JSON.parse(jsonValue) : null;
   } catch (e) {
     console.error('Error loading MPCS profile:', e);
@@ -131,7 +159,7 @@ export const loadMpcsProfile = async () => {
 
 export const loadMpcsSocieties = async () => {
   try {
-    const jsonValue = await AsyncStorage.getItem(STORAGE_KEYS.MPCS_SOCIETIES);
+    const jsonValue = await getItemSecure(STORAGE_KEYS.MPCS_SOCIETIES);
     return jsonValue != null ? JSON.parse(jsonValue) : [];
   } catch (e) {
     console.error('Error loading MPCS societies:', e);
@@ -142,7 +170,7 @@ export const loadMpcsSocieties = async () => {
 export const saveMpcsSocietyProfile = async (societyName, data) => {
   if (!societyName) return;
   try {
-    const existingProfilesJson = await AsyncStorage.getItem(STORAGE_KEYS.MPCS_SOCIETY_PROFILES);
+    const existingProfilesJson = await getItemSecure(STORAGE_KEYS.MPCS_SOCIETY_PROFILES);
     const profiles = existingProfilesJson ? JSON.parse(existingProfilesJson) : {};
     
     // Pick relevant profile fields
@@ -161,7 +189,7 @@ export const saveMpcsSocietyProfile = async (societyName, data) => {
     });
     
     profiles[societyName] = profile;
-    await AsyncStorage.setItem(STORAGE_KEYS.MPCS_SOCIETY_PROFILES, JSON.stringify(profiles));
+    await setItemSecure(STORAGE_KEYS.MPCS_SOCIETY_PROFILES, JSON.stringify(profiles));
   } catch (e) {
     console.error('Error saving MPCS society profile:', e);
   }
@@ -170,7 +198,7 @@ export const saveMpcsSocietyProfile = async (societyName, data) => {
 export const loadMpcsSocietyProfileByName = async (societyName) => {
   if (!societyName) return null;
   try {
-    const jsonValue = await AsyncStorage.getItem(STORAGE_KEYS.MPCS_SOCIETY_PROFILES);
+    const jsonValue = await getItemSecure(STORAGE_KEYS.MPCS_SOCIETY_PROFILES);
     const profiles = jsonValue != null ? JSON.parse(jsonValue) : {};
     return profiles[societyName] || null;
   } catch (e) {
@@ -185,7 +213,7 @@ export const addMpcsSociety = async (name) => {
     const societies = await loadMpcsSocieties();
     if (!societies.includes(name)) {
       const updated = [...societies, name].sort();
-      await AsyncStorage.setItem(STORAGE_KEYS.MPCS_SOCIETIES, JSON.stringify(updated));
+      await setItemSecure(STORAGE_KEYS.MPCS_SOCIETIES, JSON.stringify(updated));
       return updated;
     }
     return societies;

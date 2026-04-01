@@ -1,8 +1,8 @@
 import { createClient } from '@supabase/supabase-js';
 import { decode } from 'base64-arraybuffer';
 
-const SUPABASE_URL = 'https://elwuvjmtawinbcudkeez.supabase.co';
-const SUPABASE_ANON_KEY = 'sb_publishable_Hp-BaZJxVi4RWizr0Ul2Ew_Llg7mlYe';
+const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL;
+const SUPABASE_ANON_KEY = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
 
 export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
@@ -27,6 +27,32 @@ export async function uploadPhoto(base64Data) {
     return publicUrl;
   } catch (e) {
     console.warn('Photo upload exception:', e);
+    return null;
+  }
+}
+
+// ─── Upload multiple evidence photos ──────────────────────────────────────────
+export async function uploadEvidence(base64Data, societyName = 'general') {
+  if (!base64Data) return null;
+  try {
+    const cleanName = societyName.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+    const fileName = `evidence-vault/${cleanName}/${Date.now()}.jpg`;
+    const { error } = await supabase.storage
+      .from('milk-pcs-photos')
+      .upload(fileName, decode(base64Data), {
+        contentType: 'image/jpeg',
+        upsert: false,
+      });
+    if (error) {
+      console.warn('Evidence upload error:', error.message);
+      return null;
+    }
+    const { data: { publicUrl } } = supabase.storage
+      .from('milk-pcs-photos')
+      .getPublicUrl(fileName);
+    return publicUrl;
+  } catch (e) {
+    console.warn('Evidence upload exception:', e);
     return null;
   }
 }

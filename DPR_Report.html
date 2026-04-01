@@ -1,0 +1,630 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Detailed Project Report: CORe Project</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;900&family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script type="module">
+        import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+        mermaid.initialize({ 
+            startOnLoad: true, 
+            theme: 'base', 
+            themeVariables: { 
+                primaryColor: '#f8fafc', 
+                primaryTextColor: '#064E3B', 
+                primaryBorderColor: '#D4AF37', 
+                lineColor: '#064E3B', 
+                secondaryColor: '#ecfdf5', 
+                tertiaryColor: '#ffffff' 
+            } 
+        });
+    </script>
+    <style>
+        :root {
+            --emerald: #064E3B;
+            --emerald-light: #047857;
+            --gold: #D4AF37;
+            --gold-light: #FBBF24;
+            --text-primary: #1F2937;
+            --text-secondary: #4B5563;
+            --surface: #FFFFFF;
+        }
+
+        @page {
+            size: A4;
+            margin: 20mm;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc;
+            margin: 0;
+            padding: 0;
+            color: var(--text-primary);
+            line-height: 1.6;
+            font-size: 11pt;
+        }
+
+        .action-banner {
+            background: #111827;
+            color: white;
+            padding: 15px;
+            text-align: center;
+            font-size: 14px;
+            font-weight: 600;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .btn-print {
+            background: var(--gold);
+            color: var(--emerald);
+            border: none;
+            padding: 8px 20px;
+            border-radius: 6px;
+            font-weight: 700;
+            cursor: pointer;
+            text-transform: uppercase;
+            font-size: 12px;
+            transition: all 0.2s;
+        }
+
+        .btn-print:hover {
+            transform: scale(1.05);
+            background: var(--gold-light);
+        }
+
+        /* Page Layout */
+        .document-container {
+            width: 210mm;
+            margin: 40px auto;
+            background: white;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            padding: 25mm;
+            box-sizing: border-box;
+        }
+
+        .page-break {
+            page-break-before: always;
+            margin-top: 40px;
+        }
+
+        /* Cover Page Elements */
+        .cover-page {
+            height: 240mm;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            border: 4px solid var(--emerald);
+            padding: 40px;
+            position: relative;
+        }
+        
+        .cover-inner-border {
+            position: absolute;
+            top: 6px; left: 6px; right: 6px; bottom: 6px;
+            border: 1px solid var(--gold);
+        }
+
+        .emblem-large {
+            width: 120px;
+            height: 120px;
+            margin-bottom: 20px;
+        }
+
+        .cover-gov-name {
+            font-family: 'Cinzel', serif;
+            font-size: 32px;
+            font-weight: 900;
+            color: var(--emerald);
+            text-transform: uppercase;
+            margin: 0;
+            letter-spacing: 2px;
+        }
+
+        .cover-dept-name {
+            font-family: 'Cinzel', serif;
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            margin-top: 10px;
+            margin-bottom: 60px;
+        }
+
+        .cover-title {
+            font-family: 'Cinzel', serif;
+            font-size: 36px;
+            font-weight: 900;
+            color: var(--gold);
+            text-transform: uppercase;
+            line-height: 1.2;
+            background: var(--emerald);
+            padding: 20px 40px;
+            margin-bottom: 20px;
+            border-radius: 4px;
+        }
+
+        .cover-subtitle {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            margin-bottom: 80px;
+            letter-spacing: 1px;
+        }
+        
+        .cover-meta {
+            margin-top: auto;
+            font-size: 12px;
+            color: var(--text-secondary);
+            text-align: left;
+            width: 100%;
+            border-top: 1px solid #e2e8f0;
+            padding-top: 20px;
+        }
+
+        /* Typography */
+        h1, h2, h3, h4 {
+            font-family: 'Cinzel', serif;
+            color: var(--emerald);
+        }
+
+        h1 {
+            font-size: 24px;
+            border-bottom: 2px solid var(--gold);
+            padding-bottom: 15px;
+            margin-bottom: 25px;
+            margin-top: 40px;
+        }
+        
+        h1:first-child {
+            margin-top: 0;
+        }
+
+        h2 {
+            font-size: 18px;
+            margin-top: 35px;
+            margin-bottom: 15px;
+            color: var(--emerald-light);
+        }
+
+        h3 {
+            font-size: 14pt;
+            font-weight: 700;
+        }
+
+        p {
+            text-align: justify;
+            margin-bottom: 15px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            font-size: 10pt;
+        }
+
+        th, td {
+            border: 1px solid #cbd5e1;
+            padding: 10px;
+            text-align: left;
+        }
+
+        th {
+            background-color: var(--emerald);
+            color: white;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        tr:nth-child(even) {
+            background-color: #f8fafc;
+        }
+
+        .highlight-box {
+            background: #ecfdf5;
+            border-left: 4px solid var(--emerald);
+            padding: 15px;
+            margin: 20px 0;
+            font-size: 10pt;
+        }
+
+        .tech-stack-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .tech-box {
+            border: 1px solid var(--gold);
+            padding: 15px;
+            border-radius: 6px;
+        }
+
+        .tech-box h4 {
+            margin-top: 0;
+            margin-bottom: 10px;
+            color: var(--emerald);
+            font-size: 11pt;
+            border-bottom: 1px solid #e2e8f0;
+            padding-bottom: 5px;
+        }
+        
+        ul {
+            padding-left: 20px;
+        }
+        
+        li {
+            margin-bottom: 8px;
+            text-align: justify;
+        }
+
+        .toc-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .toc-list li {
+            margin-bottom: 15px;
+            font-weight: 600;
+            border-bottom: 1px dotted #cbd5e1;
+            padding-bottom: 5px;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .header-small {
+            text-align: center;
+            margin-bottom: 30px;
+            border-bottom: 1px solid var(--gold);
+            padding-bottom: 15px;
+        }
+        
+        .header-small img {
+            width: 50px;
+            margin-bottom: 10px;
+        }
+
+        .mermaid {
+            background: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 25px 0;
+            text-align: center;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.02);
+            font-family: 'Inter', sans-serif !important;
+        }
+
+        @media print {
+            body { background: white; }
+            .action-banner { display: none; }
+            .document-container { 
+                margin: 0; 
+                box-shadow: none; 
+                width: 100%; 
+                padding: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="action-banner">
+        <div>📄 <strong>Comprehensive Detailed Project Report (DPR) Generated successfully.</strong></div>
+        <button class="btn-print" onclick="window.print()">Print to PDF / Save</button>
+    </div>
+
+    <div class="document-container">
+        
+        <!-- COVER PAGE -->
+        <div class="cover-page">
+            <div class="cover-inner-border"></div>
+            <img src="https://upload.wikimedia.org/wikipedia/commons/1/1a/Seal_of_Sikkim_color.png" class="emblem-large" alt="Sikkim Seal">
+            <h1 class="cover-gov-name">Government of Sikkim</h1>
+            <div class="cover-dept-name">Department of Cooperation</div>
+            
+            <div class="cover-title">C O R e</div>
+            <div class="cover-subtitle">Cooperative Oversight & Reporting Engine<br>for Milk Producers' Cooperative Societies (MPCS)</div>
+            
+            <div style="margin-top: 40px;">
+                <h3 style="color: var(--text-primary); margin-bottom: 5px;">DETAILED PROJECT REPORT (DPR)</h3>
+                <p style="color: var(--text-secondary); text-align: center;">Digitization, Geospatial Monitoring, & Financial Compliance Initiative</p>
+            </div>
+
+            <div class="cover-meta">
+                <strong>Project Code:</strong> CORE-DOC-2026<br>
+                <strong>Prepared For:</strong> Secretary, Department of Cooperation, Govt. of Sikkim<br>
+                <strong>Reporting Framework:</strong> ISO/IEC 27001 Aligned Security Standards
+            </div>
+        </div>
+
+        <!-- TABLE OF CONTENTS -->
+        <div class="page-break">
+            <h1>Table of Contents</h1>
+            <ul class="toc-list">
+                <li><span>1. Executive Summary</span></li>
+                <li><span>2. Project Background & Rationale</span></li>
+                <li><span>3. Core Objectives & Scope of Work</span></li>
+                <li><span>4. Process Re-engineering (As-Is vs. To-Be)</span></li>
+                <li><span>5. System Architecture & Modules</span></li>
+                <li><span>6. Technological Stack & Security Framework</span></li>
+                <li><span>7. Implementation Strategy & Target Milestones</span></li>
+                <li><span>8. Budgetary Estimates & Financial Outlay</span></li>
+                <li><span>9. Expected Impact & Return on Investment (ROI)</span></li>
+            </ul>
+        </div>
+
+        <!-- CHAPTER 1 & 2 -->
+        <div class="page-break">
+            <div class="header-small">
+                <img src="https://upload.wikimedia.org/wikipedia/commons/1/1a/Seal_of_Sikkim_color.png" alt="Seal">
+                <div style="font-family: 'Cinzel', serif; font-weight: 700; color: var(--emerald);">GOVERNMENT OF SIKKIM • DEPARTMENT OF COOPERATION</div>
+            </div>
+
+            <h1>1. Executive Summary</h1>
+            <p>
+                The <strong>Cooperative Oversight & Reporting Engine (CORe)</strong> is a flagship digital governance initiative formulated by the Department of Cooperation, Government of Sikkim. The primary mandate of this project is to technologically overhaul the auditing, monitoring, and compliance mechanisms of Milk Producers' Cooperative Societies (MPCS) operating across the state's diverse topographical districts.
+            </p>
+            <p>
+                By replacing archaic paper-based ledgers with a <strong>cryptographically secure, GPS-locked mobile reporting application</strong> combined with a centralized <strong>cloud-based web dashboard</strong>, the government will gain unprecedented real-time visibility into cooperative operations. This transparent framework aims to eliminate reporting redundancies, prevent fund misappropriation, ensure fair subsidy distribution, and elevate the socioeconomic standing of cooperative members.
+            </p>
+
+        </div>
+
+        <div class="page-break">
+            <h1>2. Project Background & Rationale</h1>
+            <h2>2.1 The Current Scenario</h2>
+            <p>
+                Sikkim boasts a robust network of Milk Producers' Cooperative Societies that serve as the economic backbone for rural dairy farmers. Currently, the reporting mechanism heavily relies on manual data entry by field extension officers. Supervisors physically travel to collection centers, manually record milk yields, demographic participation (SC/ST/OBC/Gen), and financial liabilities (loans/advances), and submit physical returns to the head office. 
+            </p>
+            <h2>2.2 Identified Bottlenecks</h2>
+            <ul>
+                <li><strong>Data Latency:</strong> Information propagation from rural centers to the central directory takes weeks, severely crippling timely decision-making and subsidy disbursement.</li>
+                <li><strong>Absence of Spatial Verification:</strong> Physical inspections cannot be definitively proven. Supervisors may submit reports without actually visiting the MPCS.</li>
+                <li><strong>Data Integrity Risks:</strong> Manual aggregation of financial metrics (ledgers, bank balances, loan recoveries) often leads to arithmetic discrepancies, masking potential systemic inefficiencies or fund leakages.</li>
+                <li><strong>Storage & Retrieval:</strong> Retrieving historical compliance data for statutory audits is highly labor-intensive and prone to document degradation.</li>
+            </ul>
+        </div>
+
+        <!-- CHAPTER 3 & 4 -->
+        <div class="page-break">
+            <h1>3. Core Objectives & Scope of Work</h1>
+            <p>The CORe project is bounded by the following strategic objectives:</p>
+            <ol>
+                <li><strong>Real-Time Data Acquisition:</strong> Deploy an offline-first mobile application (CORe Field App) for extension officers to capture physical evidence, digital ledgers, and demographic data.</li>
+                <li><strong>Geospatial Enforceability:</strong> Mandate GPS locking. Actionable reports can only be generated if the device coordinates match the surveyed geo-fenced perimeters of the cooperative center.</li>
+                <li><strong>Automated Compliance Documentation:</strong> Upon completion of a field survey, the system must instantly generate a Government-branded, A4-sized PDF Report strictly formatted to departmental standards, acting as an immutable Return Certificate.</li>
+                <li><strong>Executive Command Center:</strong> Implement a high-level centralized dashboard (CORe Command) for the Secretariat to view state-wide aggregates, drill down to block/panchayat levels, and issue systemic broadcasts.</li>
+            </ol>
+
+        </div>
+
+        <div class="page-break">
+            <h1>4. Process Re-engineering (As-Is vs. To-Be)</h1>
+            <p>The implementation of CORe institutes a paradigm shift in bureaucratic operations, transforming a heavily manual process into a cryptographically secured digital pipeline.</p>
+            
+            <h3 style="margin-top:20px; color: var(--emerald-light);">4.1 Field Survey & Offline Integration Workflow</h3>
+            <div class="mermaid">
+                flowchart TD
+                A([Officer Arrives at MPCS Center]) --> B(Initialize CORe Field App)
+                B --> C{Internet Available?}
+                C -->|Network Active| D[Fetch Registered Societies from Cloud]
+                C -->|No Signal| E[Load Cached Local Societies List]
+                
+                D --> F[Officer Inputs Audit Ledgers & Census Data]
+                E --> F
+                
+                F --> G[Initiate Evidence Capture]
+                G --> H(Sensor Engagement: GPS Lock & Time Embedding)
+                
+                H --> I{Environment Check}
+                I -->|Network Restored| J[Instant Cloud Synchronization]
+                I -->|Still Offline| K[Queue Locally Securely encrypted]
+                
+                J --> L([Generate PDF Certification & Share w/ Society])
+                K --> L
+                
+                J -.-> M((Admin Dashboard Real-time Updating))
+            </div>
+            
+            <table>
+                <thead>
+                    <tr>
+                        <th>Parameter</th>
+                        <th>Current "As-Is" System</th>
+                        <th>Proposed "To-Be" System (CORe)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Data Entry</strong></td>
+                        <td>Paper-based registers, prone to physical damage and human error.</td>
+                        <td>Digital entry via encrypted mobile app with automated mathematical validations.</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Verification Evidence</strong></td>
+                        <td>Trust-based signatures on paper forms.</td>
+                        <td>High-resolution camera capture with embedded geospatial metadata (Lat/Long) and Network Timestamping.</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Network Reliability</strong></td>
+                        <td>Physical travel required to hand-deliver forms.</td>
+                        <td>"Offline-First" queueing. Data is securely saved locally and auto-syncs when 4G/WiFi is restored.</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Audit Archiving</strong></td>
+                        <td>Filing cabinets taking up physical real estate.</td>
+                        <td>Instant PDF generation synced directly to centralized cloud (Supabase PostgreSQL storage).</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- CHAPTER 5 & 6 -->
+        <div class="page-break">
+            <h1>5. System Architecture & Modules</h1>
+            
+            <div class="mermaid">
+                graph LR
+                %% Styling definitions
+                classDef edge fill:#ffffff,stroke:#064E3B,stroke-width:2px,color:#1F2937
+                classDef cloud fill:#064E3B,stroke:#D4AF37,stroke-width:2px,color:#ffffff
+                classDef hq fill:#ecfdf5,stroke:#047857,stroke-width:2px,color:#064E3B
+
+                subgraph "Mobile Perimeter"
+                    A(CORe Field App\nReact Native):::edge
+                    A1(Local DB / Queue):::edge
+                    A <-->|Offline Logic| A1
+                end
+                
+                subgraph "Government Cloud"
+                    D{JWT Auth Guard\nRLS Access Control}:::cloud
+                    B((Postgres DB\nSupabase Base)):::cloud
+                    C[File Storage\nEncrypted JPGs]:::cloud
+                    Function(Edge Server\nServerless)
+                    
+                    D --> B
+                    D --> C
+                    D <--> Function
+                end
+                
+                subgraph "HQ Data Access"
+                    E(CORe Command\nWeb Portal):::hq
+                end
+                
+                A -- "Encrypted JSON Payload" --> D
+                A -- "Verification Photo" --> D
+                
+                B -. "Strict Live Subscriptions" .-> E
+            </div>
+
+            <h2>5.1 CORe Field (Mobile Component)</h2>
+            <p>Targeted at ARCS (Assistant Registrar of Cooperative Societies) and Cooperative Inspectors. Core modules include:</p>
+            <ul>
+                <li><strong>Digital Evidence Vault:</strong> Utilizes device camera with mandated location permissions. Photos are compressed, EXIF tagged, and stored.</li>
+                <li><strong>Institutional Ledger Matrix:</strong> UI captures milk collection stats (Litres), total withdrawals, and current bank balance. Discrepancies prompt hard-stops.</li>
+                <li><strong>Demographic Census Widget:</strong> Dynamic calculation of Male/Female participants categorized by social strata (SC/ST/OBC/GEN) to align with state inclusive policies.</li>
+                <li><strong>Liability & Debt Control:</strong> Tracks scheme loans against individual centers, highlighting active arrears and warning thresholds.</li>
+            </ul>
+            
+            <h2>5.2 CORe Command (Web Secretariat Portal)</h2>
+            <p>Targeted at the Secretary, Registrar, and Joint Registrars. Modules include:</p>
+            <ul>
+                <li><strong>Geospatial Intelligence Map:</strong> Plotting all registered MPCS on the state map using coordinates fetched from field reports.</li>
+                <li><strong>Real-time KPI Metrics:</strong> Live tracking of total milk collected state-wide, outstanding loan recoveries, and active inspections.</li>
+                <li><strong>Headquarters Broadcast Directive:</strong> Ability to push instant urgent notifications down to all field devices seamlessly.</li>
+            </ul>
+
+        </div>
+
+        <div class="page-break">
+            <h1>6. Technological Stack & Security Framework</h1>
+            <p>The system utilizes a highly scalable, modern, edge-computed stack ensuring longevity, rapid iteration, and zero vendor-lock-in vulnerabilities.</p>
+            
+            <div class="tech-stack-grid">
+                <div class="tech-box">
+                    <h4>Frontend Field App (Mobile)</h4>
+                    <p><strong>React Native & Expo:</strong> Allows cross-platform deployment (Android/iOS). Utilizes core Native APIs for Camera, GPS caching, and Expo-Print for HTML-to-PDF generation.</p>
+                </div>
+                <div class="tech-box">
+                    <h4>Frontend Command (Web)</h4>
+                    <p><strong>React JS & Vite:</strong> Lightning-fast web rendering. Data visualization powered by <strong>Recharts</strong> and cartography powered by <strong>Leaflet.js</strong>.</p>
+                </div>
+                <div class="tech-box">
+                    <h4>Cloud & Database Infrastructure</h4>
+                    <p><strong>Supabase (PostgreSQL):</strong> Acts as the secure Backend-as-a-Service (BaaS). Provides high-performance Relational Database mapping, Row-Level Security (RLS), and secure Edge Functions.</p>
+                </div>
+                <div class="tech-box">
+                    <h4>Security & Authentication</h4>
+                    <p><strong>JWT Token Authentication:</strong> Stateless, highly secure token systems. Cryptographic monitoring ensures no unauthenticated payloads reach the central database.</p>
+                </div>
+            </div>
+            
+            <div class="highlight-box">
+                <strong>Data Sovereignty Standard:</strong> All data transmissions are encrypted via TLS 1.3 protocol. Access controls are rigorously enforced via Supabase Row-Level Policies ensuring Officers only see the districts assigned to their jurisdiction.
+            </div>
+        </div>
+
+        <!-- CHAPTER 7, 8, & 9 -->
+        <div class="page-break">
+            <h1>7. Implementation Strategy & Target Milestones</h1>
+            <p>The project will be executed in three rapid, agile phases spanning 6 months:</p>
+            <ul>
+                <li><strong>Phase I: Infrastructure Formulation (Months 1-2):</strong> Core application development, database architecture, and integration of the PDF generator engine (Currently Active).</li>
+                <li><strong>Phase II: Beta Pilot & Training (Months 3-4):</strong> Deployment of mobile applications to 50 pilot officers in the Gangtok and Namchi districts. Real-world stress testing of the offline-sync logic.</li>
+                <li><strong>Phase III: State-wide Go-Live (Months 5-6):</strong> Full transition from paper. Decommissioning of old ledgers. Deployment of the Web Dashboard to the Secretariat.</li>
+            </ul>
+
+        </div>
+
+        <div class="page-break">
+            <h1>8. Budgetary Estimates & Financial Outlay</h1>
+            <p><em>(Note: Exact figures to be customized as per departmental tender specifications. These represent generalized technology budget heads.)</em></p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>S.No.</th>
+                        <th>Component Description</th>
+                        <th>Sub-components</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>1</td>
+                        <td>Application Development</td>
+                        <td>Mobile App, Web Dashboard, UI/UX Design (Premium Emerald/Gold System).</td>
+                    </tr>
+                    <tr>
+                        <td>2</td>
+                        <td>Cloud Infrastructure</td>
+                        <td>Supabase Dedicated Instances, Media Storage Vaults, Edge Hosting.</td>
+                    </tr>
+                    <tr>
+                        <td>3</td>
+                        <td>Security & Auditing</td>
+                        <td>Pen-testing, Cryptographic Token implementations, Iso-Certification audits.</td>
+                    </tr>
+                    <tr>
+                        <td>4</td>
+                        <td>Capacity Building</td>
+                        <td>Officer Training Workshops, User Manual generation, Helpdesk standing setup.</td>
+                    </tr>
+                    <tr>
+                        <td>5</td>
+                        <td>Annual Maintenance Contract</td>
+                        <td>L2 Support, Bug Patches, OS compatibility updates (Android/iOS).</td>
+                    </tr>
+                </tbody>
+            </table>
+
+        </div>
+
+        <div class="page-break">
+            <h1>9. Expected Impact & Return on Investment (ROI)</h1>
+            <p>
+                The successful deployment of CORe guarantees a profound qualitative shift in governance:
+            </p>
+            <ul>
+                <li><strong>Erratic Claims Mitigation:</strong> Direct photographic and GPS evidence strictly halts phantom reports and ensures subsidies are disbursed to active, physically verified societies.</li>
+                <li><strong>Zero-Latency Policy Making:</strong> The Secretary of Cooperation gains real-time data, enabling rapid policy interventions rather than acting on months-old lag metrics.</li>
+                <li><strong>Eco-Friendly Operations:</strong> Substantial reduction in physical paper trails, transportation logistics, and document physical archiving costs.</li>
+                <li><strong>Institutional Accountability:</strong> Establishes a permanent, immutable digital trail of all financial reporting activities conducted by department personnel.</li>
+            </ul>
+        </div>
+
+    </div>
+
+</body>
+</html>

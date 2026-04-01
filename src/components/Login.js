@@ -28,14 +28,18 @@ const COLORS = {
   textSecondary: '#6B7280',
 };
 
-const Login = () => {
+const Login = ({ onBypass }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
 
   const handleLogin = async () => {
     if (!email || !password) {
-      Alert.alert('Required Fields', 'Please enter both your Officer Email and Access Key.');
+      if (Platform.OS === 'web') {
+        alert('Required Fields: Please enter both your Officer Email and Access Key.');
+      } else {
+        Alert.alert('Required Fields', 'Please enter both your Officer Email and Access Key.');
+      }
       return;
     }
 
@@ -46,9 +50,18 @@ const Login = () => {
     });
 
     if (error) {
-      Alert.alert('Access Denied', error.message);
+      if (Platform.OS === 'web') {
+        alert('Access Denied: ' + error.message);
+      } else {
+        Alert.alert('Access Denied', error.message);
+      }
     }
     setLoading(false);
+  };
+
+  const handleDevBypass = () => {
+    // Direct call to bypass provided by App container
+    if (onBypass) onBypass();
   };
 
   return (
@@ -73,12 +86,9 @@ const Login = () => {
               resizeMode="contain"
             />
           </View>
-          <Text style={styles.govTitle}>Government of Sikkim</Text>
-          <Text style={styles.deptTitle}>Department of Cooperation</Text>
-          <View style={styles.badge}>
-            <MaterialIcons name="verified-user" size={14} color={COLORS.gold} />
-            <Text style={styles.badgeText}>OFFICIAL ACCESS PORTAL</Text>
-          </View>
+          <Text style={styles.govTitle}>CORE</Text>
+          <Text style={styles.fullName}>COOPERATIVE OVERSIGHT & REPORTING ENGINE</Text>
+          <Text style={styles.deptSubitle}>DEPARTMENT OF COOPERATION • GOVERNMENT OF SIKKIM</Text>
         </View>
 
         <View style={styles.loginCard}>
@@ -136,6 +146,13 @@ const Login = () => {
                 </>
               )}
             </LinearGradient>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.bypassBtn}
+            onPress={handleDevBypass}
+          >
+            <Text style={styles.bypassText}>DEVELOPMENT BYPASS (INTERNAL USE ONLY)</Text>
           </TouchableOpacity>
         </View>
 
@@ -209,33 +226,25 @@ const styles = StyleSheet.create({
     letterSpacing: 2,
     textAlign: 'center',
   },
-  deptTitle: {
+  fullName: {
     fontFamily: Platform.OS === 'ios' ? 'Cinzel' : 'serif',
-    fontSize: 12,
-    fontWeight: '600',
-    color: COLORS.goldLight,
+    fontSize: 10,
+    fontWeight: '700',
+    color: 'rgba(255,255,255,0.8)',
     textTransform: 'uppercase',
-    letterSpacing: 4,
-    marginTop: 5,
+    letterSpacing: 1.5,
+    marginTop: 8,
     textAlign: 'center',
   },
-  badge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(6, 78, 59, 0.8)',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
-    marginTop: 20,
-    borderWidth: 1,
-    borderColor: 'rgba(212, 175, 55, 0.3)',
-  },
-  badgeText: {
-    color: '#D4AF37',
-    fontSize: 10,
+  deptSubitle: {
+    fontFamily: Platform.OS === 'ios' ? 'Cinzel' : 'serif',
+    fontSize: 9,
     fontWeight: '800',
-    marginLeft: 6,
-    letterSpacing: 1.5,
+    color: COLORS.goldLight,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+    marginTop: 6,
+    textAlign: 'center',
   },
   loginCard: {
     width: width * 0.85,
@@ -293,6 +302,21 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
+  },
+  bypassBtn: {
+    marginTop: 20,
+    paddingVertical: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(6, 78, 59, 0.1)',
+    borderRadius: 8,
+    borderStyle: 'dashed',
+    alignItems: 'center',
+  },
+  bypassText: {
+    color: '#94A3B8',
+    fontSize: 9,
+    fontWeight: '700',
+    letterSpacing: 0.5,
   },
   loginBtnGradient: {
     paddingVertical: 15,

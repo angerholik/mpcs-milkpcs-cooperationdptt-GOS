@@ -359,11 +359,11 @@ const FieldInput = ({ field, formData, handleChange }) => {
                         />
                     )}
 
-                    {!Platform.OS === 'web' && showDatePicker && (
+                    {Platform.OS !== 'web' && showDatePicker && (
                         <DateTimePicker
                             value={formData[field.id] ? (function(){
                                 const parts = formData[field.id].split('/');
-                                if(parts.length === 3) return new Date(`${parts[2]}-${parts[1]}-${parts[0]}`);
+                                if(parts.length === 3) return new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
                                 return new Date();
                             })() : new Date()}
                             mode="date"
@@ -504,6 +504,88 @@ const FieldInput = ({ field, formData, handleChange }) => {
         );
 };
 
+const DemographicMatrix = ({ formData, handleChange }) => {
+    const rows = [
+        { id: '1', label: 'SC', color: '#3B82F6', icon: 'shield-account' },
+        { id: '3', label: 'ST', color: '#8B5CF6', icon: 'account-child' },
+        { id: '5', label: 'OBC', color: '#F59E0B', icon: 'account-star' },
+        { id: '7', label: 'GEN', color: '#10B981', icon: 'account-check' },
+    ];
+
+    const totalMale = [1, 3, 5, 7].reduce((sum, i) => sum + (parseInt(formData[`3.${i}`]) || 0), 0);
+    const totalFemale = [2, 4, 6, 8].reduce((sum, i) => sum + (parseInt(formData[`3.${i}`]) || 0), 0);
+    const totalMembers = totalMale + totalFemale;
+    const totals = { totalMale, totalFemale, totalMembers };
+
+    return (
+        <View style={styles.ledgerContainer}>
+            <View style={styles.ledgerHeader}>
+                <Text style={[styles.ledgerHeaderLabel, { flex: 1.5 }]}>REGISTRY</Text>
+                <View style={styles.ledgerColumnHeader}>
+                    <MaterialIcons name="person" size={14} color="#94A3B8" />
+                    <Text style={styles.ledgerHeaderLabel}>MALE</Text>
+                </View>
+                <View style={styles.ledgerColumnHeader}>
+                    <MaterialIcons name="person" size={14} color="#94A3B8" />
+                    <Text style={styles.ledgerHeaderLabel}>FEMALE</Text>
+                </View>
+                <Text style={[styles.ledgerHeaderLabel, { textAlign: 'right', width: 55 }]}>TOTAL</Text>
+            </View>
+
+            {rows.map((row) => {
+                const mId = `3.${row.id}`;
+                const fId = `3.${parseInt(row.id) + 1}`;
+                const rowTotal = (parseInt(formData[mId]) || 0) + (parseInt(formData[fId]) || 0);
+                return (
+                    <View key={row.id} style={styles.ledgerRow}>
+                        <View style={styles.categoryCell}>
+                            <Text style={styles.ledgerCategoryText}>{row.label}</Text>
+                        </View>
+                        <View style={[styles.inputCell, styles.vDividerHair]}>
+                            <TextInput
+                                style={styles.ledgerInput}
+                                keyboardType="numeric"
+                                value={formData[mId] || ''}
+                                onChangeText={(v) => handleChange(mId, v)}
+                                placeholder="0"
+                                placeholderTextColor="#E2E8F0"
+                                selectionColor={COLORS.emerald}
+                            />
+                        </View>
+                        <View style={[styles.inputCell, styles.vDividerHair]}>
+                            <TextInput
+                                style={styles.ledgerInput}
+                                keyboardType="numeric"
+                                value={formData[fId] || ''}
+                                onChangeText={(v) => handleChange(fId, v)}
+                                placeholder="0"
+                                placeholderTextColor="#E2E8F0"
+                                selectionColor={COLORS.emerald}
+                            />
+                        </View>
+                        <View style={[styles.rowTotalCell, styles.vDividerHair]}>
+                            <Text style={styles.rowTotalText}>{rowTotal || '0'}</Text>
+                        </View>
+                    </View>
+                );
+            })}
+
+            <View style={styles.ledgerFooter}>
+                <Text style={styles.ledgerFooterLabel}>SUMMARY</Text>
+                <View style={[styles.footerValBox, styles.vDividerHair]}>
+                    <Text style={styles.footerValText}>{totals.totalMale}</Text>
+                </View>
+                <View style={[styles.footerValBox, styles.vDividerHair]}>
+                    <Text style={styles.footerValText}>{totals.totalFemale}</Text>
+                </View>
+                <View style={[styles.grandTotalPill, { marginLeft: 15 }]}>
+                    <Text style={styles.grandTotalPillText}>{totals.totalMembers}</Text>
+                </View>
+            </View>
+        </View>
+    );
+};
+
 export default function MPCSForm({ onComplete }) {
     const [formData, setFormData] = useState({});
     const [saving, setSaving] = useState(false);
@@ -533,93 +615,6 @@ export default function MPCSForm({ onComplete }) {
             return;
         }
         setFormData(prev => ({ ...prev, [id]: value }));
-    };
-
-    const DemographicMatrix = () => {
-        const rows = [
-            { id: '1', label: 'SC', color: '#3B82F6', icon: 'shield-account' },
-            { id: '3', label: 'ST', color: '#8B5CF6', icon: 'account-child' },
-            { id: '5', label: 'OBC', color: '#F59E0B', icon: 'account-star' },
-            { id: '7', label: 'GEN', color: '#10B981', icon: 'account-check' },
-        ];
-
-        const totalMale = [1,3,5,7].reduce((sum, i) => sum + (parseInt(formData[`3.${i}`]) || 0), 0);
-        const totalFemale = [2,4,6,8].reduce((sum, i) => sum + (parseInt(formData[`3.${i}`]) || 0), 0);
-        const totalMembers = totalMale + totalFemale;
-        const totals = { totalMale, totalFemale, totalMembers };
-
-        return (
-            <View style={styles.ledgerContainer}>
-                {/* Header: Zero-Weight Architectural */}
-                <View style={styles.ledgerHeader}>
-                    <Text style={[styles.ledgerHeaderLabel, { flex: 1.5 }]}>REGISTRY</Text>
-                    <View style={styles.ledgerColumnHeader}>
-                        <MaterialIcons name="person" size={14} color="#94A3B8" />
-                        <Text style={styles.ledgerHeaderLabel}>MALE</Text>
-                    </View>
-                    <View style={styles.ledgerColumnHeader}>
-                        <MaterialIcons name="person" size={14} color="#94A3B8" />
-                        <Text style={styles.ledgerHeaderLabel}>FEMALE</Text>
-                    </View>
-                    <Text style={[styles.ledgerHeaderLabel, { textAlign: 'right', width: 55 }]}>TOTAL</Text>
-                </View>
-
-                {rows.map((row, idx) => {
-                    const mId = `3.${row.id}`;
-                    const fId = `3.${parseInt(row.id) + 1}`;
-                    const rowTotal = (parseInt(formData[mId]) || 0) + (parseInt(formData[fId]) || 0);
-                    return (
-                        <View key={row.id} style={styles.ledgerRow}>
-                            <View style={styles.categoryCell}>
-                                <Text style={styles.ledgerCategoryText}>{row.label}</Text>
-                            </View>
-                            
-                            <View style={[styles.inputCell, styles.vDividerHair]}>
-                                <TextInput
-                                    style={styles.ledgerInput}
-                                    keyboardType="numeric"
-                                    value={formData[mId] || ''}
-                                    onChangeText={(v) => handleChange(mId, v)}
-                                    placeholder="0"
-                                    placeholderTextColor="#E2E8F0"
-                                    selectionColor={COLORS.emerald}
-                                />
-                            </View>
-                            
-                            <View style={[styles.inputCell, styles.vDividerHair]}>
-                                <TextInput
-                                    style={styles.ledgerInput}
-                                    keyboardType="numeric"
-                                    value={formData[fId] || ''}
-                                    onChangeText={(v) => handleChange(fId, v)}
-                                    placeholder="0"
-                                    placeholderTextColor="#E2E8F0"
-                                    selectionColor={COLORS.emerald}
-                                />
-                            </View>
-
-                            <View style={[styles.rowTotalCell, styles.vDividerHair]}>
-                                <Text style={styles.rowTotalText}>{rowTotal || '0'}</Text>
-                            </View>
-                        </View>
-                    );
-                })}
-
-                {/* Footer: Fluid Summary */}
-                <View style={styles.ledgerFooter}>
-                     <Text style={styles.ledgerFooterLabel}>SUMMARY</Text>
-                     <View style={[styles.footerValBox, styles.vDividerHair]}>
-                        <Text style={styles.footerValText}>{totals.totalMale}</Text>
-                     </View>
-                     <View style={[styles.footerValBox, styles.vDividerHair]}>
-                        <Text style={styles.footerValText}>{totals.totalFemale}</Text>
-                     </View>
-                     <View style={[styles.grandTotalPill, { marginLeft: 15 }]}>
-                        <Text style={styles.grandTotalPillText}>{totals.totalMembers}</Text>
-                     </View>
-                </View>
-            </View>
-        );
     };
 
     const handleSave = async () => {
@@ -654,7 +649,6 @@ export default function MPCSForm({ onComplete }) {
                 } else {
                     Alert.alert('✅ Saved', 'MPCS return data saved successfully to the cloud dashboard!', [{ text: 'OK' }]);
                 }
-                // Save static profile for the next time
                 saveMpcsProfile(formData);
                 const sName = formData['1.1'];
                 if (sName && sName.trim()) {
@@ -664,8 +658,6 @@ export default function MPCSForm({ onComplete }) {
                         if (updated) setMpcsSocieties(updated);
                     });
                 }
-                // Instead of clearing everything, we reload the static profile 
-                // so the user doesn't have to re-enter Society Name, Authority, etc.
                 loadMpcsProfile().then(profile => {
                     setFormData(profile || {});
                 });
@@ -689,7 +681,7 @@ export default function MPCSForm({ onComplete }) {
                         <Text style={styles.cardTitle}>{section.title}</Text>
                     </View>
                     {section.type === 'matrix' ? (
-                        <DemographicMatrix />
+                        <DemographicMatrix formData={formData} handleChange={handleChange} />
                     ) : (
                         <View style={styles.grid}>
                             {section.fields.map(field => {
