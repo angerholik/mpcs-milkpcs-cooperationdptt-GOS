@@ -25,7 +25,13 @@
       "softwareKeyboardLayoutMode": "resize"
     },
     "web": {
-      "favicon": "./assets/favicon.png"
+      "favicon": "./assets/favicon.png",
+      "name": "Milk PCS Reporting",
+      "shortName": "Milk PCS",
+      "themeColor": "#7C1C1C",
+      "backgroundColor": "#F8F5F2",
+      "display": "standalone",
+      "bundler": "metro"
     },
     "plugins": [
       "expo-sharing",
