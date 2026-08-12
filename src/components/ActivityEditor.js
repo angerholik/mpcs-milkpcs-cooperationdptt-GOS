@@ -3,12 +3,12 @@ import { View, Text, TextInput, TouchableOpacity, StyleSheet, Platform, Keyboard
 import { MaterialIcons } from '@expo/vector-icons';
 
 const COLORS = {
-    emerald: '#064E3B',
-    emeraldLight: '#047857',
-    gold: '#D4AF37',
-    goldLight: '#FBBF24',
-    textPrimary: '#1F2937',
-    textSecondary: '#6B7280',
+    emerald: '#7C1C1C',
+    emeraldLight: '#991B1B',
+    gold: '#B45309',
+    goldLight: '#D97706',
+    textPrimary: '#450A0A',
+    textSecondary: '#7F1D1D',
     surface: '#FFFFFF',
     border: '#E2E8F0',
 };

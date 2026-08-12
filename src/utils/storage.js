@@ -1,38 +1,28 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import * as SecureStore from 'expo-secure-store';
 
 const STORAGE_KEYS = {
-  MILK_PCS_PROFILES: '@milk_pcs_profiles_map', // Store multiple centers: { name: profileData }
-  MPCS_PROFILE: '@mpcs_profile',
-  MILK_CENTERS: '@milk_centers',
-  MPCS_SOCIETIES: '@mpcs_societies',
-  MPCS_SOCIETY_PROFILES: '@mpcs_society_profiles_map',
+  MILK_PCS_PROFILES: 'milk_pcs_profiles_map', // Store multiple centers: { name: profileData }
+  MPCS_PROFILE: 'mpcs_profile',
+  MILK_CENTERS: 'milk_centers',
+  MPCS_SOCIETIES: 'mpcs_societies',
+  MPCS_SOCIETY_PROFILES: 'mpcs_society_profiles_map',
 };
 
-// ─── INTERNAL HELPER (Secure Migration) ──────────────────────────────────────
+// ─── INTERNAL HELPER (Standardized Storage) ──────────────────────────────────
 const setItemSecure = async (key, val) => {
   try {
-    await SecureStore.setItemAsync(key, val);
-  } catch (e) {
-    // Falls back to AsyncStorage if SecureStore fails (e.g. storage limits)
     await AsyncStorage.setItem(key, val);
+  } catch (e) {
+    console.warn('Storage error (setItem):', e);
   }
 };
 
 const getItemSecure = async (key) => {
   try {
-    let val = await SecureStore.getItemAsync(key);
-    // Migration: If not in SecureStore but exists in AsyncStorage, move it.
-    if (!val) {
-      val = await AsyncStorage.getItem(key);
-      if (val) {
-        await setItemSecure(key, val);
-        await AsyncStorage.removeItem(key);
-      }
-    }
-    return val;
-  } catch (e) {
     return await AsyncStorage.getItem(key);
+  } catch (e) {
+    console.warn('Storage error (getItem):', e);
+    return null;
   }
 };
 
@@ -49,6 +39,11 @@ export const saveMilkPcsProfile = async (centerName, data) => {
       centerId: data.centerId,
       district: data.district,
       reportedBy: data.reportedBy,
+      registrationNumber: data.registrationNumber,
+      presidentName: data.presidentName,
+      presidentMobile: data.presidentMobile,
+      managerName: data.managerName,
+      managerMobile: data.managerMobile,
       mSc: data.mSc,
       fSc: data.fSc,
       mSt: data.mSt,
@@ -134,8 +129,12 @@ export const saveMpcsProfile = async (formData) => {
       '1.1', '1.4', '1.5', '1.6', '1.8',
       '2.1', '2.2', '2.3', '2.4',
       '3.1', '3.2', '3.3', '3.4', '3.5', '3.6', '3.7', '3.8',
+      '4.1', '4.2', '4.3', '4.4',
+      '5.1', '5.2', '5.3',
       '7.1', '7.2', '7.3', '7.4',
-      '8.0', '9.1', '9.2', '9.3', '9.4', '9.5', '9.6', '9.7'
+      '8.0', '8.1', '8.2', '8.3', '8.4', '8.5', '8.6',
+      '8.7', '8.8', '8.9', '8.10', '8.11',
+      '9.1', '9.2', '9.3', '9.4', '9.5', '9.6', '9.7'
     ];
     const profile = {};
     staticIds.forEach(id => {
@@ -178,8 +177,11 @@ export const saveMpcsSocietyProfile = async (societyName, data) => {
         '1.1', '1.4', '1.5', '1.6', '1.8',
         '2.1', '2.2', '2.3', '2.4',
         '3.1', '3.2', '3.3', '3.4', '3.5', '3.6', '3.7', '3.8',
+        '4.1', '4.2', '4.3', '4.4',
+        '5.1', '5.2', '5.3',
         '7.1', '7.2', '7.3', '7.4',
         '8.0', '8.1', '8.2', '8.3', '8.4', '8.5', '8.6',
+        '8.7', '8.8', '8.9', '8.10', '8.11',
         '9.1', '9.2', '9.3', '9.4', '9.5', '9.6', '9.7'
     ];
     

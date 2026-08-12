@@ -13,7 +13,6 @@ import {
   StatusBar,
   KeyboardAvoidingView,
   Dimensions,
-  Switch,
   ActivityIndicator,
   Modal
 } from 'react-native';
@@ -22,22 +21,50 @@ import * as Location from 'expo-location';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 import NetInfo from '@react-native-community/netinfo';
-import { Picker } from '@react-native-picker/picker';
-import { MaterialIcons, FontAwesome5 } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { MaterialIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { BlurView } from 'expo-blur';
-import MPCSForm from './src/components/MPCSForm';
-import ActivityEditor from './src/components/ActivityEditor';
 import Login from './src/components/Login';
-import { supabase, saveMilkPcsSubmission, uploadPhoto } from './src/supabase';
+import HomeScreen from './src/components/HomeScreen';
+import DigitalEvidenceScreen from './src/components/DigitalEvidenceScreen';
+import OperationsScreen from './src/components/OperationsScreen';
+import ActivitiesScreen from './src/components/ActivitiesScreen';
+import InstitutionalProfileScreen from './src/components/InstitutionalProfileScreen';
+import DemographicsScreen from './src/components/DemographicsScreen';
+import ComplianceScreen from './src/components/ComplianceScreen';
+import ReviewSubmitScreen from './src/components/ReviewSubmitScreen';
+import RecordsScreen from './src/components/RecordsScreen';
+import MoreScreen from './src/components/MoreScreen';
+import MyInstitutionsScreen from './src/components/MyInstitutionsScreen';
+
+// MPCS Module Screen Components
+import MpcsHomeScreen from './src/components/mpcs/MpcsHomeScreen';
+import MpcsDigitalEvidenceScreen from './src/components/mpcs/MpcsDigitalEvidenceScreen';
+import MpcsSalesDepositScreen from './src/components/mpcs/MpcsSalesDepositScreen';
+import MpcsBusinessPerformanceScreen from './src/components/mpcs/MpcsBusinessPerformanceScreen';
+import MpcsCscTransactionsScreen from './src/components/mpcs/MpcsCscTransactionsScreen';
+import MpcsActivitiesLogScreen from './src/components/mpcs/MpcsActivitiesLogScreen';
+import MpcsInstitutionalProfileScreen from './src/components/mpcs/MpcsInstitutionalProfileScreen';
+import MpcsRegisteredDemographicsScreen from './src/components/mpcs/MpcsRegisteredDemographicsScreen';
+import MpcsComplianceAuditScreen from './src/components/mpcs/MpcsComplianceAuditScreen';
+import MpcsFinancialPerformanceScreen from './src/components/mpcs/MpcsFinancialPerformanceScreen';
+import MpcsSupplementalInfoScreen from './src/components/mpcs/MpcsSupplementalInfoScreen';
+import MpcsDividendDetailsScreen from './src/components/mpcs/MpcsDividendDetailsScreen';
+import MpcsBankDetailsScreen from './src/components/mpcs/MpcsBankDetailsScreen';
+import MpcsShareCapitalScreen from './src/components/mpcs/MpcsShareCapitalScreen';
+import MpcsCscDetailsScreen from './src/components/mpcs/MpcsCscDetailsScreen';
+import MpcsReviewSubmitScreen from './src/components/mpcs/MpcsReviewSubmitScreen';
+
+import { supabase, saveMilkPcsSubmission, saveMpcsSubmission, uploadPhoto } from './src/supabase';
 import { saveMilkPcsProfile, loadMilkPcsProfileByName, loadMilkCenters, addMilkCenter } from './src/utils/storage';
 import { queueSubmission, processQueue, getQueueStatus } from './src/utils/syncManager';
+import { useFonts, Manrope_400Regular, Manrope_500Medium, Manrope_600SemiBold, Manrope_700Bold, Manrope_800ExtraBold } from '@expo-google-fonts/manrope';
 
 const { width } = Dimensions.get('window');
 
 const SyncBanner = ({ count, syncing }) => (
   <View style={styles.syncBanner}>
-    <LinearGradient colors={['#064E3B', '#047857']} style={styles.syncBannerInner}>
+    <LinearGradient colors={['#7C1C1C', '#991B1B']} style={styles.syncBannerInner}>
        <MaterialIcons name={syncing ? "sync" : "cloud-off"} size={16} color={COLORS.gold} />
        <Text style={styles.syncBannerText}>
          {syncing ? `SYNCING ${count} RECORDS...` : `${count} PENDING SUBMISSIONS (OFFLINE)`}
@@ -47,155 +74,69 @@ const SyncBanner = ({ count, syncing }) => (
 );
 
 const BroadcastBanner = ({ alert, onDismiss }) => (
-  <TouchableOpacity 
-    style={styles.broadcastBanner} 
-    onPress={() => onDismiss(alert.id)}
-    activeOpacity={0.9}
-  >
-    <LinearGradient colors={['#92400E', '#B45309']} style={styles.broadcastInner}>
-       <MaterialIcons name="campaign" size={20} color={COLORS.gold} style={{marginTop: 2}} />
-       <View style={{flex:1}}>
-         <Text style={styles.broadcastTitle}>DIRECTIVE: HQ COMMAND</Text>
-         <Text style={styles.broadcastText} numberOfLines={2}>{alert.message}</Text>
-       </View>
-       <View style={styles.broadcastClose}>
-         <MaterialIcons name="close" size={14} color="rgba(255,255,255,0.7)" />
-       </View>
-    </LinearGradient>
-  </TouchableOpacity>
+  <View style={styles.broadcastBannerWrapper}>
+    <View style={styles.broadcastNoticeCard}>
+      <View style={styles.broadcastNoticeHeaderRow}>
+        <View style={styles.broadcastIconBox}>
+          <MaterialIcons name="campaign" size={26} color="#F59E0B" />
+        </View>
+        <View style={{ flex: 1, marginLeft: 12 }}>
+          <Text style={styles.broadcastNoticeTitle}>Important Notice</Text>
+          <Text style={styles.broadcastNoticeBody}>{alert?.message || alert?.text || 'AGM for all MPCS societies must be completed by 30th June 2026.'}</Text>
+        </View>
+        <TouchableOpacity
+          style={styles.broadcastCloseBtn}
+          onPress={() => onDismiss(alert?.id)}
+          activeOpacity={0.7}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        >
+          <MaterialIcons name="close" size={16} color="#78350F" />
+        </TouchableOpacity>
+      </View>
+    </View>
+  </View>
 );
 
 // Premium Gold and Emerald Palette
 const COLORS = {
-  emerald: '#064E3B',
-  emeraldLight: '#047857',
-  gold: '#D4AF37',
-  goldLight: '#FBBF24',
+  emerald: '#7C1C1C',
+  emeraldLight: '#991B1B',
+  gold: '#B45309',
+  goldLight: '#D97706',
   textHeader: '#F3F4F6',
-  textPrimary: '#1F2937',
-  textSecondary: '#6B7280',
+  textPrimary: '#450A0A',
+  textSecondary: '#7F1D1D',
   surface: '#FFFFFF',
   surfaceBlur: 'rgba(255, 255, 255, 0.55)',
-  background: '#F8FAFC',
+  background: '#F8F5F2',
   border: '#E2E8F0',
   error: '#EF4444',
   success: '#10B981'
 };
 
-const SIKKIM_EMBLEM_URL = 'https://upload.wikimedia.org/wikipedia/commons/1/1a/Seal_of_Sikkim_color.png';
-const SIKKIM_EMBLEM_LOCAL = require('./assets/sikkim-emblem.jpg');
-
-const FloatingInput = ({ icon, label, value, onChangeText, keyboardType = 'default', prefix, readOnly, placeholder }) => (
-  <View style={styles.floatingInputWrapper}>
-    <Text style={styles.floatingInputLabel}>{label}</Text>
-    {readOnly ? (
-      <View style={styles.premiumReadOnlyCard}>
-        <LinearGradient
-          colors={['#F0FDF4', '#DCFCE7']}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 0 }}
-          style={styles.premiumReadOnlyInner}
-        >
-          <View style={styles.premiumReadOnlyIconBox}>
-            <MaterialIcons name={icon === 'bank' ? 'account-balance' : (icon === 'cash' ? 'payments' : (icon === 'cash-check' ? 'price-check' : 'info'))} size={22} color={COLORS.emerald} />
-          </View>
-          <View style={styles.premiumReadOnlyContent}>
-            <Text style={styles.premiumReadOnlyValue}>
-              {prefix}{parseFloat(value || 0).toLocaleString('en-IN')}
-            </Text>
-          </View>
-        </LinearGradient>
-      </View>
-    ) : (
-      <View style={styles.floatingInputInner}>
-        {icon && (
-          <View style={styles.floatingIcon}>
-            <MaterialIcons name={
-              icon === 'store-marker' ? 'store' : 
-              icon === 'domain' ? 'business' : 
-              icon === 'book-open-variant' ? 'menu-book' : 
-              icon === 'water-pump' ? 'opacity' : 
-              icon === 'cash-minus' ? 'money-off' : 
-              icon === 'safe' ? 'account-balance-wallet' : 
-              icon === 'account-group' ? 'groups' : 
-              icon === 'calendar-star' ? 'event-available' : 
-              icon === 'text-box-check-outline' ? 'assignment-turned-in' : 
-              icon === 'bank' ? 'account-balance' : 
-              icon === 'cash' ? 'payments' : 
-              icon === 'cash-check' ? 'price-check' : 
-              icon === 'calculator-variant' ? 'calculate' : 
-              icon === 'account-tie-hat' ? 'admin-panel-settings' :
-              icon
-            } size={20} color={COLORS.emerald} />
-          </View>
-        )}
-        {prefix && <Text style={styles.inputPrefixText}>{prefix}</Text>}
-        <TextInput
-          style={styles.floatingInputField}
-          placeholder={placeholder}
-          placeholderTextColor="#94A3B8"
-          value={value}
-          onChangeText={onChangeText}
-          keyboardType={keyboardType}
-          selectionColor={COLORS.emerald}
-          editable={!readOnly}
-        />
-      </View>
-    )}
-  </View>
-);
-
-const MiniInput = ({ label, value, onChangeText, placeholder }) => (
-  <View style={styles.miniInputWrapper}>
-    <Text style={styles.floatingInputLabel}>{label}</Text>
-    <View style={styles.miniInputInner}>
-      <TextInput
-        style={styles.floatingInputField}
-        placeholder={placeholder}
-        placeholderTextColor="#94A3B8"
-        value={value}
-        onChangeText={onChangeText}
-        keyboardType="numeric"
-        selectionColor={COLORS.emerald}
-      />
-    </View>
-  </View>
-);
-
-// Editor component is now imported from src/components/ActivityEditor.js
-// ────────────────────────────────────────────────────────────────────────────
-// ────────────────────────────────────────────────────────────────────────────
-
-// ─── Evidence Vault Component ────────────────────────────────────────────────
-const EvidenceVault = ({ photos, onAdd }) => (
-  <View style={styles.glassCard}>
-     <View style={[styles.cardRibbon, {backgroundColor: COLORS.emerald}]} />
-     <View style={styles.evidenceVaultHeader}>
-        <View style={{flexDirection:'row', alignItems:'center', gap:10}}>
-           <MaterialIcons name="security" size={24} color={COLORS.emerald} />
-           <Text style={styles.cardTitle}>Verified Evidence Vault</Text>
-        </View>
-        <Text style={styles.evidenceVaultCount}>{photos.length}/10</Text>
-     </View>
-     <View style={styles.evidenceGrid}>
-        {photos.map((p, i) => (
-           <View key={i} style={styles.evidenceMiniThumb}>
-              <Image source={{uri: p}} style={styles.evidenceThumbImg} />
-           </View>
-        ))}
-        {photos.length < 10 && (
-          <TouchableOpacity style={styles.evidenceMiniThumb} onPress={onAdd}>
-             <MaterialIcons name="add-photo-alternate" size={28} color="#94A3B8" />
-             <Text style={{fontSize:8, color:'#94A3B8', fontWeight:'800', marginTop:4}}>UPLOAD</Text>
-          </TouchableOpacity>
-        )}
-     </View>
-  </View>
-);
-
 export default function App() {
-  // Navigation State
-  const [activeView, setActiveView] = useState('MAIN'); // 'MAIN' or 'MPCS'
+  const [fontsLoaded] = useFonts({
+    Manrope: Manrope_400Regular,
+    Manrope_400Regular,
+    Manrope_500Medium,
+    Manrope_600SemiBold,
+    Manrope_700Bold,
+    Manrope_800ExtraBold,
+  });
+
+  // Inspector & User Profile State — populated after login
+  const [userProfile, setUserProfile] = useState(null);
+
+  // Multiple Managed Institutions List (MPCS & Milk PCS)
+  const [institutionsList, setInstitutionsList] = useState([]);
+
+  const [selectedSociety, setSelectedSociety] = useState(null);
+
+  // Navigation State — default to MY_INSTITUTIONS so user selects a society on first login
+  const [activeView, setActiveView] = useState('MPCS');
+  const [currentMobileScreen, setCurrentMobileScreen] = useState('MY_INSTITUTIONS');
+  const [activeBottomTab, setActiveBottomTab] = useState('home');
+  const [activityItems, setActivityItems] = useState([]);
 
   // Evidence States
   const [imageUri, setImageUri] = useState(null);
@@ -203,19 +144,50 @@ export default function App() {
   const [timestamp, setTimestamp] = useState('');
   const [location, setLocation] = useState(null);
 
-  // General & Center Profile
+  // General & Center Profile — all empty, populated via society selection
   const [centerName, setCenterName] = useState('');
-  const [district, setDistrict] = useState('');
   const [reportedBy, setReportedBy] = useState('');
+  const [registrationNumber, setRegistrationNumber] = useState('');
+  const [presidentName, setPresidentName] = useState('');
+  const [presidentMobile, setPresidentMobile] = useState('');
+  const [managerName, setManagerName] = useState('');
+  const [managerMobile, setManagerMobile] = useState('');
   const [milkCenters, setMilkCenters] = useState([]);
+  const [district, setDistrict] = useState('');
+  const [panCard, setPanCard] = useState('');
+  const [regDate, setRegDate] = useState('');
 
-  // Operational Ledgers
+  // Persistent MPCS Section Data States
+  const [demographicsData, setDemographicsData] = useState([]);
+  const [complianceData, setComplianceData] = useState({});
+  const [financialsData, setFinancialsData] = useState({});
+  const [supplementalData, setSupplementalData] = useState({});
+  const [dividendData, setDividendData] = useState({});
+  const [bankData, setBankData] = useState({});
+  const [shareCapitalData, setShareCapitalData] = useState({});
+  const [cscDetailsData, setCscDetailsData] = useState({});
+
+  // Auth & Session State
+  const [session, setSession] = useState(null);
+  const [authLoading, setAuthLoading] = useState(true);
+
+  // Sync & Network State
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [pendingSyncCount, setPendingSyncCount] = useState(0);
+
+  // UI State
+  const [isSealing, setIsSealing] = useState(false);
+  const [toastMsg, setToastMsg] = useState(null);
+  const [activeAlert, setActiveAlert] = useState(null);
+  const [alertHistory, setAlertHistory] = useState([]);
+
+  // Operational Ledger States
   const [reportingMonth, setReportingMonth] = useState('');
   const [litres, setLitres] = useState('');
   const [withdrawal, setWithdrawal] = useState('');
   const [balance, setBalance] = useState('');
 
-  // Member Category
+  // Member Demographics Legacy States
   const [mSc, setMSc] = useState('');
   const [fSc, setFSc] = useState('');
   const [mSt, setMSt] = useState('');
@@ -224,121 +196,397 @@ export default function App() {
   const [fObc, setFObc] = useState('');
   const [mGen, setMGen] = useState('');
   const [fGen, setFGen] = useState('');
-  const [totalMale, setTotalMale] = useState('');
-  const [totalFemale, setTotalFemale] = useState('');
-  const [totalMembers, setTotalMembers] = useState('');
+  const [totalMale, setTotalMale] = useState('0');
+  const [totalFemale, setTotalFemale] = useState('0');
+  const [totalMembers, setTotalMembers] = useState('0');
 
-  // Supplemental
+  // Loan States
   const [hasLoan, setHasLoan] = useState(false);
+  const [loanType, setLoanType] = useState('');
+  const [loanSanctionDate, setLoanSanctionDate] = useState('');
+  const [loanBeneficiaries, setLoanBeneficiaries] = useState('');
+  const [loanExtended, setLoanExtended] = useState('');
+  const [loanRecovered, setLoanRecovered] = useState('');
+  const [loanOutstanding, setLoanOutstanding] = useState('');
   const [loanName, setLoanName] = useState('');
   const [loanAmount, setLoanAmount] = useState('');
   const [paidAmount, setPaidAmount] = useState('');
-  const [remainingDue, setRemainingDue] = useState('');
-  const [activities, setActivities] = useState('');
+  const [remainingDue, setRemainingDue] = useState('0');
 
-  const [isSealing, setIsSealing] = useState(false);
-  const [session, setSession] = useState(null);
-  const [authLoading, setAuthLoading] = useState(true);
+  // Toast helper
+  const showToast = (msg, isError = false) => {
+    setToastMsg({ text: msg, isError });
+    setTimeout(() => setToastMsg(null), 3500);
+  };
 
-  // Sync state
-  const [pendingSyncCount, setPendingSyncCount] = useState(0);
-  const [isSyncing, setIsSyncing] = useState(false);
-  const [evidencePhotos, setEvidencePhotos] = useState([]);
-  
-  // Broadcast Logic States
-  const [activeAlert, setActiveAlert] = useState(null);
-  const [alertHistory, setAlertHistory] = useState([]);
+  // Compliance Audit & AGM States
+  const [auditDate, setAuditDate] = useState('');
+  const [auditYear, setAuditYear] = useState('');
+  const [agmDate, setAgmDate] = useState('');
+  const [agmYear, setAgmYear] = useState('');
+
+  // Modal State
   const [showHistory, setShowHistory] = useState(false);
-  const months = [
-    'January', 'February', 'March', 'April', 'May', 'June',
-    'July', 'August', 'September', 'October', 'November', 'December'
-  ];
 
-  const clearForm = () => {
-    // 1. Maintain General & Profile (Center Name / District)
-    // These are kept persistent per user request to facilitate repeated entries
-    // reportedBy is also kept persistent
-    
-    // 2. Clear Operational Ledgers
+  const resetAllFormFields = () => {
+    setCenterName('');
+    setRegistrationNumber('');
+    setPanCard('');
+    setRegDate('');
+    setPresidentName('');
+    setPresidentMobile('');
+    setManagerName('');
+    setManagerMobile('');
+
+    // Clear all 9 section master data stores
+    setDemographicsData([]);
+    setComplianceData({});
+    setFinancialsData({});
+    setSupplementalData({});
+    setDividendData({});
+    setBankData({});
+    setShareCapitalData({});
+    setCscDetailsData({});
+
+    // Clear operational ledgers
     setReportingMonth('');
     setLitres('');
     setWithdrawal('');
     setBalance('');
-    setActivities('');
-    
-    // 3. Clear Demographic Data
+
+    // Clear member demographics legacy states
     setMSc(''); setFSc(''); setMSt(''); setFSt('');
     setMObc(''); setFObc(''); setMGen(''); setFGen('');
     setTotalMale('0'); setTotalFemale('0'); setTotalMembers('0');
 
-    // 4. Clear Geolocation & Photo
-    setImageUri(null);
-    setImageBase64(null);
-    setTimestamp('');
-    setLocation(null);
-
-    // 5. Clear Supplemental / Loan Data
+    // Clear active loan
     setHasLoan(false);
+    setLoanType('');
+    setLoanSanctionDate('');
+    setLoanBeneficiaries('');
+    setLoanExtended('');
+    setLoanRecovered('');
+    setLoanOutstanding('');
     setLoanName('');
     setLoanAmount('');
     setPaidAmount('');
     setRemainingDue('0');
+
+    // Clear audit & AGM compliance fields
+    setAuditDate('');
+    setAuditYear('');
+    setAgmDate('');
+    setAgmYear('');
+
+    // Clear evidence & activities
+    setImageUri(null);
+    setImageBase64(null);
+    setTimestamp('');
+    setLocation(null);
+    setActivityItems([]);
   };
 
-  // Automatic Loan Calculation
-  useEffect(() => {
-    const lAmt = parseFloat(loanAmount) || 0;
-    const pAmt = parseFloat(paidAmount) || 0;
-    const due = Math.max(0, lAmt - pAmt);
-    if (String(due) !== remainingDue) {
-      setRemainingDue(due.toString());
+  const getUserEmail = (overrideEmail = null) => {
+    return overrideEmail || session?.user?.email || userProfile?.email || null;
+  };
+
+  const getSocietyStorageKey = (socName, userEmail = null) => {
+    const activeEmail = getUserEmail(userEmail) || 'guest';
+    const emailSafe = activeEmail.toLowerCase().replace(/[^a-z0-9]/g, '_');
+    const nameStr = typeof socName === 'string' ? socName : (socName?.name || '');
+    if (!nameStr || !nameStr.trim()) return `@mpcs_master_state_${emailSafe}_default`;
+    return `@mpcs_master_state_${emailSafe}_${nameStr.trim().toLowerCase().replace(/[^a-z0-9]/g, '_')}`;
+  };
+
+  const getLastSelectedSocietyKey = (userEmail = null) => {
+    const activeEmail = getUserEmail(userEmail) || 'guest';
+    const emailSafe = activeEmail.toLowerCase().replace(/[^a-z0-9]/g, '_');
+    return `@mpcs_last_selected_society_${emailSafe}`;
+  };
+
+  // ─── Per-user institutions list storage ───────────────────────────────────
+  const getUserInstitutionsKey = (email = null) => {
+    const activeEmail = getUserEmail(email);
+    if (!activeEmail) return null;
+    const safe = activeEmail.toLowerCase().replace(/[^a-z0-9]/g, '_');
+    return `@mpcs_institutions_${safe}`;
+  };
+
+  const saveInstitutionsForUser = async (list, email = null) => {
+    try {
+      const activeEmail = getUserEmail(email);
+      const key = getUserInstitutionsKey(activeEmail);
+      if (!key) return;
+      await AsyncStorage.setItem(key, JSON.stringify(list));
+    } catch (e) { console.warn('saveInstitutionsForUser error:', e); }
+  };
+
+  const loadInstitutionsForUser = async (email = null) => {
+    try {
+      const activeEmail = getUserEmail(email);
+      const key = getUserInstitutionsKey(activeEmail);
+      if (!key) { setInstitutionsList([]); return []; }
+      const raw = await AsyncStorage.getItem(key);
+      const list = raw ? JSON.parse(raw) : [];
+      setInstitutionsList(list);
+      return list;
+    } catch (e) {
+      console.warn('loadInstitutionsForUser error:', e);
+      setInstitutionsList([]);
+      return [];
     }
-  }, [loanAmount, paidAmount]);
+  };
+
+  // Handle Dynamic Society Selection from Dropdown or Setup
+  const handleSelectSociety = async (soc, isNewRegistration = false) => {
+    setSelectedSociety(soc);
+    setDistrict(soc?.district || '');
+    setActiveView(soc?.type === 'MPCS' ? 'MPCS' : 'MAIN');
+    setCurrentMobileScreen('HOME');
+
+    if (isNewRegistration) {
+      // NEW REGISTRATION: Wipe all fields & 9 sections so new society starts 100% BLANK
+      resetAllFormFields();
+      setCenterName(soc?.name || '');
+      setRegistrationNumber(soc?.code || soc?.regNo || '');
+      setDistrict(soc?.district || '');
+      await saveMasterStateToStorage({
+        centerName: soc?.name || '',
+        registrationNumber: soc?.code || soc?.regNo || '',
+        demographicsData: [],
+        complianceData: {},
+        financialsData: {},
+        supplementalData: {},
+        dividendData: {},
+        bankData: {},
+        shareCapitalData: {},
+        cscDetailsData: {}
+      }, soc?.name || '');
+    } else {
+      // EXISTING SOCIETY: Load saved data for this specific society only
+      await loadMasterStateFromStorage(soc?.name);
+      await fetchCloudSocietyData(soc?.name, getUserEmail());
+    }
+  };
+
+  // Master State Persistence Handlers (Keyed per Society & User Email)
+  const saveMasterStateToStorage = async (overrides = {}, targetSocName = null, explicitEmail = null) => {
+    try {
+      const userEmail = getUserEmail(explicitEmail);
+      const rawSocName = targetSocName || selectedSociety?.name || centerName;
+      const activeSocName = typeof rawSocName === 'string' ? rawSocName : (rawSocName?.name || '');
+      if (!activeSocName || !activeSocName.trim()) return;
+
+      const key = getSocietyStorageKey(activeSocName, userEmail);
+      const stateObj = {
+        societyName: activeSocName,
+        centerName: overrides.centerName !== undefined ? overrides.centerName : centerName,
+        registrationNumber: overrides.registrationNumber !== undefined ? overrides.registrationNumber : registrationNumber,
+        panCard: overrides.panCard !== undefined ? overrides.panCard : panCard,
+        regDate: overrides.regDate !== undefined ? overrides.regDate : regDate,
+        presidentName: overrides.presidentName !== undefined ? overrides.presidentName : presidentName,
+        presidentMobile: overrides.presidentMobile !== undefined ? overrides.presidentMobile : presidentMobile,
+        managerName: overrides.managerName !== undefined ? overrides.managerName : managerName,
+        managerMobile: overrides.managerMobile !== undefined ? overrides.managerMobile : managerMobile,
+        demographicsData: overrides.demographicsData !== undefined ? overrides.demographicsData : demographicsData,
+        complianceData: overrides.complianceData !== undefined ? overrides.complianceData : complianceData,
+        financialsData: overrides.financialsData !== undefined ? overrides.financialsData : financialsData,
+        supplementalData: overrides.supplementalData !== undefined ? overrides.supplementalData : supplementalData,
+        dividendData: overrides.dividendData !== undefined ? overrides.dividendData : dividendData,
+        bankData: overrides.bankData !== undefined ? overrides.bankData : bankData,
+        shareCapitalData: overrides.shareCapitalData !== undefined ? overrides.shareCapitalData : shareCapitalData,
+        cscDetailsData: overrides.cscDetailsData !== undefined ? overrides.cscDetailsData : cscDetailsData,
+        reportingMonth: overrides.reportingMonth !== undefined ? overrides.reportingMonth : reportingMonth,
+        selectedSociety: overrides.selectedSociety !== undefined ? overrides.selectedSociety : selectedSociety
+      };
+      await AsyncStorage.setItem(key, JSON.stringify(stateObj));
+      await AsyncStorage.setItem(getLastSelectedSocietyKey(userEmail), activeSocName);
+    } catch (e) {
+      console.warn('Failed to save master state locally:', e);
+    }
+  };
+
+  const loadMasterStateFromStorage = async (targetSocName = null, explicitEmail = null) => {
+    try {
+      const userEmail = getUserEmail(explicitEmail);
+      const lastSocKey = getLastSelectedSocietyKey(userEmail);
+      const rawSocName = targetSocName || (await AsyncStorage.getItem(lastSocKey)) || selectedSociety?.name || centerName;
+      const activeSocName = typeof rawSocName === 'string' ? rawSocName : (rawSocName?.name || '');
+      if (!activeSocName || !activeSocName.trim()) {
+        resetAllFormFields();
+        return false;
+      }
+
+      const key = getSocietyStorageKey(activeSocName, userEmail);
+      const raw = await AsyncStorage.getItem(key);
+      if (raw) {
+        const saved = JSON.parse(raw);
+        setCenterName(saved.centerName || activeSocName);
+        setRegistrationNumber(saved.registrationNumber || '');
+        setPanCard(saved.panCard || '');
+        setRegDate(saved.regDate || '');
+        setPresidentName(saved.presidentName || '');
+        setPresidentMobile(saved.presidentMobile || '');
+        setManagerName(saved.managerName || '');
+        setManagerMobile(saved.managerMobile || '');
+        setDemographicsData(saved.demographicsData || []);
+        setComplianceData(saved.complianceData || {});
+        setFinancialsData(saved.financialsData || {});
+        setSupplementalData(saved.supplementalData || {});
+        setDividendData(saved.dividendData || {});
+        setBankData(saved.bankData || {});
+        setShareCapitalData(saved.shareCapitalData || {});
+        setCscDetailsData(saved.cscDetailsData || {});
+        if (saved.selectedSociety) setSelectedSociety(saved.selectedSociety);
+        return true;
+      } else {
+        // Society has no saved state yet -> Reset to clean blank fields
+        resetAllFormFields();
+        setCenterName(activeSocName);
+        return false;
+      }
+    } catch (e) {
+      console.warn('Failed to load master state locally:', e);
+      return false;
+    }
+  };
+
+  const fetchCloudSocietyData = async (socName, userEmail) => {
+    const nameStr = typeof socName === 'string' ? socName : (socName?.name || '');
+    if (!nameStr || !nameStr.trim()) return;
+    try {
+      const { data: rows } = await supabase
+        .from('mpcs_submissions')
+        .select('*')
+        .ilike('society_name', `%${nameStr.trim()}%`)
+        .order('created_at', { ascending: false })
+        .limit(1);
+
+      if (rows && rows.length > 0) {
+        const row = rows[0];
+        let fd = row.form_data || {};
+        if (typeof fd === 'string') {
+          try { fd = JSON.parse(fd); } catch(e) {}
+        }
+        if (row.society_name) setCenterName(row.society_name);
+        if (row.registration_number) setRegistrationNumber(row.registration_number);
+        if (fd['1.8'] || fd.panCard) setPanCard(fd['1.8'] || fd.panCard);
+        if (fd['1.6'] || fd.regDate) setRegDate(fd['1.6'] || fd.regDate);
+        if (row.president_name || fd['2.1']) setPresidentName(row.president_name || fd['2.1']);
+        if (row.president_mobile) setPresidentMobile(row.president_mobile);
+        if (row.manager_mobile) setManagerMobile(row.manager_mobile);
+
+        if (fd.demographicsData) setDemographicsData(fd.demographicsData);
+        if (fd.complianceData) setComplianceData(fd.complianceData);
+        if (fd.financialsData) setFinancialsData(fd.financialsData);
+        if (fd.supplementalData) setSupplementalData(fd.supplementalData);
+        if (fd.dividendData) setDividendData(fd.dividendData);
+        if (fd.bankData) setBankData(fd.bankData);
+        if (fd.shareCapitalData) setShareCapitalData(fd.shareCapitalData);
+        if (fd.cscDetailsData) setCscDetailsData(fd.cscDetailsData);
+
+        // Sync to AsyncStorage under THIS society's key
+        saveMasterStateToStorage({
+          centerName: row.society_name,
+          registrationNumber: row.registration_number,
+          panCard: fd['1.8'] || fd.panCard,
+          regDate: fd['1.6'] || fd.regDate,
+          presidentName: row.president_name || fd['2.1'],
+          presidentMobile: row.president_mobile,
+          managerMobile: row.manager_mobile,
+          demographicsData: fd.demographicsData,
+          complianceData: fd.complianceData,
+          financialsData: fd.financialsData,
+          supplementalData: fd.supplementalData,
+          dividendData: fd.dividendData,
+          bankData: fd.bankData,
+          shareCapitalData: fd.shareCapitalData,
+          cscDetailsData: fd.cscDetailsData
+        }, row.society_name);
+      }
+    } catch (e) {
+      console.warn('Cloud fetch error:', e);
+    }
+  };
+
+  // Unified Auth Success & Logout Handlers
+  const handleUserAuthSuccess = async (usr) => {
+    if (!usr) return;
+    const activeEmail = usr.email || getUserEmail();
+    setUserProfile(usr);
+    setSession({ user: usr });
+    if (activeEmail) {
+      await loadInstitutionsForUser(activeEmail);
+      await loadMasterStateFromStorage(null, activeEmail);
+      await fetchCloudSocietyData(selectedSociety?.name || centerName, activeEmail);
+    }
+    setCurrentMobileScreen('MY_INSTITUTIONS');
+  };
+
+  const handleUserLogout = async () => {
+    try {
+      await supabase.auth.signOut();
+    } catch(e) {}
+    setSession(null);
+    setUserProfile(null);
+    setInstitutionsList([]);
+    setSelectedSociety(null);
+    resetAllFormFields();
+    setCurrentMobileScreen('MY_INSTITUTIONS');
+  };
 
   useEffect(() => {
     // 1. Handle Authentication
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setAuthLoading(false);
+    supabase.auth.getSession()
+      .then(({ data: { session: sbSession } }) => {
+        if (sbSession?.user) {
+          handleUserAuthSuccess(sbSession.user);
+        }
+        setAuthLoading(false);
+      })
+      .catch(() => {
+        setAuthLoading(false);
+      });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, sbSession) => {
+      if (sbSession?.user) {
+        handleUserAuthSuccess(sbSession.user);
+      } else if (event === 'SIGNED_OUT') {
+        setSession(null);
+        setUserProfile(null);
+        setInstitutionsList([]);
+        setSelectedSociety(null);
+        resetAllFormFields();
+        setCurrentMobileScreen('MY_INSTITUTIONS');
+      }
     });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-    });
+    // 2. Handle Permissions (Native Mobile only)
+    if (Platform.OS !== 'web') {
+      (async () => {
+        try {
+          const { status: cameraStatus } = await ImagePicker.requestCameraPermissionsAsync();
+          const { status: locationStatus } = await Location.requestForegroundPermissionsAsync();
+          if (cameraStatus !== 'granted' || locationStatus !== 'granted') {
+            Alert.alert('Permissions Required', 'Camera and Location are strictly enforced for official verification.');
+          }
+        } catch (e) {
+          console.warn('Permissions error:', e);
+        }
+      })();
+    }
 
-    // 2. Handle Permissions
+    // 3. Load Centers
     (async () => {
-      const { status: cameraStatus } = await ImagePicker.requestCameraPermissionsAsync();
-      const { status: locationStatus } = await Location.requestForegroundPermissionsAsync();
-      if (cameraStatus !== 'granted' || locationStatus !== 'granted') {
-        Alert.alert('Permissions Required', 'Camera and Location are strictly enforced for official verification.');
-      }
-    })();
-
-    // 3. Load Profile & Centers
-    (async () => {
-      const savedProfile = await loadMilkPcsProfileByName('last_used');
-      if (savedProfile) {
-        if (savedProfile.centerName) setCenterName(savedProfile.centerName);
-        if (savedProfile.district) setDistrict(savedProfile.district);
-        if (savedProfile.reportedBy) setReportedBy(savedProfile.reportedBy);
-        if (savedProfile.mSc) setMSc(savedProfile.mSc);
-        if (savedProfile.fSc) setFSc(savedProfile.fSc);
-        if (savedProfile.mSt) setMSt(savedProfile.mSt);
-        if (savedProfile.fSt) setFSt(savedProfile.fSt);
-        if (savedProfile.mObc) setMObc(savedProfile.mObc);
-        if (savedProfile.fObc) setFObc(savedProfile.fObc);
-        if (savedProfile.mGen) setMGen(savedProfile.mGen);
-        if (savedProfile.fGen) setFGen(savedProfile.fGen);
-        if (savedProfile.hasLoan) setHasLoan(savedProfile.hasLoan);
-        if (savedProfile.loanName) setLoanName(savedProfile.loanName);
-        if (savedProfile.loanAmount) setLoanAmount(savedProfile.loanAmount);
-      }
       const centers = await loadMilkCenters();
       setMilkCenters(centers);
     })();
 
-    return () => subscription.unsubscribe();
+    return () => {
+      if (subscription && typeof subscription.unsubscribe === 'function') {
+        subscription.unsubscribe();
+      }
+    };
   }, []);
 
   // 4. Handle Offline Sync Polling & Network Changes + Broadcast Sync
@@ -356,7 +604,7 @@ export default function App() {
             if (data && data.length > 0) {
                 setAlertHistory(data);
                 // Check if the latest alert is unread
-                const lastId = await SecureStore.getItemAsync('@last_read_alert');
+                const lastId = await AsyncStorage.getItem('@last_read_alert');
                 if (data[0].id !== lastId) {
                     setActiveAlert(data[0]);
                 }
@@ -367,7 +615,7 @@ export default function App() {
     fetchAlerts();
 
     const unsubscribe = NetInfo.addEventListener(state => {
-      if (state.isConnected) {
+      if (state && state.isConnected) {
         // Sync Data
         if (!isSyncing) {
             setIsSyncing(true);
@@ -403,7 +651,7 @@ export default function App() {
   }, [isSyncing]);
 
   const dismissAlert = async (id) => {
-      await SecureStore.setItemAsync('@last_read_alert', id);
+      await AsyncStorage.setItem('@last_read_alert', id);
       setActiveAlert(null);
   };
 
@@ -450,24 +698,20 @@ export default function App() {
   const generatePDF = async () => {
     if (isSealing) return;
 
-    // --- VALIDATIONS ---
-    const errors = [];
-    if (!district) errors.push("District selection is required.");
-    if (!centerName || !centerName.trim()) errors.push("Center Name or ID is required.");
-    if (!reportingMonth) errors.push("Reporting Month is required.");
-    if (!litres || isNaN(parseFloat(litres))) errors.push("Valid Litres amount is required.");
-    if (!balance || isNaN(parseFloat(balance))) errors.push("Valid Bank Balance is required.");
-    if (!reportedBy || !reportedBy.trim()) errors.push("Authorizing Officer name is mandatory.");
-    if (!imageUri || !imageBase64) errors.push("A geolocation evidence photo must be attached.");
-
-    if (errors.length > 0) {
-      showValidationAlert(errors);
-      return;
-    }
-    // -------------------
+    // --- DYNAMIC USER & SOCIETY DEFAULTS ---
+    const activeCenterName = selectedSociety?.name || centerName?.trim() || 'Cooperative Collection Center';
+    const activeReportingMonth = reportingMonth?.trim() || new Date().toLocaleString('en-IN', { month: 'long', year: 'numeric' });
+    const activeLitres = litres && !isNaN(parseFloat(litres)) ? litres : '0';
+    const activeBalance = balance && !isNaN(parseFloat(balance)) ? balance : '0';
+    const activeReportedBy = userProfile?.fullName || reportedBy?.trim() || 'Cooperative Inspector';
+    const activeDistrict = selectedSociety?.district || userProfile?.district || district?.trim() || 'Sikkim';
+    // Derive activities text from activityItems list
+    const activities = activityItems.length > 0
+      ? activityItems.map((a, i) => `${i + 1}. ${a.text || a.description || a.title || JSON.stringify(a)}`).join('\n')
+      : '';
 
     setIsSealing(true);
-    const locText = location ? `${location.latitude.toFixed(6)}° N, ${location.longitude.toFixed(6)}° E` : 'Pending GPS Sync';
+    const locText = location ? `${location.latitude.toFixed(6)}° N, ${location.longitude.toFixed(6)}° E` : 'Gyalshing District GPS';
     
     // Robust internal calculation for totals
     const pdfMSc = parseInt(mSc) || 0;
@@ -501,7 +745,7 @@ export default function App() {
               padding: 0; 
               margin: 0;
               background-color: #FFFFFF;
-              color: #1F2937;
+              color: #450A0A;
               line-height: 1.4;
               font-size: 11px;
             }
@@ -514,8 +758,8 @@ export default function App() {
             .page-border {
               position: absolute;
               top: -10mm; left: -10mm; right: -10mm; bottom: -10mm;
-              border: 1px solid #D4AF37;
-              outline: 0.5px solid #064E3B;
+              border: 1px solid #B45309;
+              outline: 0.5px solid #7C1C1C;
               outline-offset: -6px;
               z-index: 1;
               pointer-events: none;
@@ -530,7 +774,7 @@ export default function App() {
               text-align: center;
               margin-bottom: 30px;
               padding-bottom: 20px;
-              border-bottom: 2px solid #D4AF37;
+              border-bottom: 2px solid #B45309;
             }
             .emblem {
               width: 75px;
@@ -541,7 +785,7 @@ export default function App() {
               font-family: 'Cinzel', serif;
               font-size: 24px;
               font-weight: 900;
-              color: #064E3B;
+              color: #7C1C1C;
               letter-spacing: 1.5px;
               margin: 0;
               text-transform: uppercase;
@@ -579,15 +823,15 @@ export default function App() {
               overflow: hidden;
             }
             .card-header {
-              background: #F8FAFC;
+              background: #F8F5F2;
               padding: 10px 15px;
-              border-bottom: 1px solid #064E3B;
+              border-bottom: 1px solid #7C1C1C;
             }
             .card-title {
               font-family: 'Cinzel', serif;
               font-size: 11px;
               font-weight: 900;
-              color: #064E3B;
+              color: #7C1C1C;
               letter-spacing: 0.8px;
             }
             .card-body { padding: 15px; }
@@ -601,13 +845,13 @@ export default function App() {
             }
             .telemetry-data {
               margin-top: -25px;
-              background: rgba(6, 78, 59, 0.95);
+              background: rgba(124, 28, 28, 0.95);
               padding: 10px 15px;
               border-radius: 8px;
-              color: #D4AF37;
+              color: #B45309;
               position: relative;
               font-size: 9px;
-              border: 1px solid #D4AF37;
+              border: 1px solid #B45309;
             }
             .tel-row { display: flex; justify-content: space-between; margin: 2px 0; }
             .tel-val { font-family: 'Courier New', monospace; font-weight: bold; }
@@ -615,15 +859,15 @@ export default function App() {
             .data-table { width: 100%; border-collapse: collapse; }
             .data-row { border-bottom: 1px solid #F1F5F9; }
             .data-row:last-child { border-bottom: none; }
-            .data-label { padding: 8px 0; font-size: 9px; font-weight: 700; color: #6B7280; text-transform: uppercase; }
+            .data-label { padding: 8px 0; font-size: 9px; font-weight: 700; color: #7F1D1D; text-transform: uppercase; }
             .data-value { padding: 8px 0; font-size: 11px; font-weight: 800; color: #111827; text-align: right; }
-            .financial-val { color: #064E3B; font-size: 12px; }
+            .financial-val { color: #7C1C1C; font-size: 12px; }
 
             .census-table { width: 100%; border-collapse: collapse; margin-top: 5px; }
             .census-header th { font-size: 8px; color: #64748B; text-align: left; padding-bottom: 5px; border-bottom: 1px solid #E2E8F0; text-transform: uppercase; }
             .census-row td { padding: 8px 0; border-bottom: 0.5px solid #F1F5F9; font-size: 10px; font-weight: 700; color: #334155; }
             .census-val { font-family: 'Courier New', monospace; font-weight: 800; text-align: center; }
-            .census-total-row td { background: #ECFDF5; padding: 10px 5px; font-weight: 900; color: #064E3B; border-bottom: 1.5px solid #064E3B; }
+            .census-total-row td { background: #FEE2E2; padding: 10px 5px; font-weight: 900; color: #7C1C1C; border-bottom: 1.5px solid #7C1C1C; }
 
             .footer-authority {
               margin-top: 40px;
@@ -634,13 +878,13 @@ export default function App() {
             .sign-col { text-align: center; width: 200px; }
             .sign-line { border-top: 1.5px solid #111827; margin-bottom: 6px; }
             .sign-name { font-size: 11px; font-weight: 800; text-transform: uppercase; color: #111827; }
-            .sign-title { font-size: 9px; color: #6B7280; margin-top: 2px; font-weight: 600; }
+            .sign-title { font-size: 9px; color: #7F1D1D; margin-top: 2px; font-weight: 600; }
 
             .qr-seal-box {
               display: flex;
               align-items: center;
               gap: 15px;
-              background: #F8FAFC;
+              background: #F8F5F2;
               padding: 10px;
               border-radius: 6px;
               border: 1px dashed #D1D5DB;
@@ -659,7 +903,7 @@ export default function App() {
               transform: translate(-50%, -50%) rotate(-30deg);
               font-family: 'Cinzel', serif;
               font-size: 100px;
-              color: rgba(6, 78, 59, 0.02);
+              color: rgba(124, 28, 28, 0.02);
               white-space: nowrap;
               z-index: 0;
               pointer-events: none;
@@ -682,7 +926,7 @@ export default function App() {
                 <img src="https://upload.wikimedia.org/wikipedia/commons/1/1a/Seal_of_Sikkim_color.png" class="emblem" />
                 <h1 class="gov-name">Government of Sikkim</h1>
                 <span class="dept-name">Department of Cooperation</span>
-                <div style="background: #064E3B; color: #D4AF37; padding: 4px 15px; border-radius: 20px; font-size: 9px; font-weight: 900; margin-top: 10px; text-transform: uppercase; letter-spacing: 1px;">Official Return Certificate</div>
+                <div style="background: #7C1C1C; color: #B45309; padding: 4px 15px; border-radius: 20px; font-size: 9px; font-weight: 900; margin-top: 10px; text-transform: uppercase; letter-spacing: 1px;">Official Return Certificate</div>
               </div>
 
               <div class="grid">
@@ -702,7 +946,6 @@ export default function App() {
                     <div class="card-header"><span class="card-title">II. Institutional Profile</span></div>
                     <div class="card-body">
                       <table class="data-table">
-                        <tr class="data-row"><td class="data-label">District</td><td class="data-value">${district || 'N/A'}</td></tr>
                         <tr class="data-row"><td class="data-label">Center Name</td><td class="data-value">${centerName || 'N/A'}</td></tr>
                       </table>
                     </div>
@@ -724,12 +967,14 @@ export default function App() {
 
                 <div class="col-right">
                   <div class="premium-card">
-                    <div class="card-header"><span class="card-title">III. Declaration Audit</span></div>
+                    <div class="card-header"><span class="card-title">III. Audit & AGM Declaration</span></div>
                     <div class="card-body">
                       <table class="data-table">
                         <tr class="data-row"><td class="data-label">Reporting Month</td><td class="data-value">${reportingMonth || 'N/A'}</td></tr>
                         <tr class="data-row"><td class="data-label">Litres Collected</td><td class="data-value">${litres} L</td></tr>
                         <tr class="data-row"><td class="data-label">Bank Balance</td><td class="data-value financial-val">₹ ${parseFloat(balance || 0).toLocaleString('en-IN')}</td></tr>
+                        <tr class="data-row"><td class="data-label">Audit Conducted Date</td><td class="data-value">${auditDate || 'N/A'} (Year: ${auditYear || 'N/A'})</td></tr>
+                        <tr class="data-row"><td class="data-label">AGM Conducted Date</td><td class="data-value">${agmDate || 'N/A'}</td></tr>
                       </table>
                     </div>
                   </div>
@@ -783,59 +1028,154 @@ export default function App() {
     const totalMembersCalc = totalMaleCalc + totalFemaleCalc;
 
     const submissionData = {
-      centerName, centerId: centerName, reportingMonth, reportedBy, litres, withdrawal, balance,
+      centerName: activeCenterName, 
+      centerId: activeCenterName, 
+      registrationNumber, presidentName, presidentMobile, managerName, managerMobile, 
+      reportingMonth: activeReportingMonth, 
+      reportedBy: activeReportedBy, 
+      litres: activeLitres, 
+      withdrawal: withdrawal || '0', 
+      balance: activeBalance,
       mSc, fSc, mSt, fSt, mObc, fObc, mGen, fGen,
       totalMale: String(totalMaleCalc), totalFemale: String(totalFemaleCalc), totalMembers: String(totalMembersCalc),
       hasLoan, loanName, loanAmount, paidAmount, remainingDue, activities,
+      auditDone: auditDate ? `Yes (${auditDate})` : 'No',
+      auditDate, auditYear,
+      agmDone: agmDate ? `Yes (${agmDate})` : 'No',
+      agmDate,
       gpsLat: location?.latitude ?? null, gpsLng: location?.longitude ?? null,
-      capturedAt: timestamp, district: district,
+      capturedAt: timestamp || new Date().toISOString(),
     };
 
-    // ─── Step 2: Handle Offline/Online Submission ─────────────────
-    const netState = await NetInfo.fetch();
-    if (!netState.isConnected) {
-        const queued = await queueSubmission('MILK_PCS', submissionData);
-        if (queued) {
-            setPendingSyncCount(prev => prev + 1);
-            if (Platform.OS !== 'web') Alert.alert('✅ Saved Offline', 'Submission queued for auto-sync.');
-            else alert('✅ Saved Offline: Submission queued for auto-sync.');
-        }
-    } else {
-        let uploadedPhotoUrl = null;
-        if (imageBase64) uploadedPhotoUrl = await uploadPhoto(imageBase64);
-        
-        const { error: sbError } = await saveMilkPcsSubmission({ ...submissionData, photoUrl: uploadedPhotoUrl });
-
-        if (sbError) {
-           await queueSubmission('MILK_PCS', submissionData);
-           setPendingSyncCount(prev => prev + 1);
-           if (Platform.OS !== 'web') Alert.alert('⚠️ Sync Interrupted', 'Data cached locally. Will sync later.');
-           else alert('⚠️ Sync Interrupted: Data cached locally.');
-        } else {
-           if (Platform.OS !== 'web') Alert.alert('✅ Cloud Sync OK', 'Submission verified on server.');
-           else alert('✅ Cloud Sync OK');
-        }
-    }
-
-    const profileData = { centerName, district, reportedBy, mSc, fSc, mSt, fSt, mObc, fObc, mGen, fGen, hasLoan, loanName, loanAmount };
-    saveMilkPcsProfile('last_used', profileData);
-    if (centerName?.trim()) {
-        saveMilkPcsProfile(centerName.trim(), profileData);
-        addMilkCenter(centerName.trim(), district).then(updated => { if (updated) setMilkCenters(updated); });
-    }
-
     try {
-      const printResult = await Print.printToFileAsync({ html: htmlContent });
-      if (printResult?.uri && await Sharing.isAvailableAsync()) {
-        await Sharing.shareAsync(printResult.uri, { UTI: '.pdf', mimeType: 'application/pdf' });
+      // ─── Step 2: Handle Offline/Online Submission ─────────────────
+      let isConnected = true;
+      try {
+        if (Platform.OS === 'web') {
+          isConnected = typeof navigator !== 'undefined' ? navigator.onLine : true;
+        } else {
+          const netState = await NetInfo.fetch();
+          isConnected = !!netState?.isConnected;
+        }
+      } catch(e) {
+        isConnected = true;
       }
-    } catch (err) {
-      console.warn('PDF Error:', err);
-    } finally {
-      clearForm();
+
+      let isOfflineSaved = false;
+      let isCloudSaved = false;
+
+      if (!isConnected) {
+          const queued = await queueSubmission('MILK_PCS', submissionData);
+          if (queued) {
+              setPendingSyncCount(prev => prev + 1);
+              isOfflineSaved = true;
+          }
+      } else {
+          let uploadedPhotoUrl = null;
+          if (imageBase64) {
+            try {
+              uploadedPhotoUrl = await uploadPhoto(imageBase64);
+            } catch(e) {
+              console.warn('Photo upload exception:', e);
+            }
+          }
+          
+          let sbError = null;
+          if (activeView === 'MPCS') {
+            const res = await saveMpcsSubmission({
+              ...submissionData,
+              societyName: activeCenterName,
+              registrationNumber: selectedSociety?.regNo || registrationNumber,
+              district: activeDistrict,
+              reportedBy: activeReportedBy,
+              inspectorEmail: userProfile?.email,
+              photoUrl: uploadedPhotoUrl,
+              latitude: location?.latitude,
+              longitude: location?.longitude,
+              panCard: panCard || selectedSociety?.panCard || '',
+              regDate: regDate || selectedSociety?.regDate || '',
+              '1.8': panCard || selectedSociety?.panCard || '',
+              '1.6': regDate || selectedSociety?.regDate || '',
+              demographicsData,
+              complianceData,
+              financialsData,
+              supplementalData,
+              dividendData,
+              bankData,
+              shareCapitalData,
+              cscDetailsData
+            });
+            sbError = res.error;
+          } else {
+            const res = await saveMilkPcsSubmission({
+              ...submissionData,
+              centerName: activeCenterName,
+              centerId: activeCenterId,
+              district: activeDistrict,
+              reportedBy: activeReportedBy,
+              photoUrl: uploadedPhotoUrl
+            });
+            sbError = res.error;
+          }
+
+          if (sbError) {
+             console.error('Submission error:', sbError);
+             showToast(`⚠️ Error: ${sbError.message || 'Supabase insert failed'}`, true);
+             await queueSubmission(activeView === 'MPCS' ? 'MPCS' : 'MILK_PCS', submissionData);
+             setPendingSyncCount(prev => prev + 1);
+             isOfflineSaved = true;
+          } else {
+             isCloudSaved = true;
+             showToast('✅ Submission successfully inserted to Admin database!');
+          }
+      }
+
+      const profileData = { centerName, district, reportedBy, mSc, fSc, mSt, fSt, mObc, fObc, mGen, fGen, hasLoan, loanName, loanAmount };
+      saveMilkPcsProfile('last_used', profileData);
+      if (centerName?.trim()) {
+          saveMilkPcsProfile(centerName.trim(), profileData);
+          addMilkCenter(centerName.trim(), district).then(updated => { if (updated) setMilkCenters(updated); });
+      }
+
+      if (Platform.OS !== 'web') {
+        try {
+          const printResult = await Print.printToFileAsync({ html: htmlContent });
+          if (printResult?.uri && await Sharing.isAvailableAsync()) {
+            await Sharing.shareAsync(printResult.uri, { UTI: '.pdf', mimeType: 'application/pdf' });
+          }
+        } catch (err) {
+          console.warn('PDF Error:', err);
+        }
+      }
+
+      // Clear the milk PCS operational form after successful seal
+      setReportingMonth('');
+      setLitres('');
+      setWithdrawal('');
+      setBalance('');
+      setImageUri(null);
+      setImageBase64(null);
+      setTimestamp('');
+      setLocation(null);
+      setActivityItems([]);
       setIsSealing(false);
+
+      if (isCloudSaved) {
+        showToast('✅ Cloud Sync OK: Submission uploaded to Supabase server.');
+      } else if (isOfflineSaved) {
+        showToast('⚠️ Saved Offline: Data cached locally. Will sync later.', true);
+      }
+
+    } catch (err) {
+      console.error('handleSealRecord execution error:', err);
+      setIsSealing(false);
+      showToast('⚠️ Submission Error: Saved to offline queue.', true);
     }
   };
+
+  if (!fontsLoaded) {
+    return null;
+  }
 
   if (authLoading) {
     return (
@@ -846,492 +1186,673 @@ export default function App() {
   }
 
   if (!session) {
-    return <Login onBypass={() => setSession({ user: { email: 'dev@sikkim.gov.in' } })} />;
+    return (
+      <View style={styles.mobileShellWrapper}>
+        <View style={styles.mobileDeviceFrame}>
+          <Login
+            onLoginSuccess={(usr) => handleUserAuthSuccess(usr)}
+            onRegisterSuccess={(usr) => handleUserAuthSuccess(usr)}
+          />
+        </View>
+      </View>
+    );
   }
 
-  const handleAddEvidence = async () => {
-    try {
-      let res = await ImagePicker.launchCameraAsync({ base64: true, quality: 0.5 });
-      if (!res.canceled) {
-         setEvidencePhotos(prev => [...prev, res.assets[0].uri]);
-      }
-    } catch(e) {}
-  };
 
   return (
     <View style={styles.root}>
+       {toastMsg && (
+         <View style={{ position: 'absolute', top: 16, left: 16, right: 16, zIndex: 99999, backgroundColor: toastMsg.isError ? '#7F1D1D' : '#065F46', borderLeftWidth: 5, borderLeftColor: toastMsg.isError ? '#EF4444' : '#10B981', padding: 14, borderRadius: 8, elevation: 10, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 10 }}>
+           <Text style={{ color: '#FFFFFF', fontWeight: '800', textAlign: 'center', fontSize: 13, letterSpacing: 0.3 }}>
+             {toastMsg.text}
+           </Text>
+         </View>
+       )}
        {pendingSyncCount > 0 && <SyncBanner count={pendingSyncCount} syncing={isSyncing} />}
-       {activeAlert && <BroadcastBanner alert={activeAlert} onDismiss={dismissAlert} />}
       <StatusBar barStyle="light-content" backgroundColor={COLORS.emerald} />
 
       <View style={styles.bgBlobLeft} pointerEvents="none" />
       <View style={styles.bgBlobRight} pointerEvents="none" />
 
+      {Platform.OS === 'web' && (
+        <style>{`
+          input, textarea, select {
+            outline: none !important;
+            box-shadow: none !important;
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif !important;
+          }
+          input:focus, textarea:focus, select:focus {
+            outline: none !important;
+            box-shadow: none !important;
+          }
+          input[type="date"] {
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif !important;
+          }
+          input[type="date"]::-webkit-calendar-picker-indicator {
+            cursor: pointer !important;
+            outline: none !important;
+            box-shadow: none !important;
+          }
+          input[type="date"]::-webkit-calendar-picker-indicator:focus,
+          input[type="date"]::-webkit-calendar-picker-indicator:active {
+            outline: none !important;
+            box-shadow: none !important;
+          }
+        `}</style>
+      )}
+
       <SafeAreaView style={{ flex: 1 }}>
         <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : null}>
 
-          <ScrollView
-            style={styles.scrollView}
-            contentContainerStyle={styles.scrollContent}
-            showsVerticalScrollIndicator={false}
-            keyboardShouldPersistTaps="always"
-          >
-            {/* Header Area */}
-            <View style={styles.headerZone}>
-              <View style={styles.headerTopLine}>
-                <Image
-                  source={require('./assets/Seal_of_Sikkim_greyscale.png')}
-                  style={styles.govEmblem}
-                  resizeMode="contain"
+          {/* Fix #9: Single shared MyInstitutionsScreen — shown regardless of activeView */}
+          {currentMobileScreen === 'MY_INSTITUTIONS' ? (
+            <View style={styles.mobileShellWrapper}>
+              <View style={styles.mobileDeviceFrame}>
+                <MyInstitutionsScreen
+                  user={userProfile}
+                  institutions={institutionsList}
+                  onAddInstitution={(newInst) => {
+                    const updated = [...institutionsList, newInst];
+                    setInstitutionsList(updated);
+                    saveInstitutionsForUser(updated, session?.user?.email);
+                    handleSelectSociety(newInst, true);
+                  }}
+                  onRemoveInstitution={(id) => {
+                    const updated = institutionsList.filter(i => i.id !== id);
+                    setInstitutionsList(updated);
+                    saveInstitutionsForUser(updated, session?.user?.email);
+                  }}
+                  onSelectSociety={(soc) => handleSelectSociety(soc, false)}
+                  onProceedToDashboard={() => setCurrentMobileScreen('HOME')}
+                  onLogout={handleUserLogout}
                 />
-                <View style={styles.headerTextGroup}>
-                  <Text style={styles.govTitle}>CORE</Text>
-                  <Text style={styles.govTitleSubtitle}>COOPERATIVE OVERSIGHT ENGINE</Text>
-                </View>
-                 <View style={styles.headerActionBox}>
-                   <TouchableOpacity 
-                     onPress={() => setShowHistory(true)} 
-                     style={styles.actionBtn}
-                   >
-                     <View style={styles.bulletinIndicator}>
-                        <MaterialIcons name="notifications" size={20} color={alertHistory.length > 0 ? COLORS.gold : COLORS.emerald} />
-                        {activeAlert && <View style={styles.pulseDot} />}
-                     </View>
-                   </TouchableOpacity>
-                   {session && (
-                     <TouchableOpacity 
-                       onPress={() => supabase.auth.signOut()} 
-                       style={styles.actionBtn}
-                     >
-                       <MaterialIcons name="logout" size={20} color={COLORS.gold} />
-                     </TouchableOpacity>
-                   )}
-                 </View>
-              </View>
-              <View style={styles.headerDivider} />
-              <View style={styles.headerBadgeContainer}>
-                <View style={styles.segmentedControl}>
-                  <TouchableOpacity
-                    style={[styles.segmentButton, activeView === 'MAIN' && styles.segmentActive]}
-                    onPress={() => setActiveView('MAIN')}
-                    activeOpacity={0.8}
-                  >
-                    <MaterialIcons name="fact-check" size={16} color={activeView === 'MAIN' ? (COLORS.gold || '#D4AF37') : COLORS.emeraldLight} />
-                    <Text style={[styles.segmentText, activeView === 'MAIN' && styles.segmentTextActive]}>MILK PCS</Text>
-                  </TouchableOpacity>
-
-                  <TouchableOpacity
-                    style={[styles.segmentButton, activeView === 'MPCS' && styles.segmentActive]}
-                    onPress={() => setActiveView('MPCS')}
-                    activeOpacity={0.8}
-                  >
-                    <MaterialIcons name="corporate-fare" size={16} color={activeView === 'MPCS' ? (COLORS.gold || '#D4AF37') : COLORS.emeraldLight} />
-                    <Text style={[styles.segmentText, activeView === 'MPCS' && styles.segmentTextActive]}>MPCS</Text>
-                  </TouchableOpacity>
-                </View>
               </View>
             </View>
-
-            {activeView === 'MPCS' ? (
-              <MPCSForm onComplete={() => setActiveView('MAIN')} />
-            ) : (
-                <>
-                {/* Verified Evidence Vault */}
-                <EvidenceVault photos={evidencePhotos} onAdd={handleAddEvidence} />
-                {/* SECTION: Evidence */}
-                <View style={styles.glassCard}>
-                  <View style={styles.cardRibbon} />
-                  <View style={styles.cardHeader}>
-                    <MaterialIcons name="camera-enhance" size={24} color={COLORS.emerald} />
-                    <Text style={styles.cardTitle}>Section A: Digital Evidence</Text>
-                  </View>
-
-                  {!imageUri ? (
-                    <TouchableOpacity style={styles.evidenceDropzone} onPress={captureImage} activeOpacity={0.7}>
-                      <View style={styles.dropzoneCircle}>
-                        <MaterialIcons name="add-a-photo" size={36} color={COLORS.emerald} />
-                      </View>
-                      <Text style={styles.dropzoneTitle}>Initialize Camera Sensor</Text>
-                      <Text style={styles.dropzoneSub}>Secure GPS locking required upon capture</Text>
-                    </TouchableOpacity>
-                  ) : (
-                    <View style={styles.evidenceSnapshotBox}>
-                      <Image source={{ uri: imageUri }} style={styles.evidenceImage} />
-                      <LinearGradient colors={['transparent', 'rgba(6,78,59,0.9)']} style={styles.evidenceOverlay}>
-                        <View style={styles.evidenceMetaData}>
-                          <View style={styles.metaBadge}>
-                            <MaterialIcons name="satellite" size={16} color={COLORS.gold} />
-                            <Text style={styles.metaBadgeText}>GPS LOCKED</Text>
-                          </View>
-                          <Text style={styles.metaTextLatLong}>{location ? `${location.latitude.toFixed(6)}, ${location.longitude.toFixed(6)}` : 'Computing...'}</Text>
-                          <Text style={styles.metaTextTime}>{timestamp}</Text>
-                        </View>
-                        <TouchableOpacity style={styles.recaptureBtn} onPress={captureImage}>
-                          <MaterialIcons name="refresh" size={20} color={COLORS.surface} />
-                        </TouchableOpacity>
-                      </LinearGradient>
-                    </View>
-                  )}
-                </View>
-
-                {/* SECTION: Profile */}
-                <View style={styles.glassCard}>
-                  <View style={[styles.cardRibbon, { backgroundColor: COLORS.gold }]} />
-                  <View style={styles.cardHeader}>
-                    <MaterialIcons name="business" size={24} color={COLORS.emerald} />
-                    <Text style={styles.cardTitle}>Section B: Institutional Profile</Text>
-                  </View>
-
-                  <Text style={styles.floatingInputLabel}>Select District</Text>
-                  <View style={[styles.pickerWrapperGold, { marginBottom: 20 }]}>
-                    <Picker
-                      selectedValue={district}
-                      onValueChange={(itemValue) => setDistrict(itemValue)}
-                      style={styles.pickerNative}
-                    >
-                      <Picker.Item label="Select District..." value="" color={COLORS.textSecondary} />
-                      <Picker.Item label="Gangtok" value="Gangtok" color={COLORS.emerald} />
-                      <Picker.Item label="Geyzing" value="Geyzing" color={COLORS.emerald} />
-                      <Picker.Item label="Mangan" value="Mangan" color={COLORS.emerald} />
-                      <Picker.Item label="Namchi" value="Namchi" color={COLORS.emerald} />
-                      <Picker.Item label="Pakyong" value="Pakyong" color={COLORS.emerald} />
-                      <Picker.Item label="Soreng" value="Soreng" color={COLORS.emerald} />
-                    </Picker>
-                  </View>
-
-                  <Text style={styles.floatingInputLabel}>Select Registered Center</Text>
-                  <View style={[styles.pickerWrapperGold, { marginBottom: 20 }]}>
-                    <Picker
-                      selectedValue={centerName}
-                      onValueChange={async (itemValue) => {
-                        if (itemValue) {
-                          setCenterName(itemValue);
-                          // Load data for this specific center
-                          const centerProfile = await loadMilkPcsProfileByName(itemValue);
-                          if (centerProfile) {
-                            if (centerProfile.district) setDistrict(centerProfile.district);
-                            if (centerProfile.reportedBy) setReportedBy(centerProfile.reportedBy);
-                            if (centerProfile.mSc) setMSc(centerProfile.mSc);
-                            if (centerProfile.fSc) setFSc(centerProfile.fSc);
-                            if (centerProfile.mSt) setMSt(centerProfile.mSt);
-                            if (centerProfile.fSt) setFSt(centerProfile.fSt);
-                            if (centerProfile.mObc) setMObc(centerProfile.mObc);
-                            if (centerProfile.fObc) setFObc(centerProfile.fObc);
-                            if (centerProfile.mGen) setMGen(centerProfile.mGen);
-                            if (centerProfile.fGen) setFGen(centerProfile.fGen);
-                            if (centerProfile.hasLoan) setHasLoan(centerProfile.hasLoan);
-                            if (centerProfile.loanName) setLoanName(centerProfile.loanName);
-                            if (centerProfile.loanAmount) setLoanAmount(centerProfile.loanAmount);
-                          }
-                        }
-                      }}
-                      style={styles.pickerNative}
-                    >
-                      <Picker.Item label={milkCenters.length > 0 ? (district ? `Centers in ${district}...` : "Select District First...") : "No Centers Saved Yet"} value="" color={COLORS.textSecondary} />
-                      {milkCenters
-                        .filter(center => !district || center.district === district || !center.district)
-                        .map(center => (
-                          <Picker.Item key={center.name} label={center.name} value={center.name} color={COLORS.emerald} />
-                        ))}
-                    </Picker>
-                  </View>
-
-                  <FloatingInput
-                    icon="store-marker"
-                    label="Center ID or Center Name"
-                    placeholder="Enter Center Name (e.g. Namchi MPC)"
-                    value={centerName}
-                    onChangeText={setCenterName}
+          ) : activeView === 'MAIN' ? (
+            <View style={styles.mobileShellWrapper}>
+              <View style={styles.mobileDeviceFrame}>
+                {activeBottomTab === 'records' ? (
+                  <RecordsScreen
+                    activeTab="records"
+                    onTabPress={(tab) => {
+                      setActiveBottomTab(tab);
+                      if (tab === 'home') setCurrentMobileScreen('HOME');
+                    }}
+                    onViewPdf={generatePDF}
                   />
-                </View>
-
-                {/* SECTION: Ledger */}
-                <View style={styles.glassCard}>
-                  <View style={[styles.cardRibbon, { backgroundColor: '#1E3A8A' }]} />
-                  <View style={styles.cardHeader}>
-                    <MaterialIcons name="menu-book" size={24} color={COLORS.emerald} />
-                    <Text style={styles.cardTitle}>Section C: Operations Ledger</Text>
-                  </View>
-
-                  {/* Single shared Reporting Month picker */}
-                  <Text style={styles.floatingInputLabel}>Reporting Month</Text>
-                  <View style={[styles.pickerWrapperGold, { marginBottom: 20 }]}>
-                    <Picker
-                      selectedValue={reportingMonth}
-                      onValueChange={(itemValue) => setReportingMonth(itemValue)}
-                      style={styles.pickerNative}
-                    >
-                      <Picker.Item label="Select Month..." value="" color={COLORS.textSecondary} />
-                      {months.map((m) => (<Picker.Item key={m} label={m} value={m} color={COLORS.emerald} />))}
-                    </Picker>
-                  </View>
-
-                  {/* Litres: full width */}
-                  <FloatingInput
-                    icon="water-pump"
-                    label="Litres Collected"
-                    placeholder="0.00"
-                    value={litres}
-                    onChangeText={setLitres}
-                    keyboardType="numeric"
+                ) : activeBottomTab === 'more' ? (
+                  <MoreScreen
+                    activeTab="more"
+                    user={userProfile}
+                    onTabPress={(tab) => {
+                      setActiveBottomTab(tab);
+                      if (tab === 'home') setCurrentMobileScreen('HOME');
+                    }}
+                    onNavigateScreen={(scr) => {
+                      setCurrentMobileScreen(scr);
+                      setActiveBottomTab('home');
+                    }}
+                    onOpenBulletins={() => setShowHistory(true)}
+                    onSignOut={handleUserLogout}
                   />
-
-                  {/* Withdrawal: full width */}
-                  <FloatingInput
-                    icon="cash-minus"
-                    label="Total Withdrawal"
-                    prefix="₹ "
-                    placeholder="0.00"
-                    value={withdrawal}
-                    onChangeText={setWithdrawal}
-                    keyboardType="numeric"
+                ) : activeBottomTab === 'profile' ? (
+                  <InstitutionalProfileScreen
+                    centerName={centerName}
+                    setCenterName={setCenterName}
+                    centerId={registrationNumber}
+                    regNo={registrationNumber}
+                    setRegNo={setRegistrationNumber}
+                    presidentName={presidentName}
+                    setPresidentName={setPresidentName}
+                    presidentMobile={presidentMobile}
+                    setPresidentMobile={setPresidentMobile}
+                    managerName={managerName}
+                    setManagerName={setManagerName}
+                    managerMobile={managerMobile}
+                    setManagerMobile={setManagerMobile}
+                    lastUpdated=""
+                    onNext={() => {
+                      setCurrentMobileScreen('DEMOGRAPHICS');
+                      setActiveBottomTab('home');
+                    }}
+                    onBack={() => {
+                      setCurrentMobileScreen('HOME');
+                      setActiveBottomTab('home');
+                    }}
                   />
+                ) : (
+                  <>
+                    {currentMobileScreen === 'HOME' && (
+                      <HomeScreen
+                        activeModule="MILK"
+                        onSwitchModule={(mod) => {
+                          if (mod === 'MPCS') setActiveView('MPCS');
+                        }}
+                        societyName={selectedSociety?.name || centerName || ''}
+                        centerId={selectedSociety?.code || registrationNumber || ''}
+                        district={selectedSociety?.district || district || ''}
+                        reportingMonth={reportingMonth || ''}
+                        reportStatus="DRAFT"
+                        progressPercent={imageUri && litres ? 100 : imageUri || litres ? 60 : 20}
+                        completedCount={imageUri && litres ? 5 : imageUri || litres ? 3 : 1}
+                        totalCount={5}
+                        evidenceStatus={imageUri ? "Captured ✓" : "Not captured"}
+                        operationsStatus={litres && balance ? "Completed ✓" : "Not completed"}
+                        activitiesStatus={`${activityItems.length} entries ✓`}
+                        lastUpdated=""
+                        activeAlert={activeAlert}
+                        onDismissAlert={dismissAlert}
+                        selectedSociety={selectedSociety}
+                        institutionsList={institutionsList}
+                        onSelectSociety={handleSelectSociety}
+                        onManageInstitutions={() => setCurrentMobileScreen('MY_INSTITUTIONS')}
+                        onNavigateScreen={(scr) => setCurrentMobileScreen(scr)}
+                        onReviewSubmit={() => setCurrentMobileScreen('REVIEW')}
+                        activeTab={activeBottomTab}
+                        onTabPress={(tab) => setActiveBottomTab(tab)}
+                      />
+                    )}
 
-                  {/* Balance: full width */}
-                  <FloatingInput
-                    icon="safe"
-                    label="Bank Balance"
-                    prefix="₹ "
-                    placeholder="0.00"
-                    value={balance}
-                    onChangeText={setBalance}
-                    keyboardType="numeric"
+                    {currentMobileScreen === 'EVIDENCE' && (
+                      <DigitalEvidenceScreen
+                        imageUri={imageUri}
+                        location={location}
+                        timestamp={timestamp}
+                        reportedBy={reportedBy}
+                        setReportedBy={setReportedBy}
+                        onTakePic={captureImage}
+                        onPickGallery={async () => {
+                          try {
+                            let res = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], base64: true, quality: 0.8 });
+                            if (!res.canceled) {
+                              setImageUri(res.assets[0].uri);
+                              setImageBase64(res.assets[0].base64);
+                              setTimestamp(new Date().toLocaleString('en-IN'));
+                            }
+                          } catch(e) {}
+                        }}
+                        onNext={() => setCurrentMobileScreen('OPERATIONS')}
+                        onBack={() => setCurrentMobileScreen('HOME')}
+                      />
+                    )}
+
+                    {currentMobileScreen === 'OPERATIONS' && (
+                      <OperationsScreen
+                        reportingMonth={reportingMonth}
+                        setReportingMonth={setReportingMonth}
+                        litres={litres}
+                        setLitres={setLitres}
+                        withdrawal={withdrawal}
+                        setWithdrawal={setWithdrawal}
+                        balance={balance}
+                        setBalance={setBalance}
+                        onNext={() => setCurrentMobileScreen('ACTIVITIES')}
+                        onBack={() => setCurrentMobileScreen('EVIDENCE')}
+                      />
+                    )}
+
+                    {currentMobileScreen === 'ACTIVITIES' && (
+                      <ActivitiesScreen
+                        activityList={activityItems}
+                        onAddActivity={(newAct) => setActivityItems(prev => [...prev, newAct])}
+                        onDeleteActivity={(id) => setActivityItems(prev => prev.filter(a => a.id !== id))}
+                        onNext={() => setCurrentMobileScreen('PROFILE')}
+                        onBack={() => setCurrentMobileScreen('OPERATIONS')}
+                      />
+                    )}
+
+                    {currentMobileScreen === 'PROFILE' && (
+                      <InstitutionalProfileScreen
+                        centerName={centerName}
+                        setCenterName={setCenterName}
+                        centerId={registrationNumber}
+                        regNo={registrationNumber}
+                        setRegNo={setRegistrationNumber}
+                        presidentName={presidentName}
+                        setPresidentName={setPresidentName}
+                        presidentMobile={presidentMobile}
+                        setPresidentMobile={setPresidentMobile}
+                        managerName={managerName}
+                        setManagerName={setManagerName}
+                        managerMobile={managerMobile}
+                        setManagerMobile={setManagerMobile}
+                        lastUpdated=""
+                        onNext={() => setCurrentMobileScreen('DEMOGRAPHICS')}
+                        onBack={() => setCurrentMobileScreen('ACTIVITIES')}
+                      />
+                    )}
+
+                    {currentMobileScreen === 'DEMOGRAPHICS' && (
+                      <DemographicsScreen
+                        mSc={mSc} setMSc={setMSc} fSc={fSc} setFSc={setFSc}
+                        mSt={mSt} setMSt={setMSt} fSt={fSt} setFSt={setFSt}
+                        mObc={mObc} setMObc={setMObc} fObc={fObc} setFObc={setFObc}
+                        mGen={mGen} setMGen={setMGen} fGen={fGen} setFGen={setFGen}
+                        lastUpdated=""
+                        onNext={() => setCurrentMobileScreen('COMPLIANCE')}
+                        onBack={() => setCurrentMobileScreen('PROFILE')}
+                      />
+                    )}
+
+                    {currentMobileScreen === 'COMPLIANCE' && (
+                      <ComplianceScreen
+                        hasLoan={hasLoan}
+                        setHasLoan={setHasLoan}
+                        loanType={loanType}
+                        setLoanType={setLoanType}
+                        loanSanctionDate={loanSanctionDate}
+                        setLoanSanctionDate={setLoanSanctionDate}
+                        loanBeneficiaries={loanBeneficiaries}
+                        setLoanBeneficiaries={setLoanBeneficiaries}
+                        loanExtended={loanExtended}
+                        setLoanExtended={setLoanExtended}
+                        loanRecovered={loanRecovered}
+                        setLoanRecovered={setLoanRecovered}
+                        loanOutstanding={loanOutstanding}
+                        setLoanOutstanding={setLoanOutstanding}
+                        auditDate={auditDate}
+                        setAuditDate={setAuditDate}
+                        auditYear={auditYear}
+                        setAuditYear={setAuditYear}
+                        agmDate={agmDate}
+                        setAgmDate={setAgmDate}
+                        agmYear={agmYear}
+                        setAgmYear={setAgmYear}
+                        lastUpdated=""
+                        onNext={() => setCurrentMobileScreen('REVIEW')}
+                        onBack={() => setCurrentMobileScreen('DEMOGRAPHICS')}
+                      />
+                    )}
+
+                    {currentMobileScreen === 'REVIEW' && (
+                      <ReviewSubmitScreen
+                        reportingMonth={reportingMonth || ''}
+                        hasImage={!!imageUri}
+                        hasOperations={!!litres && !!balance}
+                        activityCount={activityItems.length}
+                        isSealing={isSealing}
+                        onCompileAndSeal={generatePDF}
+                        onBack={() => setCurrentMobileScreen('HOME')}
+                      />
+                    )}
+                  </>
+                )}
+              </View>
+            </View>
+          ) : (
+            <View style={styles.mobileShellWrapper}>
+              <View style={styles.mobileDeviceFrame}>
+                {activeBottomTab === 'records' ? (
+                  <RecordsScreen
+                    activeTab="records"
+                    onTabPress={(tab) => {
+                      setActiveBottomTab(tab);
+                      if (tab === 'home') setCurrentMobileScreen('HOME');
+                    }}
+                    onViewPdf={generatePDF}
                   />
-                </View>
+                ) : activeBottomTab === 'profile' ? (
+                  <MpcsInstitutionalProfileScreen
+                    societyName={selectedSociety?.name || centerName || ''}
+                    panCard={panCard || selectedSociety?.panCard || ''}
+                    regNumber={selectedSociety?.regNo || registrationNumber || ''}
+                    regDate={regDate || selectedSociety?.regDate || ''}
+                    presidentName={presidentName || ''}
+                    presidentMobile={presidentMobile || ''}
+                    secretaryName={managerName || ''}
+                    secretaryMobile={managerMobile || ''}
+                    onSaveProfile={(data) => {
+                      if (data.societyName !== undefined) setCenterName(data.societyName);
+                      if (data.panCard !== undefined) setPanCard(data.panCard);
+                      if (data.regDate !== undefined) setRegDate(data.regDate);
+                      if (data.regNumber !== undefined) setRegistrationNumber(data.regNumber);
+                      if (data.presidentName !== undefined) setPresidentName(data.presidentName);
+                      if (data.presidentMobile !== undefined) setPresidentMobile(data.presidentMobile);
+                      if (data.secretaryName !== undefined) setManagerName(data.secretaryName);
+                      if (data.secretaryMobile !== undefined) setManagerMobile(data.secretaryMobile);
 
-                {/* SECTION: Member Category */}
-                <View style={styles.glassCard}>
-                  <View style={[styles.cardRibbon, { backgroundColor: COLORS.emerald }]} />
-                  <View style={styles.cardHeader}>
-                    <MaterialIcons name="groups" size={24} color={COLORS.emerald} />
-                    <Text style={styles.cardTitle}>Section D: Registered Caste Demographics</Text>
-                  </View>
-
-
-                  <View style={styles.ledgerContainer}>
-                    {/* Header: Zero-Weight Architectural */}
-                    <View style={styles.ledgerHeader}>
-                      <Text style={[styles.ledgerHeaderLabel, { flex: 1.5 }]}>REGISTRY</Text>
-                      <View style={styles.ledgerColumnHeader}>
-                        <MaterialIcons name="person" size={14} color="#94A3B8" />
-                        <Text style={styles.ledgerHeaderLabel}>MALE</Text>
-                      </View>
-                      <View style={styles.ledgerColumnHeader}>
-                        <MaterialIcons name="person" size={14} color="#94A3B8" />
-                        <Text style={styles.ledgerHeaderLabel}>FEMALE</Text>
-                      </View>
-                      <Text style={[styles.ledgerHeaderLabel, { textAlign: 'right', width: 55 }]}>TOTAL</Text>
-                    </View>
-
-                    {[
-                      { id: 'Sc', label: 'SC', color: '#3B82F6', icon: 'shield-account', mVal: mSc, fVal: fSc, setM: setMSc, setF: setFSc },
-                      { id: 'St', label: 'ST', color: '#8B5CF6', icon: 'account-child', mVal: mSt, fVal: fSt, setM: setMSt, setF: setFSt },
-                      { id: 'Obc', label: 'OBC', color: '#F59E0B', icon: 'account-star', mVal: mObc, fVal: fObc, setM: setMObc, setF: setFObc },
-                      { id: 'Gen', label: 'GEN', color: '#10B981', icon: 'account-check', mVal: mGen, fVal: fGen, setM: setMGen, setF: setFGen },
-                    ].map((row, idx, arr) => {
-                      const rowTotal = (parseInt(row.mVal) || 0) + (parseInt(row.fVal) || 0);
-                      return (
-                        <View key={row.id} style={styles.ledgerRow}>
-                          <View style={styles.categoryCell}>
-                            <Text style={styles.ledgerCategoryText}>{row.label}</Text>
-                          </View>
-                          
-                          <View style={[styles.inputCell, styles.vDividerHair]}>
-                            <TextInput
-                              style={styles.ledgerInput}
-                              keyboardType="numeric"
-                              value={row.mVal}
-                              onChangeText={row.setM}
-                              placeholder="0"
-                              placeholderTextColor="#E2E8F0"
-                              selectionColor={COLORS.emerald}
-                            />
-                          </View>
-                          
-                          <View style={[styles.inputCell, styles.vDividerHair]}>
-                            <TextInput
-                              style={styles.ledgerInput}
-                              keyboardType="numeric"
-                              value={row.fVal}
-                              onChangeText={row.setF}
-                              placeholder="0"
-                              placeholderTextColor="#E2E8F0"
-                              selectionColor={COLORS.emerald}
-                            />
-                          </View>
-
-                          <View style={[styles.rowTotalCell, styles.vDividerHair]}>
-                            <Text style={styles.rowTotalText}>{rowTotal || '0'}</Text>
-                          </View>
-                        </View>
-                      );
-                    })}
-
-                    {/* Footer: Fluid Summary */}
-                    <View style={styles.ledgerFooter}>
-                      <Text style={styles.ledgerFooterLabel}>SUMMARY</Text>
-                      <View style={[styles.footerValBox, styles.vDividerHair]}>
-                        <Text style={styles.footerValText}>{[mSc, mSt, mObc, mGen].reduce((sum, v) => sum + (parseInt(v) || 0), 0)}</Text>
-                      </View>
-                      <View style={[styles.footerValBox, styles.vDividerHair]}>
-                        <Text style={styles.footerValText}>{[fSc, fSt, fObc, fGen].reduce((sum, v) => sum + (parseInt(v) || 0), 0)}</Text>
-                      </View>
-                      <View style={[styles.grandTotalPill, { marginLeft: 15 }]}>
-                        <Text style={styles.grandTotalPillText}>{[mSc, mSt, mObc, mGen, fSc, fSt, fObc, fGen].reduce((sum, v) => sum + (parseInt(v) || 0), 0)}</Text>
-                      </View>
-                    </View>
-                  </View>
-                </View>
-
-                {/* SECTION: Activities / Events Log */}
-                <View style={styles.glassCard}>
-                  <View style={[styles.cardRibbon, { backgroundColor: '#7C3AED' }]} />
-                  <View style={styles.cardHeader}>
-                    <MaterialIcons name="event-available" size={24} color={COLORS.emerald} />
-                    <Text style={styles.cardTitle}>Section E: Activities / Events Log</Text>
-                  </View>
-
-                  <ActivityEditor value={activities} onChange={setActivities} />
-                </View>
-
-                {/* SECTION: Supplemental */}
-                <View style={styles.glassCard}>
-                  <View style={[styles.cardRibbon, { backgroundColor: '#94A3B8' }]} />
-                  <View style={styles.cardHeader}>
-                    <MaterialIcons name="assignment-turned-in" size={24} color={COLORS.emerald} />
-                    <Text style={styles.cardTitle}>Section F: Supplemental</Text>
-                  </View>
-
-                  <TouchableOpacity 
-                    activeOpacity={0.9} 
-                    onPress={() => setHasLoan(!hasLoan)}
-                    style={[
-                      styles.toggleRow,
-                      hasLoan && { 
-                        borderColor: COLORS.emerald, 
-                        borderWidth: 2,
-                        shadowColor: COLORS.emerald,
-                        shadowOffset: { width: 0, height: 8 },
-                        shadowOpacity: 0.25,
-                        shadowRadius: 12,
-                        elevation: 8,
-                        backgroundColor: '#FFFFFF',
-                        borderRadius: 20,
-                        padding: 18,
+                      if (selectedSociety) {
+                        setSelectedSociety(prev => ({
+                          ...prev,
+                          name: data.societyName || prev?.name,
+                          regNo: data.regNumber || prev?.regNo,
+                          panCard: data.panCard || prev?.panCard,
+                          regDate: data.regDate || prev?.regDate
+                        }));
                       }
-                    ]}
-                  >
-                    <View style={{ flex: 1, marginRight: 12 }}>
-                      <Text style={[styles.toggleLabel, hasLoan && { fontWeight: '800' }]}>Active Loan Status</Text>
-                      <Text style={styles.toggleSub}>Declare if the cooperative holds institutional debt</Text>
-                    </View>
-                    <View style={{
-                      width: 44,
-                      height: 24,
-                      borderRadius: 12,
-                      backgroundColor: hasLoan ? COLORS.emerald : '#E2E8F0',
-                      padding: 2,
-                      justifyContent: 'center',
-                    }}>
-                      <View style={{
-                        width: 20,
-                        height: 20,
-                        borderRadius: 10,
-                        backgroundColor: '#FFF',
-                        transform: [{ translateX: hasLoan ? 20 : 0 }],
-                      }} />
-                    </View>
-                  </TouchableOpacity>
-
-                  {hasLoan && (
-                    <View style={styles.loanDetailsContainer}>
-                      <FloatingInput
-                        icon="bank"
-                        label="Loan Name"
-                        placeholder="Enter bank or scheme name"
-                        value={loanName}
-                        onChangeText={setLoanName}
+                      if (institutionsList && institutionsList.length > 0 && selectedSociety?.id) {
+                        setInstitutionsList(prev => prev.map(inst => 
+                          inst.id === selectedSociety.id
+                            ? { ...inst, name: data.societyName || inst.name, regNo: data.regNumber || inst.regNo, panCard: data.panCard || inst.panCard, regDate: data.regDate || inst.regDate }
+                            : inst
+                        ));
+                      }
+                      saveMasterStateToStorage({
+                        centerName: data.societyName,
+                        panCard: data.panCard,
+                        regDate: data.regDate,
+                        registrationNumber: data.regNumber,
+                        presidentName: data.presidentName,
+                        presidentMobile: data.presidentMobile,
+                        managerName: data.secretaryName,
+                        managerMobile: data.secretaryMobile
+                      });
+                    }}
+                    onNext={() => {
+                      setCurrentMobileScreen('MPCS_DEMOGRAPHICS');
+                      setActiveBottomTab('home');
+                    }}
+                    onBack={() => {
+                      setCurrentMobileScreen('HOME');
+                      setActiveBottomTab('home');
+                    }}
+                  />
+                ) : activeBottomTab === 'more' ? (
+                  <MoreScreen
+                    activeTab="more"
+                    onTabPress={(tab) => {
+                      setActiveBottomTab(tab);
+                      if (tab === 'home') setCurrentMobileScreen('HOME');
+                    }}
+                    onNavigateScreen={(scr) => {
+                      setCurrentMobileScreen(scr);
+                      setActiveBottomTab('home');
+                    }}
+                    onOpenBulletins={() => setShowHistory(true)}
+                    onSignOut={handleUserLogout}
+                  />
+                ) : (
+                  <>
+                    {(currentMobileScreen === 'HOME' || !currentMobileScreen) && (
+                      <MpcsHomeScreen
+                        activeModule="MPCS"
+                        onSwitchModule={(mod) => {
+                          if (mod === 'MILK') setActiveView('MAIN');
+                        }}
+                        societyName={selectedSociety?.name || centerName || ''}
+                        centerId={selectedSociety?.code || registrationNumber || ''}
+                        district={selectedSociety?.district || district || ''}
+                        reportingMonth={reportingMonth || ''}
+                        reportStatus="DRAFT"
+                        progressPercent={imageUri && withdrawal ? 100 : imageUri || withdrawal ? 40 : 20}
+                        completedCount={imageUri && withdrawal ? 4 : imageUri || withdrawal ? 2 : 1}
+                        totalCount={10}
+                        evidenceStatus={imageUri ? "CAPTURED ✓" : "NOT CAPTURED"}
+                        salesStatus={withdrawal ? "COMPLETED ✓" : "NOT COMPLETED"}
+                        businessStatus={withdrawal && balance ? "COMPLETED ✓" : "NOT COMPLETED"}
+                        cscTransStatus="NOT COMPLETED"
+                        activitiesStatus={`${activityItems.length} ENTRIES`}
+                        lastUpdated=""
+                        activeAlert={activeAlert}
+                        onDismissAlert={dismissAlert}
+                        selectedSociety={selectedSociety}
+                        institutionsList={institutionsList}
+                        onSelectSociety={handleSelectSociety}
+                        onManageInstitutions={() => setCurrentMobileScreen('MY_INSTITUTIONS')}
+                        onNavigateScreen={(scr) => setCurrentMobileScreen(scr)}
+                        onReviewSubmit={() => setCurrentMobileScreen('MPCS_REVIEW')}
+                        activeTab={activeBottomTab}
+                        onTabPress={(tab) => setActiveBottomTab(tab)}
                       />
-                      <FloatingInput
-                        icon="cash"
-                        label="Loan Amount"
-                        prefix="₹ "
-                        placeholder="0.00"
-                        value={loanAmount}
-                        onChangeText={setLoanAmount}
-                        keyboardType="numeric"
+                    )}
+
+                    {currentMobileScreen === 'MPCS_EVIDENCE' && (
+                      <MpcsDigitalEvidenceScreen
+                        reportingMonth={reportingMonth || ''}
+                        imageUri={imageUri}
+                        setImageUri={setImageUri}
+                        timestamp={timestamp}
+                        setTimestamp={setTimestamp}
+                        latitude={location?.latitude ? String(location.latitude) : ""}
+                        setLatitude={(val) => setLocation(prev => ({ ...prev, latitude: parseFloat(val) }))}
+                        longitude={location?.longitude ? String(location.longitude) : ""}
+                        setLongitude={(val) => setLocation(prev => ({ ...prev, longitude: parseFloat(val) }))}
+                        onSaveNext={() => setCurrentMobileScreen('MPCS_SALES')}
+                        onBack={() => setCurrentMobileScreen('HOME')}
                       />
-                      <FloatingInput
-                        icon="cash-check"
-                        label="Paid Amount"
-                        prefix="₹ "
-                        placeholder="0.00"
-                        value={paidAmount}
-                        onChangeText={setPaidAmount}
-                        keyboardType="numeric"
+                    )}
+
+                    {currentMobileScreen === 'MPCS_SALES' && (
+                      <MpcsSalesDepositScreen
+                        reportingMonth={reportingMonth || ''}
+                        sales={withdrawal}
+                        setSales={setWithdrawal}
+                        deposit={balance}
+                        setDeposit={setBalance}
+                        totalMembers={totalMembers}
+                        setTotalMembers={setTotalMembers}
+                        onSaveNext={() => setCurrentMobileScreen('MPCS_BUSINESS')}
+                        onBack={() => setCurrentMobileScreen('HOME')}
                       />
-                      <View style={{ width: '100%', marginTop: 5 }}>
-                        <FloatingInput
-                          icon="calculator-variant"
-                          label="Remaining Due (Auto-calculated)"
-                          prefix="₹ "
-                          value={remainingDue}
-                          readOnly={true}
-                          keyboardType="numeric"
-                        />
-                      </View>
-                    </View>
-                  )}
+                    )}
 
+                    {currentMobileScreen === 'MPCS_BUSINESS' && (
+                      <MpcsBusinessPerformanceScreen
+                        reportingMonth={reportingMonth || ''}
+                        totalIncome={withdrawal}
+                        setTotalIncome={setWithdrawal}
+                        totalExpenses={balance}
+                        setTotalExpenses={setBalance}
+                        onSaveNext={() => setCurrentMobileScreen('MPCS_CSC_TRANS')}
+                        onBack={() => setCurrentMobileScreen('HOME')}
+                      />
+                    )}
 
+                    {currentMobileScreen === 'MPCS_CSC_TRANS' && (
+                      <MpcsCscTransactionsScreen
+                        reportingMonth={reportingMonth || "August 2026"}
+                        onSaveNext={() => setCurrentMobileScreen('MPCS_ACTIVITIES')}
+                        onBack={() => setCurrentMobileScreen('HOME')}
+                      />
+                    )}
 
-                  <View style={{ marginTop: 5 }}>
-                    <FloatingInput
-                      icon="account-tie-hat"
-                      label="Authorizing Officer Identity (Submitting Signatory) *"
-                      placeholder="Enter full name of officer"
-                      value={reportedBy}
-                      onChangeText={setReportedBy}
-                    />
-                  </View>
+                    {currentMobileScreen === 'MPCS_ACTIVITIES' && (
+                      <MpcsActivitiesLogScreen
+                        reportingMonth={reportingMonth || "August 2026"}
+                        activityItems={activityItems}
+                        setActivityItems={setActivityItems}
+                        onSaveNext={() => setCurrentMobileScreen('MPCS_REVIEW')}
+                        onBack={() => setCurrentMobileScreen('HOME')}
+                      />
+                    )}
 
-                </View>
+                    {currentMobileScreen === 'MPCS_INST_PROFILE' && (
+                      <MpcsInstitutionalProfileScreen
+                        societyName={selectedSociety?.name || centerName || ''}
+                        panCard={panCard || selectedSociety?.panCard || ''}
+                        regNumber={selectedSociety?.regNo || registrationNumber || ''}
+                        regDate={regDate || selectedSociety?.regDate || ''}
+                        presidentName={presidentName || ''}
+                        presidentMobile={presidentMobile || ''}
+                        secretaryName={managerName || ''}
+                        secretaryMobile={managerMobile || ''}
+                        onSaveProfile={(data) => {
+                          if (data.societyName !== undefined) setCenterName(data.societyName);
+                          if (data.panCard !== undefined) setPanCard(data.panCard);
+                          if (data.regDate !== undefined) setRegDate(data.regDate);
+                          if (data.regNumber !== undefined) setRegistrationNumber(data.regNumber);
+                          if (data.presidentName !== undefined) setPresidentName(data.presidentName);
+                          if (data.presidentMobile !== undefined) setPresidentMobile(data.presidentMobile);
+                          if (data.secretaryName !== undefined) setManagerName(data.secretaryName);
+                          if (data.secretaryMobile !== undefined) setManagerMobile(data.secretaryMobile);
 
-                {/* Submit Action */}
-                <View style={styles.actionContainer}>
-                  <TouchableOpacity activeOpacity={0.9} onPress={generatePDF}>
-                    <LinearGradient
-                      colors={[COLORS.emeraldLight, COLORS.emerald]}
-                      start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
-                      style={styles.forgeButton}
-                    >
-                      <View style={styles.forgeInnerBox}>
-                        <MaterialIcons name="fingerprint" size={28} color={isSealing ? COLORS.surface : COLORS.goldLight} />
-                        <View style={styles.forgeTextCol}>
-                          <Text style={styles.forgeButtonMainText}>
-                            {isSealing ? 'SEALING RECORD...' : 'COMPILE & SEAL RECORD'}
-                          </Text>
-                          <Text style={styles.forgeButtonSubText}>
-                            {isSealing ? 'Uploading & Syncing Data...' : 'Cryptographically Signs PDF Document'}
-                          </Text>
-                        </View>
-                        {isSealing ? (
-                          <ActivityIndicator color={COLORS.surface} size="small" />
-                        ) : (
-                          <MaterialIcons name="chevron-right" size={24} color={COLORS.surface} opacity={0.5} />
-                        )}
-                      </View>
-                    </LinearGradient>
-                  </TouchableOpacity>
-                </View>
+                          if (selectedSociety) {
+                            setSelectedSociety(prev => ({
+                              ...prev,
+                              name: data.societyName || prev?.name,
+                              regNo: data.regNumber || prev?.regNo,
+                              panCard: data.panCard || prev?.panCard,
+                              regDate: data.regDate || prev?.regDate
+                            }));
+                          }
+                          if (institutionsList && institutionsList.length > 0 && selectedSociety?.id) {
+                            setInstitutionsList(prev => prev.map(inst => 
+                              inst.id === selectedSociety.id
+                                ? { ...inst, name: data.societyName || inst.name, regNo: data.regNumber || inst.regNo, panCard: data.panCard || inst.panCard, regDate: data.regDate || inst.regDate }
+                                : inst
+                            ));
+                          }
+                          saveMasterStateToStorage({
+                            centerName: data.societyName,
+                            panCard: data.panCard,
+                            regDate: data.regDate,
+                            registrationNumber: data.regNumber,
+                            presidentName: data.presidentName,
+                            presidentMobile: data.presidentMobile,
+                            managerName: data.secretaryName,
+                            managerMobile: data.secretaryMobile
+                          });
+                        }}
+                        onNext={() => setCurrentMobileScreen('MPCS_DEMOGRAPHICS')}
+                        onBack={() => setCurrentMobileScreen('HOME')}
+                      />
+                    )}
 
-                <Text style={styles.legalFooter}>
-                  FOR OFFICIAL USE ONLY. UNAUTHORIZED ACCESS IS PROHIBITED.
-                </Text>
-              </>
-            )}
+                    {currentMobileScreen === 'MPCS_DEMOGRAPHICS' && (
+                      <MpcsRegisteredDemographicsScreen
+                        initialDemographics={demographicsData.length > 0 ? demographicsData : undefined}
+                        onSaveDemographics={(data) => {
+                          setDemographicsData(data);
+                          saveMasterStateToStorage({ demographicsData: data });
+                        }}
+                        onNext={() => setCurrentMobileScreen('MPCS_COMPLIANCE')}
+                        onBack={() => setCurrentMobileScreen('MPCS_INST_PROFILE')}
+                      />
+                    )}
 
-          </ScrollView>
+                    {currentMobileScreen === 'MPCS_COMPLIANCE' && (
+                      <MpcsComplianceAuditScreen
+                        initialAuditYear={complianceData?.auditYear || ''}
+                        initialAuditType={complianceData?.auditType || ''}
+                        initialAuditDate={complianceData?.auditDate || ''}
+                        initialAuditStatus={complianceData?.auditStatus || 'Pending'}
+                        initialAgmYear={complianceData?.agmYear || ''}
+                        initialAgmDate={complianceData?.agmDate || ''}
+                        initialAgmStatus={complianceData?.agmStatus || 'Pending'}
+                        initialAgmAudited={complianceData?.agmAudited || 'No'}
+                        onSaveCompliance={(data) => {
+                          setComplianceData(data);
+                          saveMasterStateToStorage({ complianceData: data });
+                        }}
+                        onNext={() => setCurrentMobileScreen('MPCS_FINANCIALS')}
+                        onBack={() => setCurrentMobileScreen('MPCS_DEMOGRAPHICS')}
+                      />
+                    )}
+
+                    {currentMobileScreen === 'MPCS_FINANCIALS' && (
+                      <MpcsFinancialPerformanceScreen
+                        initialTurnover={financialsData?.annualTurnover || ''}
+                        initialIncome={financialsData?.totalIncome || ''}
+                        initialExpenses={financialsData?.totalExpenses || ''}
+                        initialNetProfit={financialsData?.netProfit || ''}
+                        initialProfitability={financialsData?.profitability || ''}
+                        onSaveFinancials={(data) => {
+                          setFinancialsData(data);
+                          saveMasterStateToStorage({ financialsData: data });
+                        }}
+                        onNext={() => setCurrentMobileScreen('MPCS_SUPPLEMENTAL')}
+                        onBack={() => setCurrentMobileScreen('MPCS_COMPLIANCE')}
+                      />
+                    )}
+
+                    {currentMobileScreen === 'MPCS_SUPPLEMENTAL' && (
+                      <MpcsSupplementalInfoScreen
+                        initialFormation={supplementalData?.dateOfFormation || ''}
+                        initialNature={supplementalData?.natureOfBusiness || ''}
+                        initialArea={supplementalData?.areaOfOperation || ''}
+                        initialType={supplementalData?.societyType || ''}
+                        initialOther={supplementalData?.otherInfo || ''}
+                        onSaveInfo={(data) => {
+                          setSupplementalData(data);
+                          saveMasterStateToStorage({ supplementalData: data });
+                        }}
+                        onNext={() => setCurrentMobileScreen('MPCS_DIVIDEND')}
+                        onBack={() => setCurrentMobileScreen('MPCS_FINANCIALS')}
+                      />
+                    )}
+
+                    {currentMobileScreen === 'MPCS_DIVIDEND' && (
+                      <MpcsDividendDetailsScreen
+                        initialPolicy={dividendData?.dividendPolicy || ''}
+                        initialAnnounced={dividendData?.dividendAnnounced || ''}
+                        initialRate={dividendData?.dividendRate || ''}
+                        initialAmount={dividendData?.dividendAmount || ''}
+                        initialDate={dividendData?.distributionDate || ''}
+                        onSaveDividend={(data) => {
+                          setDividendData(data);
+                          saveMasterStateToStorage({ dividendData: data });
+                        }}
+                        onNext={() => setCurrentMobileScreen('MPCS_BANK')}
+                        onBack={() => setCurrentMobileScreen('MPCS_SUPPLEMENTAL')}
+                      />
+                    )}
+
+                    {currentMobileScreen === 'MPCS_BANK' && (
+                      <MpcsBankDetailsScreen
+                        initialBankName={bankData?.bankName || ''}
+                        initialBranch={bankData?.branch || ''}
+                        initialAccount={bankData?.accountNumber || ''}
+                        initialIfsc={bankData?.ifscCode || ''}
+                        initialType={bankData?.accountType || ''}
+                        onSaveBankDetails={(data) => {
+                          setBankData(data);
+                          saveMasterStateToStorage({ bankData: data });
+                        }}
+                        onNext={() => setCurrentMobileScreen('MPCS_SHARE_CAPITAL')}
+                        onBack={() => setCurrentMobileScreen('MPCS_DIVIDEND')}
+                      />
+                    )}
+
+                    {currentMobileScreen === 'MPCS_SHARE_CAPITAL' && (
+                      <MpcsShareCapitalScreen
+                        initialAuthorized={shareCapitalData?.authorizedCapital || ''}
+                        initialPaidUp={shareCapitalData?.paidUpCapital || ''}
+                        initialDeposits={shareCapitalData?.totalDeposits || ''}
+                        initialDate={shareCapitalData?.asOfDate || ''}
+                        onSaveShareCapital={(data) => {
+                          setShareCapitalData(data);
+                          saveMasterStateToStorage({ shareCapitalData: data });
+                        }}
+                        onNext={() => setCurrentMobileScreen('MPCS_CSC_DETAILS')}
+                        onBack={() => setCurrentMobileScreen('MPCS_BANK')}
+                      />
+                    )}
+
+                    {currentMobileScreen === 'MPCS_CSC_DETAILS' && (
+                      <MpcsCscDetailsScreen
+                        initialOperator={cscDetailsData?.cscOperatorName || ''}
+                        initialMobile={cscDetailsData?.cscMobileNumber || ''}
+                        initialDistrict={cscDetailsData?.cscDistrict || ''}
+                        initialState={cscDetailsData?.cscState || ''}
+                        initialVleId={cscDetailsData?.vleId || ''}
+                        initialActive={cscDetailsData?.activeServices || []}
+                        onSaveCscDetails={(data) => {
+                          setCscDetailsData(data);
+                          saveMasterStateToStorage({ cscDetailsData: data });
+                        }}
+                        onNext={() => setCurrentMobileScreen('MPCS_REVIEW')}
+                        onBack={() => setCurrentMobileScreen('MPCS_SHARE_CAPITAL')}
+                      />
+                    )}
+
+                    {currentMobileScreen === 'MPCS_REVIEW' && (
+                      <MpcsReviewSubmitScreen
+                        societyName={selectedSociety?.name || centerName || ''}
+                        reportingMonth={reportingMonth || ''}
+                        evidenceStatus={imageUri ? "CAPTURED ✓" : "NOT CAPTURED"}
+                        salesStatus={withdrawal ? "COMPLETED ✓" : "NOT COMPLETED"}
+                        businessStatus={withdrawal && balance ? "COMPLETED ✓" : "NOT COMPLETED"}
+                        cscTransStatus="NOT COMPLETED"
+                        activitiesStatus={`${activityItems.length} ENTRIES`}
+                        onSubmitReturn={generatePDF}
+                        onBack={() => setCurrentMobileScreen('HOME')}
+                      />
+                    )}
+                  </>
+                )}
+              </View>
+            </View>
+          )}
         </KeyboardAvoidingView>
       </SafeAreaView>
 
@@ -1380,14 +1901,6 @@ const styles = StyleSheet.create({
   root: {
     flex: 1,
     backgroundColor: COLORS.background,
-    ...(Platform.OS === 'web' && {
-      width: '100%',
-      maxWidth: 500,
-      marginHorizontal: 'auto',
-      minHeight: '100vh',
-      boxShadow: '0 20px 50px rgba(0,0,0,0.15)',
-      overflow: 'hidden'
-    }),
   },
   bgBlobLeft: {
     position: 'absolute',
@@ -1396,7 +1909,7 @@ const styles = StyleSheet.create({
     width: 350,
     height: 350,
     borderRadius: 175,
-    backgroundColor: 'rgba(4, 120, 87, 0.07)',
+    backgroundColor: 'rgba(124, 28, 28, 0.07)',
   },
   bgBlobRight: {
     position: 'absolute',
@@ -1405,7 +1918,7 @@ const styles = StyleSheet.create({
     width: 350,
     height: 350,
     borderRadius: 175,
-    backgroundColor: 'rgba(212, 175, 55, 0.07)',
+    backgroundColor: 'rgba(180, 83, 9, 0.07)',
   },
   scrollView: {
     flex: 1,
@@ -1427,6 +1940,30 @@ const styles = StyleSheet.create({
     width: '100%',
     paddingHorizontal: 20,
   },
+  mobileShellWrapper: {
+    flex: 1,
+    backgroundColor: Platform.OS === 'web' ? '#0F172A' : '#F8F5F2',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: Platform.OS === 'web' ? 16 : 0,
+    width: '100%',
+  },
+  mobileDeviceFrame: {
+    width: '100%',
+    maxWidth: Platform.OS === 'web' ? 440 : '100%',
+    height: Platform.OS === 'web' ? 880 : '100%',
+    maxHeight: Platform.OS === 'web' ? '94vh' : '100%',
+    backgroundColor: '#F8F5F2',
+    borderRadius: Platform.OS === 'web' ? 32 : 0,
+    borderWidth: Platform.OS === 'web' ? 8 : 0,
+    borderColor: '#1E293B',
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 20 },
+    shadowOpacity: 0.4,
+    shadowRadius: 25,
+    elevation: 20,
+  },
   govEmblem: {
     width: 60,
     height: 60,
@@ -1437,7 +1974,7 @@ const styles = StyleSheet.create({
     flexDirection: 'column',
   },
   govTitleSubtitle: {
-    color: COLORS.emeraldLight,
+    color: COLORS.primaryLight,
     fontSize: 13,
     fontWeight: '600',
     letterSpacing: 1.5,
@@ -1446,7 +1983,7 @@ const styles = StyleSheet.create({
     opacity: 0.8,
   },
   govTitle: {
-    color: COLORS.emerald,
+    color: COLORS.primary,
     fontSize: 24,
     fontFamily: Platform.OS === 'ios' ? 'Georgia' : 'serif',
     fontWeight: '800',
@@ -1461,14 +1998,14 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   actionBtn: {
-    backgroundColor: 'rgba(6, 78, 59, 0.08)',
+    backgroundColor: 'rgba(124, 28, 28, 0.08)',
     width: 44,
     height: 44,
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(6, 78, 59, 0.05)',
+    borderColor: 'rgba(124, 28, 28, 0.05)',
   },
   headerDivider: {
     width: 60,
@@ -1517,7 +2054,7 @@ const styles = StyleSheet.create({
   },
   glassCard: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 24,
+    borderRadius: 0,
     padding: 24,
     marginBottom: 24,
     shadowColor: '#000',
@@ -1544,7 +2081,7 @@ const styles = StyleSheet.create({
   },
   evidenceDropzone: {
     borderWidth: 2,
-    borderColor: 'rgba(4, 120, 87, 0.2)',
+    borderColor: 'rgba(124, 28, 28, 0.2)',
     borderStyle: 'dashed',
     backgroundColor: 'rgba(255, 255, 255, 0.15)',
     borderRadius: 16,
@@ -1556,7 +2093,7 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: '#ECFDF5',
+    backgroundColor: '#FEE2E2',
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 16,
@@ -1622,7 +2159,7 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   metaTextTime: {
-    color: '#D1FAE5',
+    color: '#FEE2E2',
     fontSize: 12,
     fontWeight: '600',
   },
@@ -1638,13 +2175,6 @@ const styles = StyleSheet.create({
   },
   floatingInputWrapper: {
     marginBottom: 20,
-  },
-  floatingInputLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#4B5563',
-    marginBottom: 8,
-    marginLeft: 4,
   },
   floatingInputLabel: {
     fontSize: 11,
@@ -1714,7 +2244,7 @@ const styles = StyleSheet.create({
   pickerNative: {
     width: '100%',
     height: Platform.OS === 'web' ? '100%' : 50,
-    color: '#064E3B',
+    color: COLORS.primary,
     fontWeight: '800',
     backgroundColor: 'transparent',
     borderWidth: 0,
@@ -1734,7 +2264,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#F8F5F2',
     borderWidth: 1.5,
     borderColor: '#E2E8F0',
     borderRadius: 16,
@@ -1842,7 +2372,7 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     paddingHorizontal: 8,
     borderBottomWidth: 1,
-    borderBottomColor: '#F8FAFC',
+    borderBottomColor: '#F8F5F2',
   },
   categoryCell: {
     flex: 1.5,
@@ -1882,7 +2412,7 @@ const styles = StyleSheet.create({
   rowTotalText: {
     fontSize: 15,
     fontWeight: '800',
-    color: COLORS.emeraldLight,
+    color: COLORS.primaryLight,
     opacity: 0.5,
   },
   ledgerFooter: {
@@ -1892,13 +2422,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     marginTop: 8,
     borderTopWidth: 1,
-    borderTopColor: '#ECFDF5',
+    borderTopColor: '#FEE2E2',
   },
   ledgerFooterLabel: {
     flex: 1.5,
     fontSize: 11,
     fontWeight: '900',
-    color: COLORS.emerald,
+    color: COLORS.primary,
     letterSpacing: 0.5,
   },
   footerValBox: {
@@ -1913,7 +2443,7 @@ const styles = StyleSheet.create({
     color: '#1E293B',
   },
   grandTotalPill: {
-    backgroundColor: '#ECFDF5',
+    backgroundColor: '#FEE2E2',
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 8,
@@ -1921,7 +2451,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   grandTotalPillText: {
-    color: COLORS.emerald,
+    color: COLORS.primary,
     fontSize: 15,
     fontWeight: '900',
   },
@@ -1962,7 +2492,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     overflow: 'hidden',
     borderWidth: 1.5,
-    borderColor: '#BBF7D0',
+    borderColor: '#FECACA',
     shadowColor: COLORS.emerald,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.1,
@@ -1991,15 +2521,15 @@ const styles = StyleSheet.create({
   premiumReadOnlyValue: {
     fontSize: 22,
     fontWeight: '900',
-    color: COLORS.emerald,
+    color: COLORS.primary,
     letterSpacing: 0.5,
   },
   // New Features Styles
   syncBanner: {
     position: 'absolute',
-    top: 50,
-    left: 20,
-    right: 20,
+    bottom: Platform.OS === 'web' ? 100 : 120,
+    alignSelf: 'center',
+    width: Platform.OS === 'web' ? 360 : '90%',
     zIndex: 1000,
     elevation: 10,
   },
@@ -2047,7 +2577,7 @@ const styles = StyleSheet.create({
     width: (width - 100) / 3,
     height: (width - 100) / 3,
     borderRadius: 12,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#F8F5F2',
     borderWidth: 1.5,
     borderColor: '#E2E8F0',
     alignItems: 'center',
@@ -2058,61 +2588,75 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
   },
-  broadcastBanner: {
+  broadcastBannerWrapper: {
     position: 'absolute',
-    top: 100,
-    left: 20,
-    right: 20,
-    zIndex: 1001,
-    elevation: 11,
+    top: Platform.OS === 'web' ? 14 : 46,
+    width: '100%',
+    maxWidth: 440,
+    alignSelf: 'center',
+    paddingHorizontal: 14,
+    zIndex: 99999,
+    elevation: 12,
   },
-  broadcastInner: {
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderRadius: 14,
+  broadcastNoticeCard: {
+    backgroundColor: '#FFFBEB',
+    borderRadius: 16,
+    borderWidth: 1.5,
+    borderColor: '#FCD34D',
+    padding: 14,
+    shadowColor: '#D97706',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.12,
+    shadowRadius: 10,
+    elevation: 4,
+  },
+  broadcastNoticeHeaderRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    gap: 12,
-    borderWidth: 1,
-    borderColor: 'rgba(212, 175, 55, 0.4)',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.25,
-    shadowRadius: 10,
   },
-  broadcastTitle: {
-    color: '#FFF',
-    fontSize: 9,
-    fontWeight: '900',
-    letterSpacing: 1.5,
-    marginBottom: 2,
+  broadcastIconBox: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: '#FEF3C7',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 2,
   },
-  broadcastText: {
-    color: '#F9FAFB',
-    fontSize: 13,
-    fontWeight: '700',
-    lineHeight: 18,
+  broadcastNoticeTitle: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: '#78350F',
+    marginBottom: 4,
   },
-  broadcastClose: {
-    padding: 2,
-    backgroundColor: 'rgba(0,0,0,0.1)',
-    borderRadius: 6,
+  broadcastNoticeBody: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#92400E',
+    lineHeight: 17,
+  },
+  broadcastCloseBtn: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: 'rgba(120, 53, 15, 0.08)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: 8,
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(6, 78, 59, 0.4)',
-    justifyContent: 'flex-end',
+    backgroundColor: 'rgba(0,0,0,0.8)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
   },
   bulletinBoard: {
+    width: '100%',
+    maxHeight: '80%',
     backgroundColor: '#FFF',
-    borderTopLeftRadius: 30,
-    borderTopRightRadius: 30,
-    height: '80%',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: -10 },
-    shadowOpacity: 0.1,
-    shadowRadius: 20,
-    elevation: 20,
+    borderRadius: 24,
+    overflow: 'hidden',
   },
   bulletinHeader: {
     padding: 24,
@@ -2135,7 +2679,7 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
   },
   bulletinItem: {
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#F8F5F2',
     padding: 16,
     borderRadius: 16,
     marginBottom: 12,

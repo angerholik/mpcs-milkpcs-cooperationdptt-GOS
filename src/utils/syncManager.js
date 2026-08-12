@@ -1,8 +1,9 @@
+import { Platform } from 'react-native';
 import NetInfo from '@react-native-community/netinfo';
-import * as SecureStore from 'expo-secure-store';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { saveMilkPcsSubmission, saveMpcsSubmission } from '../supabase';
 
-const QUEUE_KEY = '@submission_queue';
+const QUEUE_KEY = 'submission_queue';
 
 /**
  * Adds a submission to the offline queue.
@@ -11,7 +12,7 @@ const QUEUE_KEY = '@submission_queue';
  */
 export const queueSubmission = async (type, data) => {
     try {
-        const queueJson = await SecureStore.getItemAsync(QUEUE_KEY);
+        const queueJson = await AsyncStorage.getItem(QUEUE_KEY);
         const queue = queueJson ? JSON.parse(queueJson) : [];
         const item = {
             id: Date.now().toString(),
@@ -20,7 +21,7 @@ export const queueSubmission = async (type, data) => {
             timestamp: new Date().toISOString()
         };
         queue.push(item);
-        await SecureStore.setItemAsync(QUEUE_KEY, JSON.stringify(queue));
+        await AsyncStorage.setItem(QUEUE_KEY, JSON.stringify(queue));
         return true;
     } catch (e) {
         console.error('Queue error:', e);
@@ -32,11 +33,22 @@ export const queueSubmission = async (type, data) => {
  * Processes the offline queue and attempts to sync with Supabase.
  */
 export const processQueue = async (onStatusChange) => {
-    const state = await NetInfo.fetch();
-    if (!state.isConnected) return { synced: 0, pending: 0 };
+    let isConnected = true;
+    try {
+        if (Platform.OS === 'web') {
+            isConnected = typeof navigator !== 'undefined' ? navigator.onLine : true;
+        } else {
+            const state = await NetInfo.fetch();
+            isConnected = !!state?.isConnected;
+        }
+    } catch (e) {
+        isConnected = true;
+    }
+
+    if (!isConnected) return { synced: 0, pending: await getQueueStatus() };
 
     try {
-        const queueJson = await SecureStore.getItemAsync(QUEUE_KEY);
+        const queueJson = await AsyncStorage.getItem(QUEUE_KEY);
         if (!queueJson) return { synced: 0, pending: 0 };
 
         let queue = JSON.parse(queueJson);
@@ -59,14 +71,24 @@ export const processQueue = async (onStatusChange) => {
                 if (!error) {
                     syncedCount++;
                 } else {
-                    remaining.push(item);
+                    console.warn('Sync item failed:', error.message || error);
+                    // increment retry count, if retry > 3 remove from queue to unstick user
+                    item.retryCount = (item.retryCount || 0) + 1;
+                    if (item.retryCount <= 3) {
+                        remaining.push(item);
+                    } else {
+                        console.error('Dropping un-syncable item after 3 retries:', item);
+                        syncedCount++; // clear from queue
+                    }
                 }
             } catch (e) {
-                remaining.push(item);
+                console.error('Queue item sync exception:', e);
+                item.retryCount = (item.retryCount || 0) + 1;
+                if (item.retryCount <= 3) remaining.push(item);
             }
         }
 
-        await SecureStore.setItemAsync(QUEUE_KEY, JSON.stringify(remaining));
+        await AsyncStorage.setItem(QUEUE_KEY, JSON.stringify(remaining));
         
         if (onStatusChange) onStatusChange({ synced: syncedCount, pending: remaining.length });
         return { synced: syncedCount, pending: remaining.length };
@@ -81,7 +103,7 @@ export const processQueue = async (onStatusChange) => {
  */
 export const getQueueStatus = async () => {
     try {
-        const queueJson = await SecureStore.getItemAsync(QUEUE_KEY);
+        const queueJson = await AsyncStorage.getItem(QUEUE_KEY);
         if (!queueJson) return 0;
         const queue = JSON.parse(queueJson);
         return queue.length;
