@@ -90,9 +90,6 @@ export default function MpcsActivitiesLogScreen({
           <Text style={styles.moduleTag}>MPCS</Text>
           <Text style={styles.screenTitleHeader}>Activities &amp; Events Log</Text>
         </View>
-        <View style={styles.stepBadge}>
-          <Text style={styles.stepIndicator}>5 of 5</Text>
-        </View>
       </View>
 
       <ScrollView

@@ -80,9 +80,6 @@ export default function MpcsDigitalEvidenceScreen({
           <Text style={styles.moduleTag}>MPCS</Text>
           <Text style={styles.screenTitleHeader}>Digital Evidence</Text>
         </View>
-        <View style={styles.stepBadge}>
-          <Text style={styles.stepIndicator}>1 of 5</Text>
-        </View>
       </View>
 
       <ScrollView

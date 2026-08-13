@@ -71,3 +71,28 @@ export async function saveVisitRecord(societyName, reportingMonth, visitData) {
     return [];
   }
 }
+
+const SECTION_STATES_PREFIX = '@mpcs_section_states_';
+
+export async function saveSectionStates(societyName, reportingMonth, sectionStates) {
+  try {
+    const key = `${SECTION_STATES_PREFIX}${(societyName || 'default').toLowerCase()}_${(reportingMonth || 'current').toLowerCase()}`;
+    await AsyncStorage.setItem(key, JSON.stringify(sectionStates));
+    return true;
+  } catch (e) {
+    console.warn('Failed to save section states:', e);
+    return false;
+  }
+}
+
+export async function getSectionStates(societyName, reportingMonth) {
+  try {
+    const key = `${SECTION_STATES_PREFIX}${(societyName || 'default').toLowerCase()}_${(reportingMonth || 'current').toLowerCase()}`;
+    const raw = await AsyncStorage.getItem(key);
+    if (!raw) return null;
+    return JSON.parse(raw);
+  } catch (e) {
+    console.warn('Failed to load section states:', e);
+    return null;
+  }
+}

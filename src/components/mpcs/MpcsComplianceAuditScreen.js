@@ -82,13 +82,11 @@ function deriveFinancialYear(dateStr) {
 export default function MpcsComplianceAuditScreen({
   lastVerified = "Not verified",
   initialAuditYear = "",
-  initialAuditType = "",
   initialAuditDate = "",
   initialAuditStatus = "Pending",
   initialAgmYear = "",
   initialAgmDate = "",
   initialAgmStatus = "Pending",
-  initialAgmAudited = "No",
   onSaveCompliance,
   onNext,
   onBack
@@ -97,24 +95,20 @@ export default function MpcsComplianceAuditScreen({
 
   const [auditDate, setAuditDate] = useState(initialAuditDate);
   const [auditYear, setAuditYear] = useState(initialAuditYear || deriveFinancialYear(initialAuditDate));
-  const [auditType, setAuditType] = useState(initialAuditType);
-  const [auditStatus, setAuditStatus] = useState(initialAuditStatus);
+  const [auditStatus, setAuditStatus] = useState(initialAuditStatus || 'Pending');
 
   const [agmDate, setAgmDate] = useState(initialAgmDate);
   const [agmYear, setAgmYear] = useState(initialAgmYear || deriveFinancialYear(initialAgmDate));
-  const [agmStatus, setAgmStatus] = useState(initialAgmStatus);
-  const [agmAudited, setAgmAudited] = useState(initialAgmAudited);
+  const [agmStatus, setAgmStatus] = useState(initialAgmStatus || 'Pending');
 
   React.useEffect(() => {
     if (initialAuditDate) setAuditDate(initialAuditDate);
     if (initialAuditYear) setAuditYear(initialAuditYear);
-    if (initialAuditType) setAuditType(initialAuditType);
     if (initialAuditStatus) setAuditStatus(initialAuditStatus);
     if (initialAgmDate) setAgmDate(initialAgmDate);
     if (initialAgmYear) setAgmYear(initialAgmYear);
     if (initialAgmStatus) setAgmStatus(initialAgmStatus);
-    if (initialAgmAudited) setAgmAudited(initialAgmAudited);
-  }, [initialAuditYear, initialAuditType, initialAuditDate, initialAuditStatus, initialAgmYear, initialAgmDate, initialAgmStatus, initialAgmAudited]);
+  }, [initialAuditYear, initialAuditDate, initialAuditStatus, initialAgmYear, initialAgmDate, initialAgmStatus]);
 
   const handleAuditDateSelect = (isoValue) => {
     const displayDate = formatFromIsoDate(isoValue);
@@ -132,7 +126,7 @@ export default function MpcsComplianceAuditScreen({
 
   const handleSave = () => {
     if (onSaveCompliance) {
-      onSaveCompliance({ auditYear, auditType, auditDate, auditStatus, agmYear, agmDate, agmStatus, agmAudited });
+      onSaveCompliance({ auditYear, auditDate, auditStatus, agmYear, agmDate, agmStatus });
     }
     setModalVisible(false);
   };
@@ -235,8 +229,8 @@ export default function MpcsComplianceAuditScreen({
               <Text style={styles.infoValue}>{auditYear || "-"}</Text>
             </View>
             <View style={styles.infoCol}>
-              <Text style={styles.infoLabel}>AUDIT TYPE</Text>
-              <Text style={styles.infoValue}>{auditType || "-"}</Text>
+              <Text style={styles.infoLabel}>AUDIT DATE</Text>
+              <Text style={styles.infoValue}>{auditDate || "-"}</Text>
             </View>
           </View>
           
@@ -244,12 +238,13 @@ export default function MpcsComplianceAuditScreen({
 
           <View style={styles.infoGrid}>
             <View style={styles.infoCol}>
-              <Text style={styles.infoLabel}>AUDIT DATE</Text>
-              <Text style={styles.infoValue}>{auditDate || "-"}</Text>
-            </View>
-            <View style={styles.infoCol}>
               <Text style={styles.infoLabel}>AUDIT STATUS</Text>
-              <Text style={styles.infoValue}>{auditStatus || "-"}</Text>
+              <Text style={[
+                styles.infoValue,
+                { color: auditStatus === 'Completed' ? COLORS.emerald700 : COLORS.amber900, fontWeight: '800' }
+              ]}>
+                {auditStatus || "Pending"}
+              </Text>
             </View>
           </View>
         </View>
@@ -279,11 +274,12 @@ export default function MpcsComplianceAuditScreen({
           <View style={styles.infoGrid}>
             <View style={styles.infoCol}>
               <Text style={styles.infoLabel}>AGM STATUS</Text>
-              <Text style={styles.infoValue}>{agmStatus || "-"}</Text>
-            </View>
-            <View style={styles.infoCol}>
-              <Text style={styles.infoLabel}>AGM AUDITED</Text>
-              <Text style={styles.infoValue}>{agmAudited || "-"}</Text>
+              <Text style={[
+                styles.infoValue,
+                { color: agmStatus === 'Completed' ? COLORS.emerald700 : COLORS.amber900, fontWeight: '800' }
+              ]}>
+                {agmStatus || "Pending"}
+              </Text>
             </View>
           </View>
         </View>
@@ -330,8 +326,27 @@ export default function MpcsComplianceAuditScreen({
               </View>
 
               <View style={styles.modalFormGroup}>
-                <Text style={styles.modalLabel}>Audit Type</Text>
-                <TextInput style={styles.modalInput} value={auditType} onChangeText={setAuditType} placeholder="e.g. Statutory Audit" placeholderTextColor={COLORS.slate400} />
+                <Text style={styles.modalLabel}>Audit Status</Text>
+                <View style={{ flexDirection: 'row', gap: 10, marginTop: 4 }}>
+                  {['Pending', 'Completed'].map((st) => (
+                    <TouchableOpacity
+                      key={st}
+                      style={[
+                        styles.statusToggleChip,
+                        auditStatus === st && styles.statusToggleChipActive,
+                      ]}
+                      onPress={() => setAuditStatus(st)}
+                      activeOpacity={0.7}
+                    >
+                      <Text style={[
+                        styles.statusToggleText,
+                        auditStatus === st && styles.statusToggleTextActive
+                      ]}>
+                        {st}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
               </View>
 
               <Text style={[styles.modalSectionTitle, { marginTop: 20 }]}>Latest AGM Details</Text>
@@ -361,7 +376,31 @@ export default function MpcsComplianceAuditScreen({
                 <TextInput style={styles.modalInput} value={agmYear} onChangeText={setAgmYear} placeholder="e.g. 2024 - 2025" placeholderTextColor={COLORS.slate400} />
               </View>
 
-              <View style={[styles.btnWrapper, { marginTop: 16, marginBottom: 20 }]}>
+              <View style={styles.modalFormGroup}>
+                <Text style={styles.modalLabel}>AGM Status</Text>
+                <View style={{ flexDirection: 'row', gap: 10, marginTop: 4 }}>
+                  {['Pending', 'Completed'].map((st) => (
+                    <TouchableOpacity
+                      key={st}
+                      style={[
+                        styles.statusToggleChip,
+                        agmStatus === st && styles.statusToggleChipActive,
+                      ]}
+                      onPress={() => setAgmStatus(st)}
+                      activeOpacity={0.7}
+                    >
+                      <Text style={[
+                        styles.statusToggleText,
+                        agmStatus === st && styles.statusToggleTextActive
+                      ]}>
+                        {st}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+
+              <View style={[styles.btnWrapper, { marginTop: 24, marginBottom: 20 }]}>
                 <Pressable 
                   style={({ hovered, pressed }) => [
                     styles.saveModalBtn,
@@ -697,5 +736,29 @@ const styles = StyleSheet.create({
     fontSize: 13, 
     fontWeight: '700',
     letterSpacing: 0.5,
+  },
+  statusToggleChip: {
+    flex: 1,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: COLORS.slate200,
+    backgroundColor: COLORS.slate50,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  statusToggleChipActive: {
+    borderColor: '#7a1a1f',
+    backgroundColor: '#7a1a1f',
+  },
+  statusToggleText: {
+    fontFamily: FONT_FAMILY,
+    fontSize: 12,
+    fontWeight: '700',
+    color: COLORS.slate600,
+  },
+  statusToggleTextActive: {
+    color: '#FFFFFF',
   },
 });

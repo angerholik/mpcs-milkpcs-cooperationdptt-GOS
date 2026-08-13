@@ -43,6 +43,8 @@ export default function MpcsBusinessPerformanceScreen({
   setTotalIncome,
   totalExpenses = "",
   setTotalExpenses,
+  totalMembers = "",
+  setTotalMembers,
   remarks = "",
   setRemarks,
   onSaveNext,
@@ -51,7 +53,28 @@ export default function MpcsBusinessPerformanceScreen({
   const parseNum = (str) => parseFloat((str || '').replace(/,/g, '')) || 0;
   const incomeVal = parseNum(totalIncome);
   const expenseVal = parseNum(totalExpenses);
-  const netSurplus = incomeVal - expenseVal;
+  const diff = incomeVal - expenseVal;
+
+  let statusText = 'BREAK-EVEN';
+  let statusBg = '#FEF3C7';
+  let statusColor = COLORS.amber900;
+  let statusIcon = 'scale-balance';
+  let cardStyle = styles.breakEvenCard;
+  let displayValue = Math.abs(diff);
+
+  if (diff > 0) {
+    statusText = 'SURPLUS';
+    statusBg = '#D1FAE5';
+    statusColor = COLORS.emerald700;
+    statusIcon = 'chart-line-up';
+    cardStyle = styles.surplusCard;
+  } else if (diff < 0) {
+    statusText = 'DEFICIT';
+    statusBg = '#FEE2E2';
+    statusColor = COLORS.red700;
+    statusIcon = 'chart-line-down';
+    cardStyle = styles.deficitCard;
+  }
 
   return (
     <View style={styles.container}>
@@ -69,9 +92,6 @@ export default function MpcsBusinessPerformanceScreen({
         <View style={styles.topBarTitleContainer}>
           <Text style={styles.moduleTag}>MPCS</Text>
           <Text style={styles.screenTitleHeader}>Business Performance</Text>
-        </View>
-        <View style={styles.stepBadge}>
-          <Text style={styles.stepIndicator}>3 of 5</Text>
         </View>
       </View>
 
@@ -111,9 +131,9 @@ export default function MpcsBusinessPerformanceScreen({
             </View>
           </View>
 
-          {/* Field 1: Total Income */}
+          {/* Field 1: Gross Income / Revenue */}
           <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>Total Income (₹)</Text>
+            <Text style={styles.inputLabel}>Gross Income / Revenue (₹)</Text>
             <View style={styles.inputBox}>
               <Text style={styles.currencyPrefix}>₹</Text>
               <TextInput
@@ -146,44 +166,45 @@ export default function MpcsBusinessPerformanceScreen({
           </View>
 
           {/* Auto Derived Net Surplus / Deficit Card */}
-          <View style={[
-            styles.autoCalcCard,
-            netSurplus >= 0 ? styles.surplusCard : styles.deficitCard
-          ]}>
+          <View style={[styles.autoCalcCard, cardStyle]}>
             <View style={{ flex: 1 }}>
-              <Text style={[
-                styles.autoCalcLabel,
-                { color: netSurplus >= 0 ? COLORS.emerald700 : COLORS.red700 }
-              ]}>
+              <Text style={[styles.autoCalcLabel, { color: statusColor }]}>
                 NET SURPLUS / (DEFICIT) (AUTO CALCULATED)
               </Text>
-              <Text style={[
-                styles.autoCalcValue,
-                { color: netSurplus >= 0 ? COLORS.emerald700 : COLORS.red700 }
-              ]}>
-                {formatCurrency(netSurplus)}
+              <Text style={[styles.autoCalcValue, { color: statusColor }]}>
+                {formatCurrency(displayValue)}
               </Text>
             </View>
 
-            <View style={[
-              styles.autoBadge,
-              { backgroundColor: netSurplus >= 0 ? '#D1FAE5' : '#FEE2E2' }
-            ]}>
+            <View style={[styles.autoBadge, { backgroundColor: statusBg }]}>
               <MaterialCommunityIcons
-                name={netSurplus >= 0 ? 'chart-line-up' : 'chart-line-down'}
+                name={statusIcon}
                 size={14}
-                color={netSurplus >= 0 ? COLORS.emerald700 : COLORS.red700}
+                color={statusColor}
               />
-              <Text style={[
-                styles.autoBadgeText,
-                { color: netSurplus >= 0 ? COLORS.emerald700 : COLORS.red700 }
-              ]}>
-                {netSurplus >= 0 ? 'SURPLUS' : 'DEFICIT'}
+              <Text style={[styles.autoBadgeText, { color: statusColor }]}>
+                {statusText}
               </Text>
             </View>
           </View>
 
-          {/* Field 3: Remarks */}
+          {/* Field 3: Total Active Members */}
+          <View style={styles.inputGroup}>
+            <Text style={styles.inputLabel}>Total Active Members</Text>
+            <View style={styles.inputBox}>
+              <MaterialCommunityIcons name="account-group-outline" size={16} color={COLORS.slate400} style={{ marginRight: 6 }} />
+              <TextInput
+                style={styles.textInput}
+                value={totalMembers}
+                onChangeText={setTotalMembers}
+                placeholder="e.g. 245"
+                placeholderTextColor={COLORS.slate300}
+                keyboardType="numeric"
+              />
+            </View>
+          </View>
+
+          {/* Field 4: Remarks */}
           <View style={styles.inputGroup}>
             <Text style={styles.inputLabel}>Remarks (Optional)</Text>
             <View style={[styles.inputBox, { height: 74, alignItems: 'flex-start', paddingTop: 10 }]}>
@@ -403,6 +424,10 @@ const styles = StyleSheet.create({
   deficitCard: {
     backgroundColor: COLORS.red50,
     borderColor: '#FCA5A5',
+  },
+  breakEvenCard: {
+    backgroundColor: COLORS.amber50,
+    borderColor: '#FDE68A',
   },
   autoCalcLabel: {
     fontFamily: FONT_FAMILY,

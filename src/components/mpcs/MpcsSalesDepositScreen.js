@@ -51,7 +51,7 @@ export default function MpcsSalesDepositScreen({
 }) {
   const salesVal = parseFloat((sales || '').replace(/,/g, '')) || 0;
   const depositVal = parseFloat((deposit || '').replace(/,/g, '')) || 0;
-  const totalTurnover = salesVal + depositVal;
+  const totalTurnover = salesVal;
 
   return (
     <View style={styles.container}>
@@ -69,9 +69,6 @@ export default function MpcsSalesDepositScreen({
         <View style={styles.topBarTitleContainer}>
           <Text style={styles.moduleTag}>MPCS</Text>
           <Text style={styles.screenTitleHeader}>Monthly Sales / Deposit</Text>
-        </View>
-        <View style={styles.stepBadge}>
-          <Text style={styles.stepIndicator}>2 of 5</Text>
         </View>
       </View>
 
@@ -128,9 +125,9 @@ export default function MpcsSalesDepositScreen({
             </View>
           </View>
 
-          {/* Field 2: Total Deposit */}
+          {/* Field 2: Total Bank Deposit */}
           <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>Total Deposit (₹)</Text>
+            <Text style={styles.inputLabel}>Total Bank Deposit (₹)</Text>
             <View style={styles.inputBox}>
               <Text style={styles.currencyPrefix}>₹</Text>
               <TextInput
@@ -145,15 +142,15 @@ export default function MpcsSalesDepositScreen({
             </View>
           </View>
 
-          {/* Combined Turnover Summary Strip */}
+          {/* Monthly Turnover Summary Strip */}
           <View style={styles.summaryStrip}>
             <View style={{ flex: 1 }}>
-              <Text style={styles.summaryLabel}>Combined Monthly Turnover (Auto)</Text>
+              <Text style={styles.summaryLabel}>MONTHLY TURNOVER (AUTO)</Text>
               <Text style={styles.summaryValue}>{formatCurrency(totalTurnover.toString())}</Text>
             </View>
             <View style={styles.autoBadge}>
               <MaterialCommunityIcons name="calculator-variant-outline" size={14} color={COLORS.emerald700} />
-              <Text style={styles.autoBadgeText}>SUM</Text>
+              <Text style={styles.autoBadgeText}>AUTO</Text>
             </View>
           </View>
 

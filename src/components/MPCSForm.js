@@ -209,28 +209,6 @@ const getFormSections = (formData, mpcsSocieties = []) => [
         ]
     },
     {
-        title: 'Section G: Supplemental',
-        icon: 'credit-card',
-        ribbonColor: '#DC2626',
-        fields: [
-            { 
-                id: '8.0', 
-                label: 'Active Loan Status', 
-                subLabel: 'Declare if the cooperative holds institutional debt',
-                type: 'switch', 
-                fullWidth: true 
-            },
-            ...(formData['8.0'] === 'Yes' ? [
-                { id: '8.1', label: 'Type of Loans', icon: 'list', fullWidth: true, placeholder: 'e.g. Working Capital' },
-                { id: '8.2', label: 'Date of Loan Sanctioned', icon: 'history', type: 'date', fullWidth: true },
-                { id: '8.3', label: 'Total number of Beneficiaries', icon: 'people-outline', numeric: true, fullWidth: true, placeholder: '0' },
-                { id: '8.4', label: 'Total Loan extended in last FY (Rs)', icon: 'arrow-upward', numeric: true, prefix: '₹ ', fullWidth: true, placeholder: '0.00' },
-                { id: '8.5', label: 'Total Loan recovered in last FY (Rs)', icon: 'arrow-downward', numeric: true, prefix: '₹ ', fullWidth: true, placeholder: '0.00' },
-                { id: '8.6', label: 'Total Loan Outstanding in last FY (Rs)', icon: 'report-problem', numeric: true, prefix: '₹ ', fullWidth: true, placeholder: '0.00' },
-            ] : [])
-        ]
-    },
-    {
         title: 'Section H: Dividend Details',
         icon: 'payments',
         ribbonColor: '#4F46E5',
@@ -275,11 +253,10 @@ const getFormSections = (formData, mpcsSocieties = []) => [
         icon: 'show-chart',
         ribbonColor: '#D97706',
         fields: [
-            { id: '8.7', label: 'Last FY Revenue from Non-Credit Activities', icon: 'trending-up', numeric: true, prefix: '₹ ', fullWidth: true, placeholder: '0.00' },
             { id: '8.8', label: 'Authorised Share Capital (Rs)', icon: 'account-balance', numeric: true, prefix: '₹ ', fullWidth: true, placeholder: '0.00' },
             { id: '8.9', label: 'Paid Up Share Capital (Rs)', icon: 'savings', numeric: true, prefix: '₹ ', fullWidth: true, placeholder: '0.00' },
             { id: '8.10', label: 'Paid Up Share Capital Date', icon: 'event-available', type: 'date', fullWidth: true },
-            { id: '8.11', label: 'Total Deposit (Rs)', icon: 'savings', numeric: true, prefix: '₹ ', fullWidth: true, placeholder: '0.00' },
+            { id: '8.11', label: 'Total Bank Deposit (Rs)', icon: 'savings', numeric: true, prefix: '₹ ', fullWidth: true, placeholder: '0.00' },
         ]
     },
     {

@@ -46,8 +46,10 @@ export default function HomeScreen({
   completedCount = 0,
   totalCount = 5,
   evidenceStatus = "NOT CAPTURED",
-  operationsStatus = "IN PROGRESS",
-  activitiesStatus = "NOT COMPLETED",
+  salesStatus = "NOT COMPLETED",
+  businessStatus = "NOT COMPLETED",
+  cscTransStatus = "NOT COMPLETED",
+  activitiesStatus = "0 ENTRIES",
   lastUpdated = "",
   activeAlert,
   onDismissAlert,
@@ -156,7 +158,7 @@ export default function HomeScreen({
           <View style={styles.progressContainer}>
             <View style={styles.progressLabelRow}>
               <Text style={styles.progressLabel}>
-                {hasSubmittedMonthlyParams ? 'MONTHLY PARAMS SUBMITTED (80% BASE)' : 'OVERALL COMPLETION'}
+                {reportStatus === 'MONTHLY PARAMS OK' ? 'MONTHLY PARAMS SUBMITTED (80% BASE)' : 'OVERALL COMPLETION'}
               </Text>
               <Text style={styles.progressPercent}>{progressPercent}%</Text>
             </View>
@@ -178,9 +180,9 @@ export default function HomeScreen({
           ]}
           onPress={() => {
             if (!onNavigateScreen) return;
-            if (evidenceStatus !== 'CAPTURED ✓') {
+            if (!evidenceStatus?.includes('CAPTURED') && !evidenceStatus?.includes('Valid')) {
               onNavigateScreen('MPCS_EVIDENCE');
-            } else if (!hasSubmittedMonthlyParams && operationsStatus !== 'COMPLETED ✓') {
+            } else if (!salesStatus?.includes('COMPLETED')) {
               onNavigateScreen('MPCS_SALES');
             } else if (activitiesStatus === '0 ENTRIES' || activitiesStatus === 'NOT COMPLETED') {
               onNavigateScreen('MPCS_ACTIVITIES');
@@ -200,9 +202,9 @@ export default function HomeScreen({
               ]}
             >
               <Text style={styles.nextStepBtnText}>
-                {evidenceStatus !== 'CAPTURED ✓'
+                {(!evidenceStatus?.includes('CAPTURED') && !evidenceStatus?.includes('Valid'))
                   ? 'Next Step: Digital Evidence (Live Visit)'
-                  : !hasSubmittedMonthlyParams
+                  : !salesStatus?.includes('COMPLETED')
                     ? 'Next Step: Monthly Sales / Deposit'
                     : activitiesStatus === '0 ENTRIES' || activitiesStatus === 'NOT COMPLETED'
                       ? 'Next Step: Activities & Events Log (Live Visit)'
@@ -262,8 +264,8 @@ export default function HomeScreen({
                       ]}>
                         <MaterialCommunityIcons name="image-outline" size={24} color={evidenceStatus === 'CAPTURED ✓' ? COLORS.emerald700 : hovered ? '#7a1a1f' : COLORS.slate400} />
                       </View>
-                      <View style={[styles.statusPill, {backgroundColor: evidenceStatus === 'CAPTURED ✓' ? COLORS.emerald50 : COLORS.slate100, borderColor: evidenceStatus === 'CAPTURED ✓' ? 'rgba(16,185,129,0.3)' : 'rgba(226,232,240,0.5)'}]}>
-                        <Text style={[styles.statusPillText, {color: evidenceStatus === 'CAPTURED ✓' ? COLORS.emerald700 : COLORS.slate500}]}>
+                      <View style={[styles.statusPill, {backgroundColor: evidenceStatus.includes('CAPTURED') ? COLORS.emerald50 : COLORS.slate100, borderColor: evidenceStatus.includes('CAPTURED') ? 'rgba(16,185,129,0.3)' : 'rgba(226,232,240,0.5)'}]}>
+                        <Text style={[styles.statusPillText, {color: evidenceStatus.includes('CAPTURED') ? COLORS.emerald700 : COLORS.slate500}]}>
                           {evidenceStatus || 'NOT CAPTURED'}
                         </Text>
                       </View>
@@ -288,21 +290,21 @@ export default function HomeScreen({
                     <View style={styles.moduleCardHeader}>
                       <View style={[
                         styles.moduleIconBox, 
-                        {backgroundColor: hasSubmittedMonthlyParams ? COLORS.emerald50 : COLORS.amber50, borderColor: hasSubmittedMonthlyParams ? '#a7f3d0' : 'rgba(254,243,199,0.5)'},
+                        {backgroundColor: salesStatus?.includes('COMPLETED') ? COLORS.emerald50 : COLORS.amber50, borderColor: salesStatus?.includes('COMPLETED') ? '#a7f3d0' : 'rgba(254,243,199,0.5)'},
                         Platform.OS === 'web' && { transition: 'all 0.3s' },
                         hovered && { backgroundColor: '#fef3c7', borderColor: '#fde68a' }
                       ]}>
-                        <MaterialCommunityIcons name="wallet-outline" size={24} color={hasSubmittedMonthlyParams ? COLORS.emerald700 : COLORS.amber600} />
+                        <MaterialCommunityIcons name="wallet-outline" size={24} color={salesStatus?.includes('COMPLETED') ? COLORS.emerald700 : COLORS.amber600} />
                       </View>
-                      <View style={[styles.statusPill, {backgroundColor: hasSubmittedMonthlyParams ? COLORS.emerald50 : COLORS.amber50, borderColor: hasSubmittedMonthlyParams ? 'rgba(16,185,129,0.3)' : 'rgba(254,243,199,0.5)'}]}>
-                        <Text style={[styles.statusPillText, {color: hasSubmittedMonthlyParams ? COLORS.emerald700 : COLORS.amber700}]}>
-                          {hasSubmittedMonthlyParams ? 'COMPLETED ✓' : 'IN PROGRESS'}
+                      <View style={[styles.statusPill, {backgroundColor: salesStatus?.includes('COMPLETED') ? COLORS.emerald50 : COLORS.amber50, borderColor: salesStatus?.includes('COMPLETED') ? 'rgba(16,185,129,0.3)' : 'rgba(254,243,199,0.5)'}]}>
+                        <Text style={[styles.statusPillText, {color: salesStatus?.includes('COMPLETED') ? COLORS.emerald700 : COLORS.amber700}]}>
+                          {salesStatus}
                         </Text>
                       </View>
                     </View>
                     <Text style={[styles.moduleCardTitle, Platform.OS === 'web' && { transition: 'all 0.3s' }, hovered && { color: '#7a1a1f' }]}>Sales &amp; Deposit</Text>
                     <Text style={styles.moduleCardDesc}>
-                      {hasSubmittedMonthlyParams ? 'Monthly parameter submitted & locked for this period.' : 'Record daily sales and verify bank deposits.'}
+                      {salesStatus?.includes('COMPLETED') ? 'Monthly parameter saved.' : 'Record daily sales and verify bank deposits.'}
                     </Text>
                   </>
                 )}
@@ -322,21 +324,21 @@ export default function HomeScreen({
                     <View style={styles.moduleCardHeader}>
                       <View style={[
                         styles.moduleIconBox, 
-                        {backgroundColor: hasSubmittedMonthlyParams ? COLORS.emerald50 : COLORS.slate50, borderColor: hasSubmittedMonthlyParams ? '#a7f3d0' : COLORS.slate100},
+                        {backgroundColor: businessStatus?.includes('COMPLETED') ? COLORS.emerald50 : COLORS.slate50, borderColor: businessStatus?.includes('COMPLETED') ? '#a7f3d0' : COLORS.slate100},
                         Platform.OS === 'web' && { transition: 'all 0.3s' },
                         hovered && { backgroundColor: '#fef2f2', borderColor: '#fee2e2' }
                       ]}>
-                        <MaterialCommunityIcons name="chart-bar" size={24} color={hasSubmittedMonthlyParams ? COLORS.emerald700 : hovered ? '#7a1a1f' : COLORS.slate400} />
+                        <MaterialCommunityIcons name="chart-bar" size={24} color={businessStatus?.includes('COMPLETED') ? COLORS.emerald700 : hovered ? '#7a1a1f' : COLORS.slate400} />
                       </View>
-                      <View style={[styles.statusPill, {backgroundColor: hasSubmittedMonthlyParams ? COLORS.emerald50 : COLORS.slate100, borderColor: hasSubmittedMonthlyParams ? 'rgba(16,185,129,0.3)' : 'rgba(226,232,240,0.5)'}]}>
-                        <Text style={[styles.statusPillText, {color: hasSubmittedMonthlyParams ? COLORS.emerald700 : COLORS.slate500}]}>
-                          {hasSubmittedMonthlyParams ? 'COMPLETED ✓' : 'NOT COMPLETED'}
+                      <View style={[styles.statusPill, {backgroundColor: businessStatus?.includes('COMPLETED') ? COLORS.emerald50 : COLORS.slate100, borderColor: businessStatus?.includes('COMPLETED') ? 'rgba(16,185,129,0.3)' : 'rgba(226,232,240,0.5)'}]}>
+                        <Text style={[styles.statusPillText, {color: businessStatus?.includes('COMPLETED') ? COLORS.emerald700 : COLORS.slate500}]}>
+                          {businessStatus}
                         </Text>
                       </View>
                     </View>
                     <Text style={[styles.moduleCardTitle, Platform.OS === 'web' && { transition: 'all 0.3s' }, hovered && { color: '#7a1a1f' }]}>Business Performance</Text>
                     <Text style={styles.moduleCardDesc}>
-                      {hasSubmittedMonthlyParams ? 'P&L metrics submitted & locked for this period.' : 'KPI metrics and overall performance assessment.'}
+                      {businessStatus?.includes('COMPLETED') ? 'P&L metrics saved.' : 'KPI metrics and overall performance assessment.'}
                     </Text>
                   </>
                 )}

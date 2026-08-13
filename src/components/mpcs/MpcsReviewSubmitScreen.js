@@ -30,13 +30,9 @@ const FONT_FAMILY = 'Manrope';
 export default function MpcsReviewSubmitScreen({
   societyName = "",
   reportingMonth = "",
-  evidenceStatus = "NOT CAPTURED",
-  salesStatus = "NOT COMPLETED",
-  businessStatus = "NOT COMPLETED",
-  cscTransStatus = "NOT COMPLETED",
+  sectionStates = {},
   cscIsActive = false,
-  activitiesStatus = "0 ENTRIES",
-  hasSubmittedMonthlyParams = false,
+  activitiesCount = 0,
   onSubmitReturn,
   onNavigateSection,
   onBack
@@ -45,31 +41,79 @@ export default function MpcsReviewSubmitScreen({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
 
+  // Helper to format timestamp
+  const formatTime = (isoString) => {
+    if (!isoString) return '';
+    const d = new Date(isoString);
+    return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  };
+
+  const evidenceState = sectionStates.evidence || { status: 'NOT CAPTURED' };
+  const isValid = evidenceState.validUntil && new Date() < new Date(evidenceState.validUntil);
+  const hasCaptured = evidenceState.status.includes('CAPTURED') || evidenceState.status.includes('Valid') || evidenceState.status.includes('EXPIRED');
+  
+  const isEvidenceComplete = hasCaptured && isValid;
+  
+  const displayEvidenceStatus = (!isValid && hasCaptured) ? 'EXPIRED' : evidenceState.status;
+
+  const evidenceSubText = isValid 
+    ? `Valid until ${formatTime(evidenceState.validUntil)}` 
+    : ((!isValid && hasCaptured) ? 'Please recapture evidence' : (evidenceState.updatedAt ? `Captured ${formatTime(evidenceState.updatedAt)}` : ''));
+
+  const salesState = sectionStates.sales || { status: 'NOT COMPLETED' };
+  const isSalesComplete = salesState.status.includes('COMPLETED') || salesState.status.includes('UPDATED');
+
+  const businessState = sectionStates.business || { status: 'NOT COMPLETED' };
+  const isBusinessComplete = businessState.status.includes('COMPLETED') || businessState.status.includes('UPDATED');
+
+  const cscState = sectionStates.csc || { status: 'NOT COMPLETED' };
+  const isCscComplete = cscState.status.includes('COMPLETED') || cscState.status.includes('UPDATED');
+
+  const activitiesState = sectionStates.activities || { status: '0 ENTRIES' };
+  const isActivitiesComplete = activitiesCount > 0;
+
   const sections = [
-    { title: 'Digital Evidence',          status: evidenceStatus,   isComplete: evidenceStatus.endsWith('✓'),   isNA: false, screenKey: 'MPCS_EVIDENCE' },
+    { 
+      title: 'Digital Evidence',          
+      status: displayEvidenceStatus,   
+      subText: evidenceSubText,
+      isComplete: isEvidenceComplete,   
+      isNA: false, 
+      screenKey: 'MPCS_EVIDENCE' 
+    },
     { 
       title: 'Monthly Sales / Deposit',   
-      status: hasSubmittedMonthlyParams ? 'MONTHLY PARAMETER ✓' : salesStatus,      
-      isComplete: hasSubmittedMonthlyParams || salesStatus.endsWith('✓'),      
+      status: salesState.status,      
+      subText: salesState.updatedAt ? `Last updated ${formatTime(salesState.updatedAt)}` : '',
+      isComplete: isSalesComplete,      
       isNA: false, 
       screenKey: 'MPCS_SALES' 
     },
     { 
       title: 'Business Performance',      
-      status: hasSubmittedMonthlyParams ? 'MONTHLY PARAMETER ✓' : businessStatus,   
-      isComplete: hasSubmittedMonthlyParams || businessStatus.endsWith('✓'),   
+      status: businessState.status,   
+      subText: businessState.updatedAt ? `Last updated ${formatTime(businessState.updatedAt)}` : '',
+      isComplete: isBusinessComplete,   
       isNA: false, 
       screenKey: 'MPCS_BUSINESS' 
     },
     {
       title: 'CSC Monthly Transactions',
-      status: !cscIsActive ? 'CSC SERVICES NOT AVAILABLE' : (hasSubmittedMonthlyParams ? 'MONTHLY PARAMETER ✓' : cscTransStatus),
-      isComplete: !cscIsActive ? false : (hasSubmittedMonthlyParams || cscTransStatus.endsWith('✓') || cscTransStatus.includes('ENTRIES')),
+      status: !cscIsActive ? 'CSC SERVICES NOT AVAILABLE' : cscState.status,
+      subText: (!cscIsActive || !cscState.updatedAt) ? '' : `Last updated ${formatTime(cscState.updatedAt)}`,
+      isComplete: !cscIsActive ? false : isCscComplete,
       isNA: !cscIsActive,
       isOptional: !cscIsActive,
       screenKey: 'MPCS_CSC_TRANS',
     },
-    { title: 'Activities / Events Log',   status: activitiesStatus, isComplete: !activitiesStatus.startsWith('0'), isNA: false, screenKey: 'MPCS_ACTIVITIES' },
+    { 
+      title: 'Activities / Events Log',   
+      status: `${activitiesCount} ENTRIES`, 
+      subText: activitiesState.updatedAt ? `Last updated ${formatTime(activitiesState.updatedAt)}` : '',
+      isComplete: isActivitiesComplete, 
+      isNA: false, 
+      screenKey: 'MPCS_ACTIVITIES' 
+    },
   ];
 
   // Only mandatory (non-NA/non-optional) sections block submission
@@ -157,16 +201,16 @@ export default function MpcsReviewSubmitScreen({
               <MaterialCommunityIcons name="format-list-checks" size={20} color={COLORS.primary} />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={styles.cardHeaderTitle}>Monthly Sections Checklist</Text>
+              <Text style={styles.cardHeaderTitle}>Monthly Sections</Text>
               <Text style={styles.cardHeaderSub}>
-                {completedCount} of {requiredCount} required sections complete
+                Tap any section to independently view or update it.
                 {!cscIsActive ? '  •  CSC: Optional' : ''}
               </Text>
             </View>
           </View>
 
           {sections.map((sec, idx) => {
-            const isTappable = !sec.isNA && !sec.isComplete && onNavigateSection;
+            const isTappable = !sec.isNA && onNavigateSection;
             const RowWrapper = isTappable ? TouchableOpacity : View;
             const rowProps = isTappable
               ? {
@@ -184,8 +228,13 @@ export default function MpcsReviewSubmitScreen({
                   size={20}
                   color={sec.isNA ? COLORS.slate400 : sec.isComplete ? COLORS.emerald500 : COLORS.primary}
                 />
-                {/* Title */}
-                <Text style={[styles.checkTitle, sec.isNA && styles.checkTitleNA]}>{sec.title}</Text>
+                {/* Title & SubText */}
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.checkTitle, sec.isNA && styles.checkTitleNA]}>{sec.title}</Text>
+                  {sec.subText ? (
+                    <Text style={{ fontFamily: FONT_FAMILY, fontSize: 11, color: COLORS.slate500, marginTop: 2 }}>{sec.subText}</Text>
+                  ) : null}
+                </View>
                 {/* Status chip */}
                 <View style={[
                   styles.statusChip,
@@ -207,9 +256,10 @@ export default function MpcsReviewSubmitScreen({
                     <Text style={styles.optionalBadgeText}>OPTIONAL</Text>
                   </View>
                 )}
-                {/* Tap-to-fix chevron for incomplete rows */}
+                {/* Tap-to-fix chevron */}
                 {isTappable && (
                   <View style={styles.goChevronBox}>
+
                     <MaterialCommunityIcons name="chevron-right" size={16} color={COLORS.primary} />
                   </View>
                 )}
@@ -518,7 +568,6 @@ const styles = StyleSheet.create({
     borderTopColor: COLORS.slate100 
   },
   checkTitle: { 
-    flex: 1, 
     fontFamily: FONT_FAMILY, 
     fontSize: 14, 
     fontWeight: '600', 

@@ -166,7 +166,7 @@ export default function MpcsFinancialPerformanceScreen({
 
           <View style={styles.infoGrid}>
             <View style={styles.infoCol}>
-              <Text style={styles.infoLabel}>TOTAL INCOME</Text>
+              <Text style={styles.infoLabel}>GROSS INCOME / REVENUE</Text>
               <Text style={styles.infoValue}>{totalIncome ? `₹${totalIncome}` : "-"}</Text>
             </View>
             <View style={styles.infoCol}>
@@ -232,7 +232,7 @@ export default function MpcsFinancialPerformanceScreen({
               </View>
 
               <View style={styles.modalFormGroup}>
-                <Text style={styles.modalLabel}>Total Income (₹)</Text>
+                <Text style={styles.modalLabel}>Gross Income / Revenue (₹)</Text>
                 <TextInput style={styles.modalInput} keyboardType="numeric" value={totalIncome} onChangeText={setTotalIncome} placeholder="0" placeholderTextColor={COLORS.slate400} />
               </View>
 

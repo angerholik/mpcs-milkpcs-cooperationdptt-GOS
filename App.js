@@ -48,7 +48,6 @@ import MpcsInstitutionalProfileScreen from './src/components/mpcs/MpcsInstitutio
 import MpcsRegisteredDemographicsScreen from './src/components/mpcs/MpcsRegisteredDemographicsScreen';
 import MpcsComplianceAuditScreen from './src/components/mpcs/MpcsComplianceAuditScreen';
 import MpcsFinancialPerformanceScreen from './src/components/mpcs/MpcsFinancialPerformanceScreen';
-import MpcsSupplementalInfoScreen from './src/components/mpcs/MpcsSupplementalInfoScreen';
 import MpcsDividendDetailsScreen from './src/components/mpcs/MpcsDividendDetailsScreen';
 import MpcsShareCapitalScreen from './src/components/mpcs/MpcsShareCapitalScreen';
 import MpcsCscDetailsScreen from './src/components/mpcs/MpcsCscDetailsScreen';
@@ -57,7 +56,7 @@ import MpcsReviewSubmitScreen from './src/components/mpcs/MpcsReviewSubmitScreen
 import { supabase, saveMilkPcsSubmission, saveMpcsSubmission, uploadPhoto } from './src/supabase';
 import { saveMilkPcsProfile, loadMilkPcsProfileByName, loadMilkCenters, addMilkCenter } from './src/utils/storage';
 import { queueSubmission, processQueue, getQueueStatus } from './src/utils/syncManager';
-import { isMonthlyParamsCompleted, saveMonthlyParams, getMonthlyParams } from './src/utils/monthlySyncManager';
+import { isMonthlyParamsCompleted, saveMonthlyParams, getMonthlyParams, saveSectionStates, getSectionStates } from './src/utils/monthlySyncManager';
 import { useFonts, Manrope_400Regular, Manrope_500Medium, Manrope_600SemiBold, Manrope_700Bold, Manrope_800ExtraBold } from '@expo-google-fonts/manrope';
 
 const { width } = Dimensions.get('window');
@@ -115,7 +114,7 @@ const COLORS = {
 };
 
 export default function App() {
-  const [fontsLoaded] = useFonts({
+  const [fontsLoaded, fontError] = useFonts({
     Manrope: Manrope_400Regular,
     Manrope_400Regular,
     Manrope_500Medium,
@@ -166,6 +165,7 @@ export default function App() {
   const [bankData, setBankData] = useState({});
   const [shareCapitalData, setShareCapitalData] = useState({});
   const [cscDetailsData, setCscDetailsData] = useState({});
+  const [businessPerformanceData, setBusinessPerformanceData] = useState({});
   
   // CSC Monthly Transactions State
   const [cscTransData, setCscTransData] = useState({
@@ -175,6 +175,15 @@ export default function App() {
 
   // Track if monthly parameters have been completed for current society & reporting month
   const [hasSubmittedMonthlyParams, setHasSubmittedMonthlyParams] = useState(false);
+
+  // Independent Section States Tracking
+  const [sectionStates, setSectionStates] = useState({
+    evidence: { status: 'NOT CAPTURED', updatedAt: null, validUntil: null },
+    sales: { status: 'NOT COMPLETED', updatedAt: null },
+    business: { status: 'NOT COMPLETED', updatedAt: null },
+    csc: { status: 'NOT COMPLETED', updatedAt: null },
+    activities: { status: '0 ENTRIES', updatedAt: null }
+  });
 
   // Auth & Session State
   const [session, setSession] = useState(null);
@@ -256,6 +265,7 @@ export default function App() {
     setBankData({});
     setShareCapitalData({});
     setCscDetailsData({});
+    setBusinessPerformanceData({});
     setCscTransData({
       isCscActive: false,
       transactions: [],
@@ -307,7 +317,20 @@ export default function App() {
       const repMonth = reportingMonth || 'AUG 2024';
       if (socName) {
         const storedParams = await getMonthlyParams(socName, repMonth);
+        const sStates = await getSectionStates(socName, repMonth);
         if (isMounted) {
+          if (sStates) {
+            setSectionStates(sStates);
+          } else {
+            // Reset to defaults if not found
+            setSectionStates({
+              evidence: { status: 'NOT CAPTURED', updatedAt: null, validUntil: null },
+              sales: { status: 'NOT COMPLETED', updatedAt: null },
+              business: { status: 'NOT COMPLETED', updatedAt: null },
+              csc: { status: 'NOT COMPLETED', updatedAt: null },
+              activities: { status: '0 ENTRIES', updatedAt: null }
+            });
+          }
           if (storedParams && storedParams.paramsData) {
             setHasSubmittedMonthlyParams(true);
             if (!withdrawal && storedParams.paramsData.withdrawal) setWithdrawal(storedParams.paramsData.withdrawal);
@@ -316,6 +339,7 @@ export default function App() {
             setHasSubmittedMonthlyParams(false);
           }
         }
+
       }
     })();
     return () => { isMounted = false; };
@@ -356,19 +380,48 @@ export default function App() {
     } catch (e) { console.warn('saveInstitutionsForUser error:', e); }
   };
 
+  const updateSectionState = async (sectionKey, updates) => {
+    const newState = {
+      ...sectionStates,
+      [sectionKey]: {
+        ...sectionStates[sectionKey],
+        ...updates,
+        updatedAt: new Date().toISOString()
+      }
+    };
+    setSectionStates(newState);
+    const socName = selectedSociety?.name || centerName || '';
+    const repMonth = reportingMonth || 'AUG 2024';
+    if (socName) {
+      await saveSectionStates(socName, repMonth, newState);
+    }
+  };
+
   const loadInstitutionsForUser = async (email = null) => {
     try {
       const activeEmail = getUserEmail(email);
       const key = getUserInstitutionsKey(activeEmail);
-      if (!key) { setInstitutionsList([]); return []; }
+      const defaultList = [
+        { id: 'inst-default-1', name: 'Dentam MPCS', type: 'MPCS', gpu: 'Dentam GPU', regNo: 'SIK/MPCS/2024/01' },
+        { id: 'inst-default-2', name: 'Gyalshing Milk Center', type: 'MILK', gpu: 'Gyalshing GPU', regNo: 'SIK/MILK/2024/02' }
+      ];
+      if (!key) { setInstitutionsList(defaultList); return defaultList; }
       const raw = await AsyncStorage.getItem(key);
-      const list = raw ? JSON.parse(raw) : [];
-      setInstitutionsList(list);
-      return list;
+      const list = raw ? JSON.parse(raw) : null;
+      const initialList = (list && list.length > 0) ? list : defaultList;
+      setInstitutionsList(initialList);
+      if (!list || list.length === 0) {
+        saveInstitutionsForUser(initialList, activeEmail);
+      }
+      return initialList;
     } catch (e) {
       console.warn('loadInstitutionsForUser error:', e);
-      setInstitutionsList([]);
-      return [];
+      const defaultList = [
+        { id: 'inst-default-1', name: 'Dentam MPCS', type: 'MPCS', gpu: 'Dentam GPU', regNo: 'SIK/MPCS/2024/01' },
+        { id: 'inst-default-2', name: 'Gyalshing Milk Center', type: 'MILK', gpu: 'Gyalshing GPU', regNo: 'SIK/MILK/2024/02' }
+      ];
+      setInstitutionsList(defaultList);
+      return defaultList;
     }
   };
 
@@ -431,6 +484,15 @@ export default function App() {
         bankData: overrides.bankData !== undefined ? overrides.bankData : bankData,
         shareCapitalData: overrides.shareCapitalData !== undefined ? overrides.shareCapitalData : shareCapitalData,
         cscDetailsData: overrides.cscDetailsData !== undefined ? overrides.cscDetailsData : cscDetailsData,
+        businessPerformanceData: overrides.businessPerformanceData !== undefined ? overrides.businessPerformanceData : businessPerformanceData,
+        sales: overrides.sales !== undefined ? overrides.sales : (withdrawal || ''),
+        deposit: overrides.deposit !== undefined ? overrides.deposit : (balance || ''),
+        withdrawal: overrides.withdrawal !== undefined ? overrides.withdrawal : (withdrawal || ''),
+        balance: overrides.balance !== undefined ? overrides.balance : (balance || ''),
+        totalTurnover: overrides.totalTurnover !== undefined ? overrides.totalTurnover : (withdrawal || ''),
+        totalIncome: overrides.totalIncome !== undefined ? overrides.totalIncome : (businessPerformanceData?.totalIncome || ''),
+        totalExpenses: overrides.totalExpenses !== undefined ? overrides.totalExpenses : (businessPerformanceData?.totalExpenses || ''),
+        netSurplusDeficit: overrides.netSurplusDeficit !== undefined ? overrides.netSurplusDeficit : (businessPerformanceData?.netSurplusDeficit || ''),
         reportingMonth: overrides.reportingMonth !== undefined ? overrides.reportingMonth : reportingMonth,
         selectedSociety: overrides.selectedSociety !== undefined ? overrides.selectedSociety : selectedSociety
       };
@@ -508,6 +570,7 @@ export default function App() {
         setBankData(saved.bankData || {});
         setShareCapitalData(saved.shareCapitalData || {});
         setCscDetailsData(saved.cscDetailsData || {});
+        setBusinessPerformanceData(saved.businessPerformanceData || {});
         if (saved.selectedSociety) setSelectedSociety(saved.selectedSociety);
         return true;
       } else {
@@ -555,6 +618,14 @@ export default function App() {
         if (fd.bankData) setBankData(fd.bankData);
         if (fd.shareCapitalData) setShareCapitalData(fd.shareCapitalData);
         if (fd.cscDetailsData) setCscDetailsData(fd.cscDetailsData);
+        const loadedBizPerf = fd.businessPerformanceData || {
+          totalIncome: fd.totalIncome || fd.financialsData?.totalIncome || fd['5.1'] || '',
+          totalExpenses: fd.totalExpenses || fd.financialsData?.totalExpenses || '',
+          netSurplusDeficit: fd.netSurplusDeficit || fd.financialsData?.netProfit || row.net_profit_loss || '',
+          totalMembers: fd.totalMembers || row.total_members || '',
+          remarks: fd.remarks || ''
+        };
+        setBusinessPerformanceData(loadedBizPerf);
 
         // Sync to AsyncStorage under THIS society's key
         saveMasterStateToStorage({
@@ -572,7 +643,8 @@ export default function App() {
           dividendData: fd.dividendData,
           bankData: fd.bankData,
           shareCapitalData: fd.shareCapitalData,
-          cscDetailsData: fd.cscDetailsData
+          cscDetailsData: fd.cscDetailsData,
+          businessPerformanceData: loadedBizPerf
         }, row.society_name);
       }
     } catch (e) {
@@ -607,15 +679,21 @@ export default function App() {
   };
 
   useEffect(() => {
-    // 1. Handle Authentication
+    // 1. Handle Authentication with safety timeout
+    const authTimeout = setTimeout(() => {
+      setAuthLoading(false);
+    }, 2500);
+
     supabase.auth.getSession()
       .then(({ data: { session: sbSession } }) => {
+        clearTimeout(authTimeout);
         if (sbSession?.user) {
           handleUserAuthSuccess(sbSession.user);
         }
         setAuthLoading(false);
       })
       .catch(() => {
+        clearTimeout(authTimeout);
         setAuthLoading(false);
       });
 
@@ -1140,8 +1218,14 @@ export default function App() {
       reportingMonth: activeReportingMonth, 
       reportedBy: activeReportedBy, 
       litres: activeLitres, 
+      sales: withdrawal || '0',
       withdrawal: withdrawal || '0', 
+      deposit: activeBalance || '0',
       balance: activeBalance,
+      totalTurnover: withdrawal || '0',
+      totalIncome: businessPerformanceData?.totalIncome || '',
+      totalExpenses: businessPerformanceData?.totalExpenses || '',
+      netSurplusDeficit: businessPerformanceData?.netSurplusDeficit || '',
       mSc, fSc, mSt, fSt, mObc, fObc, mGen, fGen,
       totalMale: String(totalMaleCalc), totalFemale: String(totalFemaleCalc), totalMembers: String(totalMembersCalc),
       hasLoan, loanName, loanAmount, paidAmount, remainingDue, activities,
@@ -1151,6 +1235,18 @@ export default function App() {
       agmDate,
       gpsLat: location?.latitude ?? null, gpsLng: location?.longitude ?? null,
       capturedAt: timestamp || new Date().toISOString(),
+      // Append all data sets to ensure they are captured in offline queue and cloud DB
+      demographicsData,
+      complianceData,
+      financialsData,
+      supplementalData,
+      dividendData,
+      bankData,
+      shareCapitalData,
+      cscDetailsData,
+      cscTransData,
+      businessPerformanceData,
+      remarks: businessPerformanceData?.remarks || ''
     };
 
     try {
@@ -1173,9 +1269,10 @@ export default function App() {
 
       let isOfflineSaved = false;
       let isCloudSaved = false;
+      let sbError = null;
 
       if (!isConnected) {
-          const queued = await queueSubmission('MILK_PCS', submissionData);
+          const queued = await queueSubmission(activeView === 'MPCS' ? 'MPCS' : 'MILK_PCS', submissionData);
           if (queued) {
               setPendingSyncCount(prev => prev + 1);
               isOfflineSaved = true;
@@ -1190,7 +1287,6 @@ export default function App() {
             }
           }
           
-          let sbError = null;
           if (activeView === 'MPCS') {
             const res = await saveMpcsSubmission({
               ...submissionData,
@@ -1205,15 +1301,7 @@ export default function App() {
               panCard: panCard || selectedSociety?.panCard || '',
               regDate: regDate || selectedSociety?.regDate || '',
               '1.8': panCard || selectedSociety?.panCard || '',
-              '1.6': regDate || selectedSociety?.regDate || '',
-              demographicsData,
-              complianceData,
-              financialsData,
-              supplementalData,
-              dividendData,
-              bankData,
-              shareCapitalData,
-              cscDetailsData
+              '1.6': regDate || selectedSociety?.regDate || ''
             });
             sbError = res.error;
           } else {
@@ -1293,7 +1381,7 @@ export default function App() {
     }
   };
 
-  if (!fontsLoaded) {
+  if (!fontsLoaded && !fontError) {
     return (
       <View style={{ flex: 1, backgroundColor: '#fcf8fa', justifyContent: 'center', alignItems: 'center' }}>
         <ActivityIndicator size="large" color="#7a1a1f" />
@@ -1727,19 +1815,31 @@ export default function App() {
                         centerId={selectedSociety?.code || registrationNumber || ''}
                         district={selectedSociety?.district || district || ''}
                         reportingMonth={reportingMonth || ''}
-                        reportStatus={hasSubmittedMonthlyParams ? 'MONTHLY PARAMS OK' : 'DRAFT'}
+                        reportStatus={(sectionStates?.evidence?.status?.includes('CAPTURED') && sectionStates?.sales?.status?.includes('COMPLETED') && sectionStates?.business?.status?.includes('COMPLETED')) ? 'MONTHLY PARAMS OK' : 'DRAFT'}
                         progressPercent={
-                          hasSubmittedMonthlyParams
-                            ? 80 + (imageUri ? 10 : 0) + (activityItems.length > 0 ? 10 : 0)
-                            : Math.round(((withdrawal ? 1 : 0) + (balance ? 1 : 0) + (!cscTransData.isCscActive || cscTransData.transactions?.length > 0 ? 1 : 0)) / 3 * 80) + (imageUri ? 10 : 0) + (activityItems.length > 0 ? 10 : 0)
+                          Math.round(
+                            ((sectionStates?.evidence?.status?.includes('CAPTURED') || sectionStates?.evidence?.status?.includes('Valid') ? 20 : 0) +
+                            (sectionStates?.sales?.status?.includes('COMPLETED') ? 20 : 0) +
+                            (sectionStates?.business?.status?.includes('COMPLETED') ? 20 : 0) +
+                            (!cscTransData?.isCscActive || sectionStates?.csc?.status?.includes('COMPLETED') ? 20 : 0) +
+                            (activityItems.length > 0 ? 20 : 0))
+                          )
                         }
-                        hasSubmittedMonthlyParams={hasSubmittedMonthlyParams}
-                        completedCount={hasSubmittedMonthlyParams ? 4 : 2}
+                        hasSubmittedMonthlyParams={false} // Disable global lock
+                        completedCount={
+                          ((sectionStates?.evidence?.status?.includes('CAPTURED') || sectionStates?.evidence?.status?.includes('Valid')) ? 1 : 0) +
+                          (sectionStates?.sales?.status?.includes('COMPLETED') ? 1 : 0) +
+                          (sectionStates?.business?.status?.includes('COMPLETED') ? 1 : 0) +
+                          ((!cscTransData?.isCscActive || sectionStates?.csc?.status?.includes('COMPLETED')) ? 1 : 0) +
+                          (activityItems.length > 0 ? 1 : 0)
+                        }
                         totalCount={5}
-                        evidenceStatus={imageUri ? "CAPTURED ✓" : "NOT CAPTURED"}
-                        salesStatus={hasSubmittedMonthlyParams ? "COMPLETED ✓" : withdrawal ? "COMPLETED ✓" : "NOT COMPLETED"}
-                        businessStatus={hasSubmittedMonthlyParams ? "COMPLETED ✓" : withdrawal && balance ? "COMPLETED ✓" : "NOT COMPLETED"}
-                        cscTransStatus={hasSubmittedMonthlyParams ? "COMPLETED ✓" : "NOT COMPLETED"}
+                        evidenceStatus={
+                          (sectionStates?.evidence?.validUntil && new Date() >= new Date(sectionStates.evidence.validUntil)) ? 'EXPIRED' : (sectionStates?.evidence?.status || 'NOT CAPTURED')
+                        }
+                        salesStatus={sectionStates?.sales?.status || 'NOT COMPLETED'}
+                        businessStatus={sectionStates?.business?.status || 'NOT COMPLETED'}
+                        cscTransStatus={sectionStates?.csc?.status || 'NOT COMPLETED'}
                         activitiesStatus={`${activityItems.length} ENTRIES`}
                         lastUpdated=""
                         activeAlert={activeAlert}
@@ -1766,8 +1866,11 @@ export default function App() {
                         setLatitude={(val) => setLocation(prev => ({ ...prev, latitude: parseFloat(val) }))}
                         longitude={location?.longitude ? String(location.longitude) : ""}
                         setLongitude={(val) => setLocation(prev => ({ ...prev, longitude: parseFloat(val) }))}
-                        onSaveNext={() => setCurrentMobileScreen('MPCS_SALES')}
-                        onBack={() => setCurrentMobileScreen('HOME')}
+                        onSaveNext={() => {
+                          updateSectionState('evidence', { status: 'CAPTURED ✓', validUntil: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString() });
+                          setCurrentMobileScreen('MPCS_REVIEW');
+                        }}
+                        onBack={() => setCurrentMobileScreen('MPCS_REVIEW')}
                       />
                     )}
 
@@ -1780,20 +1883,62 @@ export default function App() {
                         setDeposit={setBalance}
                         totalMembers={totalMembers}
                         setTotalMembers={setTotalMembers}
-                        onSaveNext={() => setCurrentMobileScreen('MPCS_BUSINESS')}
-                        onBack={() => setCurrentMobileScreen('HOME')}
+                        onSaveNext={() => {
+                          saveMasterStateToStorage({
+                            sales: withdrawal,
+                            withdrawal,
+                            deposit: balance,
+                            balance,
+                            totalMembers
+                          });
+                          updateSectionState('sales', { status: 'COMPLETED ✓' });
+                          setCurrentMobileScreen('MPCS_REVIEW');
+                        }}
+                        onBack={() => setCurrentMobileScreen('MPCS_REVIEW')}
                       />
                     )}
 
                     {currentMobileScreen === 'MPCS_BUSINESS' && (
                       <MpcsBusinessPerformanceScreen
                         reportingMonth={reportingMonth || ''}
-                        totalIncome={withdrawal}
-                        setTotalIncome={setWithdrawal}
-                        totalExpenses={balance}
-                        setTotalExpenses={setBalance}
-                        onSaveNext={() => setCurrentMobileScreen('MPCS_CSC_TRANS')}
-                        onBack={() => setCurrentMobileScreen('HOME')}
+                        totalIncome={businessPerformanceData?.totalIncome || ''}
+                        setTotalIncome={(val) => {
+                          setBusinessPerformanceData(prev => ({ ...prev, totalIncome: val }));
+                        }}
+                        totalExpenses={businessPerformanceData?.totalExpenses || ''}
+                        setTotalExpenses={(val) => {
+                          setBusinessPerformanceData(prev => ({ ...prev, totalExpenses: val }));
+                        }}
+                        totalMembers={businessPerformanceData?.totalMembers || totalMembers || ''}
+                        setTotalMembers={(val) => {
+                          setTotalMembers(val);
+                          setBusinessPerformanceData(prev => ({ ...prev, totalMembers: val }));
+                        }}
+                        remarks={businessPerformanceData?.remarks || ''}
+                        setRemarks={(val) => {
+                          setBusinessPerformanceData(prev => ({ ...prev, remarks: val }));
+                        }}
+                        onSaveNext={() => {
+                          const inc = parseFloat((businessPerformanceData?.totalIncome || '0').replace(/,/g, '')) || 0;
+                          const exp = parseFloat((businessPerformanceData?.totalExpenses || '0').replace(/,/g, '')) || 0;
+                          const diff = (inc - exp).toString();
+                          const updated = {
+                            ...businessPerformanceData,
+                            netSurplusDeficit: diff,
+                            totalMembers: businessPerformanceData?.totalMembers || totalMembers
+                          };
+                          setBusinessPerformanceData(updated);
+                          saveMasterStateToStorage({
+                            businessPerformanceData: updated,
+                            totalIncome: businessPerformanceData?.totalIncome,
+                            totalExpenses: businessPerformanceData?.totalExpenses,
+                            netSurplusDeficit: diff,
+                            totalMembers: updated.totalMembers
+                          });
+                          updateSectionState('business', { status: 'COMPLETED ✓' });
+                          setCurrentMobileScreen('MPCS_REVIEW');
+                        }}
+                        onBack={() => setCurrentMobileScreen('MPCS_REVIEW')}
                       />
                     )}
 
@@ -1804,8 +1949,11 @@ export default function App() {
                         onChangeCscTrans={(data) => {
                           setCscTransData(data);
                         }}
-                        onSaveNext={() => setCurrentMobileScreen('MPCS_ACTIVITIES')}
-                        onBack={() => setCurrentMobileScreen('HOME')}
+                        onSaveNext={() => {
+                          updateSectionState('csc', { status: 'COMPLETED ✓' });
+                          setCurrentMobileScreen('MPCS_REVIEW');
+                        }}
+                        onBack={() => setCurrentMobileScreen('MPCS_REVIEW')}
                       />
                     )}
 
@@ -1814,8 +1962,11 @@ export default function App() {
                         reportingMonth={reportingMonth || "August 2026"}
                         activityItems={activityItems}
                         setActivityItems={setActivityItems}
-                        onSaveNext={() => setCurrentMobileScreen('MPCS_REVIEW')}
-                        onBack={() => setCurrentMobileScreen('HOME')}
+                        onSaveNext={() => {
+                          updateSectionState('activities', { status: 'COMPLETED ✓' });
+                          setCurrentMobileScreen('MPCS_REVIEW');
+                        }}
+                        onBack={() => setCurrentMobileScreen('MPCS_REVIEW')}
                       />
                     )}
 
@@ -1886,13 +2037,11 @@ export default function App() {
                     {currentMobileScreen === 'MPCS_COMPLIANCE' && (
                       <MpcsComplianceAuditScreen
                         initialAuditYear={complianceData?.auditYear || ''}
-                        initialAuditType={complianceData?.auditType || ''}
                         initialAuditDate={complianceData?.auditDate || ''}
                         initialAuditStatus={complianceData?.auditStatus || 'Pending'}
                         initialAgmYear={complianceData?.agmYear || ''}
                         initialAgmDate={complianceData?.agmDate || ''}
                         initialAgmStatus={complianceData?.agmStatus || 'Pending'}
-                        initialAgmAudited={complianceData?.agmAudited || 'No'}
                         onSaveCompliance={(data) => {
                           setComplianceData(data);
                           saveMasterStateToStorage({ complianceData: data });
@@ -1913,24 +2062,8 @@ export default function App() {
                           setFinancialsData(data);
                           saveMasterStateToStorage({ financialsData: data });
                         }}
-                        onNext={() => setCurrentMobileScreen('MPCS_SUPPLEMENTAL')}
-                        onBack={() => setCurrentMobileScreen('MPCS_COMPLIANCE')}
-                      />
-                    )}
-
-                    {currentMobileScreen === 'MPCS_SUPPLEMENTAL' && (
-                      <MpcsSupplementalInfoScreen
-                        initialFormation={supplementalData?.dateOfFormation || ''}
-                        initialNature={supplementalData?.natureOfBusiness || ''}
-                        initialArea={supplementalData?.areaOfOperation || ''}
-                        initialType={supplementalData?.societyType || ''}
-                        initialOther={supplementalData?.otherInfo || ''}
-                        onSaveInfo={(data) => {
-                          setSupplementalData(data);
-                          saveMasterStateToStorage({ supplementalData: data });
-                        }}
                         onNext={() => setCurrentMobileScreen('MPCS_DIVIDEND')}
-                        onBack={() => setCurrentMobileScreen('MPCS_FINANCIALS')}
+                        onBack={() => setCurrentMobileScreen('MPCS_COMPLIANCE')}
                       />
                     )}
 
@@ -1989,19 +2122,9 @@ export default function App() {
                       <MpcsReviewSubmitScreen
                         societyName={selectedSociety?.name || centerName || ''}
                         reportingMonth={reportingMonth || ''}
-                        evidenceStatus={imageUri ? "CAPTURED ✓" : "NOT CAPTURED"}
-                        salesStatus={withdrawal ? "COMPLETED ✓" : "NOT COMPLETED"}
-                        businessStatus={withdrawal && balance ? "COMPLETED ✓" : "NOT COMPLETED"}
-                        cscTransStatus={
-                          !cscTransData.isCscActive
-                            ? "NOT AVAILABLE"
-                            : (cscTransData.transactions && cscTransData.transactions.length > 0)
-                              ? `${cscTransData.transactions.length} ENTRIES ✓`
-                              : "NOT COMPLETED"
-                        }
-                        cscIsActive={cscTransData.isCscActive}
-                        activitiesStatus={`${activityItems.length} ENTRIES`}
-                        hasSubmittedMonthlyParams={hasSubmittedMonthlyParams}
+                        sectionStates={sectionStates}
+                        cscIsActive={cscTransData?.isCscActive || false}
+                        activitiesCount={activityItems.length}
                         onNavigateSection={(screenKey) => setCurrentMobileScreen(screenKey)}
                         onSubmitReturn={generatePDF}
                         onBack={() => setCurrentMobileScreen('HOME')}

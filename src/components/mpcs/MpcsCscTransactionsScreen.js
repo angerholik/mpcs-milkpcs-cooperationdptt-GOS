@@ -133,9 +133,6 @@ export default function MpcsCscTransactionsScreen({
           <Text style={styles.moduleTag}>MPCS</Text>
           <Text style={styles.screenTitleHeader}>CSC Monthly Transactions</Text>
         </View>
-        <View style={styles.stepBadge}>
-          <Text style={styles.stepIndicator}>4 of 5</Text>
-        </View>
       </View>
 
       <ScrollView
