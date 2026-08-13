@@ -50,7 +50,6 @@ import MpcsComplianceAuditScreen from './src/components/mpcs/MpcsComplianceAudit
 import MpcsFinancialPerformanceScreen from './src/components/mpcs/MpcsFinancialPerformanceScreen';
 import MpcsSupplementalInfoScreen from './src/components/mpcs/MpcsSupplementalInfoScreen';
 import MpcsDividendDetailsScreen from './src/components/mpcs/MpcsDividendDetailsScreen';
-import MpcsBankDetailsScreen from './src/components/mpcs/MpcsBankDetailsScreen';
 import MpcsShareCapitalScreen from './src/components/mpcs/MpcsShareCapitalScreen';
 import MpcsCscDetailsScreen from './src/components/mpcs/MpcsCscDetailsScreen';
 import MpcsReviewSubmitScreen from './src/components/mpcs/MpcsReviewSubmitScreen';
@@ -58,6 +57,7 @@ import MpcsReviewSubmitScreen from './src/components/mpcs/MpcsReviewSubmitScreen
 import { supabase, saveMilkPcsSubmission, saveMpcsSubmission, uploadPhoto } from './src/supabase';
 import { saveMilkPcsProfile, loadMilkPcsProfileByName, loadMilkCenters, addMilkCenter } from './src/utils/storage';
 import { queueSubmission, processQueue, getQueueStatus } from './src/utils/syncManager';
+import { isMonthlyParamsCompleted, saveMonthlyParams, getMonthlyParams } from './src/utils/monthlySyncManager';
 import { useFonts, Manrope_400Regular, Manrope_500Medium, Manrope_600SemiBold, Manrope_700Bold, Manrope_800ExtraBold } from '@expo-google-fonts/manrope';
 
 const { width } = Dimensions.get('window');
@@ -166,6 +166,15 @@ export default function App() {
   const [bankData, setBankData] = useState({});
   const [shareCapitalData, setShareCapitalData] = useState({});
   const [cscDetailsData, setCscDetailsData] = useState({});
+  
+  // CSC Monthly Transactions State
+  const [cscTransData, setCscTransData] = useState({
+    isCscActive: false,
+    transactions: [],
+  });
+
+  // Track if monthly parameters have been completed for current society & reporting month
+  const [hasSubmittedMonthlyParams, setHasSubmittedMonthlyParams] = useState(false);
 
   // Auth & Session State
   const [session, setSession] = useState(null);
@@ -247,6 +256,10 @@ export default function App() {
     setBankData({});
     setShareCapitalData({});
     setCscDetailsData({});
+    setCscTransData({
+      isCscActive: false,
+      transactions: [],
+    });
 
     // Clear operational ledgers
     setReportingMonth('');
@@ -285,6 +298,28 @@ export default function App() {
     setLocation(null);
     setActivityItems([]);
   };
+
+  // Auto-check if monthly parameters exist for current society & reporting month
+  useEffect(() => {
+    let isMounted = true;
+    (async () => {
+      const socName = selectedSociety?.name || centerName || '';
+      const repMonth = reportingMonth || 'AUG 2024';
+      if (socName) {
+        const storedParams = await getMonthlyParams(socName, repMonth);
+        if (isMounted) {
+          if (storedParams && storedParams.paramsData) {
+            setHasSubmittedMonthlyParams(true);
+            if (!withdrawal && storedParams.paramsData.withdrawal) setWithdrawal(storedParams.paramsData.withdrawal);
+            if (!balance && storedParams.paramsData.balance) setBalance(storedParams.paramsData.balance);
+          } else {
+            setHasSubmittedMonthlyParams(false);
+          }
+        }
+      }
+    })();
+    return () => { isMounted = false; };
+  }, [selectedSociety, centerName, reportingMonth]);
 
   const getUserEmail = (overrideEmail = null) => {
     return overrideEmail || session?.user?.email || userProfile?.email || null;
@@ -401,6 +436,42 @@ export default function App() {
       };
       await AsyncStorage.setItem(key, JSON.stringify(stateObj));
       await AsyncStorage.setItem(getLastSelectedSocietyKey(userEmail), activeSocName);
+
+      // ── Cloud Sync to Supabase Backend on Every Master Data Save ──
+      try {
+        const gpuVal = selectedSociety?.gpu || selectedSociety?.district || 'Dentam GPU';
+        let calcMembers = 0;
+        if (stateObj.demographicsData) {
+          if (Array.isArray(stateObj.demographicsData)) {
+            calcMembers = stateObj.demographicsData.reduce((s, d) => s + (parseInt(d.male || 0) + parseInt(d.female || 0)), 0);
+          } else if (typeof stateObj.demographicsData === 'object') {
+            calcMembers = Object.values(stateObj.demographicsData).reduce((s, v) => s + (parseInt(v) || 0), 0);
+          }
+        }
+
+        saveMpcsSubmission({
+          societyName: activeSocName,
+          registrationNumber: stateObj.registrationNumber || selectedSociety?.regNo || 'SIK/MPCS/2024/01',
+          gpu: gpuVal,
+          district: gpuVal,
+          presidentName: stateObj.presidentName,
+          presidentMobile: stateObj.presidentMobile,
+          managerName: stateObj.managerName,
+          managerMobile: stateObj.managerMobile,
+          auditDone: stateObj.complianceData?.auditDone,
+          auditYear: stateObj.complianceData?.auditYear,
+          auditCategory: stateObj.complianceData?.auditGrade,
+          annualTurnover: stateObj.financialsData?.annualTurnover,
+          profitOrLoss: stateObj.financialsData?.profitOrLoss || 'PROFIT',
+          netProfit: stateObj.financialsData?.netProfit,
+          totalMembers: calcMembers,
+          reportedBy: userProfile?.name || 'Cooperative Inspector',
+          inspectorEmail: userEmail,
+          ...stateObj
+        });
+      } catch (cloudErr) {
+        console.warn('Auto cloud sync exception:', cloudErr);
+      }
     } catch (e) {
       console.warn('Failed to save master state locally:', e);
     }
@@ -695,22 +766,31 @@ export default function App() {
     }
   };
 
-  const generatePDF = async () => {
-    if (isSealing) return;
+  const generatePDF = async (recordOverride = null) => {
+    if (isSealing && !recordOverride) return;
+
+    const recordItem = recordOverride?.rawData || recordOverride;
 
     // --- DYNAMIC USER & SOCIETY DEFAULTS ---
-    const activeCenterName = selectedSociety?.name || centerName?.trim() || 'Cooperative Collection Center';
-    const activeReportingMonth = reportingMonth?.trim() || new Date().toLocaleString('en-IN', { month: 'long', year: 'numeric' });
-    const activeLitres = litres && !isNaN(parseFloat(litres)) ? litres : '0';
-    const activeBalance = balance && !isNaN(parseFloat(balance)) ? balance : '0';
-    const activeReportedBy = userProfile?.fullName || reportedBy?.trim() || 'Cooperative Inspector';
+    const activeCenterName = recordItem?.society_name || recordItem?.center_name || recordItem?.center || selectedSociety?.name || centerName?.trim() || 'Cooperative Collection Center';
+    const activeReportingMonth = recordItem?.reporting_month || recordItem?.month || reportingMonth?.trim() || new Date().toLocaleString('en-IN', { month: 'long', year: 'numeric' });
+    const activeLitres = recordItem?.litres ? String(recordItem.litres) : (litres && !isNaN(parseFloat(litres)) ? litres : '0');
+    const activeBalance = recordItem?.bank_balance || recordItem?.balance ? String(recordItem.bank_balance || recordItem.balance) : (balance && !isNaN(parseFloat(balance)) ? balance : '0');
+    const activeWithdrawal = recordItem?.annual_turnover || recordItem?.withdrawal ? String(recordItem.annual_turnover || recordItem.withdrawal) : (withdrawal || '0');
+    const activeReportedBy = recordItem?.reported_by || recordItem?.officer || userProfile?.fullName || reportedBy?.trim() || 'Cooperative Inspector';
     const activeDistrict = selectedSociety?.district || userProfile?.district || district?.trim() || 'Sikkim';
-    // Derive activities text from activityItems list
-    const activities = activityItems.length > 0
-      ? activityItems.map((a, i) => `${i + 1}. ${a.text || a.description || a.title || JSON.stringify(a)}`).join('\n')
-      : '';
+    
+    // Derive activities text
+    let activities = '';
+    if (recordItem?.activities) {
+      activities = typeof recordItem.activities === 'string' ? recordItem.activities : JSON.stringify(recordItem.activities);
+    } else {
+      activities = activityItems.length > 0
+        ? activityItems.map((a, i) => `${i + 1}. ${a.text || a.description || a.title || JSON.stringify(a)}`).join('\n')
+        : '';
+    }
 
-    setIsSealing(true);
+    if (!recordOverride) setIsSealing(true);
     const locText = location ? `${location.latitude.toFixed(6)}° N, ${location.longitude.toFixed(6)}° E` : 'Gyalshing District GPS';
     
     // Robust internal calculation for totals
@@ -1013,7 +1093,7 @@ export default function App() {
               </div>
 
               <div class="footer-authority">
-                <div class="sign-col"><div class="sign-line"></div><div class="sign-name">${reportedBy}</div><div class="sign-title">Officer Authorized Signatory</div></div>
+                <div class="sign-col"><div class="sign-line"></div><div class="sign-name">${activeReportedBy}</div><div class="sign-title">Officer Authorized Signatory</div></div>
                 <div class="sign-col"><div class="sign-line"></div><div class="sign-name">Digitally Verified</div><div class="sign-title">ARCS / CI Authority</div></div>
               </div>
             </div>
@@ -1021,6 +1101,32 @@ export default function App() {
         </body>
       </html>
     `;
+
+    // --- If viewing historical record PDF from RecordsScreen ---
+    if (recordOverride) {
+      if (Platform.OS === 'web') {
+        try {
+          const printWin = window.open('', '_blank');
+          if (printWin) {
+            printWin.document.write(htmlContent);
+            printWin.document.close();
+            setTimeout(() => { printWin.focus(); printWin.print(); }, 300);
+          }
+        } catch(e) {
+          console.warn('Web print exception:', e);
+        }
+      } else {
+        try {
+          const printResult = await Print.printToFileAsync({ html: htmlContent });
+          if (printResult?.uri && await Sharing.isAvailableAsync()) {
+            await Sharing.shareAsync(printResult.uri, { UTI: '.pdf', mimeType: 'application/pdf' });
+          }
+        } catch(e) {
+          console.warn('Mobile PDF exception:', e);
+        }
+      }
+      return;
+    }
 
     // ─── Step 1: Prepare Submission Data ───────────────────────────
     const totalMaleCalc = [mSc, mSt, mObc, mGen].reduce((s, v) => s + (parseInt(v) || 0), 0);
@@ -1048,6 +1154,10 @@ export default function App() {
     };
 
     try {
+      // Save monthly parameters persistently so subsequent visits in same month show 80% completion
+      await saveMonthlyParams(activeCenterName, activeReportingMonth, submissionData);
+      setHasSubmittedMonthlyParams(true);
+
       // ─── Step 2: Handle Offline/Online Submission ─────────────────
       let isConnected = true;
       try {
@@ -1137,7 +1247,18 @@ export default function App() {
           addMilkCenter(centerName.trim(), district).then(updated => { if (updated) setMilkCenters(updated); });
       }
 
-      if (Platform.OS !== 'web') {
+      if (Platform.OS === 'web') {
+        try {
+          const printWin = window.open('', '_blank');
+          if (printWin) {
+            printWin.document.write(htmlContent);
+            printWin.document.close();
+            setTimeout(() => { printWin.focus(); printWin.print(); }, 300);
+          }
+        } catch(e) {
+          console.warn('Web print error:', e);
+        }
+      } else {
         try {
           const printResult = await Print.printToFileAsync({ html: htmlContent });
           if (printResult?.uri && await Sharing.isAvailableAsync()) {
@@ -1148,11 +1269,7 @@ export default function App() {
         }
       }
 
-      // Clear the milk PCS operational form after successful seal
-      setReportingMonth('');
-      setLitres('');
-      setWithdrawal('');
-      setBalance('');
+      // Clear only live visit fields after successful seal (retaining monthly params for baseline 80%)
       setImageUri(null);
       setImageBase64(null);
       setTimestamp('');
@@ -1166,15 +1283,22 @@ export default function App() {
         showToast('⚠️ Saved Offline: Data cached locally. Will sync later.', true);
       }
 
+      return { success: isCloudSaved || isOfflineSaved, error: sbError };
+
     } catch (err) {
       console.error('handleSealRecord execution error:', err);
       setIsSealing(false);
       showToast('⚠️ Submission Error: Saved to offline queue.', true);
+      return { success: false, error: err };
     }
   };
 
   if (!fontsLoaded) {
-    return null;
+    return (
+      <View style={{ flex: 1, backgroundColor: '#fcf8fa', justifyContent: 'center', alignItems: 'center' }}>
+        <ActivityIndicator size="large" color="#7a1a1f" />
+      </View>
+    );
   }
 
   if (authLoading) {
@@ -1208,7 +1332,7 @@ export default function App() {
            </Text>
          </View>
        )}
-       {pendingSyncCount > 0 && <SyncBanner count={pendingSyncCount} syncing={isSyncing} />}
+       {pendingSyncCount > 0 && !isSealing && <SyncBanner count={pendingSyncCount} syncing={isSyncing} />}
       <StatusBar barStyle="light-content" backgroundColor={COLORS.emerald} />
 
       <View style={styles.bgBlobLeft} pointerEvents="none" />
@@ -1251,10 +1375,38 @@ export default function App() {
                 <MyInstitutionsScreen
                   user={userProfile}
                   institutions={institutionsList}
-                  onAddInstitution={(newInst) => {
+                  onAddInstitution={async (newInst) => {
                     const updated = [...institutionsList, newInst];
                     setInstitutionsList(updated);
                     saveInstitutionsForUser(updated, session?.user?.email);
+                    
+                    // Persist new institution record to Supabase backend immediately
+                    try {
+                      if (newInst.type === 'MPCS') {
+                        await saveMpcsSubmission({
+                          societyName: newInst.name,
+                          registrationNumber: newInst.regNo,
+                          gpu: newInst.gpu || newInst.district || 'Dentam GPU',
+                          district: newInst.gpu || newInst.district || 'Dentam GPU',
+                          reportedBy: userProfile?.name || 'Cooperative Inspector',
+                          inspectorEmail: session?.user?.email,
+                          totalMembers: 0,
+                          annualTurnover: 0,
+                          isProfit: 'PROFIT'
+                        });
+                      } else {
+                        await saveMilkPcsSubmission({
+                          centerName: newInst.name,
+                          centerId: newInst.name,
+                          registrationNumber: newInst.regNo,
+                          district: newInst.gpu || newInst.district || 'Dentam GPU',
+                          reportedBy: userProfile?.name || 'Cooperative Inspector'
+                        });
+                      }
+                    } catch (e) {
+                      console.warn('Initial cloud registration warning:', e);
+                    }
+
                     handleSelectSociety(newInst, true);
                   }}
                   onRemoveInstitution={(id) => {
@@ -1274,6 +1426,7 @@ export default function App() {
                 {activeBottomTab === 'records' ? (
                   <RecordsScreen
                     activeTab="records"
+                    userProfile={userProfile}
                     onTabPress={(tab) => {
                       setActiveBottomTab(tab);
                       if (tab === 'home') setCurrentMobileScreen('HOME');
@@ -1485,6 +1638,7 @@ export default function App() {
                 {activeBottomTab === 'records' ? (
                   <RecordsScreen
                     activeTab="records"
+                    userProfile={userProfile}
                     onTabPress={(tab) => {
                       setActiveBottomTab(tab);
                       if (tab === 'home') setCurrentMobileScreen('HOME');
@@ -1573,14 +1727,19 @@ export default function App() {
                         centerId={selectedSociety?.code || registrationNumber || ''}
                         district={selectedSociety?.district || district || ''}
                         reportingMonth={reportingMonth || ''}
-                        reportStatus="DRAFT"
-                        progressPercent={imageUri && withdrawal ? 100 : imageUri || withdrawal ? 40 : 20}
-                        completedCount={imageUri && withdrawal ? 4 : imageUri || withdrawal ? 2 : 1}
-                        totalCount={10}
+                        reportStatus={hasSubmittedMonthlyParams ? 'MONTHLY PARAMS OK' : 'DRAFT'}
+                        progressPercent={
+                          hasSubmittedMonthlyParams
+                            ? 80 + (imageUri ? 10 : 0) + (activityItems.length > 0 ? 10 : 0)
+                            : Math.round(((withdrawal ? 1 : 0) + (balance ? 1 : 0) + (!cscTransData.isCscActive || cscTransData.transactions?.length > 0 ? 1 : 0)) / 3 * 80) + (imageUri ? 10 : 0) + (activityItems.length > 0 ? 10 : 0)
+                        }
+                        hasSubmittedMonthlyParams={hasSubmittedMonthlyParams}
+                        completedCount={hasSubmittedMonthlyParams ? 4 : 2}
+                        totalCount={5}
                         evidenceStatus={imageUri ? "CAPTURED ✓" : "NOT CAPTURED"}
-                        salesStatus={withdrawal ? "COMPLETED ✓" : "NOT COMPLETED"}
-                        businessStatus={withdrawal && balance ? "COMPLETED ✓" : "NOT COMPLETED"}
-                        cscTransStatus="NOT COMPLETED"
+                        salesStatus={hasSubmittedMonthlyParams ? "COMPLETED ✓" : withdrawal ? "COMPLETED ✓" : "NOT COMPLETED"}
+                        businessStatus={hasSubmittedMonthlyParams ? "COMPLETED ✓" : withdrawal && balance ? "COMPLETED ✓" : "NOT COMPLETED"}
+                        cscTransStatus={hasSubmittedMonthlyParams ? "COMPLETED ✓" : "NOT COMPLETED"}
                         activitiesStatus={`${activityItems.length} ENTRIES`}
                         lastUpdated=""
                         activeAlert={activeAlert}
@@ -1641,6 +1800,10 @@ export default function App() {
                     {currentMobileScreen === 'MPCS_CSC_TRANS' && (
                       <MpcsCscTransactionsScreen
                         reportingMonth={reportingMonth || "August 2026"}
+                        cscTransData={cscTransData}
+                        onChangeCscTrans={(data) => {
+                          setCscTransData(data);
+                        }}
                         onSaveNext={() => setCurrentMobileScreen('MPCS_ACTIVITIES')}
                         onBack={() => setCurrentMobileScreen('HOME')}
                       />
@@ -1782,24 +1945,8 @@ export default function App() {
                           setDividendData(data);
                           saveMasterStateToStorage({ dividendData: data });
                         }}
-                        onNext={() => setCurrentMobileScreen('MPCS_BANK')}
-                        onBack={() => setCurrentMobileScreen('MPCS_SUPPLEMENTAL')}
-                      />
-                    )}
-
-                    {currentMobileScreen === 'MPCS_BANK' && (
-                      <MpcsBankDetailsScreen
-                        initialBankName={bankData?.bankName || ''}
-                        initialBranch={bankData?.branch || ''}
-                        initialAccount={bankData?.accountNumber || ''}
-                        initialIfsc={bankData?.ifscCode || ''}
-                        initialType={bankData?.accountType || ''}
-                        onSaveBankDetails={(data) => {
-                          setBankData(data);
-                          saveMasterStateToStorage({ bankData: data });
-                        }}
                         onNext={() => setCurrentMobileScreen('MPCS_SHARE_CAPITAL')}
-                        onBack={() => setCurrentMobileScreen('MPCS_DIVIDEND')}
+                        onBack={() => setCurrentMobileScreen('MPCS_FINANCIALS')}
                       />
                     )}
 
@@ -1814,7 +1961,7 @@ export default function App() {
                           saveMasterStateToStorage({ shareCapitalData: data });
                         }}
                         onNext={() => setCurrentMobileScreen('MPCS_CSC_DETAILS')}
-                        onBack={() => setCurrentMobileScreen('MPCS_BANK')}
+                        onBack={() => setCurrentMobileScreen('MPCS_DIVIDEND')}
                       />
                     )}
 
@@ -1830,7 +1977,10 @@ export default function App() {
                           setCscDetailsData(data);
                           saveMasterStateToStorage({ cscDetailsData: data });
                         }}
-                        onNext={() => setCurrentMobileScreen('MPCS_REVIEW')}
+                        onNext={() => {
+                          showToast('✅ Master Data Saved Successfully!');
+                          setCurrentMobileScreen('HOME');
+                        }}
                         onBack={() => setCurrentMobileScreen('MPCS_SHARE_CAPITAL')}
                       />
                     )}
@@ -1842,8 +1992,17 @@ export default function App() {
                         evidenceStatus={imageUri ? "CAPTURED ✓" : "NOT CAPTURED"}
                         salesStatus={withdrawal ? "COMPLETED ✓" : "NOT COMPLETED"}
                         businessStatus={withdrawal && balance ? "COMPLETED ✓" : "NOT COMPLETED"}
-                        cscTransStatus="NOT COMPLETED"
+                        cscTransStatus={
+                          !cscTransData.isCscActive
+                            ? "NOT AVAILABLE"
+                            : (cscTransData.transactions && cscTransData.transactions.length > 0)
+                              ? `${cscTransData.transactions.length} ENTRIES ✓`
+                              : "NOT COMPLETED"
+                        }
+                        cscIsActive={cscTransData.isCscActive}
                         activitiesStatus={`${activityItems.length} ENTRIES`}
+                        hasSubmittedMonthlyParams={hasSubmittedMonthlyParams}
+                        onNavigateSection={(screenKey) => setCurrentMobileScreen(screenKey)}
                         onSubmitReturn={generatePDF}
                         onBack={() => setCurrentMobileScreen('HOME')}
                       />
@@ -2527,10 +2686,10 @@ const styles = StyleSheet.create({
   // New Features Styles
   syncBanner: {
     position: 'absolute',
-    bottom: Platform.OS === 'web' ? 100 : 120,
+    top: Platform.OS === 'ios' ? 56 : 40,
     alignSelf: 'center',
     width: Platform.OS === 'web' ? 360 : '90%',
-    zIndex: 1000,
+    zIndex: 99990,
     elevation: 10,
   },
   syncBannerInner: {

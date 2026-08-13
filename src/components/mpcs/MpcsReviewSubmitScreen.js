@@ -34,8 +34,11 @@ export default function MpcsReviewSubmitScreen({
   salesStatus = "NOT COMPLETED",
   businessStatus = "NOT COMPLETED",
   cscTransStatus = "NOT COMPLETED",
+  cscIsActive = false,
   activitiesStatus = "0 ENTRIES",
+  hasSubmittedMonthlyParams = false,
   onSubmitReturn,
+  onNavigateSection,
   onBack
 }) {
   const [modalVisible, setModalVisible] = useState(false);
@@ -43,22 +46,62 @@ export default function MpcsReviewSubmitScreen({
   const [submitted, setSubmitted] = useState(false);
 
   const sections = [
-    { title: 'Digital Evidence', status: evidenceStatus, isComplete: evidenceStatus.includes('CAPTURED') },
-    { title: 'Monthly Sales / Deposit', status: salesStatus, isComplete: salesStatus.includes('COMPLETED') },
-    { title: 'Business Performance', status: businessStatus, isComplete: businessStatus.includes('COMPLETED') },
-    { title: 'CSC Monthly Transactions', status: cscTransStatus, isComplete: cscTransStatus.includes('COMPLETED') },
-    { title: 'Activities / Events Log', status: activitiesStatus, isComplete: !activitiesStatus.includes('0') },
+    { title: 'Digital Evidence',          status: evidenceStatus,   isComplete: evidenceStatus.endsWith('✓'),   isNA: false, screenKey: 'MPCS_EVIDENCE' },
+    { 
+      title: 'Monthly Sales / Deposit',   
+      status: hasSubmittedMonthlyParams ? 'MONTHLY PARAMETER ✓' : salesStatus,      
+      isComplete: hasSubmittedMonthlyParams || salesStatus.endsWith('✓'),      
+      isNA: false, 
+      screenKey: 'MPCS_SALES' 
+    },
+    { 
+      title: 'Business Performance',      
+      status: hasSubmittedMonthlyParams ? 'MONTHLY PARAMETER ✓' : businessStatus,   
+      isComplete: hasSubmittedMonthlyParams || businessStatus.endsWith('✓'),   
+      isNA: false, 
+      screenKey: 'MPCS_BUSINESS' 
+    },
+    {
+      title: 'CSC Monthly Transactions',
+      status: !cscIsActive ? 'CSC SERVICES NOT AVAILABLE' : (hasSubmittedMonthlyParams ? 'MONTHLY PARAMETER ✓' : cscTransStatus),
+      isComplete: !cscIsActive ? false : (hasSubmittedMonthlyParams || cscTransStatus.endsWith('✓') || cscTransStatus.includes('ENTRIES')),
+      isNA: !cscIsActive,
+      isOptional: !cscIsActive,
+      screenKey: 'MPCS_CSC_TRANS',
+    },
+    { title: 'Activities / Events Log',   status: activitiesStatus, isComplete: !activitiesStatus.startsWith('0'), isNA: false, screenKey: 'MPCS_ACTIVITIES' },
   ];
 
-  const allSectionsComplete = sections.every(sec => sec.isComplete);
+  // Only mandatory (non-NA/non-optional) sections block submission
+  const mandatorySections = sections.filter(sec => !sec.isNA);
+  const allSectionsComplete = mandatorySections.every(sec => sec.isComplete);
+  const completedCount = mandatorySections.filter(sec => sec.isComplete).length;
+  const requiredCount = mandatorySections.length;
 
-  const handleConfirmSubmit = () => {
+  const handleConfirmSubmit = async () => {
     setIsSubmitting(true);
-    setTimeout(() => {
+    let success = true;
+    try {
+      if (onSubmitReturn) {
+        const res = await onSubmitReturn();
+        if (res && res.error) {
+          success = false;
+          if (Platform.OS === 'web') {
+            alert(`Submission Error: ${res.error.message || 'Failed to save submission to database.'}`);
+          }
+        }
+      }
+    } catch (e) {
+      success = false;
+      if (Platform.OS === 'web') {
+        alert(`Submission Failed: ${e.message || 'Unexpected network error'}`);
+      }
+    } finally {
       setIsSubmitting(false);
+    }
+    if (success) {
       setSubmitted(true);
-      if (onSubmitReturn) onSubmitReturn();
-    }, 1200);
+    }
   };
 
   return (
@@ -113,24 +156,74 @@ export default function MpcsReviewSubmitScreen({
             <View style={styles.cardIconBox}>
               <MaterialCommunityIcons name="format-list-checks" size={20} color={COLORS.primary} />
             </View>
-            <Text style={styles.cardHeaderTitle}>Monthly Sections Checklist (5/5)</Text>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.cardHeaderTitle}>Monthly Sections Checklist</Text>
+              <Text style={styles.cardHeaderSub}>
+                {completedCount} of {requiredCount} required sections complete
+                {!cscIsActive ? '  •  CSC: Optional' : ''}
+              </Text>
+            </View>
           </View>
 
-          {sections.map((sec, idx) => (
-            <View key={sec.title} style={[styles.checkRow, idx > 0 && styles.rowBorder]}>
-              <MaterialCommunityIcons
-                name={sec.isComplete ? "check-circle" : "alert-circle-outline"}
-                size={20}
-                color={sec.isComplete ? COLORS.emerald500 : COLORS.primary}
-              />
-              <Text style={styles.checkTitle}>{sec.title}</Text>
-              <View style={[styles.statusChip, { backgroundColor: sec.isComplete ? COLORS.emerald50 : COLORS.red50, borderColor: sec.isComplete ? 'rgba(16, 185, 129, 0.2)' : 'rgba(220, 38, 38, 0.2)' }]}>
-                <Text style={[styles.statusChipText, { color: sec.isComplete ? COLORS.emerald700 : COLORS.primary }]}>
-                  {sec.status}
-                </Text>
-              </View>
+          {sections.map((sec, idx) => {
+            const isTappable = !sec.isNA && !sec.isComplete && onNavigateSection;
+            const RowWrapper = isTappable ? TouchableOpacity : View;
+            const rowProps = isTappable
+              ? {
+                  onPress: () => onNavigateSection(sec.screenKey),
+                  activeOpacity: 0.75,
+                  style: [styles.checkRow, idx > 0 && styles.rowBorder, sec.isNA && styles.checkRowNA, styles.checkRowTappable],
+                }
+              : { style: [styles.checkRow, idx > 0 && styles.rowBorder, sec.isNA && styles.checkRowNA] };
+
+            return (
+              <RowWrapper key={sec.title} {...rowProps}>
+                {/* Left icon */}
+                <MaterialCommunityIcons
+                  name={sec.isNA ? 'minus-circle-outline' : sec.isComplete ? 'check-circle' : 'alert-circle-outline'}
+                  size={20}
+                  color={sec.isNA ? COLORS.slate400 : sec.isComplete ? COLORS.emerald500 : COLORS.primary}
+                />
+                {/* Title */}
+                <Text style={[styles.checkTitle, sec.isNA && styles.checkTitleNA]}>{sec.title}</Text>
+                {/* Status chip */}
+                <View style={[
+                  styles.statusChip,
+                  {
+                    backgroundColor: sec.isNA ? COLORS.slate100 : sec.isComplete ? COLORS.emerald50 : COLORS.red50,
+                    borderColor: sec.isNA ? 'rgba(148,163,184,0.3)' : sec.isComplete ? 'rgba(16,185,129,0.2)' : 'rgba(220,38,38,0.2)',
+                  }
+                ]}>
+                  <Text style={[styles.statusChipText, {
+                    color: sec.isNA ? COLORS.slate400 : sec.isComplete ? COLORS.emerald700 : COLORS.primary,
+                    fontStyle: sec.isNA ? 'italic' : 'normal',
+                  }]}>
+                    {sec.status}
+                  </Text>
+                </View>
+                {/* OPTIONAL badge for inactive CSC */}
+                {sec.isOptional && (
+                  <View style={styles.optionalBadge}>
+                    <Text style={styles.optionalBadgeText}>OPTIONAL</Text>
+                  </View>
+                )}
+                {/* Tap-to-fix chevron for incomplete rows */}
+                {isTappable && (
+                  <View style={styles.goChevronBox}>
+                    <MaterialCommunityIcons name="chevron-right" size={16} color={COLORS.primary} />
+                  </View>
+                )}
+              </RowWrapper>
+            );
+          })}
+
+          {/* Incomplete hint */}
+          {!allSectionsComplete && (
+            <View style={styles.incompleteHint}>
+              <MaterialCommunityIcons name="gesture-tap" size={14} color={COLORS.amber900} />
+              <Text style={styles.incompleteHintText}>Tap any incomplete section above to go back and fill it in.</Text>
             </View>
-          ))}
+          )}
         </View>
 
         {/* Warning Callout */}
@@ -398,11 +491,27 @@ const styles = StyleSheet.create({
     color: COLORS.slate800,
     letterSpacing: -0.14,
   },
+  cardHeaderSub: {
+    fontFamily: FONT_FAMILY,
+    fontSize: 11,
+    fontWeight: '500',
+    color: COLORS.slate400,
+    marginTop: 1,
+  },
   checkRow: { 
     flexDirection: 'row', 
     alignItems: 'center', 
     paddingVertical: 12, 
     gap: 12 
+  },
+  checkRowNA: {
+    opacity: 0.55,
+  },
+  checkRowTappable: {
+    backgroundColor: 'rgba(122, 26, 31, 0.03)',
+    borderRadius: 10,
+    marginHorizontal: -4,
+    paddingHorizontal: 4,
   },
   rowBorder: { 
     borderTopWidth: 1, 
@@ -414,6 +523,50 @@ const styles = StyleSheet.create({
     fontSize: 14, 
     fontWeight: '600', 
     color: COLORS.slate800 
+  },
+  checkTitleNA: {
+    color: COLORS.slate400,
+    fontWeight: '500',
+  },
+  goChevronBox: {
+    width: 24,
+    height: 24,
+    borderRadius: 6,
+    backgroundColor: COLORS.primaryLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  optionalBadge: {
+    backgroundColor: COLORS.slate100,
+    borderRadius: 5,
+    paddingHorizontal: 6,
+    paddingVertical: 3,
+    borderWidth: 1,
+    borderColor: COLORS.slate200,
+  },
+  optionalBadgeText: {
+    fontFamily: FONT_FAMILY,
+    fontSize: 8,
+    fontWeight: '800',
+    color: COLORS.slate400,
+    letterSpacing: 0.4,
+  },
+  incompleteHint: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 10,
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.slate100,
+  },
+  incompleteHintText: {
+    flex: 1,
+    fontFamily: FONT_FAMILY,
+    fontSize: 11,
+    color: COLORS.amber900,
+    fontWeight: '500',
+    lineHeight: 16,
   },
   statusChip: { 
     paddingHorizontal: 8, 

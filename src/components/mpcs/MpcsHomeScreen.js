@@ -56,11 +56,11 @@ export default function HomeScreen({
   onSelectSociety,
   onManageInstitutions,
   onNavigateScreen,
-  onReviewSubmit,
+  hasSubmittedMonthlyParams = false,
   activeTab = 'home',
   onTabPress
 }) {
-  const [internalTab, setInternalTab] = useState('master');
+  const [internalTab, setInternalTab] = useState('monthly');
   const [alertVisible, setAlertVisible] = useState(true);
 
   return (
@@ -155,7 +155,9 @@ export default function HomeScreen({
           
           <View style={styles.progressContainer}>
             <View style={styles.progressLabelRow}>
-              <Text style={styles.progressLabel}>OVERALL COMPLETION</Text>
+              <Text style={styles.progressLabel}>
+                {hasSubmittedMonthlyParams ? 'MONTHLY PARAMS SUBMITTED (80% BASE)' : 'OVERALL COMPLETION'}
+              </Text>
               <Text style={styles.progressPercent}>{progressPercent}%</Text>
             </View>
             <View style={styles.progressBarBg}>
@@ -174,7 +176,18 @@ export default function HomeScreen({
             pressed && { transform: [{ scale: 0.98 }] },
             hovered && { opacity: 0.95 }
           ]}
-          onPress={() => onNavigateScreen && onNavigateScreen('MPCS_SALES')}
+          onPress={() => {
+            if (!onNavigateScreen) return;
+            if (evidenceStatus !== 'CAPTURED ✓') {
+              onNavigateScreen('MPCS_EVIDENCE');
+            } else if (!hasSubmittedMonthlyParams && operationsStatus !== 'COMPLETED ✓') {
+              onNavigateScreen('MPCS_SALES');
+            } else if (activitiesStatus === '0 ENTRIES' || activitiesStatus === 'NOT COMPLETED') {
+              onNavigateScreen('MPCS_ACTIVITIES');
+            } else {
+              onNavigateScreen('MPCS_REVIEW');
+            }
+          }}
         >
           {({ hovered }) => (
             <LinearGradient
@@ -186,7 +199,15 @@ export default function HomeScreen({
                 hovered && { shadowOpacity: 0.2, shadowRadius: 12, elevation: 8 }
               ]}
             >
-              <Text style={styles.nextStepBtnText}>Next Step: Monthly Sales / Deposit</Text>
+              <Text style={styles.nextStepBtnText}>
+                {evidenceStatus !== 'CAPTURED ✓'
+                  ? 'Next Step: Digital Evidence (Live Visit)'
+                  : !hasSubmittedMonthlyParams
+                    ? 'Next Step: Monthly Sales / Deposit'
+                    : activitiesStatus === '0 ENTRIES' || activitiesStatus === 'NOT COMPLETED'
+                      ? 'Next Step: Activities & Events Log (Live Visit)'
+                      : 'Next Step: Review & Submit Return'}
+              </Text>
               <MaterialCommunityIcons 
                 name="arrow-right" 
                 size={18} 
@@ -235,18 +256,20 @@ export default function HomeScreen({
                     <View style={styles.moduleCardHeader}>
                       <View style={[
                         styles.moduleIconBox, 
-                        {backgroundColor: COLORS.slate50, borderColor: COLORS.slate100},
+                        {backgroundColor: evidenceStatus === 'CAPTURED ✓' ? COLORS.emerald50 : COLORS.slate50, borderColor: evidenceStatus === 'CAPTURED ✓' ? '#a7f3d0' : COLORS.slate100},
                         Platform.OS === 'web' && { transition: 'all 0.3s' },
                         hovered && { backgroundColor: '#fef2f2', borderColor: '#fee2e2' }
                       ]}>
-                        <MaterialCommunityIcons name="image-outline" size={24} color={hovered ? '#7a1a1f' : COLORS.slate400} />
+                        <MaterialCommunityIcons name="image-outline" size={24} color={evidenceStatus === 'CAPTURED ✓' ? COLORS.emerald700 : hovered ? '#7a1a1f' : COLORS.slate400} />
                       </View>
-                      <View style={[styles.statusPill, {backgroundColor: COLORS.slate100, borderColor: 'rgba(226,232,240,0.5)'}]}>
-                        <Text style={[styles.statusPillText, {color: COLORS.slate500}]}>NOT CAPTURED</Text>
+                      <View style={[styles.statusPill, {backgroundColor: evidenceStatus === 'CAPTURED ✓' ? COLORS.emerald50 : COLORS.slate100, borderColor: evidenceStatus === 'CAPTURED ✓' ? 'rgba(16,185,129,0.3)' : 'rgba(226,232,240,0.5)'}]}>
+                        <Text style={[styles.statusPillText, {color: evidenceStatus === 'CAPTURED ✓' ? COLORS.emerald700 : COLORS.slate500}]}>
+                          {evidenceStatus || 'NOT CAPTURED'}
+                        </Text>
                       </View>
                     </View>
                     <Text style={[styles.moduleCardTitle, Platform.OS === 'web' && { transition: 'all 0.3s' }, hovered && { color: '#7a1a1f' }]}>Digital Evidence</Text>
-                    <Text style={styles.moduleCardDesc}>Upload site photos and ledger scans for the current period.</Text>
+                    <Text style={styles.moduleCardDesc}>Live visit evidence: photo &amp; GPS coordinates.</Text>
                   </>
                 )}
               </Pressable>
@@ -265,18 +288,22 @@ export default function HomeScreen({
                     <View style={styles.moduleCardHeader}>
                       <View style={[
                         styles.moduleIconBox, 
-                        {backgroundColor: COLORS.amber50, borderColor: 'rgba(254,243,199,0.5)'},
+                        {backgroundColor: hasSubmittedMonthlyParams ? COLORS.emerald50 : COLORS.amber50, borderColor: hasSubmittedMonthlyParams ? '#a7f3d0' : 'rgba(254,243,199,0.5)'},
                         Platform.OS === 'web' && { transition: 'all 0.3s' },
                         hovered && { backgroundColor: '#fef3c7', borderColor: '#fde68a' }
                       ]}>
-                        <MaterialCommunityIcons name="wallet-outline" size={24} color={COLORS.amber600} />
+                        <MaterialCommunityIcons name="wallet-outline" size={24} color={hasSubmittedMonthlyParams ? COLORS.emerald700 : COLORS.amber600} />
                       </View>
-                      <View style={[styles.statusPill, {backgroundColor: COLORS.amber50, borderColor: 'rgba(254,243,199,0.5)'}]}>
-                        <Text style={[styles.statusPillText, {color: COLORS.amber700}]}>IN PROGRESS</Text>
+                      <View style={[styles.statusPill, {backgroundColor: hasSubmittedMonthlyParams ? COLORS.emerald50 : COLORS.amber50, borderColor: hasSubmittedMonthlyParams ? 'rgba(16,185,129,0.3)' : 'rgba(254,243,199,0.5)'}]}>
+                        <Text style={[styles.statusPillText, {color: hasSubmittedMonthlyParams ? COLORS.emerald700 : COLORS.amber700}]}>
+                          {hasSubmittedMonthlyParams ? 'COMPLETED ✓' : 'IN PROGRESS'}
+                        </Text>
                       </View>
                     </View>
-                    <Text style={[styles.moduleCardTitle, Platform.OS === 'web' && { transition: 'all 0.3s' }, hovered && { color: '#7a1a1f' }]}>Sales & Deposit</Text>
-                    <Text style={styles.moduleCardDesc}>Record daily sales and verify bank deposits.</Text>
+                    <Text style={[styles.moduleCardTitle, Platform.OS === 'web' && { transition: 'all 0.3s' }, hovered && { color: '#7a1a1f' }]}>Sales &amp; Deposit</Text>
+                    <Text style={styles.moduleCardDesc}>
+                      {hasSubmittedMonthlyParams ? 'Monthly parameter submitted & locked for this period.' : 'Record daily sales and verify bank deposits.'}
+                    </Text>
                   </>
                 )}
               </Pressable>
@@ -295,18 +322,22 @@ export default function HomeScreen({
                     <View style={styles.moduleCardHeader}>
                       <View style={[
                         styles.moduleIconBox, 
-                        {backgroundColor: COLORS.slate50, borderColor: COLORS.slate100},
+                        {backgroundColor: hasSubmittedMonthlyParams ? COLORS.emerald50 : COLORS.slate50, borderColor: hasSubmittedMonthlyParams ? '#a7f3d0' : COLORS.slate100},
                         Platform.OS === 'web' && { transition: 'all 0.3s' },
                         hovered && { backgroundColor: '#fef2f2', borderColor: '#fee2e2' }
                       ]}>
-                        <MaterialCommunityIcons name="chart-bar" size={24} color={hovered ? '#7a1a1f' : COLORS.slate400} />
+                        <MaterialCommunityIcons name="chart-bar" size={24} color={hasSubmittedMonthlyParams ? COLORS.emerald700 : hovered ? '#7a1a1f' : COLORS.slate400} />
                       </View>
-                      <View style={[styles.statusPill, {backgroundColor: COLORS.slate100, borderColor: 'rgba(226,232,240,0.5)'}]}>
-                        <Text style={[styles.statusPillText, {color: COLORS.slate500}]}>NOT COMPLETED</Text>
+                      <View style={[styles.statusPill, {backgroundColor: hasSubmittedMonthlyParams ? COLORS.emerald50 : COLORS.slate100, borderColor: hasSubmittedMonthlyParams ? 'rgba(16,185,129,0.3)' : 'rgba(226,232,240,0.5)'}]}>
+                        <Text style={[styles.statusPillText, {color: hasSubmittedMonthlyParams ? COLORS.emerald700 : COLORS.slate500}]}>
+                          {hasSubmittedMonthlyParams ? 'COMPLETED ✓' : 'NOT COMPLETED'}
+                        </Text>
                       </View>
                     </View>
                     <Text style={[styles.moduleCardTitle, Platform.OS === 'web' && { transition: 'all 0.3s' }, hovered && { color: '#7a1a1f' }]}>Business Performance</Text>
-                    <Text style={styles.moduleCardDesc}>KPI metrics and overall performance assessment.</Text>
+                    <Text style={styles.moduleCardDesc}>
+                      {hasSubmittedMonthlyParams ? 'P&L metrics submitted & locked for this period.' : 'KPI metrics and overall performance assessment.'}
+                    </Text>
                   </>
                 )}
               </Pressable>
@@ -324,9 +355,7 @@ export default function HomeScreen({
                 { id: 'MPCS_DEMOGRAPHICS', title: 'Registered Demographics', icon: 'account-group-outline', updated: '01 Jan 2024' },
                 { id: 'MPCS_COMPLIANCE', title: 'Compliance Audit', icon: 'file-document-check-outline', updated: 'Needs update' },
                 { id: 'MPCS_FINANCIALS', title: 'Financial Performance', icon: 'chart-line', updated: 'Needs update' },
-                { id: 'MPCS_SUPPLEMENTAL', title: 'Supplemental Info', icon: 'information-outline', updated: 'Needs update' },
                 { id: 'MPCS_DIVIDEND', title: 'Dividend Details', icon: 'cash-multiple', updated: 'Needs update' },
-                { id: 'MPCS_BANK', title: 'Bank Details', icon: 'bank-outline', updated: 'Needs update' },
                 { id: 'MPCS_SHARE_CAPITAL', title: 'Share Capital', icon: 'chart-pie', updated: 'Needs update' },
                 { id: 'MPCS_CSC_DETAILS', title: 'CSC Details', icon: 'laptop', updated: 'Needs update' }
               ].map((item, index) => (

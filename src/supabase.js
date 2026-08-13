@@ -209,36 +209,56 @@ export async function saveMpcsSubmission(formData) {
     const totalMem = formData.totalMembers ? parseInt(formData.totalMembers) : ['3.1','3.2','3.3','3.4','3.5','3.6','3.7','3.8']
       .reduce((s, id) => s + (parseInt(formData[id]) || 0), 0);
 
+    const gpuVal = formData.gpu || formData.gpuName || formData.district || 'Dentam GPU';
+
     const row = {
       society_name: socName,
       registration_number: formData.registrationNumber || formData['1.5'] || 'N/A',
       registration_authority: formData.registrationAuthority || formData['1.4'] || 'Department of Cooperation',
       president_name: formData.presidentName || formData['2.1'] || null,
       president_mobile: formData.presidentMobile || null,
-      manager_name: formData.managerName || formData.secretaryName || formData['2.3'] || formData['2.2'] || null,
       manager_mobile: formData.managerMobile || formData.secretaryMobile || formData['2.4'] || null,
       audit_done: formData.auditDone || formData['4.1'] || null,
       audit_year: formData.auditYear || formData['4.2'] || null,
       audit_category: formData.auditCategory || formData['4.3'] || null,
       annual_turnover: parseFloat(formData.annualTurnover || formData.withdrawal || formData['5.1']) || null,
-      is_profit: formData.isProfit || formData['5.2'] || 'Yes',
-      net_profit_loss: parseFloat(formData.netProfitLoss || formData.balance || formData['5.3']) || null,
+      is_profit: formData.profitOrLoss || formData.isProfit || formData['5.2'] || 'PROFIT',
+      net_profit_loss: formData.profitOrLoss === 'NO_PROFIT_NO_LOSS' ? null : (parseFloat(formData.netProfit || formData.netProfitLoss || formData.balance || formData['5.3']) || null),
       bank_balance: parseFloat(formData.balance || formData.bankBalance || formData['7.5']) || null,
       bank_name: formData.bankName || formData['7.2'] || 'N/A',
       has_loan: formData.hasLoan === true || formData['8.0'] === 'Yes',
       total_members: totalMem || 0,
-      form_data: updatedFormData,
+      form_data: {
+        ...updatedFormData,
+        gpu: gpuVal,
+        gpu_name: gpuVal,
+        district: gpuVal,
+      },
     };
 
     // Check if an existing submission exists for this society
     const cleanSociety = (row.society_name || '').trim();
+    const cleanRegNo = (row.registration_number || '').trim();
     let existingId = null;
 
-    if (cleanSociety && cleanSociety !== 'MPCS Society') {
+    if (cleanRegNo && cleanRegNo !== 'N/A' && cleanRegNo.length > 3) {
       const { data: existingRows } = await supabase
         .from('mpcs_submissions')
         .select('id')
-        .or(`society_name.ilike.%${cleanSociety}%,registration_number.eq.${row.registration_number || 'N/A'}`)
+        .eq('registration_number', cleanRegNo)
+        .order('created_at', { ascending: false })
+        .limit(1);
+
+      if (existingRows && existingRows.length > 0) {
+        existingId = existingRows[0].id;
+      }
+    }
+
+    if (!existingId && cleanSociety && cleanSociety !== 'MPCS Society') {
+      const { data: existingRows } = await supabase
+        .from('mpcs_submissions')
+        .select('id')
+        .ilike('society_name', cleanSociety)
         .order('created_at', { ascending: false })
         .limit(1);
 

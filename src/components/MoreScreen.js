@@ -1,18 +1,45 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Platform } from 'react-native';
-import { MaterialIcons } from '@expo/vector-icons';
+import { View, Text, StyleSheet, TouchableOpacity, Pressable, ScrollView, Platform } from 'react-native';
+import { MaterialIcons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import HeaderNav from './HeaderNav';
 import BottomNav from './BottomNav';
 
+// STITCH Design Tokens (Matching Dashboard Overview)
 const COLORS = {
-  primary: '#7C1C1C',
-  bg: '#F8F5F2',
-  cardBg: '#FFFFFF',
-  textPrimary: '#0F172A',
-  textSecondary: '#64748B',
-  border: '#E2E8F0',
-  success: '#10B981',
+  background: "#fcf8fa",
+  surface: "#ffffff",
+  primary: "#7a1a1f",
+  primaryDark: "#4a1017",
+  onSurface: "#1b1b1d",
+  slate800: "#1e293b",
+  slate700: "#334155",
+  slate600: "#475569",
+  slate500: "#64748b",
+  slate400: "#94a3b8",
+  slate300: "#cbd5e1",
+  slate200: "#e2e8f0",
+  slate100: "#f1f5f9",
+  slate50: "#f8fafc",
+  amber50: "#fffbeb",
+  amber100: "#fef3c7",
+  amber600: "#d97706",
+  amber700: "#b45309",
+  emerald50: "#ecfdf5",
+  emerald100: "#d1fae5",
+  emerald500: "#10b981",
+  emerald600: "#059669",
+  emerald700: "#047857",
+  red50: "#fef2f2",
+  red100: "#fee2e2",
+  red600: "#dc2626",
 };
+
+const FONT_FAMILY = Platform.select({
+  web: 'Manrope, Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+  ios: 'System',
+  android: 'Roboto',
+});
 
 export default function MoreScreen({
   activeTab = 'more',
@@ -27,36 +54,41 @@ export default function MoreScreen({
       id: 'PROFILE',
       label: 'Institutional Profile',
       sub: 'Manage center details & management team',
-      icon: 'business',
-      color: '#1E40AF',
+      icon: 'office-building-outline',
+      color: '#1e40af',
+      bgColor: '#eff6ff',
     },
     {
       id: 'DEMOGRAPHICS',
       label: 'Demographics Breakdown',
       sub: 'SC/ST/OBC/GEN registered member counts',
-      icon: 'people-alt',
-      color: '#7C3AED',
+      icon: 'account-group-outline',
+      color: '#7c3aed',
+      bgColor: '#f5f3ff',
     },
     {
       id: 'COMPLIANCE',
       label: 'Compliance & Audit Details',
       sub: 'Audit date, AGM records & active loan status',
-      icon: 'verified-user',
+      icon: 'shield-check-outline',
       color: '#047857',
+      bgColor: '#ecfdf5',
     },
     {
       id: 'BULLETINS',
       label: 'Departmental Bulletins',
       sub: 'View official directives & notifications',
-      icon: 'notifications-active',
-      color: '#B45309',
+      icon: 'bell-ring-outline',
+      color: '#b45309',
+      bgColor: '#fffbeb',
     },
     {
       id: 'SYNC',
       label: 'Offline Engine Status',
       sub: 'Realtime cloud database sync status',
-      icon: 'cloud-done',
-      color: '#0284C7',
+      icon: 'cloud-sync-outline',
+      color: '#0284c7',
+      bgColor: '#f0f9ff',
     },
   ];
 
@@ -68,9 +100,18 @@ export default function MoreScreen({
     <View style={styles.container}>
       <HeaderNav />
 
-      <ScrollView style={styles.scrollContent} contentContainerStyle={styles.scrollInner}>
-        {/* Officer Profile Card */}
-        <View style={styles.officerCard}>
+      {/* Ambient Decorative Background Blobs (Matches Dashboard Overview) */}
+      <View style={styles.bgBlobTop} pointerEvents="none" />
+      <View style={styles.bgBlobBottomLeft} pointerEvents="none" />
+
+      <ScrollView style={styles.scrollContent} contentContainerStyle={styles.scrollInner} showsVerticalScrollIndicator={false}>
+        {/* Officer Profile Card with Gradient */}
+        <LinearGradient
+          colors={['#7a1a1f', '#4a1017']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 0 }}
+          style={styles.officerCard}
+        >
           <View style={styles.avatarBox}>
             <Text style={styles.avatarText}>{initials}</Text>
           </View>
@@ -81,20 +122,27 @@ export default function MoreScreen({
               {user?.district ? ` • ${user.district}` : ''}
             </Text>
             <View style={styles.statusChip}>
-              <MaterialIcons name="circle" size={8} color={COLORS.success} />
+              <View style={styles.activeDot} />
               <Text style={styles.statusChipText}>System Online • Supabase Sync Active</Text>
             </View>
           </View>
-        </View>
+        </LinearGradient>
 
         {/* Menu Options Group */}
-        <Text style={styles.sectionHeading}>MODULE & SYSTEM OPTIONS</Text>
-        
+        <View style={styles.sectionHeaderRow}>
+          <Text style={styles.sectionHeading}>MODULE & SYSTEM OPTIONS</Text>
+        </View>
+
         <View style={styles.menuContainer}>
-          {menuOptions.map((opt) => (
-            <TouchableOpacity
+          {menuOptions.map((opt, index) => (
+            <Pressable
               key={opt.id}
-              style={styles.menuRow}
+              style={({ hovered }) => [
+                styles.menuRow,
+                index === menuOptions.length - 1 && { borderBottomWidth: 0 },
+                Platform.OS === 'web' && { transition: 'all 0.25s ease' },
+                hovered && { backgroundColor: COLORS.slate50 }
+              ]}
               onPress={() => {
                 if (opt.id === 'BULLETINS') {
                   if (onOpenBulletins) onOpenBulletins();
@@ -102,25 +150,48 @@ export default function MoreScreen({
                   onNavigateScreen(opt.id);
                 }
               }}
-              activeOpacity={0.7}
             >
-              <View style={[styles.iconBox, { backgroundColor: `${opt.color}15` }]}>
-                <MaterialIcons name={opt.icon} size={22} color={opt.color} />
-              </View>
-              <View style={{ flex: 1, marginLeft: 12 }}>
-                <Text style={styles.menuLabel}>{opt.label}</Text>
-                <Text style={styles.menuSub}>{opt.sub}</Text>
-              </View>
-              <MaterialIcons name="chevron-right" size={22} color={COLORS.textSecondary} />
-            </TouchableOpacity>
+              {({ hovered }) => (
+                <>
+                  <View style={[styles.iconBox, { backgroundColor: opt.bgColor }]}>
+                    <MaterialCommunityIcons name={opt.icon} size={22} color={opt.color} />
+                  </View>
+                  <View style={styles.menuTextGroup}>
+                    <Text style={[styles.menuLabel, hovered && { color: COLORS.primary }]}>{opt.label}</Text>
+                    <Text style={styles.menuSub}>{opt.sub}</Text>
+                  </View>
+                  <View style={[
+                    styles.chevronCircle,
+                    hovered && { backgroundColor: COLORS.primary, borderColor: 'transparent' }
+                  ]}>
+                    <MaterialCommunityIcons 
+                      name="arrow-right" 
+                      size={16} 
+                      color={hovered ? '#ffffff' : COLORS.slate400} 
+                      style={hovered && Platform.OS === 'web' ? { transform: [{ translateX: 2 }] } : null}
+                    />
+                  </View>
+                </>
+              )}
+            </Pressable>
           ))}
         </View>
 
         {/* Sign Out Button */}
-        <TouchableOpacity style={styles.signOutBtn} onPress={onSignOut} activeOpacity={0.8}>
-          <MaterialIcons name="logout" size={18} color="#EF4444" />
+        <Pressable
+          style={({ hovered, pressed }) => [
+            styles.signOutBtn,
+            pressed && { transform: [{ scale: 0.98 }] },
+            hovered && { backgroundColor: '#fee2e2', borderColor: '#fca5a5' }
+          ]}
+          onPress={onSignOut}
+        >
+          <MaterialCommunityIcons name="logout" size={18} color={COLORS.red600} />
           <Text style={styles.signOutText}>SIGN OUT OF CORE ENGINE</Text>
-        </TouchableOpacity>
+        </Pressable>
+
+        {/* Padding for BottomNav */}
+        <View style={{ height: 60 }} />
       </ScrollView>
 
       <BottomNav activeTab={activeTab} onTabPress={onTabPress} />
@@ -129,84 +200,153 @@ export default function MoreScreen({
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.bg },
+  container: {
+    flex: 1,
+    backgroundColor: COLORS.background,
+    position: 'relative',
+  },
+  
+  // Ambient Blobs (Matches Dashboard Overview)
+  bgBlobTop: {
+    position: 'absolute',
+    top: -40,
+    right: -40,
+    width: 240,
+    height: 240,
+    borderRadius: 120,
+    backgroundColor: 'rgba(122, 26, 31, 0.06)',
+    zIndex: -1,
+  },
+  bgBlobBottomLeft: {
+    position: 'absolute',
+    bottom: 80,
+    left: -50,
+    width: 220,
+    height: 220,
+    borderRadius: 110,
+    backgroundColor: 'rgba(180, 83, 9, 0.05)',
+    zIndex: -1,
+  },
+
   scrollContent: { flex: 1 },
-  scrollInner: { padding: 16 },
+  scrollInner: { padding: 14, gap: 14 },
+
   officerCard: {
-    backgroundColor: COLORS.primary,
-    borderRadius: 14,
+    borderRadius: 16,
     padding: 16,
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 20,
-    elevation: 3,
+    shadowColor: COLORS.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 10,
+    elevation: 4,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
   },
   avatarBox: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: 50,
+    height: 50,
+    borderRadius: 25,
     backgroundColor: '#FFFFFF',
     alignItems: 'center',
     justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
   },
-  avatarText: { fontSize: 18, fontWeight: '900', color: COLORS.primary },
+  avatarText: { fontFamily: FONT_FAMILY, fontSize: 18, fontWeight: '800', color: COLORS.primary },
   officerMeta: { marginLeft: 14, flex: 1 },
-  officerName: { fontSize: 16, fontWeight: '800', color: '#FFFFFF' },
-  officerRole: { fontSize: 11, color: 'rgba(255,255,255,0.8)', marginTop: 2, fontWeight: '500' },
+  officerName: { fontFamily: FONT_FAMILY, fontSize: 17, fontWeight: '800', color: '#FFFFFF', letterSpacing: 0.2 },
+  officerRole: { fontFamily: FONT_FAMILY, fontSize: 11, color: 'rgba(255,255,255,0.8)', marginTop: 2, fontWeight: '500' },
   statusChip: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: 'rgba(255,255,255,0.15)',
-    paddingHorizontal: 8,
+    backgroundColor: 'rgba(255, 255, 255, 0.14)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+    paddingHorizontal: 9,
     paddingVertical: 3,
     borderRadius: 10,
-    marginTop: 6,
+    marginTop: 8,
     alignSelf: 'flex-start',
   },
-  statusChipText: { fontSize: 10, color: '#FFFFFF', fontWeight: '600' },
-  sectionHeading: {
-    fontSize: 11,
-    fontWeight: '800',
-    color: COLORS.textSecondary,
-    letterSpacing: 0.8,
-    marginBottom: 10,
+  activeDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: COLORS.emerald500,
+    shadowColor: COLORS.emerald500,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.8,
+    shadowRadius: 4,
   },
+  statusChipText: { fontFamily: FONT_FAMILY, fontSize: 10, color: '#FFFFFF', fontWeight: '700' },
+
+  sectionHeaderRow: { paddingHorizontal: 2, marginTop: 4 },
+  sectionHeading: {
+    fontFamily: FONT_FAMILY,
+    fontSize: 12,
+    fontWeight: '800',
+    color: COLORS.slate700,
+    letterSpacing: 1.2,
+  },
+  
   menuContainer: {
-    backgroundColor: COLORS.cardBg,
-    borderRadius: 12,
+    backgroundColor: COLORS.surface,
+    borderRadius: 16,
     borderWidth: 1,
-    borderColor: COLORS.border,
-    marginBottom: 20,
+    borderColor: COLORS.slate200,
     overflow: 'hidden',
+    shadowColor: '#0f172a',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    elevation: 2,
   },
   menuRow: {
     flexDirection: 'row',
     alignItems: 'center',
     padding: 14,
     borderBottomWidth: 1,
-    borderBottomColor: '#F1F5F9',
+    borderBottomColor: COLORS.slate100,
   },
   iconBox: {
-    width: 38,
-    height: 38,
-    borderRadius: 10,
+    width: 42,
+    height: 42,
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  menuLabel: { fontSize: 14, fontWeight: '800', color: COLORS.textPrimary },
-  menuSub: { fontSize: 11, color: COLORS.textSecondary, marginTop: 1, fontWeight: '500' },
+  menuTextGroup: { flex: 1, marginLeft: 14 },
+  menuLabel: { fontFamily: FONT_FAMILY, fontSize: 15, fontWeight: '800', color: COLORS.onSurface },
+  menuSub: { fontFamily: FONT_FAMILY, fontSize: 11, color: COLORS.slate500, marginTop: 2, fontWeight: '500' },
+  
+  chevronCircle: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: COLORS.slate50,
+    borderWidth: 1,
+    borderColor: COLORS.slate100,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
   signOutBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#FEF2F2',
+    backgroundColor: COLORS.red50,
     borderWidth: 1,
-    borderColor: '#FCA5A5',
-    paddingVertical: 14,
-    borderRadius: 10,
+    borderColor: COLORS.red100,
+    paddingVertical: 15,
+    borderRadius: 14,
     gap: 8,
-    marginBottom: 20,
+    marginTop: 6,
   },
-  signOutText: { color: '#EF4444', fontSize: 13, fontWeight: '800' },
+  signOutText: { fontFamily: FONT_FAMILY, color: COLORS.red600, fontSize: 12, fontWeight: '800', letterSpacing: 0.6 },
 });

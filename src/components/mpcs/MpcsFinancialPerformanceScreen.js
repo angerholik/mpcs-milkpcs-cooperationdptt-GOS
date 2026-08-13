@@ -41,6 +41,7 @@ export default function MpcsFinancialPerformanceScreen({
   const [totalIncome, setTotalIncome] = useState(initialIncome);
   const [totalExpenses, setTotalExpenses] = useState(initialExpenses);
   const [netProfit, setNetProfit] = useState(initialNetProfit);
+  const [profitOrLoss, setProfitOrLoss] = useState('PROFIT');
   const [profitability, setProfitability] = useState(initialProfitability);
 
   React.useEffect(() => {
@@ -53,7 +54,7 @@ export default function MpcsFinancialPerformanceScreen({
 
   const handleSave = () => {
     if (onSaveFinancials) {
-      onSaveFinancials({ annualTurnover, totalIncome, totalExpenses, netProfit, profitability });
+      onSaveFinancials({ annualTurnover, totalIncome, totalExpenses, netProfit, profitOrLoss, profitability });
     }
     setModalVisible(false);
   };
@@ -178,9 +179,32 @@ export default function MpcsFinancialPerformanceScreen({
 
           <View style={styles.infoGrid}>
             <View style={styles.infoCol}>
-              <Text style={styles.infoLabel}>NET PROFIT / LOSS</Text>
-              <Text style={[styles.infoValue, { color: netProfit ? COLORS.emerald700 : COLORS.slate800 }]}>
-                {netProfit ? `₹${netProfit}` : "-"}
+              <Text style={styles.infoLabel}>NET PROFIT / LOSS STATUS</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4 }}>
+                <View style={{
+                  backgroundColor: profitOrLoss === 'PROFIT' ? COLORS.emerald50 : profitOrLoss === 'LOSS' ? '#FEF2F2' : COLORS.amber100,
+                  paddingHorizontal: 8,
+                  paddingVertical: 4,
+                  borderRadius: 6,
+                  borderWidth: 1,
+                  borderColor: profitOrLoss === 'PROFIT' ? 'rgba(16,185,129,0.3)' : profitOrLoss === 'LOSS' ? 'rgba(239,68,68,0.3)' : 'rgba(217,119,6,0.3)'
+                }}>
+                  <Text style={{
+                    fontFamily: FONT_FAMILY,
+                    fontSize: 11,
+                    fontWeight: '800',
+                    color: profitOrLoss === 'PROFIT' ? COLORS.emerald700 : profitOrLoss === 'LOSS' ? '#DC2626' : COLORS.amber900
+                  }}>
+                    {profitOrLoss === 'PROFIT' ? '✓ PROFIT' : profitOrLoss === 'LOSS' ? '⚠ LOSS' : '⚪ NO PROFIT / NO LOSS'}
+                  </Text>
+                </View>
+              </View>
+            </View>
+
+            <View style={styles.infoCol}>
+              <Text style={styles.infoLabel}>AMOUNT (₹)</Text>
+              <Text style={[styles.infoValue, { color: profitOrLoss === 'PROFIT' ? COLORS.emerald700 : profitOrLoss === 'LOSS' ? '#DC2626' : COLORS.slate600 }]}>
+                {profitOrLoss === 'NO_PROFIT_NO_LOSS' ? '—' : (netProfit ? `₹${netProfit}` : '—')}
               </Text>
             </View>
           </View>
@@ -217,10 +241,89 @@ export default function MpcsFinancialPerformanceScreen({
                 <TextInput style={styles.modalInput} keyboardType="numeric" value={totalExpenses} onChangeText={setTotalExpenses} placeholder="0" placeholderTextColor={COLORS.slate400} />
               </View>
 
+              {/* 3-State Profit / Loss / Neutral Selector */}
               <View style={styles.modalFormGroup}>
-                <Text style={styles.modalLabel}>Net Profit / Loss (₹)</Text>
-                <TextInput style={styles.modalInput} keyboardType="numeric" value={netProfit} onChangeText={setNetProfit} placeholder="0" placeholderTextColor={COLORS.slate400} />
+                <Text style={styles.modalLabel}>Financial Result Status</Text>
+                <View style={{ flexDirection: 'column', gap: 6, marginTop: 4 }}>
+                  <View style={{ flexDirection: 'row', gap: 8 }}>
+                    <TouchableOpacity
+                      style={{
+                        flex: 1,
+                        paddingVertical: 10,
+                        borderRadius: 10,
+                        alignItems: 'center',
+                        borderWidth: 1.5,
+                        borderColor: profitOrLoss === 'PROFIT' ? COLORS.emerald700 : COLORS.slate200,
+                        backgroundColor: profitOrLoss === 'PROFIT' ? COLORS.emerald50 : COLORS.slate50
+                      }}
+                      onPress={() => setProfitOrLoss('PROFIT')}
+                    >
+                      <Text style={{
+                        fontFamily: FONT_FAMILY,
+                        fontSize: 11,
+                        fontWeight: '800',
+                        color: profitOrLoss === 'PROFIT' ? COLORS.emerald700 : COLORS.slate500
+                      }}>
+                        PROFIT
+                      </Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      style={{
+                        flex: 1,
+                        paddingVertical: 10,
+                        borderRadius: 10,
+                        alignItems: 'center',
+                        borderWidth: 1.5,
+                        borderColor: profitOrLoss === 'LOSS' ? '#DC2626' : COLORS.slate200,
+                        backgroundColor: profitOrLoss === 'LOSS' ? '#FEF2F2' : COLORS.slate50
+                      }}
+                      onPress={() => setProfitOrLoss('LOSS')}
+                    >
+                      <Text style={{
+                        fontFamily: FONT_FAMILY,
+                        fontSize: 11,
+                        fontWeight: '800',
+                        color: profitOrLoss === 'LOSS' ? '#DC2626' : COLORS.slate500
+                      }}>
+                        LOSS
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+
+                  <TouchableOpacity
+                    style={{
+                      width: '100%',
+                      paddingVertical: 10,
+                      borderRadius: 10,
+                      alignItems: 'center',
+                      borderWidth: 1.5,
+                      borderColor: profitOrLoss === 'NO_PROFIT_NO_LOSS' ? COLORS.amber900 : COLORS.slate200,
+                      backgroundColor: profitOrLoss === 'NO_PROFIT_NO_LOSS' ? COLORS.amber100 : COLORS.slate50
+                    }}
+                    onPress={() => {
+                      setProfitOrLoss('NO_PROFIT_NO_LOSS');
+                      setNetProfit('');
+                    }}
+                  >
+                    <Text style={{
+                      fontFamily: FONT_FAMILY,
+                      fontSize: 11,
+                      fontWeight: '800',
+                      color: profitOrLoss === 'NO_PROFIT_NO_LOSS' ? COLORS.amber900 : COLORS.slate500
+                    }}>
+                      NO PROFIT / NO LOSS
+                    </Text>
+                  </TouchableOpacity>
+                </View>
               </View>
+
+              {profitOrLoss !== 'NO_PROFIT_NO_LOSS' && (
+                <View style={styles.modalFormGroup}>
+                  <Text style={styles.modalLabel}>{profitOrLoss === 'PROFIT' ? 'Net Profit Amount (₹)' : 'Net Loss Amount (₹)'}</Text>
+                  <TextInput style={styles.modalInput} keyboardType="numeric" value={netProfit} onChangeText={setNetProfit} placeholder="0" placeholderTextColor={COLORS.slate400} />
+                </View>
+              )}
 
               <View style={styles.modalFormGroup}>
                 <Text style={styles.modalLabel}>Profitability Margin (%)</Text>

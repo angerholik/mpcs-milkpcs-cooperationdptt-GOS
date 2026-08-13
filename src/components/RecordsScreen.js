@@ -22,6 +22,7 @@ export default function RecordsScreen({
   onTabPress,
   onViewPdf,
   onNavigateHome,
+  userProfile = null,
   records = []
 }) {
   const [searchQ, setSearchQ] = useState('');
@@ -31,6 +32,9 @@ export default function RecordsScreen({
     if (!records || records.length === 0) {
       (async () => {
         try {
+          const userEmail = (userProfile?.email || '').trim().toLowerCase();
+          const userName = (userProfile?.fullName || userProfile?.inspectorName || '').trim().toLowerCase();
+
           const [resMilk, resMpcs] = await Promise.all([
             supabase.from('milk_pcs_submissions').select('*').order('created_at', { ascending: false }),
             supabase.from('mpcs_submissions').select('*').order('created_at', { ascending: false })
@@ -43,18 +47,29 @@ export default function RecordsScreen({
               try { actObj = JSON.parse(actObj); } catch(e) {}
             }
             const isRev = !!(actObj?.is_updated || actObj?.updated_at || r.is_updated || r.isUpdated);
+            const officerEmail = (r.inspector_email || '').trim().toLowerCase();
+            const officerName = (r.reported_by || '').trim().toLowerCase();
+
+            // Strict user isolation filter
+            if (userEmail || userName) {
+              const matchEmail = userEmail && officerEmail && officerEmail === userEmail;
+              const matchName = userName && officerName && officerName.includes(userName);
+              if (!matchEmail && !matchName) return;
+            }
+
             list.push({
               id: r.id,
               month: r.reporting_month || 'Monthly',
               center: r.center_name,
               code: r.center_id || r.registration_number || 'MILK-PCS',
-              officer: r.reported_by || 'Inspector',
+              officer: r.reported_by || userProfile?.fullName || 'Inspector',
               litres: `${r.litres || 0} L`,
               withdrawal: `₹${r.withdrawal || 0}`,
               balance: `₹${r.balance || 0}`,
               status: 'SUBMITTED',
               date: r.created_at ? new Date(r.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : 'Recent',
-              isUpdated: isRev
+              isUpdated: isRev,
+              rawData: r,
             });
           });
 
@@ -64,18 +79,29 @@ export default function RecordsScreen({
               try { fdObj = JSON.parse(fdObj); } catch(e) {}
             }
             const isRev = !!(fdObj?.is_updated || fdObj?.updated_at || r.is_updated || r.isUpdated);
+            const officerEmail = (r.inspector_email || '').trim().toLowerCase();
+            const officerName = (r.reported_by || r.president_name || '').trim().toLowerCase();
+
+            // Strict user isolation filter
+            if (userEmail || userName) {
+              const matchEmail = userEmail && officerEmail && officerEmail === userEmail;
+              const matchName = userName && officerName && officerName.includes(userName);
+              if (!matchEmail && !matchName) return;
+            }
+
             list.push({
               id: r.id,
-              month: 'Monthly',
-              center: r.society_name,
+              month: r.reporting_month || 'Monthly',
+              center: r.society_name || r.center_name,
               code: r.registration_number || 'MPCS',
-              officer: r.president_name || 'Inspector',
+              officer: r.reported_by || r.president_name || userProfile?.fullName || 'Inspector',
               litres: `${r.total_members || 0} Members`,
               withdrawal: `₹${r.annual_turnover || 0}`,
               balance: `₹${r.bank_balance || 0}`,
               status: 'SUBMITTED',
               date: r.created_at ? new Date(r.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : 'Recent',
-              isUpdated: isRev
+              isUpdated: isRev,
+              rawData: r,
             });
           });
 
@@ -85,7 +111,7 @@ export default function RecordsScreen({
         }
       })();
     }
-  }, [records]);
+  }, [records, userProfile]);
 
   const activeRecords = (records && records.length > 0) ? records : dbRecords;
 
@@ -195,7 +221,7 @@ export default function RecordsScreen({
 
             <View style={styles.cardFooter}>
               <Text style={styles.footerMeta}>Submitted: {item.date} by {item.officer}</Text>
-              <TouchableOpacity style={styles.pdfBtn} onPress={onViewPdf} activeOpacity={0.8}>
+              <TouchableOpacity style={styles.pdfBtn} onPress={() => onViewPdf && onViewPdf(item)} activeOpacity={0.8}>
                 <MaterialIcons name="picture-as-pdf" size={16} color={COLORS.primary} />
                 <Text style={styles.pdfBtnText}>VIEW PDF</Text>
               </TouchableOpacity>

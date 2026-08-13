@@ -5,6 +5,7 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
+  Pressable,
   Image,
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -14,24 +15,39 @@ import {
   Alert
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { MaterialIcons, FontAwesome5 } from '@expo/vector-icons';
+import { MaterialIcons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { supabase } from '../supabase';
 
 const { width } = Dimensions.get('window');
 
+// STITCH Design Tokens (Matching Dashboard Overview)
 const COLORS = {
-  bgStart: '#5a1010',
-  bgMid: '#7a1a1a',
-  bgMid2: '#6b1414',
-  bgEnd: '#3d0a0a',
-  gold: '#c9a227',
-  goldLight: '#fff8f0',
-  textMuted: '#8a6a5a',
-  labelColor: '#7a1a1a',
-  iconColor: '#9b6a5a',
-  inputBg: '#faf6f2',
-  inputBorder: 'rgba(122, 26, 26, 0.12)',
+  bgStart: "#3b080b",
+  bgMid: "#7a1a1f",
+  bgMid2: "#4a1017",
+  bgEnd: "#1c0406",
+  gold: "#fde68a",
+  goldDark: "#b45309",
+  surface: "#ffffff",
+  onSurface: "#1b1b1d",
+  slate800: "#1e293b",
+  slate700: "#334155",
+  slate600: "#475569",
+  slate500: "#64748b",
+  slate400: "#94a3b8",
+  slate300: "#cbd5e1",
+  slate200: "#e2e8f0",
+  slate100: "#f1f5f9",
+  slate50: "#f8fafc",
+  primary: "#7a1a1f",
+  primaryDark: "#4a1017",
 };
+
+const FONT_FAMILY = Platform.select({
+  web: 'Manrope, Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+  ios: 'System',
+  android: 'Roboto',
+});
 
 // Official Sikkim Government Seal Emblem Component
 function SikkimEmblem() {
@@ -52,6 +68,34 @@ const Login = ({ onLoginSuccess, onRegisterSuccess }) => {
   const [mobile, setMobile] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+
+  const [forgotMode, setForgotMode] = useState(false);
+  const [resetEmail, setResetEmail] = useState('');
+  const [resetLoading, setResetLoading] = useState(false);
+  const [resetMsg, setResetMsg] = useState('');
+  const [resetErr, setResetErr] = useState('');
+
+  const handleForgotPasswordSubmit = async () => {
+    if (!resetEmail) {
+      setResetErr('Please enter your Official Email ID.');
+      return;
+    }
+    setResetLoading(true);
+    setResetErr('');
+    setResetMsg('');
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(resetEmail.trim());
+      setResetLoading(false);
+      if (error) {
+        setResetErr(error.message);
+      } else {
+        setResetMsg('✅ Password recovery email sent! Check your inbox for reset instructions.');
+      }
+    } catch (err) {
+      setResetLoading(false);
+      setResetErr(err.message || 'Failed to send recovery email.');
+    }
+  };
 
   const handleSignIn = async () => {
     if (!email || !password) {
@@ -167,11 +211,11 @@ const Login = ({ onLoginSuccess, onRegisterSuccess }) => {
       {/* Rich Background Gradient */}
       <LinearGradient
         colors={[COLORS.bgStart, COLORS.bgMid, COLORS.bgMid2, COLORS.bgEnd]}
-        locations={[0, 0.3, 0.6, 1]}
+        locations={[0, 0.35, 0.7, 1]}
         style={styles.background}
       />
 
-      {/* Decorative Glow Blobs */}
+      {/* Ambient Glow Blobs (Matches Dashboard Overview) */}
       <View style={styles.bgBlobTop} pointerEvents="none" />
       <View style={styles.bgBlobBottomLeft} pointerEvents="none" />
       <View style={styles.bgBlobBottomRight} pointerEvents="none" />
@@ -228,46 +272,46 @@ const Login = ({ onLoginSuccess, onRegisterSuccess }) => {
                     <Text style={styles.fieldLabel}>SELECT INSPECTOR DESIGNATION / ROLE</Text>
                     <View style={styles.roleToggleContainer}>
                       <TouchableOpacity
-                        style={[styles.roleChip, role === 'CI' && styles.activeRoleChip]}
+                        style={{ flex: 1 }}
                         onPress={() => setRole('CI')}
                         activeOpacity={0.85}
                       >
                         {role === 'CI' ? (
                           <LinearGradient
-                            colors={['#7a1a1a', '#9b2222']}
+                            colors={['#7a1a1f', '#4a1017']}
                             start={{ x: 0, y: 0 }}
-                            end={{ x: 1, y: 1 }}
+                            end={{ x: 1, y: 0 }}
                             style={styles.activeRoleGradient}
                           >
-                            <MaterialIcons name="security" size={16} color="#fff8f0" />
+                            <MaterialCommunityIcons name="shield-check" size={16} color="#FFFFFF" />
                             <Text style={styles.activeRoleText}>CI (Cooperative Inspector)</Text>
                           </LinearGradient>
                         ) : (
                           <View style={styles.inactiveRoleContent}>
-                            <MaterialIcons name="security" size={16} color={COLORS.textMuted} />
+                            <MaterialCommunityIcons name="shield-check-outline" size={16} color={COLORS.slate500} />
                             <Text style={styles.inactiveRoleText}>CI (Cooperative Inspector)</Text>
                           </View>
                         )}
                       </TouchableOpacity>
 
                       <TouchableOpacity
-                        style={[styles.roleChip, role === 'ACI' && styles.activeRoleChip]}
+                        style={{ flex: 1 }}
                         onPress={() => setRole('ACI')}
                         activeOpacity={0.85}
                       >
                         {role === 'ACI' ? (
                           <LinearGradient
-                            colors={['#7a1a1a', '#9b2222']}
+                            colors={['#7a1a1f', '#4a1017']}
                             start={{ x: 0, y: 0 }}
-                            end={{ x: 1, y: 1 }}
+                            end={{ x: 1, y: 0 }}
                             style={styles.activeRoleGradient}
                           >
-                            <MaterialIcons name="verified-user" size={16} color="#fff8f0" />
+                            <MaterialCommunityIcons name="shield-account" size={16} color="#FFFFFF" />
                             <Text style={styles.activeRoleText}>ACI (Assistant CI)</Text>
                           </LinearGradient>
                         ) : (
                           <View style={styles.inactiveRoleContent}>
-                            <MaterialIcons name="verified-user" size={16} color={COLORS.textMuted} />
+                            <MaterialCommunityIcons name="shield-account-outline" size={16} color={COLORS.slate500} />
                             <Text style={styles.inactiveRoleText}>ACI (Assistant CI)</Text>
                           </View>
                         )}
@@ -279,11 +323,11 @@ const Login = ({ onLoginSuccess, onRegisterSuccess }) => {
                   <View style={styles.fieldGroup}>
                     <Text style={styles.fieldLabel}>FULL NAME</Text>
                     <View style={styles.inputInner}>
-                      <MaterialIcons name="person-outline" size={18} color={COLORS.iconColor} style={styles.inputIcon} />
+                      <MaterialCommunityIcons name="account-outline" size={20} color={COLORS.primary} style={styles.inputIcon} />
                       <TextInput
                         style={styles.input}
                         placeholder="Enter Full Name"
-                        placeholderTextColor="#94A3B8"
+                        placeholderTextColor={COLORS.slate400}
                         value={fullName}
                         onChangeText={setFullName}
                       />
@@ -294,11 +338,11 @@ const Login = ({ onLoginSuccess, onRegisterSuccess }) => {
                   <View style={styles.fieldGroup}>
                     <Text style={styles.fieldLabel}>OFFICIAL EMAIL ID</Text>
                     <View style={styles.inputInner}>
-                      <MaterialIcons name="mail-outline" size={18} color={COLORS.iconColor} style={styles.inputIcon} />
+                      <MaterialCommunityIcons name="email-outline" size={20} color={COLORS.primary} style={styles.inputIcon} />
                       <TextInput
                         style={styles.input}
                         placeholder="officer@sikkim.gov.in"
-                        placeholderTextColor="#94A3B8"
+                        placeholderTextColor={COLORS.slate400}
                         value={email}
                         onChangeText={setEmail}
                         autoCapitalize="none"
@@ -311,11 +355,11 @@ const Login = ({ onLoginSuccess, onRegisterSuccess }) => {
                   <View style={styles.fieldGroup}>
                     <Text style={styles.fieldLabel}>MOBILE NUMBER</Text>
                     <View style={styles.inputInner}>
-                      <MaterialIcons name="phone" size={18} color={COLORS.iconColor} style={styles.inputIcon} />
+                      <MaterialCommunityIcons name="phone-outline" size={20} color={COLORS.primary} style={styles.inputIcon} />
                       <TextInput
                         style={styles.input}
                         placeholder="+91 Mobile Number"
-                        placeholderTextColor="#94A3B8"
+                        placeholderTextColor={COLORS.slate400}
                         value={mobile}
                         onChangeText={setMobile}
                         keyboardType="phone-pad"
@@ -327,11 +371,11 @@ const Login = ({ onLoginSuccess, onRegisterSuccess }) => {
                   <View style={styles.fieldGroup}>
                     <Text style={styles.fieldLabel}>CREATE ACCESS PASSWORD</Text>
                     <View style={styles.inputInner}>
-                      <MaterialIcons name="lock-outline" size={18} color={COLORS.iconColor} style={styles.inputIcon} />
+                      <MaterialCommunityIcons name="lock-outline" size={20} color={COLORS.primary} style={styles.inputIcon} />
                       <TextInput
                         style={styles.input}
                         placeholder="Minimum 8 characters"
-                        placeholderTextColor="#94A3B8"
+                        placeholderTextColor={COLORS.slate400}
                         value={password}
                         onChangeText={setPassword}
                         secureTextEntry
@@ -347,27 +391,125 @@ const Login = ({ onLoginSuccess, onRegisterSuccess }) => {
                   </View>
 
                   {/* Submit CTA Button */}
-                  <TouchableOpacity
-                    style={styles.primaryCtaBtn}
+                  <Pressable
+                    style={({ hovered, pressed }) => [
+                      styles.primaryCtaBtnWrapper,
+                      pressed && { transform: [{ scale: 0.98 }] },
+                      hovered && { opacity: 0.95 }
+                    ]}
                     onPress={handleRegisterSubmit}
                     disabled={loading}
-                    activeOpacity={0.85}
                   >
-                    <LinearGradient
-                      colors={['#6b1414', '#9b2222', '#7a1a1a']}
-                      start={{ x: 0, y: 0 }}
-                      end={{ x: 1, y: 1 }}
-                      style={styles.ctaGradient}
-                    >
-                      {loading ? (
-                        <ActivityIndicator color="#fff8f0" size="small" />
-                      ) : (
-                        <>
-                          <Text style={styles.ctaText}>CREATE ACCOUNT & ADD INSTITUTIONS</Text>
-                          <MaterialIcons name="arrow-forward" size={18} color="#fff8f0" style={{ marginLeft: 6 }} />
-                        </>
-                      )}
-                    </LinearGradient>
+                    {({ hovered }) => (
+                      <LinearGradient
+                        colors={['#7a1a1f', '#4a1017']}
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 1, y: 0 }}
+                        style={[
+                          styles.ctaGradient,
+                          hovered && Platform.OS === 'web' && { shadowOpacity: 0.25, shadowRadius: 12, elevation: 8 }
+                        ]}
+                      >
+                        {loading ? (
+                          <ActivityIndicator color="#FFFFFF" size="small" />
+                        ) : (
+                          <>
+                            <Text style={styles.ctaText}>CREATE ACCOUNT & ADD INSTITUTIONS</Text>
+                            <MaterialCommunityIcons 
+                              name="arrow-right" 
+                              size={18} 
+                              color="#FFFFFF" 
+                              style={hovered && Platform.OS === 'web' ? { transform: [{ translateX: 4 }] } : null}
+                            />
+                          </>
+                        )}
+                      </LinearGradient>
+                    )}
+                  </Pressable>
+                </>
+              ) : forgotMode ? (
+                <>
+                  <Text style={styles.cardSubtitle}>
+                    Enter your official registered email ID to receive a password reset link
+                  </Text>
+
+                  {/* Reset Email Input */}
+                  <View style={styles.fieldGroup}>
+                    <Text style={styles.fieldLabel}>REGISTERED OFFICIAL EMAIL ID</Text>
+                    <View style={styles.inputInner}>
+                      <MaterialCommunityIcons name="email-outline" size={20} color={COLORS.primary} style={styles.inputIcon} />
+                      <TextInput
+                        style={styles.input}
+                        placeholder="officer@sikkim.gov.in"
+                        placeholderTextColor={COLORS.slate400}
+                        value={resetEmail || email}
+                        onChangeText={setResetEmail}
+                        autoCapitalize="none"
+                        keyboardType="email-address"
+                      />
+                    </View>
+                  </View>
+
+                  {resetMsg ? (
+                    <View style={{ backgroundColor: '#ecfdf5', padding: 12, borderRadius: 10, borderWidth: 1, borderColor: '#a7f3d0', marginBottom: 14 }}>
+                      <Text style={{ fontFamily: FONT_FAMILY, fontSize: 12, fontWeight: '700', color: '#047857', textAlign: 'center' }}>
+                        {resetMsg}
+                      </Text>
+                    </View>
+                  ) : null}
+
+                  {resetErr ? (
+                    <View style={{ backgroundColor: '#fef2f2', padding: 12, borderRadius: 10, borderWidth: 1, borderColor: '#fca5a5', marginBottom: 14 }}>
+                      <Text style={{ fontFamily: FONT_FAMILY, fontSize: 12, fontWeight: '700', color: '#dc2626', textAlign: 'center' }}>
+                        ⚠️ {resetErr}
+                      </Text>
+                    </View>
+                  ) : null}
+
+                  {/* Reset CTA Button */}
+                  <Pressable
+                    style={({ hovered, pressed }) => [
+                      styles.primaryCtaBtnWrapper,
+                      pressed && { transform: [{ scale: 0.98 }] },
+                      hovered && { opacity: 0.95 }
+                    ]}
+                    onPress={handleForgotPasswordSubmit}
+                    disabled={resetLoading}
+                  >
+                    {({ hovered }) => (
+                      <LinearGradient
+                        colors={['#7a1a1f', '#4a1017']}
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 1, y: 0 }}
+                        style={[
+                          styles.ctaGradient,
+                          hovered && Platform.OS === 'web' && { shadowOpacity: 0.25, shadowRadius: 12, elevation: 8 }
+                        ]}
+                      >
+                        {resetLoading ? (
+                          <ActivityIndicator color="#FFFFFF" size="small" />
+                        ) : (
+                          <>
+                            <Text style={styles.ctaText}>SEND PASSWORD RESET EMAIL</Text>
+                            <MaterialCommunityIcons 
+                              name="email-send-outline" 
+                              size={18} 
+                              color="#FFFFFF" 
+                            />
+                          </>
+                        )}
+                      </LinearGradient>
+                    )}
+                  </Pressable>
+
+                  <TouchableOpacity
+                    style={{ alignSelf: 'center', marginTop: 16, padding: 8 }}
+                    onPress={() => { setForgotMode(false); setResetMsg(''); setResetErr(''); }}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={{ fontFamily: FONT_FAMILY, fontSize: 12, fontWeight: '800', color: COLORS.primary }}>
+                      ← Back to Sign In
+                    </Text>
                   </TouchableOpacity>
                 </>
               ) : (
@@ -380,13 +522,13 @@ const Login = ({ onLoginSuccess, onRegisterSuccess }) => {
                   <View style={styles.fieldGroup}>
                     <Text style={styles.fieldLabel}>OFFICIAL EMAIL ID</Text>
                     <View style={styles.inputInner}>
-                      <MaterialIcons name="mail-outline" size={18} color={COLORS.iconColor} style={styles.inputIcon} />
+                      <MaterialCommunityIcons name="email-outline" size={20} color={COLORS.primary} style={styles.inputIcon} />
                       <TextInput
                         style={styles.input}
                         placeholder="officer@sikkim.gov.in"
-                        placeholderTextColor="#94A3B8"
+                        placeholderTextColor={COLORS.slate400}
                         value={email}
-                        onChangeText={setEmail}
+                        onChangeText={(txt) => { setEmail(txt); setResetEmail(txt); }}
                         autoCapitalize="none"
                         keyboardType="email-address"
                       />
@@ -397,11 +539,11 @@ const Login = ({ onLoginSuccess, onRegisterSuccess }) => {
                   <View style={styles.fieldGroup}>
                     <Text style={styles.fieldLabel}>PASSWORD</Text>
                     <View style={styles.inputInner}>
-                      <MaterialIcons name="lock-outline" size={18} color={COLORS.iconColor} style={styles.inputIcon} />
+                      <MaterialCommunityIcons name="lock-outline" size={20} color={COLORS.primary} style={styles.inputIcon} />
                       <TextInput
                         style={styles.input}
                         placeholder="Enter your password"
-                        placeholderTextColor="#94A3B8"
+                        placeholderTextColor={COLORS.slate400}
                         value={password}
                         onChangeText={setPassword}
                         secureTextEntry
@@ -409,7 +551,11 @@ const Login = ({ onLoginSuccess, onRegisterSuccess }) => {
                     </View>
                   </View>
 
-                  <TouchableOpacity style={styles.forgotBtn} activeOpacity={0.7}>
+                  <TouchableOpacity 
+                    style={styles.forgotBtn} 
+                    onPress={() => { setForgotMode(true); setResetEmail(email); setResetMsg(''); setResetErr(''); }}
+                    activeOpacity={0.7}
+                  >
                     <Text style={styles.forgotText}>Forgot Password?</Text>
                   </TouchableOpacity>
 
@@ -421,29 +567,41 @@ const Login = ({ onLoginSuccess, onRegisterSuccess }) => {
                   </View>
 
                   {/* Sign In CTA Button */}
-                  <TouchableOpacity
-                    style={styles.primaryCtaBtn}
+                  <Pressable
+                    style={({ hovered, pressed }) => [
+                      styles.primaryCtaBtnWrapper,
+                      pressed && { transform: [{ scale: 0.98 }] },
+                      hovered && { opacity: 0.95 }
+                    ]}
                     onPress={handleSignIn}
                     disabled={loading}
-                    activeOpacity={0.85}
                   >
-                    <LinearGradient
-                      colors={['#6b1414', '#9b2222', '#7a1a1a']}
-                      start={{ x: 0, y: 0 }}
-                      end={{ x: 1, y: 1 }}
-                      style={styles.ctaGradient}
-                    >
-                      {loading ? (
-                        <ActivityIndicator color="#fff8f0" size="small" />
-                      ) : (
-                        <>
-                          <Text style={styles.ctaText}>SIGN IN TO PORTAL</Text>
-                          <MaterialIcons name="chevron-right" size={20} color="#fff8f0" style={{ marginLeft: 6 }} />
-                        </>
-                      )}
-                    </LinearGradient>
-                  </TouchableOpacity>
-
+                    {({ hovered }) => (
+                      <LinearGradient
+                        colors={['#7a1a1f', '#4a1017']}
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 1, y: 0 }}
+                        style={[
+                          styles.ctaGradient,
+                          hovered && Platform.OS === 'web' && { shadowOpacity: 0.25, shadowRadius: 12, elevation: 8 }
+                        ]}
+                      >
+                        {loading ? (
+                          <ActivityIndicator color="#FFFFFF" size="small" />
+                        ) : (
+                          <>
+                            <Text style={styles.ctaText}>SIGN IN TO PORTAL</Text>
+                            <MaterialCommunityIcons 
+                              name="arrow-right" 
+                              size={18} 
+                              color="#FFFFFF" 
+                              style={hovered && Platform.OS === 'web' ? { transform: [{ translateX: 4 }] } : null}
+                            />
+                          </>
+                        )}
+                      </LinearGradient>
+                    )}
+                  </Pressable>
                 </>
               )}
             </View>
@@ -451,7 +609,7 @@ const Login = ({ onLoginSuccess, onRegisterSuccess }) => {
 
           {/* Footer */}
           <View style={styles.footer}>
-            <Text style={styles.footerText}>Secure Government Assets • v2.0.4-beta</Text>
+            <Text style={styles.footerText}>SECURE GOVERNMENT ASSETS • v2.0.4-beta</Text>
             <Text style={styles.footerSubtext}>System generated access tokens are cryptographically monitored.</Text>
           </View>
         </ScrollView>
@@ -469,7 +627,7 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
   },
 
-  // Glow Blobs
+  // Glow Blobs (Matches Dashboard Overview)
   bgBlobTop: {
     position: 'absolute',
     top: -100,
@@ -477,7 +635,7 @@ const styles = StyleSheet.create({
     width: 600,
     height: 350,
     borderRadius: 300,
-    backgroundColor: 'rgba(155, 34, 34, 0.3)',
+    backgroundColor: 'rgba(122, 26, 31, 0.25)',
     zIndex: -1,
   },
   bgBlobBottomLeft: {
@@ -487,7 +645,7 @@ const styles = StyleSheet.create({
     width: 350,
     height: 350,
     borderRadius: 175,
-    backgroundColor: 'rgba(74, 14, 14, 0.4)',
+    backgroundColor: 'rgba(74, 16, 23, 0.35)',
     zIndex: -1,
   },
   bgBlobBottomRight: {
@@ -497,7 +655,7 @@ const styles = StyleSheet.create({
     width: 300,
     height: 300,
     borderRadius: 150,
-    backgroundColor: 'rgba(107, 20, 20, 0.35)',
+    backgroundColor: 'rgba(180, 83, 9, 0.15)',
     zIndex: -1,
   },
 
@@ -518,16 +676,16 @@ const styles = StyleSheet.create({
     width: 76,
     height: 76,
     borderRadius: 38,
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    backgroundColor: 'rgba(255, 255, 255, 0.12)',
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1.5,
-    borderColor: 'rgba(201, 162, 39, 0.4)',
+    borderColor: 'rgba(253, 230, 138, 0.4)',
     padding: 14,
     marginBottom: 16,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.5,
+    shadowOpacity: 0.4,
     shadowRadius: 16,
     elevation: 10,
   },
@@ -538,26 +696,28 @@ const styles = StyleSheet.create({
   },
 
   govTitle: {
-    fontFamily: Platform.OS === 'ios' ? 'Cinzel' : 'serif',
+    fontFamily: FONT_FAMILY,
     fontSize: 32,
-    fontWeight: '700',
-    color: '#fff8f0',
+    fontWeight: '800',
+    color: '#ffffff',
     letterSpacing: 8,
     textAlign: 'center',
     marginBottom: 4,
   },
   fullNameSub: {
+    fontFamily: FONT_FAMILY,
     fontSize: 9.5,
-    fontWeight: '600',
-    color: 'rgba(255, 248, 240, 0.6)',
+    fontWeight: '700',
+    color: 'rgba(255, 255, 255, 0.7)',
     letterSpacing: 2,
     textTransform: 'uppercase',
     textAlign: 'center',
     marginBottom: 4,
   },
   deptSubtitle: {
+    fontFamily: FONT_FAMILY,
     fontSize: 9,
-    fontWeight: '700',
+    fontWeight: '800',
     color: COLORS.gold,
     letterSpacing: 1.5,
     textTransform: 'uppercase',
@@ -567,18 +727,18 @@ const styles = StyleSheet.create({
   // Card & Tabs Container
   cardWrapper: {
     width: '100%',
-    maxWidth: 580,
+    maxWidth: 540,
     marginTop: 8,
   },
 
   // Tabs Header
   tabContainer: {
     flexDirection: 'row',
-    backgroundColor: 'rgba(40, 8, 8, 0.6)',
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
+    backgroundColor: 'rgba(28, 4, 6, 0.65)',
+    borderTopLeftRadius: 18,
+    borderTopRightRadius: 18,
     borderWidth: 1,
-    borderColor: 'rgba(201, 162, 39, 0.18)',
+    borderColor: 'rgba(255, 255, 255, 0.12)',
     borderBottomWidth: 0,
     overflow: 'hidden',
   },
@@ -590,58 +750,65 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   activeTabBtn: {
-    backgroundColor: 'rgba(122, 26, 26, 0.1)',
+    backgroundColor: 'rgba(122, 26, 31, 0.25)',
   },
   tabBtnText: {
+    fontFamily: FONT_FAMILY,
     fontSize: 11,
-    fontWeight: '700',
+    fontWeight: '800',
     letterSpacing: 1.5,
-    color: 'rgba(255, 248, 240, 0.45)',
+    color: 'rgba(255, 255, 255, 0.5)',
     textTransform: 'uppercase',
   },
   activeTabText: {
-    color: '#fff8f0',
+    color: '#ffffff',
   },
   activeTabIndicator: {
     position: 'absolute',
     bottom: 0,
     left: 20,
     right: 20,
-    height: 2,
+    height: 3,
     backgroundColor: COLORS.gold,
-    borderRadius: 1,
+    borderTopLeftRadius: 2,
+    borderTopRightRadius: 2,
   },
 
   // White Form Body
   whiteFormCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: COLORS.surface,
     borderBottomLeftRadius: 20,
     borderBottomRightRadius: 20,
     borderTopRightRadius: 20,
     paddingHorizontal: 20,
     paddingTop: 24,
     paddingBottom: 28,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 20 },
-    shadowOpacity: 0.45,
-    shadowRadius: 40,
-    elevation: 15,
+    borderWidth: 1,
+    borderColor: COLORS.slate200,
+    shadowColor: '#0f172a',
+    shadowOffset: { width: 0, height: 16 },
+    shadowOpacity: 0.18,
+    shadowRadius: 32,
+    elevation: 12,
   },
   cardSubtitle: {
-    fontSize: 11,
-    color: COLORS.textMuted,
+    fontFamily: FONT_FAMILY,
+    fontSize: 12,
+    color: COLORS.slate500,
     textAlign: 'center',
     marginBottom: 20,
-    lineHeight: 16,
+    lineHeight: 18,
+    fontWeight: '500',
   },
 
   fieldGroup: {
     marginBottom: 16,
   },
   fieldLabel: {
+    fontFamily: FONT_FAMILY,
     fontSize: 10,
-    fontWeight: '700',
-    color: COLORS.labelColor,
+    fontWeight: '800',
+    color: COLORS.slate700,
     letterSpacing: 1.2,
     textTransform: 'uppercase',
     marginBottom: 6,
@@ -650,63 +817,66 @@ const styles = StyleSheet.create({
   // Segmented Role Selector (CI vs ACI)
   roleToggleContainer: {
     flexDirection: 'row',
-    backgroundColor: '#faf6f2',
-    borderWidth: 1.5,
-    borderColor: 'rgba(122, 26, 26, 0.18)',
-    borderRadius: 12,
-    padding: 3,
-    gap: 4,
+    backgroundColor: COLORS.slate50,
+    borderWidth: 1,
+    borderColor: COLORS.slate200,
+    borderRadius: 14,
+    padding: 4,
+    gap: 6,
   },
-  roleChip: {
-    flex: 1,
-    borderRadius: 9,
-    overflow: 'hidden',
-  },
-  activeRoleChip: {},
   activeRoleGradient: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
-    paddingVertical: 12,
-    borderRadius: 9,
+    paddingVertical: 11,
+    borderRadius: 10,
+    shadowColor: COLORS.primary,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    elevation: 2,
   },
   activeRoleText: {
+    fontFamily: FONT_FAMILY,
     fontSize: 11,
-    fontWeight: '700',
-    color: '#fff8f0',
+    fontWeight: '800',
+    color: '#FFFFFF',
   },
   inactiveRoleContent: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
-    paddingVertical: 12,
+    paddingVertical: 11,
+    borderRadius: 10,
   },
   inactiveRoleText: {
+    fontFamily: FONT_FAMILY,
     fontSize: 11,
-    fontWeight: '600',
-    color: COLORS.textMuted,
+    fontWeight: '700',
+    color: COLORS.slate600,
   },
 
   // Input Field Box
   inputInner: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: COLORS.inputBg,
+    backgroundColor: COLORS.slate50,
     borderRadius: 12,
-    borderWidth: 1.5,
-    borderColor: COLORS.inputBorder,
+    borderWidth: 1,
+    borderColor: COLORS.slate200,
     paddingHorizontal: 14,
-    height: 48,
+    height: 46,
   },
   inputIcon: {
     marginRight: 10,
   },
   input: {
     flex: 1,
-    fontSize: 13.5,
-    color: '#1a0a08',
+    fontFamily: FONT_FAMILY,
+    fontSize: 13,
+    color: COLORS.onSurface,
     outlineStyle: 'none',
   },
 
@@ -716,9 +886,10 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   forgotText: {
+    fontFamily: FONT_FAMILY,
     fontSize: 11,
-    color: '#9b2222',
-    fontWeight: '600',
+    color: COLORS.primary,
+    fontWeight: '700',
   },
 
   // PROCEED Divider
@@ -731,50 +902,38 @@ const styles = StyleSheet.create({
   dividerLine: {
     flex: 1,
     height: 1,
-    backgroundColor: 'rgba(122, 26, 26, 0.1)',
+    backgroundColor: COLORS.slate200,
   },
   dividerText: {
+    fontFamily: FONT_FAMILY,
     fontSize: 10,
-    fontWeight: '700',
-    color: 'rgba(138, 106, 90, 0.6)',
+    fontWeight: '800',
+    color: COLORS.slate400,
     letterSpacing: 1.8,
     textTransform: 'uppercase',
   },
 
   // Primary CTA Button
-  primaryCtaBtn: {
-    borderRadius: 12,
-    overflow: 'hidden',
-    shadowColor: '#7a1a1a',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.45,
-    shadowRadius: 16,
-    elevation: 8,
-  },
+  primaryCtaBtnWrapper: { borderRadius: 14, overflow: 'hidden' },
   ctaGradient: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 15,
+    borderRadius: 14,
+    gap: 8,
+    shadowColor: COLORS.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 10,
+    elevation: 4,
   },
   ctaText: {
+    fontFamily: FONT_FAMILY,
     fontSize: 12,
     fontWeight: '800',
-    color: '#fff8f0',
+    color: '#FFFFFF',
     letterSpacing: 0.8,
-  },
-
-  // Quick Demo Link
-  demoLinkBtn: {
-    marginTop: 18,
-    alignItems: 'center',
-  },
-  demoLinkText: {
-    fontSize: 10.5,
-    fontWeight: '600',
-    color: COLORS.textMuted,
-    letterSpacing: 1,
-    textTransform: 'uppercase',
   },
 
   // Footer
@@ -783,14 +942,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   footerText: {
-    color: 'rgba(255,255,255,0.4)',
+    fontFamily: FONT_FAMILY,
+    color: 'rgba(255, 255, 255, 0.5)',
     fontSize: 10,
-    fontWeight: '700',
-    letterSpacing: 1,
+    fontWeight: '800',
+    letterSpacing: 1.2,
   },
   footerSubtext: {
-    color: 'rgba(255,255,255,0.25)',
-    fontSize: 8,
+    fontFamily: FONT_FAMILY,
+    color: 'rgba(255, 255, 255, 0.3)',
+    fontSize: 9,
     textAlign: 'center',
     marginTop: 4,
     paddingHorizontal: 40,

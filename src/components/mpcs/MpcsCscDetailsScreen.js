@@ -38,6 +38,7 @@ export default function MpcsCscDetailsScreen({
 }) {
   const [modalVisible, setModalVisible] = useState(false);
 
+  const [isCscActive, setIsCscActive] = useState(true);
   const [cscOperatorName, setCscOperatorName] = useState(initialOperator);
   const [cscId, setCscId] = useState(initialCscId);
   const [cscCenterName, setCscCenterName] = useState(initialCenterName);
@@ -56,7 +57,7 @@ export default function MpcsCscDetailsScreen({
 
   const handleSave = () => {
     if (onSaveCscDetails) {
-      onSaveCscDetails({ cscOperatorName, cscId, cscCenterName, mobileNumber, emailId, activeServicesCount });
+      onSaveCscDetails({ isCscActive, cscOperatorName, cscId, cscCenterName, mobileNumber, emailId, activeServicesCount });
     }
     setModalVisible(false);
   };
@@ -75,7 +76,7 @@ export default function MpcsCscDetailsScreen({
           <MaterialCommunityIcons name="arrow-left" size={24} color="#FFFFFF" />
         </TouchableOpacity>
         <View style={styles.topBarTitleContainer}>
-          <Text style={styles.moduleTag}>MPCS</Text>
+          <Text style={styles.moduleTag}>MPCS MASTER DATA</Text>
           <Text style={styles.screenTitleHeader}>CSC Details</Text>
         </View>
       </View>
@@ -119,8 +120,8 @@ export default function MpcsCscDetailsScreen({
                   end={{ x: 1, y: 0 }}
                   style={StyleSheet.absoluteFillObject}
                 />
-                <Text style={styles.editCtaText}>Review & Submit</Text>
-                <MaterialCommunityIcons name="arrow-right" size={16} color="#ffffff" />
+                <Text style={styles.editCtaText}>Save Master Data</Text>
+                <MaterialCommunityIcons name="check" size={16} color="#ffffff" />
               </Pressable>
             </View>
           )}
@@ -139,56 +140,90 @@ export default function MpcsCscDetailsScreen({
             <MaterialCommunityIcons name="store-cog" size={20} color={COLORS.amber900} />
           </View>
           <View style={styles.alertBody}>
-            <Text style={styles.alertTitle}>CSC Details</Text>
-            <Text style={styles.alertText}>Last verified: {lastVerified}</Text>
+            <Text style={styles.alertTitle}>CSC Operations Status</Text>
+            <Text style={styles.alertText}>
+              Status: {isCscActive ? "Active CSC Services" : "Inactive / CSC Not Available"}
+            </Text>
           </View>
         </View>
 
         {/* Info Card */}
-        <View style={styles.card}>
+        <View style={[styles.card, !isCscActive && { opacity: 0.75 }]}>
           <View style={styles.cardHeaderRow}>
             <View style={styles.cardIconBox}>
               <MaterialCommunityIcons name="storefront" size={20} color={COLORS.primary} />
             </View>
-            <Text style={styles.cardHeaderTitle}>CSC Operator & Center Info</Text>
+            <Text style={styles.cardHeaderTitle}>CSC Operator &amp; Center Info</Text>
+            <View style={{
+              marginLeft: 'auto',
+              backgroundColor: isCscActive ? COLORS.emerald50 : COLORS.slate100,
+              paddingHorizontal: 8,
+              paddingVertical: 4,
+              borderRadius: 6,
+              borderWidth: 1,
+              borderColor: isCscActive ? 'rgba(16,185,129,0.3)' : COLORS.slate200
+            }}>
+              <Text style={{
+                fontFamily: FONT_FAMILY,
+                fontSize: 10,
+                fontWeight: '800',
+                color: isCscActive ? COLORS.emerald700 : COLORS.slate500
+              }}>
+                {isCscActive ? '✓ CSC ACTIVE' : '⚠ CSC INACTIVE'}
+              </Text>
+            </View>
           </View>
 
-          <View style={styles.infoGrid}>
-            <View style={styles.infoCol}>
-              <Text style={styles.infoLabel}>CSC OPERATOR NAME</Text>
-              <Text style={styles.infoValue}>{cscOperatorName || "-"}</Text>
-            </View>
-            <View style={styles.infoCol}>
-              <Text style={styles.infoLabel}>CSC ID / VLE ID</Text>
-              <Text style={styles.infoValue}>{cscId || "-"}</Text>
-            </View>
-          </View>
-          
-          <View style={styles.divider} />
+          {isCscActive ? (
+            <>
+              <View style={styles.infoGrid}>
+                <View style={styles.infoCol}>
+                  <Text style={styles.infoLabel}>CSC OPERATOR NAME</Text>
+                  <Text style={styles.infoValue}>{cscOperatorName || "-"}</Text>
+                </View>
+                <View style={styles.infoCol}>
+                  <Text style={styles.infoLabel}>CSC ID / VLE ID</Text>
+                  <Text style={styles.infoValue}>{cscId || "-"}</Text>
+                </View>
+              </View>
+              
+              <View style={styles.divider} />
 
-          <View style={styles.infoGrid}>
-            <View style={styles.infoCol}>
-              <Text style={styles.infoLabel}>CSC CENTER NAME</Text>
-              <Text style={styles.infoValue}>{cscCenterName || "-"}</Text>
-            </View>
-            <View style={styles.infoCol}>
-              <Text style={styles.infoLabel}>OPERATOR MOBILE</Text>
-              <Text style={styles.infoValue}>{mobileNumber || "-"}</Text>
-            </View>
-          </View>
-          
-          <View style={styles.divider} />
+              <View style={styles.infoGrid}>
+                <View style={styles.infoCol}>
+                  <Text style={styles.infoLabel}>CSC CENTER NAME</Text>
+                  <Text style={styles.infoValue}>{cscCenterName || "-"}</Text>
+                </View>
+                <View style={styles.infoCol}>
+                  <Text style={styles.infoLabel}>OPERATOR MOBILE</Text>
+                  <Text style={styles.infoValue}>{mobileNumber || "-"}</Text>
+                </View>
+              </View>
+              
+              <View style={styles.divider} />
 
-          <View style={styles.infoGrid}>
-            <View style={styles.infoCol}>
-              <Text style={styles.infoLabel}>OPERATOR EMAIL ID</Text>
-              <Text style={styles.infoValue}>{emailId || "-"}</Text>
+              <View style={styles.infoGrid}>
+                <View style={styles.infoCol}>
+                  <Text style={styles.infoLabel}>OPERATOR EMAIL ID</Text>
+                  <Text style={styles.infoValue}>{emailId || "-"}</Text>
+                </View>
+                <View style={styles.infoCol}>
+                  <Text style={styles.infoLabel}>ACTIVE SERVICES OFFERED</Text>
+                  <Text style={styles.infoValue}>{activeServicesCount || "-"}</Text>
+                </View>
+              </View>
+            </>
+          ) : (
+            <View style={{ paddingVertical: 14, alignItems: 'center', gap: 4 }}>
+              <MaterialCommunityIcons name="office-building-remove-outline" size={32} color={COLORS.slate400} />
+              <Text style={{ fontFamily: FONT_FAMILY, fontSize: 13, fontWeight: '700', color: COLORS.slate600 }}>
+                CSC Services Not Available
+              </Text>
+              <Text style={{ fontFamily: FONT_FAMILY, fontSize: 11, color: COLORS.slate400, textAlign: 'center' }}>
+                This society does not operate an active Common Service Center (CSC). Fields are non-mandatory.
+              </Text>
             </View>
-            <View style={styles.infoCol}>
-              <Text style={styles.infoLabel}>ACTIVE SERVICES OFFERED</Text>
-              <Text style={styles.infoValue}>{activeServicesCount || "-"}</Text>
-            </View>
-          </View>
+          )}
         </View>
 
       </ScrollView>
@@ -206,6 +241,56 @@ export default function MpcsCscDetailsScreen({
             </View>
 
             <ScrollView style={styles.modalFormScroll} showsVerticalScrollIndicator={false}>
+              
+              {/* Active / Inactive Selector */}
+              <View style={styles.modalFormGroup}>
+                <Text style={styles.modalLabel}>CSC Status in this Society</Text>
+                <View style={{ flexDirection: 'row', gap: 10, marginTop: 4 }}>
+                  <TouchableOpacity
+                    style={{
+                      flex: 1,
+                      paddingVertical: 10,
+                      borderRadius: 10,
+                      alignItems: 'center',
+                      borderWidth: 1.5,
+                      borderColor: isCscActive ? COLORS.emerald700 : COLORS.slate200,
+                      backgroundColor: isCscActive ? COLORS.emerald50 : COLORS.slate50
+                    }}
+                    onPress={() => setIsCscActive(true)}
+                  >
+                    <Text style={{
+                      fontFamily: FONT_FAMILY,
+                      fontSize: 12,
+                      fontWeight: '800',
+                      color: isCscActive ? COLORS.emerald700 : COLORS.slate500
+                    }}>
+                      ✓ ACTIVE CSC
+                    </Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={{
+                      flex: 1,
+                      paddingVertical: 10,
+                      borderRadius: 10,
+                      alignItems: 'center',
+                      borderWidth: 1.5,
+                      borderColor: !isCscActive ? COLORS.amber900 : COLORS.slate200,
+                      backgroundColor: !isCscActive ? COLORS.amber100 : COLORS.slate50
+                    }}
+                    onPress={() => setIsCscActive(false)}
+                  >
+                    <Text style={{
+                      fontFamily: FONT_FAMILY,
+                      fontSize: 12,
+                      fontWeight: '800',
+                      color: !isCscActive ? COLORS.amber900 : COLORS.slate500
+                    }}>
+                      ⚠ INACTIVE / NONE
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
               
               <View style={styles.modalFormGroup}>
                 <Text style={styles.modalLabel}>CSC Operator Name</Text>
