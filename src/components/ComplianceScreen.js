@@ -1,719 +1,736 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Switch, TextInput, Modal, Platform } from 'react-native';
-import { MaterialIcons } from '@expo/vector-icons';
+import React, { useState, useEffect } from 'react';
+import { getMilkSectionData, saveMilkSectionData } from '../utils/monthlySyncManager';
+import {
+  View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, Platform, Pressable, Switch
+} from 'react-native';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 
 const COLORS = {
-  primary: '#7C1C1C',
-  primaryLight: '#FEF2F2',
-  bg: '#F8F5F2',
-  cardBg: '#FFFFFF',
-  textPrimary: '#0F172A',
-  textSecondary: '#64748B',
-  border: '#E2E8F0',
-  success: '#10B981',
-  successBg: '#ECFDF5',
-  amber: '#D97706',
-  amberBg: '#FEF3C7',
+  surface: '#ffffff',
+  slate800: '#1e293b',
+  slate700: '#334155',
+  slate600: '#475569',
+  slate500: '#64748b',
+  slate400: '#94a3b8',
+  slate300: '#cbd5e1',
+  slate200: '#e2e8f0',
+  slate100: '#f1f5f9',
+  slate50: '#f8fafc',
+  primary: '#7a1a1f',
+  amber100: '#fef3c7',
+  amber900: '#78350f',
+  emerald700: '#047857',
+};
+
+const FONT_FAMILY = 'Manrope';
+
+// Helpers for Date & Financial Year
+const deriveFinancialYear = (dateStr) => {
+  if (!dateStr) return '';
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return '';
+  const year = d.getFullYear();
+  const month = d.getMonth() + 1;
+  if (month >= 4) {
+    return `${year} - ${year + 1}`;
+  } else {
+    return `${year - 1} - ${year}`;
+  }
+};
+
+const formatToIsoDate = (dStr) => {
+  if (!dStr) return '';
+  const parts = dStr.split(' ');
+  if (parts.length === 3) {
+    const day = parts[0].padStart(2, '0');
+    const months = { Jan:'01', Feb:'02', Mar:'03', Apr:'04', May:'05', Jun:'06', Jul:'07', Aug:'08', Sep:'09', Oct:'10', Nov:'11', Dec:'12' };
+    const month = months[parts[1]] || '01';
+    const year = parts[2];
+    return `${year}-${month}-${day}`;
+  }
+  return dStr;
+};
+
+const formatFromIsoDate = (isoStr) => {
+  if (!isoStr) return '';
+  const d = new Date(isoStr);
+  if (isNaN(d.getTime())) return isoStr;
+  const day = String(d.getDate()).padStart(2, '0');
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const month = months[d.getMonth()];
+  const year = d.getFullYear();
+  return `${day} ${month} ${year}`;
 };
 
 export default function ComplianceScreen({
-  hasLoan = false,
-  setHasLoan,
-  loanType = '',
-  setLoanType,
-  loanSanctionDate = '',
-  setLoanSanctionDate,
-  loanBeneficiaries = '',
-  setLoanBeneficiaries,
-  loanExtended = '',
-  setLoanExtended,
-  loanRecovered = '',
-  setLoanRecovered,
-  loanOutstanding = '',
-  setLoanOutstanding,
-  auditDate = "",
-  setAuditDate,
-  auditYear = "",
-  setAuditYear,
-  agmDate = "",
-  setAgmDate,
-  agmYear = "",
-  setAgmYear,
-  lastUpdated = "",
   societyName = "",
+  reportingMonth = "",
+  onSave,
+  onSaveNext,
   onNext,
   onBack
 }) {
-  // Modals state
-  const [complianceModalVisible, setComplianceModalVisible] = useState(false);
-  const [loanModalVisible, setLoanModalVisible] = useState(false);
+  const [modalVisible, setModalVisible] = useState(false);
+  const [lastVerified, setLastVerified] = useState('Not verified');
 
-  // Temp Compliance State
-  const [tempAuditDate, setTempAuditDate] = useState(auditDate || '');
-  const [tempAgmDate, setTempAgmDate] = useState(agmDate || '');
+  // Audit State
+  const [auditDate, setAuditDate] = useState('');
+  const [auditYear, setAuditYear] = useState('');
+  const [auditStatus, setAuditStatus] = useState('Pending');
 
-  // Temp Loan State inside Modal
-  const [tempLoanType, setTempLoanType] = useState(loanType || '');
-  const [tempLoanSanctionDate, setTempLoanSanctionDate] = useState(loanSanctionDate || '');
-  const [tempLoanBeneficiaries, setTempLoanBeneficiaries] = useState(loanBeneficiaries || '');
-  const [tempLoanExtended, setTempLoanExtended] = useState(loanExtended || '');
-  const [tempLoanRecovered, setTempLoanRecovered] = useState(loanRecovered || '');
-  const [tempLoanOutstanding, setTempLoanOutstanding] = useState(loanOutstanding || '');
+  // AGM State
+  const [agmDate, setAgmDate] = useState('');
+  const [agmYear, setAgmYear] = useState('');
+  const [agmStatus, setAgmStatus] = useState('Pending');
 
-  // Date Formatting Utilities
-  const formatToInputDate = (dStr) => {
-    if (!dStr) return '2025-03-15';
-    if (dStr.includes('/')) {
-      const parts = dStr.split('/');
-      if (parts.length === 3) {
-        const [d, m, y] = parts;
-        return `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
+  // Loan State
+  const [hasLoan, setHasLoan] = useState(false);
+  const [loanType, setLoanType] = useState('');
+  const [loanSanctionDate, setLoanSanctionDate] = useState('');
+  const [loanBeneficiaries, setLoanBeneficiaries] = useState('');
+  const [loanExtended, setLoanExtended] = useState('');
+  const [loanRecovered, setLoanRecovered] = useState('');
+  const [loanOutstanding, setLoanOutstanding] = useState('');
+
+  // Temporary State for Modal
+  const [tempAuditDate, setTempAuditDate] = useState('');
+  const [tempAuditYear, setTempAuditYear] = useState('');
+  const [tempAuditStatus, setTempAuditStatus] = useState('Pending');
+  const [tempAgmDate, setTempAgmDate] = useState('');
+  const [tempAgmYear, setTempAgmYear] = useState('');
+  const [tempAgmStatus, setTempAgmStatus] = useState('Pending');
+  
+  const [tempHasLoan, setTempHasLoan] = useState(false);
+  const [tempLoanType, setTempLoanType] = useState('');
+  const [tempLoanSanctionDate, setTempLoanSanctionDate] = useState('');
+  const [tempLoanBeneficiaries, setTempLoanBeneficiaries] = useState('');
+  const [tempLoanExtended, setTempLoanExtended] = useState('');
+  const [tempLoanRecovered, setTempLoanRecovered] = useState('');
+  const [tempLoanOutstanding, setTempLoanOutstanding] = useState('');
+
+  useEffect(() => {
+    (async () => {
+      const data = await getMilkSectionData(societyName, reportingMonth, 'compliance');
+      if (data) {
+        setAuditDate(data.auditDate || '');
+        setAuditYear(data.auditYear || '');
+        setAuditStatus(data.auditStatus || 'Pending');
+        setAgmDate(data.agmDate || '');
+        setAgmYear(data.agmYear || '');
+        setAgmStatus(data.agmStatus || 'Pending');
+
+        setHasLoan(data.hasLoan || false);
+        setLoanType(data.loanType || '');
+        setLoanSanctionDate(data.loanSanctionDate || '');
+        setLoanBeneficiaries(data.loanBeneficiaries || '');
+        setLoanExtended(data.loanExtended || '');
+        setLoanRecovered(data.loanRecovered || '');
+        setLoanOutstanding(data.loanOutstanding || '');
+
+        if (data.auditDate || data.agmDate) {
+          setLastVerified(new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }));
+        }
+      }
+    })();
+  }, [societyName, reportingMonth]);
+
+  const openModal = () => {
+    setTempAuditDate(auditDate);
+    setTempAuditYear(auditYear);
+    setTempAuditStatus(auditStatus);
+    setTempAgmDate(agmDate);
+    setTempAgmYear(agmYear);
+    setTempAgmStatus(agmStatus);
+    setTempHasLoan(hasLoan);
+    setTempLoanType(loanType);
+    setTempLoanSanctionDate(loanSanctionDate);
+    setTempLoanBeneficiaries(loanBeneficiaries);
+    setTempLoanExtended(loanExtended);
+    setTempLoanRecovered(loanRecovered);
+    setTempLoanOutstanding(loanOutstanding);
+    setModalVisible(true);
+  };
+
+  const handleTempAuditDateSelect = (isoValue) => {
+    const displayDate = formatFromIsoDate(isoValue);
+    setTempAuditDate(displayDate);
+    setTempAuditYear(deriveFinancialYear(isoValue));
+  };
+
+  const handleTempAgmDateSelect = (isoValue) => {
+    const displayDate = formatFromIsoDate(isoValue);
+    setTempAgmDate(displayDate);
+    setTempAgmYear(deriveFinancialYear(isoValue));
+  };
+
+  const handleTempLoanDateSelect = (isoValue) => {
+    const displayDate = formatFromIsoDate(isoValue);
+    setTempLoanSanctionDate(displayDate);
+  };
+
+  const saveToLocal = async (newData) => {
+    let isCompleted = true;
+    if (!newData.auditDate || !newData.agmDate) isCompleted = false;
+    
+    // Loan completion logic
+    if (newData.hasLoan) {
+      if (!newData.loanType || !newData.loanSanctionDate || !newData.loanBeneficiaries || 
+          !newData.loanExtended || !newData.loanRecovered || !newData.loanOutstanding) {
+        isCompleted = false;
       }
     }
-    if (dStr.includes('-') && dStr.length === 10) return dStr;
-    return '2025-03-15';
+
+    const payload = { ...newData, isCompleted };
+    await saveMilkSectionData(societyName, reportingMonth, 'compliance', payload);
+    return isCompleted;
   };
 
-  const formatFromInputDate = (iStr) => {
-    if (!iStr) return '';
-    const parts = iStr.split('-');
-    if (parts.length === 3) {
-      const [y, m, d] = parts;
-      return `${d}/${m}/${y}`;
+  const handleSaveModal = async () => {
+    setAuditDate(tempAuditDate);
+    setAuditYear(tempAuditYear);
+    setAuditStatus(tempAuditStatus);
+    setAgmDate(tempAgmDate);
+    setAgmYear(tempAgmYear);
+    setAgmStatus(tempAgmStatus);
+    
+    setHasLoan(tempHasLoan);
+    setLoanType(tempLoanType);
+    setLoanSanctionDate(tempLoanSanctionDate);
+    setLoanBeneficiaries(tempLoanBeneficiaries);
+    setLoanExtended(tempLoanExtended);
+    setLoanRecovered(tempLoanRecovered);
+    setLoanOutstanding(tempLoanOutstanding);
+
+    setLastVerified(new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }));
+    setModalVisible(false);
+
+    await saveToLocal({
+      auditDate: tempAuditDate, auditYear: tempAuditYear, auditStatus: tempAuditStatus,
+      agmDate: tempAgmDate, agmYear: tempAgmYear, agmStatus: tempAgmStatus,
+      hasLoan: tempHasLoan, loanType: tempLoanType, loanSanctionDate: tempLoanSanctionDate,
+      loanBeneficiaries: tempLoanBeneficiaries, loanExtended: tempLoanExtended,
+      loanRecovered: tempLoanRecovered, loanOutstanding: tempLoanOutstanding
+    });
+
+    if (onSave) onSave();
+  };
+
+  const handleSaveAndNext = async () => {
+    await saveToLocal({
+      auditDate, auditYear, auditStatus,
+      agmDate, agmYear, agmStatus,
+      hasLoan, loanType, loanSanctionDate,
+      loanBeneficiaries, loanExtended,
+      loanRecovered, loanOutstanding
+    });
+
+    if (onSaveNext) {
+      onSaveNext();
+    } else if (onNext) {
+      onNext();
     }
-    return iStr;
   };
-
-  const getYear = (dStr) => {
-    if (!dStr) return '2025';
-    if (dStr.includes('/')) {
-      const parts = dStr.split('/');
-      return parts[parts.length - 1];
-    }
-    if (dStr.includes('-')) {
-      const parts = dStr.split('-');
-      return parts[0].length === 4 ? parts[0] : parts[parts.length - 1];
-    }
-    return '2025';
-  };
-
-  // Switch Active Loan Toggle
-  const handleToggleLoan = (val) => {
-    if (setHasLoan) setHasLoan(val);
-    if (val) {
-      setLoanModalVisible(true); // Auto pop-up modal when YES is checked
-    }
-  };
-
-  // Save Loan Modal Form
-  const handleSaveLoanModal = () => {
-    if (setLoanType) setLoanType(tempLoanType);
-    if (setLoanSanctionDate) setLoanSanctionDate(tempLoanSanctionDate);
-    if (setLoanBeneficiaries) setLoanBeneficiaries(tempLoanBeneficiaries);
-    if (setLoanExtended) setLoanExtended(tempLoanExtended);
-    if (setLoanRecovered) setLoanRecovered(tempLoanRecovered);
-    if (setLoanOutstanding) setLoanOutstanding(tempLoanOutstanding);
-    setLoanModalVisible(false);
-  };
-
-  // Save Audit/AGM Compliance Modal
-  const handleSaveComplianceModal = () => {
-    const formattedAudit = tempAuditDate.includes('-') ? formatFromInputDate(tempAuditDate) : tempAuditDate;
-    const formattedAgm = tempAgmDate.includes('-') ? formatFromInputDate(tempAgmDate) : tempAgmDate;
-
-    const calcAuditYear = getYear(formattedAudit);
-    const calcAgmYear = getYear(formattedAgm);
-
-    if (setAuditDate) setAuditDate(formattedAudit);
-    if (setAuditYear) setAuditYear(calcAuditYear);
-    if (setAgmDate) setAgmDate(formattedAgm);
-    if (setAgmYear) setAgmYear(calcAgmYear);
-
-    setComplianceModalVisible(false);
-  };
-
-  const displayAudit = auditDate || "15/03/2025";
-  const displayAuditYr = auditYear || getYear(displayAudit) || "2025";
-  const displayAgm = agmDate || "20/04/2025";
-  const displayAgmYr = agmYear || getYear(displayAgm) || "2025";
 
   return (
     <View style={styles.container}>
-      {/* Deep Burgundy Header */}
+      {/* Top Header */}
       <View style={styles.topBar}>
+        <LinearGradient
+          colors={['#7a1a1f', '#4a1017']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 0 }}
+          style={StyleSheet.absoluteFillObject}
+        />
         <TouchableOpacity style={styles.backBtn} onPress={onBack} activeOpacity={0.7}>
-          <MaterialIcons name="arrow-back" size={22} color="#FFFFFF" />
+          <MaterialCommunityIcons name="arrow-left" size={24} color="#FFFFFF" />
         </TouchableOpacity>
-        <Text style={styles.screenTitle}>Milk PCS Compliance</Text>
-        <Text style={styles.stepIndicator}>Section E</Text>
+        <View style={styles.topBarTitleContainer}>
+          <Text style={styles.moduleTag}>MILK PCS</Text>
+          <Text style={styles.screenTitleHeader}>Compliance & Audit</Text>
+        </View>
       </View>
 
-      <ScrollView style={styles.scrollContent} contentContainerStyle={styles.scrollInner}>
-        {/* Status Card */}
-        <View style={styles.statusBanner}>
-          <View style={styles.statusChip}>
-            <MaterialIcons name="verified" size={18} color={COLORS.success} />
-            <Text style={styles.statusChipText}>COMPLIANCE VERIFIED</Text>
+      {/* Sticky Action Banner */}
+      <View style={styles.stickyActionBanner}>
+        <View style={{ flexDirection: 'row', gap: 8 }}>
+          <View style={[styles.btnWrapper, { flex: 1 }]}>
+            <Pressable 
+              style={({ hovered, pressed }) => [
+                styles.editCtaBtn,
+                pressed && { transform: [{ scale: 0.98 }] },
+                hovered && Platform.OS === 'web' && { shadowOpacity: 0.4 }
+              ]}
+              onPress={openModal}
+            >
+              <LinearGradient
+                colors={['#7a1a1f', '#4a1017']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={StyleSheet.absoluteFillObject}
+              />
+              <MaterialCommunityIcons name="pencil-outline" size={16} color="#ffffff" />
+              <Text style={styles.editCtaText}>Edit Compliance</Text>
+            </Pressable>
           </View>
-          <Text style={styles.bannerHeading}>{societyName ? `${societyName} • ` : ''}Compliance Overview</Text>
-          {lastUpdated ? <Text style={styles.bannerSub}>Last Verified: {lastUpdated}</Text> : null}
+
+          <View style={[styles.btnWrapper, { flex: 1 }]}>
+            <Pressable 
+              style={({ hovered, pressed }) => [
+                styles.editCtaBtn,
+                pressed && { transform: [{ scale: 0.98 }] },
+                hovered && Platform.OS === 'web' && { shadowOpacity: 0.4 }
+              ]}
+              onPress={handleSaveAndNext}
+            >
+              <LinearGradient
+                colors={['#047857', '#064e3b']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={StyleSheet.absoluteFillObject}
+              />
+              <Text style={styles.editCtaText}>Save & Next</Text>
+              <MaterialCommunityIcons name="arrow-right" size={16} color="#ffffff" />
+            </Pressable>
+          </View>
+        </View>
+      </View>
+
+      {/* Decorative Ambient Background Blobs */}
+      <View style={styles.bgBlobTop} pointerEvents="none" />
+      <View style={styles.bgBlobBottomLeft} pointerEvents="none" />
+      <View style={styles.bgBlobBottomRight} pointerEvents="none" />
+
+      <ScrollView style={styles.scrollContent} contentContainerStyle={styles.scrollInner} showsVerticalScrollIndicator={false}>
+        {/* Profile Status Banner */}
+        <View style={styles.alertCard}>
+          <View style={styles.alertIconBox}>
+            <MaterialCommunityIcons name="file-document-check-outline" size={20} color={COLORS.amber900} />
+          </View>
+          <View style={styles.alertBody}>
+            <Text style={styles.alertTitle}>Compliance Record</Text>
+            <Text style={styles.alertText}>Last verified: {lastVerified}</Text>
+          </View>
         </View>
 
-        {/* 1. Active Institutional Loan Card */}
-        <View style={[styles.card, hasLoan && styles.cardHighlight]}>
-          <View style={styles.rowBetween}>
-            <View style={[styles.iconCircle, { backgroundColor: '#FEF2F2' }]}>
-              <MaterialIcons name="account-balance" size={20} color={COLORS.primary} />
+        {/* Section 1: Latest Audit */}
+        <View style={styles.card}>
+          <View style={styles.cardHeaderRow}>
+            <View style={styles.cardIconBox}>
+              <MaterialCommunityIcons name="gavel" size={20} color={COLORS.primary} />
             </View>
-            <View style={{ flex: 1, marginLeft: 12 }}>
-              <Text style={styles.cardTitle}>Active Institutional Loan</Text>
-              <Text style={styles.cardSub}>Declare if the cooperative holds institutional debt</Text>
-            </View>
-            <Switch
-              value={hasLoan}
-              onValueChange={handleToggleLoan}
-              trackColor={{ false: '#CBD5E1', true: COLORS.primary }}
-              thumbColor={'#FFFFFF'}
-            />
+            <Text style={styles.cardHeaderTitle}>Latest Audit</Text>
           </View>
 
-          {/* When Active Loan is YES, show summary card + Edit Popup button */}
-          {hasLoan && (
-            <View style={styles.loanSummaryBox}>
-              <View style={styles.summaryGrid}>
-                <View style={styles.summaryCol}>
-                  <Text style={styles.summaryLabel}>Loan Type</Text>
-                  <Text style={styles.summaryValue}>{loanType || 'Not specified'}</Text>
-                </View>
-                <View style={styles.summaryCol}>
-                  <Text style={styles.summaryLabel}>Sanction Date</Text>
-                  <Text style={styles.summaryValue}>{loanSanctionDate || '-'}</Text>
-                </View>
-              </View>
-
-              <View style={styles.summaryGrid}>
-                <View style={styles.summaryCol}>
-                  <Text style={styles.summaryLabel}>Beneficiaries</Text>
-                  <Text style={styles.summaryValue}>{loanBeneficiaries ? `${loanBeneficiaries} Producers` : '-'}</Text>
-                </View>
-                <View style={styles.summaryCol}>
-                  <Text style={styles.summaryLabel}>Outstanding Due</Text>
-                  <Text style={[styles.summaryValue, { color: '#C2410C' }]}>₹ {loanOutstanding || '0'}</Text>
-                </View>
-              </View>
-
-              <TouchableOpacity style={styles.editLoanBtn} onPress={() => setLoanModalVisible(true)} activeOpacity={0.85}>
-                <MaterialIcons name="edit" size={16} color={COLORS.primary} />
-                <Text style={styles.editLoanBtnText}>EDIT LOAN DETAILS</Text>
-              </TouchableOpacity>
+          <View style={styles.infoGrid}>
+            <View style={styles.infoCol}>
+              <Text style={styles.infoLabel}>AUDIT YEAR</Text>
+              <Text style={styles.infoValue}>{auditYear || "-"}</Text>
             </View>
+            <View style={styles.infoCol}>
+              <Text style={styles.infoLabel}>AUDIT DATE</Text>
+              <Text style={styles.infoValue}>{auditDate || "-"}</Text>
+            </View>
+          </View>
+          
+          <View style={styles.divider} />
+
+          <View style={styles.infoGrid}>
+            <View style={styles.infoCol}>
+              <Text style={styles.infoLabel}>AUDIT STATUS</Text>
+              <Text style={[
+                styles.infoValue,
+                { color: auditStatus === 'Completed' ? COLORS.emerald700 : COLORS.amber900, fontWeight: '800' }
+              ]}>
+                {auditStatus || "Pending"}
+              </Text>
+            </View>
+          </View>
+        </View>
+
+        {/* Section 2: Latest AGM */}
+        <View style={styles.card}>
+          <View style={styles.cardHeaderRow}>
+            <View style={styles.cardIconBox}>
+              <MaterialCommunityIcons name="account-group" size={20} color={COLORS.primary} />
+            </View>
+            <Text style={styles.cardHeaderTitle}>Latest AGM</Text>
+          </View>
+
+          <View style={styles.infoGrid}>
+            <View style={styles.infoCol}>
+              <Text style={styles.infoLabel}>AGM YEAR</Text>
+              <Text style={styles.infoValue}>{agmYear || "-"}</Text>
+            </View>
+            <View style={styles.infoCol}>
+              <Text style={styles.infoLabel}>AGM DATE</Text>
+              <Text style={styles.infoValue}>{agmDate || "-"}</Text>
+            </View>
+          </View>
+          
+          <View style={styles.divider} />
+
+          <View style={styles.infoGrid}>
+            <View style={styles.infoCol}>
+              <Text style={styles.infoLabel}>AGM STATUS</Text>
+              <Text style={[
+                styles.infoValue,
+                { color: agmStatus === 'Completed' ? COLORS.emerald700 : COLORS.amber900, fontWeight: '800' }
+              ]}>
+                {agmStatus || "Pending"}
+              </Text>
+            </View>
+          </View>
+        </View>
+
+        {/* Section 3: Active Loan */}
+        <View style={styles.card}>
+          <View style={styles.cardHeaderRow}>
+            <View style={styles.cardIconBox}>
+              <MaterialCommunityIcons name="bank-outline" size={20} color={COLORS.primary} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.cardHeaderTitle}>Active Loan</Text>
+            </View>
+            <View style={styles.statusBadge}>
+              <Text style={[styles.statusBadgeText, { color: hasLoan ? COLORS.emerald700 : COLORS.slate500 }]}>
+                {hasLoan ? 'ON' : 'OFF'}
+              </Text>
+            </View>
+          </View>
+
+          {hasLoan ? (
+            <>
+              <View style={styles.infoGrid}>
+                <View style={styles.infoCol}>
+                  <Text style={styles.infoLabel}>LOAN TYPE</Text>
+                  <Text style={styles.infoValue}>{loanType || "-"}</Text>
+                </View>
+                <View style={styles.infoCol}>
+                  <Text style={styles.infoLabel}>SANCTION DATE</Text>
+                  <Text style={styles.infoValue}>{loanSanctionDate || "-"}</Text>
+                </View>
+              </View>
+              <View style={styles.divider} />
+              <View style={styles.infoGrid}>
+                <View style={styles.infoCol}>
+                  <Text style={styles.infoLabel}>BENEFICIARIES</Text>
+                  <Text style={styles.infoValue}>{loanBeneficiaries || "-"}</Text>
+                </View>
+                <View style={styles.infoCol}>
+                  <Text style={styles.infoLabel}>EXTENDED (₹)</Text>
+                  <Text style={styles.infoValue}>{loanExtended || "-"}</Text>
+                </View>
+              </View>
+              <View style={styles.divider} />
+              <View style={styles.infoGrid}>
+                <View style={styles.infoCol}>
+                  <Text style={styles.infoLabel}>RECOVERED (₹)</Text>
+                  <Text style={styles.infoValue}>{loanRecovered || "-"}</Text>
+                </View>
+                <View style={styles.infoCol}>
+                  <Text style={styles.infoLabel}>OUTSTANDING (₹)</Text>
+                  <Text style={styles.infoValue}>{loanOutstanding || "-"}</Text>
+                </View>
+              </View>
+            </>
+          ) : (
+            <Text style={styles.emptySubtitle}>No active loan record. Enable edit to add loan details.</Text>
           )}
         </View>
-
-        {/* 2. Audit & AGM Records Card */}
-        <View style={styles.card}>
-          <Text style={styles.sectionHeaderLabel}>AUDIT & AGM COMPLIANCE</Text>
-
-          <View style={styles.auditRow}>
-            <View style={[styles.iconCircle, { backgroundColor: COLORS.primaryLight }]}>
-              <MaterialIcons name="assignment-turned-in" size={20} color={COLORS.primary} />
-            </View>
-            <View style={{ flex: 1, marginLeft: 12 }}>
-              <Text style={styles.auditLabel}>Latest Audit Conducted</Text>
-              <Text style={styles.auditValue}>{displayAudit}</Text>
-            </View>
-            <View style={styles.yearChip}>
-              <Text style={styles.yearChipLabel}>Year</Text>
-              <Text style={styles.yearChipValue}>{displayAuditYr}</Text>
-            </View>
-          </View>
-
-          <View style={styles.cardDivider} />
-
-          <View style={styles.auditRow}>
-            <View style={[styles.iconCircle, { backgroundColor: COLORS.amberBg }]}>
-              <MaterialIcons name="groups" size={20} color={COLORS.amber} />
-            </View>
-            <View style={{ flex: 1, marginLeft: 12 }}>
-              <Text style={styles.auditLabel}>Latest AGM Conducted</Text>
-              <Text style={styles.auditValue}>{displayAgm}</Text>
-            </View>
-            <View style={[styles.yearChip, { backgroundColor: COLORS.amberBg, borderColor: '#FDE68A' }]}>
-              <Text style={[styles.yearChipLabel, { color: COLORS.amber }]}>Year</Text>
-              <Text style={[styles.yearChipValue, { color: COLORS.amber }]}>{displayAgmYr}</Text>
-            </View>
-          </View>
-        </View>
-
-        {/* Primary CTA Trigger for Audit/AGM */}
-        <TouchableOpacity style={styles.updateCtaBtn} onPress={() => setComplianceModalVisible(true)} activeOpacity={0.85}>
-          <MaterialIcons name="edit-calendar" size={20} color="#FFFFFF" />
-          <Text style={styles.updateCtaText}>UPDATE AUDIT & AGM DATES</Text>
-        </TouchableOpacity>
       </ScrollView>
 
-      {/* ──────────────────────────────────────────────────────────── */}
-      {/* 1. POP-UP MODAL: UPDATE ACTIVE LOAN DETAILS */}
-      {/* ──────────────────────────────────────────────────────────── */}
-      <Modal visible={loanModalVisible} animationType="slide" transparent onRequestClose={() => setLoanModalVisible(false)}>
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContentCard}>
+      {/* Edit Modal */}
+      {modalVisible && (
+        <View style={styles.inAppModalOverlay}>
+          <TouchableOpacity style={StyleSheet.absoluteFillObject} activeOpacity={1} onPress={() => setModalVisible(false)} />
+          <View style={styles.modalCard}>
             <View style={styles.modalHeaderRow}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                <MaterialIcons name="account-balance" size={22} color={COLORS.primary} />
-                <Text style={styles.modalHeaderTitle}>Update Active Loan Details</Text>
-              </View>
-              <TouchableOpacity onPress={() => setLoanModalVisible(false)}>
-                <MaterialIcons name="close" size={22} color={COLORS.textSecondary} />
+              <Text style={styles.modalTitle}>Edit Compliance Data</Text>
+              <TouchableOpacity style={styles.closeBtnCircle} onPress={() => setModalVisible(false)} activeOpacity={0.7}>
+                <MaterialCommunityIcons name="close" size={18} color={COLORS.slate500} />
               </TouchableOpacity>
             </View>
 
-            <ScrollView style={{ maxHeight: 420 }} showsVerticalScrollIndicator={false}>
-              {/* Field 1: Type of Loans */}
-              <View style={styles.modalFieldGroup}>
-                <Text style={styles.modalLabel}>TYPE OF LOANS</Text>
-                <View style={styles.inputBox}>
-                  <MaterialIcons name="format-list-bulleted" size={18} color={COLORS.primary} style={styles.fieldIcon} />
-                  <TextInput
-                    style={styles.fieldInput}
-                    value={tempLoanType}
-                    onChangeText={setTempLoanType}
-                    placeholder="e.g. Working Capital"
-                    placeholderTextColor="#94A3B8"
-                  />
+            <ScrollView style={styles.modalFormScroll} showsVerticalScrollIndicator={false}>
+              
+              {/* Audit Details */}
+              <Text style={styles.modalSectionTitle}>Latest Audit</Text>
+              <View style={styles.modalFormGroup}>
+                <Text style={styles.modalLabel}>Audit Date</Text>
+                {Platform.OS === 'web' ? (
+                  <View style={styles.datePickerWrapper}>
+                    <input type="date" value={formatToIsoDate(tempAuditDate)} onChange={(e) => handleTempAuditDateSelect(e.target.value)} style={{ width: '100%', height: '100%', border: 'none', outline: 'none', background: 'transparent', fontFamily: FONT_FAMILY, fontSize: '13px', color: '#1e293b', fontWeight: '500', cursor: 'pointer' }} />
+                  </View>
+                ) : (
+                  <TextInput style={styles.modalInput} value={tempAuditDate} onChangeText={(val) => { setTempAuditDate(val); setTempAuditYear(deriveFinancialYear(val)); }} placeholder="DD Mon YYYY" placeholderTextColor={COLORS.slate400} />
+                )}
+              </View>
+              <View style={styles.modalFormGroup}>
+                <Text style={styles.modalLabel}>Audit Year</Text>
+                <TextInput style={styles.modalInput} value={tempAuditYear} onChangeText={setTempAuditYear} placeholder="e.g. 2024 - 2025" placeholderTextColor={COLORS.slate400} />
+              </View>
+              <View style={styles.modalFormGroup}>
+                <Text style={styles.modalLabel}>Audit Status</Text>
+                <View style={{ flexDirection: 'row', gap: 10, marginTop: 4 }}>
+                  {['Pending', 'Completed'].map((st) => (
+                    <TouchableOpacity key={st} style={[styles.statusToggleChip, tempAuditStatus === st && styles.statusToggleChipActive]} onPress={() => setTempAuditStatus(st)} activeOpacity={0.7}>
+                      <Text style={[styles.statusToggleText, tempAuditStatus === st && styles.statusToggleTextActive]}>{st}</Text>
+                    </TouchableOpacity>
+                  ))}
                 </View>
               </View>
 
-              {/* Field 2: Date of Loan Sanctioned */}
-              <View style={styles.modalFieldGroup}>
-                <Text style={styles.modalLabel}>DATE OF LOAN SANCTIONED</Text>
-                <View style={styles.inputBox}>
-                  <MaterialIcons name="calendar-today" size={18} color={COLORS.primary} style={styles.fieldIcon} />
-                  {Platform.OS === 'web' ? (
-                    <input
-                      type="date"
-                      value={formatToInputDate(tempLoanSanctionDate)}
-                      onChange={(e) => {
-                        if (e.target.value) {
-                          setTempLoanSanctionDate(formatFromInputDate(e.target.value));
-                        }
-                      }}
-                      style={styles.webModalDatePicker}
-                    />
-                  ) : (
-                    <TextInput
-                      style={styles.fieldInput}
-                      value={tempLoanSanctionDate}
-                      onChangeText={setTempLoanSanctionDate}
-                      placeholder="DD/MM/YYYY"
-                      placeholderTextColor="#94A3B8"
-                    />
-                  )}
+              {/* AGM Details */}
+              <Text style={[styles.modalSectionTitle, { marginTop: 24 }]}>Latest AGM</Text>
+              <View style={styles.modalFormGroup}>
+                <Text style={styles.modalLabel}>AGM Date</Text>
+                {Platform.OS === 'web' ? (
+                  <View style={styles.datePickerWrapper}>
+                    <input type="date" value={formatToIsoDate(tempAgmDate)} onChange={(e) => handleTempAgmDateSelect(e.target.value)} style={{ width: '100%', height: '100%', border: 'none', outline: 'none', background: 'transparent', fontFamily: FONT_FAMILY, fontSize: '13px', color: '#1e293b', fontWeight: '500', cursor: 'pointer' }} />
+                  </View>
+                ) : (
+                  <TextInput style={styles.modalInput} value={tempAgmDate} onChangeText={(val) => { setTempAgmDate(val); setTempAgmYear(deriveFinancialYear(val)); }} placeholder="DD Mon YYYY" placeholderTextColor={COLORS.slate400} />
+                )}
+              </View>
+              <View style={styles.modalFormGroup}>
+                <Text style={styles.modalLabel}>AGM Year</Text>
+                <TextInput style={styles.modalInput} value={tempAgmYear} onChangeText={setTempAgmYear} placeholder="e.g. 2024 - 2025" placeholderTextColor={COLORS.slate400} />
+              </View>
+              <View style={styles.modalFormGroup}>
+                <Text style={styles.modalLabel}>AGM Status</Text>
+                <View style={{ flexDirection: 'row', gap: 10, marginTop: 4 }}>
+                  {['Pending', 'Completed'].map((st) => (
+                    <TouchableOpacity key={st} style={[styles.statusToggleChip, tempAgmStatus === st && styles.statusToggleChipActive]} onPress={() => setTempAgmStatus(st)} activeOpacity={0.7}>
+                      <Text style={[styles.statusToggleText, tempAgmStatus === st && styles.statusToggleTextActive]}>{st}</Text>
+                    </TouchableOpacity>
+                  ))}
                 </View>
               </View>
 
-              {/* Field 3: Total Number of Beneficiaries */}
-              <View style={styles.modalFieldGroup}>
-                <Text style={styles.modalLabel}>TOTAL NUMBER OF BENEFICIARIES</Text>
-                <View style={styles.inputBox}>
-                  <MaterialIcons name="groups" size={18} color={COLORS.primary} style={styles.fieldIcon} />
-                  <TextInput
-                    style={styles.fieldInput}
-                    value={tempLoanBeneficiaries}
-                    onChangeText={setTempLoanBeneficiaries}
-                    placeholder="0"
-                    placeholderTextColor="#94A3B8"
-                    keyboardType="numeric"
-                  />
-                </View>
+              {/* Active Loan Details */}
+              <View style={[styles.modalHeaderRow, { marginTop: 24, borderBottomWidth: 0, paddingBottom: 0 }]}>
+                <Text style={[styles.modalSectionTitle, { marginBottom: 0 }]}>Active Loan</Text>
+                <Switch
+                  value={tempHasLoan}
+                  onValueChange={setTempHasLoan}
+                  trackColor={{ false: COLORS.slate300, true: COLORS.primary }}
+                  thumbColor="#ffffff"
+                />
               </View>
+              <Text style={styles.emptySubtitle}>If OFF, no loan fields are required.</Text>
 
-              {/* Field 4: Total Loan Extended in Last FY */}
-              <View style={styles.modalFieldGroup}>
-                <Text style={styles.modalLabel}>TOTAL LOAN EXTENDED IN LAST FY (RS)</Text>
-                <View style={styles.inputBox}>
-                  <Text style={styles.currencyPrefix}>₹</Text>
-                  <TextInput
-                    style={styles.fieldInput}
-                    value={tempLoanExtended}
-                    onChangeText={setTempLoanExtended}
-                    placeholder="0.00"
-                    placeholderTextColor="#94A3B8"
-                    keyboardType="numeric"
-                  />
+              {tempHasLoan && (
+                <View style={{ marginTop: 12 }}>
+                  <View style={styles.modalFormGroup}>
+                    <Text style={styles.modalLabel}>Loan Type</Text>
+                    <TextInput style={styles.modalInput} value={tempLoanType} onChangeText={setTempLoanType} placeholder="e.g. Working Capital" placeholderTextColor={COLORS.slate400} />
+                  </View>
+                  <View style={styles.modalFormGroup}>
+                    <Text style={styles.modalLabel}>Sanction Date</Text>
+                    {Platform.OS === 'web' ? (
+                      <View style={styles.datePickerWrapper}>
+                        <input type="date" value={formatToIsoDate(tempLoanSanctionDate)} onChange={(e) => handleTempLoanDateSelect(e.target.value)} style={{ width: '100%', height: '100%', border: 'none', outline: 'none', background: 'transparent', fontFamily: FONT_FAMILY, fontSize: '13px', color: '#1e293b', fontWeight: '500', cursor: 'pointer' }} />
+                      </View>
+                    ) : (
+                      <TextInput style={styles.modalInput} value={tempLoanSanctionDate} onChangeText={setTempLoanSanctionDate} placeholder="DD Mon YYYY" placeholderTextColor={COLORS.slate400} />
+                    )}
+                  </View>
+                  <View style={styles.modalFormGroup}>
+                    <Text style={styles.modalLabel}>Total Beneficiaries</Text>
+                    <TextInput style={styles.modalInput} value={tempLoanBeneficiaries} onChangeText={setTempLoanBeneficiaries} placeholder="e.g. 150" keyboardType="numeric" placeholderTextColor={COLORS.slate400} />
+                  </View>
+                  <View style={styles.modalFormGroup}>
+                    <Text style={styles.modalLabel}>Amount Extended (₹)</Text>
+                    <TextInput style={styles.modalInput} value={tempLoanExtended} onChangeText={setTempLoanExtended} placeholder="e.g. 500000" keyboardType="numeric" placeholderTextColor={COLORS.slate400} />
+                  </View>
+                  <View style={styles.modalFormGroup}>
+                    <Text style={styles.modalLabel}>Amount Recovered (₹)</Text>
+                    <TextInput style={styles.modalInput} value={tempLoanRecovered} onChangeText={setTempLoanRecovered} placeholder="e.g. 200000" keyboardType="numeric" placeholderTextColor={COLORS.slate400} />
+                  </View>
+                  <View style={styles.modalFormGroup}>
+                    <Text style={styles.modalLabel}>Amount Outstanding (₹)</Text>
+                    <TextInput style={styles.modalInput} value={tempLoanOutstanding} onChangeText={setTempLoanOutstanding} placeholder="e.g. 300000" keyboardType="numeric" placeholderTextColor={COLORS.slate400} />
+                  </View>
                 </View>
-              </View>
+              )}
 
-              {/* Field 5: Total Loan Recovered in Last FY */}
-              <View style={styles.modalFieldGroup}>
-                <Text style={styles.modalLabel}>TOTAL LOAN RECOVERED IN LAST FY (RS)</Text>
-                <View style={styles.inputBox}>
-                  <Text style={styles.currencyPrefix}>₹</Text>
-                  <TextInput
-                    style={styles.fieldInput}
-                    value={tempLoanRecovered}
-                    onChangeText={setTempLoanRecovered}
-                    placeholder="0.00"
-                    placeholderTextColor="#94A3B8"
-                    keyboardType="numeric"
+              <View style={[styles.btnWrapper, { marginTop: 24, marginBottom: 20 }]}>
+                <Pressable 
+                  style={({ hovered, pressed }) => [
+                    styles.saveModalBtn,
+                    pressed && { transform: [{ scale: 0.98 }] },
+                    hovered && Platform.OS === 'web' && { shadowOpacity: 0.4 }
+                  ]}
+                  onPress={handleSaveModal}
+                >
+                  <LinearGradient
+                    colors={['#7a1a1f', '#4a1017']}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 0 }}
+                    style={StyleSheet.absoluteFillObject}
                   />
-                </View>
-              </View>
-
-              {/* Field 6: Total Loan Outstanding in Last FY */}
-              <View style={styles.modalFieldGroup}>
-                <Text style={styles.modalLabel}>TOTAL LOAN OUTSTANDING IN LAST FY (RS)</Text>
-                <View style={styles.inputBox}>
-                  <Text style={styles.currencyPrefix}>₹</Text>
-                  <TextInput
-                    style={styles.fieldInput}
-                    value={tempLoanOutstanding}
-                    onChangeText={setTempLoanOutstanding}
-                    placeholder="0.00"
-                    placeholderTextColor="#94A3B8"
-                    keyboardType="numeric"
-                  />
-                </View>
+                  <Text style={styles.saveModalText}>Save Changes</Text>
+                </Pressable>
               </View>
             </ScrollView>
-
-            <TouchableOpacity style={styles.saveBtn} onPress={handleSaveLoanModal} activeOpacity={0.85}>
-              <Text style={styles.saveBtnText}>SAVE LOAN DETAILS</Text>
-            </TouchableOpacity>
           </View>
         </View>
-      </Modal>
-
-      {/* ──────────────────────────────────────────────────────────── */}
-      {/* 2. POP-UP MODAL: UPDATE AUDIT & AGM DATES */}
-      {/* ──────────────────────────────────────────────────────────── */}
-      <Modal visible={complianceModalVisible} animationType="slide" transparent onRequestClose={() => setComplianceModalVisible(false)}>
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContentCard}>
-            <View style={styles.modalHeaderRow}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                <MaterialIcons name="event" size={22} color={COLORS.primary} />
-                <Text style={styles.modalHeaderTitle}>Update Audit & AGM Dates</Text>
-              </View>
-              <TouchableOpacity onPress={() => setComplianceModalVisible(false)}>
-                <MaterialIcons name="close" size={22} color={COLORS.textSecondary} />
-              </TouchableOpacity>
-            </View>
-
-            <ScrollView style={{ maxHeight: 380 }} showsVerticalScrollIndicator={false}>
-              {/* Audit Date Selector */}
-              <View style={styles.modalFieldGroup}>
-                <Text style={styles.modalLabel}>LATEST AUDIT CONDUCTED DATE</Text>
-                <View style={styles.inputBox}>
-                  <MaterialIcons name="calendar-today" size={20} color={COLORS.primary} style={{ marginRight: 10 }} />
-                  {Platform.OS === 'web' ? (
-                    <input
-                      type="date"
-                      value={formatToInputDate(tempAuditDate)}
-                      onChange={(e) => {
-                        if (e.target.value) {
-                          setTempAuditDate(e.target.value);
-                        }
-                      }}
-                      style={styles.webModalDatePicker}
-                    />
-                  ) : (
-                    <TextInput
-                      style={styles.fieldInput}
-                      value={tempAuditDate}
-                      onChangeText={setTempAuditDate}
-                      placeholder="YYYY-MM-DD or DD/MM/YYYY"
-                      placeholderTextColor="#94A3B8"
-                    />
-                  )}
-                </View>
-                <View style={styles.autoYearBadge}>
-                  <Text style={styles.autoYearText}>
-                    Auto-fetched Audit Year: <Text style={{ fontWeight: '900', color: COLORS.primary }}>{getYear(tempAuditDate)}</Text>
-                  </Text>
-                </View>
-              </View>
-
-              {/* AGM Date Selector */}
-              <View style={styles.modalFieldGroup}>
-                <Text style={styles.modalLabel}>LATEST AGM CONDUCTED DATE</Text>
-                <View style={styles.inputBox}>
-                  <MaterialIcons name="date-range" size={20} color={COLORS.amber} style={{ marginRight: 10 }} />
-                  {Platform.OS === 'web' ? (
-                    <input
-                      type="date"
-                      value={formatToInputDate(tempAgmDate)}
-                      onChange={(e) => {
-                        if (e.target.value) {
-                          setTempAgmDate(e.target.value);
-                        }
-                      }}
-                      style={styles.webModalDatePicker}
-                    />
-                  ) : (
-                    <TextInput
-                      style={styles.fieldInput}
-                      value={tempAgmDate}
-                      onChangeText={setTempAgmDate}
-                      placeholder="YYYY-MM-DD or DD/MM/YYYY"
-                      placeholderTextColor="#94A3B8"
-                    />
-                  )}
-                </View>
-                <View style={[styles.autoYearBadge, { backgroundColor: COLORS.amberBg, borderColor: '#FDE68A' }]}>
-                  <Text style={[styles.autoYearText, { color: COLORS.amber }]}>
-                    Auto-fetched AGM Year: <Text style={{ fontWeight: '900', color: COLORS.amber }}>{getYear(tempAgmDate)}</Text>
-                  </Text>
-                </View>
-              </View>
-            </ScrollView>
-
-            <TouchableOpacity style={styles.saveBtn} onPress={handleSaveComplianceModal} activeOpacity={0.85}>
-              <Text style={styles.saveBtnText}>SAVE & UPDATE COMPLIANCE</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
-
-      {/* Nav Actions */}
-      <View style={styles.bottomBar}>
-        <TouchableOpacity style={styles.navBackBtn} onPress={onBack} activeOpacity={0.7}>
-          <Text style={styles.navBackText}>BACK</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.navNextBtn} onPress={onNext} activeOpacity={0.85}>
-          <Text style={styles.navNextText}>NEXT</Text>
-        </TouchableOpacity>
-      </View>
+      )}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.bg },
+  container: { flex: 1, backgroundColor: COLORS.slate50, position: 'relative' },
   topBar: {
-    backgroundColor: COLORS.primary,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    paddingTop: Platform.OS === 'ios' ? 44 : 14,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    paddingTop: Platform.OS === 'ios' ? 44 : 12,
+    overflow: 'hidden',
   },
-  backBtn: { padding: 4 },
-  screenTitle: { color: '#FFFFFF', fontSize: 17, fontWeight: '800' },
-  stepIndicator: { color: 'rgba(255,255,255,0.75)', fontSize: 11, fontWeight: '700' },
+  backBtn: { padding: 8, marginRight: 8 },
+  topBarTitleContainer: { flex: 1 },
+  stickyActionBanner: {
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(226, 232, 240, 0.8)',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    zIndex: 10,
+  },
+  bgBlobTop: {
+    position: 'absolute', top: -40, right: -40, width: 260, height: 260,
+    borderRadius: 130, backgroundColor: 'rgba(122, 26, 31, 0.08)', zIndex: -1,
+  },
+  bgBlobBottomLeft: {
+    position: 'absolute', bottom: 80, left: -50, width: 240, height: 240,
+    borderRadius: 120, backgroundColor: 'rgba(180, 83, 9, 0.06)', zIndex: -1,
+  },
+  bgBlobBottomRight: {
+    position: 'absolute', top: '40%', right: -60, width: 220, height: 220,
+    borderRadius: 110, backgroundColor: 'rgba(122, 26, 31, 0.05)', zIndex: -1,
+  },
+  moduleTag: { 
+    color: 'rgba(255,255,255,0.7)', fontFamily: FONT_FAMILY,
+    fontSize: 8, fontWeight: '800', letterSpacing: 1.2, marginBottom: 2,
+  },
+  screenTitleHeader: { 
+    color: '#FFFFFF', fontFamily: FONT_FAMILY, fontSize: 16, 
+    fontWeight: '800', letterSpacing: -0.16,
+  },
   scrollContent: { flex: 1 },
-  scrollInner: { padding: 16 },
-  statusBanner: {
-    backgroundColor: COLORS.cardBg,
-    borderRadius: 14,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    marginBottom: 16,
-    elevation: 1,
+  scrollInner: { padding: 12, gap: 12, paddingBottom: 40 },
+  alertCard: {
+    backgroundColor: 'rgba(254, 252, 232, 0.8)',
+    borderRadius: 14, padding: 12, flexDirection: 'row', alignItems: 'center',
+    gap: 10, borderWidth: 1, borderColor: 'rgba(253, 230, 138, 0.5)',
+    shadowColor: '#0f172a', shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05, shadowRadius: 10, elevation: 2,
   },
-  statusChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    backgroundColor: COLORS.successBg,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
-    alignSelf: 'flex-start',
-    marginBottom: 8,
+  alertIconBox: {
+    width: 36, height: 36, borderRadius: 18, backgroundColor: COLORS.amber100,
+    alignItems: 'center', justifyContent: 'center',
   },
-  statusChipText: { fontSize: 10, fontWeight: '800', color: '#065F46' },
-  bannerHeading: { fontSize: 15, fontWeight: '800', color: COLORS.textPrimary },
-  bannerSub: { fontSize: 11, color: COLORS.textSecondary, marginTop: 2, fontWeight: '500' },
+  alertBody: { flex: 1, paddingRight: 8 },
+  alertTitle: {
+    fontFamily: FONT_FAMILY, fontSize: 13, fontWeight: '800',
+    color: COLORS.amber900, marginBottom: 2,
+  },
+  alertText: {
+    fontFamily: FONT_FAMILY, fontSize: 11, fontWeight: '500',
+    color: 'rgba(146, 64, 14, 0.9)',
+  },
   card: {
-    backgroundColor: COLORS.cardBg,
-    borderRadius: 14,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    marginBottom: 16,
+    backgroundColor: COLORS.surface, borderRadius: 16, padding: 16,
+    borderWidth: 1, borderColor: 'rgba(226,232,240,0.6)', shadowColor: '#0f172a',
+    shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.08, shadowRadius: 20, elevation: 3,
   },
-  cardHighlight: {
-    borderWidth: 1.5,
-    borderColor: COLORS.primary,
+  cardHeaderRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 12 },
+  cardIconBox: {
+    width: 32, height: 32, borderRadius: 10, backgroundColor: COLORS.slate50,
+    borderWidth: 1, borderColor: COLORS.slate100, alignItems: 'center', justifyContent: 'center',
   },
-  rowBetween: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  cardHeaderTitle: { 
+    fontFamily: FONT_FAMILY, fontSize: 14, fontWeight: '700', 
+    color: COLORS.slate800, letterSpacing: -0.14,
   },
-  iconCircle: {
-    width: 40,
-    height: 40,
-    borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
+  statusBadge: {
+    paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6,
+    backgroundColor: COLORS.slate100, marginLeft: 'auto',
   },
-  cardTitle: { fontSize: 14, fontWeight: '800', color: COLORS.textPrimary },
-  cardSub: { fontSize: 11, color: COLORS.textSecondary, marginTop: 2, fontWeight: '500' },
-  loanSummaryBox: {
-    backgroundColor: '#FAFAFA',
-    borderRadius: 10,
-    padding: 12,
-    marginTop: 14,
-    borderWidth: 1,
-    borderColor: '#F1F5F9',
-    gap: 10,
+  statusBadgeText: {
+    fontFamily: FONT_FAMILY, fontSize: 10, fontWeight: '800',
   },
-  summaryGrid: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+  emptySubtitle: {
+    fontFamily: FONT_FAMILY, fontSize: 12, color: COLORS.slate500,
+    fontStyle: 'italic',
   },
-  summaryCol: { flex: 1 },
-  summaryLabel: { fontSize: 10, fontWeight: '700', color: COLORS.textSecondary, textTransform: 'uppercase' },
-  summaryValue: { fontSize: 13, fontWeight: '800', color: COLORS.textPrimary, marginTop: 2 },
-  editLoanBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#FEF2F2',
-    borderWidth: 1,
-    borderColor: '#7C1C1C',
-    paddingVertical: 10,
-    borderRadius: 8,
-    gap: 6,
-    marginTop: 4,
-    outlineStyle: 'none',
+  divider: { height: 1, backgroundColor: COLORS.slate100, marginVertical: 12 },
+  infoGrid: { flexDirection: 'row', gap: 12 },
+  infoCol: { flex: 1 },
+  infoLabel: { 
+    fontFamily: FONT_FAMILY, fontSize: 8, fontWeight: '800', color: COLORS.slate400,
+    letterSpacing: 1.2, marginBottom: 2,
   },
-  editLoanBtnText: { color: COLORS.primary, fontSize: 11, fontWeight: '800' },
-  sectionHeaderLabel: {
-    fontSize: 11,
-    fontWeight: '800',
-    color: COLORS.textSecondary,
-    letterSpacing: 0.8,
-    marginBottom: 12,
+  infoValue: { fontFamily: FONT_FAMILY, fontSize: 13, fontWeight: '600', color: COLORS.slate800 },
+  btnWrapper: {
+    borderRadius: 16, shadowColor: COLORS.primary, shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2, shadowRadius: 8, elevation: 4, overflow: 'hidden',
   },
-  auditRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  editCtaBtn: { 
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    gap: 8, paddingVertical: 12, paddingHorizontal: 16,
   },
-  auditLabel: { fontSize: 11, color: COLORS.textSecondary, fontWeight: '600' },
-  auditValue: { fontSize: 14, fontWeight: '800', color: COLORS.textPrimary, marginTop: 2 },
-  yearChip: {
-    backgroundColor: COLORS.primaryLight,
-    borderWidth: 1,
-    borderColor: '#FCA5A5',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 8,
-    alignItems: 'center',
+  editCtaText: { 
+    color: '#FFFFFF', fontFamily: FONT_FAMILY, fontSize: 13, fontWeight: '700', letterSpacing: 0.5,
   },
-  yearChipLabel: { fontSize: 9, fontWeight: '700', color: COLORS.primary, textTransform: 'uppercase' },
-  yearChipValue: { fontSize: 13, fontWeight: '900', color: COLORS.primary },
-  cardDivider: { height: 1, backgroundColor: '#F1F5F9', marginVertical: 14 },
-  updateCtaBtn: {
-    backgroundColor: COLORS.primary,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 14,
-    borderRadius: 12,
-    gap: 8,
-    marginBottom: 20,
-    elevation: 2,
-  },
-  updateCtaText: { color: '#FFFFFF', fontSize: 13, fontWeight: '800', letterSpacing: 0.5 },
-  bottomBar: {
-    flexDirection: 'row',
-    padding: 16,
-    backgroundColor: '#FFFFFF',
-    borderTopWidth: 1,
-    borderTopColor: COLORS.border,
-    gap: 12,
-  },
-  navBackBtn: {
-    flex: 1,
-    paddingVertical: 14,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    alignItems: 'center',
-  },
-  navBackText: { color: COLORS.textSecondary, fontSize: 13, fontWeight: '800' },
-  navNextBtn: {
-    flex: 1,
-    paddingVertical: 14,
-    borderRadius: 10,
-    backgroundColor: COLORS.primary,
-    alignItems: 'center',
-  },
-  navNextText: { color: '#FFFFFF', fontSize: 13, fontWeight: '800' },
 
-  // Modal Overlay & Form Styles
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(15, 23, 42, 0.6)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
+  // Modal
+  inAppModalOverlay: {
+    position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+    backgroundColor: 'rgba(15, 23, 42, 0.65)', justifyContent: 'flex-end', zIndex: 9999,
   },
-  modalContentCard: {
-    width: '100%',
-    maxWidth: 420,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 20,
-    elevation: 10,
+  modalCard: {
+    width: '100%', backgroundColor: COLORS.surface, borderTopLeftRadius: 24, borderTopRightRadius: 24,
+    padding: 20, paddingBottom: Platform.OS === 'ios' ? 34 : 20, maxHeight: '85%',
+    shadowColor: '#0f172a', shadowOffset: { width: 0, height: -10 }, shadowOpacity: 0.1, shadowRadius: 40, elevation: 25,
   },
   modalHeaderRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
-    paddingBottom: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F1F5F9',
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+    paddingBottom: 16, borderBottomWidth: 1, borderBottomColor: COLORS.slate100, marginBottom: 16,
   },
-  modalHeaderTitle: { fontSize: 16, fontWeight: '800', color: COLORS.textPrimary },
-  modalFieldGroup: { marginBottom: 14, gap: 4 },
-  modalLabel: { fontSize: 10, fontWeight: '800', color: '#64748B', letterSpacing: 0.5 },
-  inputBox: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1.5,
-    borderColor: COLORS.primary,
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    height: 46,
+  modalTitle: { 
+    fontFamily: FONT_FAMILY, fontSize: 16, fontWeight: '800', color: COLORS.slate800, letterSpacing: -0.16,
   },
-  fieldIcon: { marginRight: 8 },
-  currencyPrefix: { fontSize: 14, fontWeight: '800', color: COLORS.primary, marginRight: 8 },
-  fieldInput: { flex: 1, fontSize: 13, color: COLORS.textPrimary, fontWeight: '700', outlineStyle: 'none' },
-  webModalDatePicker: {
-    flex: 1,
-    border: 'none',
-    outline: 'none',
-    backgroundColor: 'transparent',
-    fontSize: '14px',
-    fontWeight: '800',
-    color: '#0F172A',
-    fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-    cursor: 'pointer',
+  closeBtnCircle: {
+    width: 36, height: 36, borderRadius: 18, backgroundColor: COLORS.slate50,
+    borderWidth: 1, borderColor: COLORS.slate100, alignItems: 'center', justifyContent: 'center',
   },
-  autoYearBadge: {
-    backgroundColor: COLORS.primaryLight,
-    borderWidth: 1,
-    borderColor: '#FCA5A5',
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 8,
-    alignSelf: 'flex-start',
-    marginTop: 4,
+  modalFormScroll: { maxHeight: 500 },
+  modalSectionTitle: { fontFamily: FONT_FAMILY, fontSize: 12, fontWeight: '800', color: COLORS.slate800, marginBottom: 12 },
+  modalFormGroup: { marginBottom: 12, gap: 6 },
+  modalLabel: { 
+    fontFamily: FONT_FAMILY, fontSize: 9, fontWeight: '800', color: COLORS.slate500, letterSpacing: 1.2, marginBottom: 2,
   },
-  autoYearText: { fontSize: 11, color: COLORS.primary, fontWeight: '600' },
-  saveBtn: {
-    backgroundColor: COLORS.primary,
-    paddingVertical: 14,
-    borderRadius: 12,
-    alignItems: 'center',
-    marginTop: 12,
+  modalInput: {
+    borderWidth: 1, borderColor: COLORS.slate200, borderRadius: 10, paddingHorizontal: 14, height: 42,
+    fontFamily: FONT_FAMILY, fontSize: 13, fontWeight: '500', color: COLORS.slate800, backgroundColor: COLORS.slate50,
+    ...(Platform.OS === 'web' && { outlineStyle: 'none' }),
   },
-  saveBtnText: { color: '#FFFFFF', fontSize: 13, fontWeight: '800', letterSpacing: 0.5 },
+  datePickerWrapper: {
+    borderWidth: 1, borderColor: COLORS.slate200, borderRadius: 10, paddingHorizontal: 14, height: 42,
+    backgroundColor: COLORS.slate50, flexDirection: 'row', alignItems: 'center',
+  },
+  saveModalBtn: { alignItems: 'center', justifyContent: 'center', paddingVertical: 12, paddingHorizontal: 16 },
+  saveModalText: { color: '#FFFFFF', fontFamily: FONT_FAMILY, fontSize: 13, fontWeight: '700', letterSpacing: 0.5 },
+  statusToggleChip: {
+    flex: 1, paddingVertical: 10, paddingHorizontal: 12, borderRadius: 10,
+    borderWidth: 1, borderColor: COLORS.slate200, backgroundColor: COLORS.slate50, alignItems: 'center', justifyContent: 'center',
+  },
+  statusToggleChipActive: { borderColor: '#7a1a1f', backgroundColor: '#7a1a1f' },
+  statusToggleText: { fontFamily: FONT_FAMILY, fontSize: 12, fontWeight: '700', color: COLORS.slate600 },
+  statusToggleTextActive: { color: '#FFFFFF' },
 });

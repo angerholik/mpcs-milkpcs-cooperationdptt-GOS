@@ -25,6 +25,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { MaterialIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import Login from './src/components/Login';
+import ErrorBoundary from './src/components/ErrorBoundary';
 import HomeScreen from './src/components/HomeScreen';
 import DigitalEvidenceScreen from './src/components/DigitalEvidenceScreen';
 import OperationsScreen from './src/components/OperationsScreen';
@@ -56,7 +57,7 @@ import MpcsReviewSubmitScreen from './src/components/mpcs/MpcsReviewSubmitScreen
 import { supabase, saveMilkPcsSubmission, saveMpcsSubmission, uploadPhoto } from './src/supabase';
 import { saveMilkPcsProfile, loadMilkPcsProfileByName, loadMilkCenters, addMilkCenter } from './src/utils/storage';
 import { queueSubmission, processQueue, getQueueStatus } from './src/utils/syncManager';
-import { isMonthlyParamsCompleted, saveMonthlyParams, getMonthlyParams, saveSectionStates, getSectionStates } from './src/utils/monthlySyncManager';
+import { isMonthlyParamsCompleted, saveMonthlyParams, getMonthlyParams, saveSectionStates, getSectionStates, getMilkSectionData, clearMilkSectionData } from './src/utils/monthlySyncManager';
 import { useFonts, Manrope_400Regular, Manrope_500Medium, Manrope_600SemiBold, Manrope_700Bold, Manrope_800ExtraBold } from '@expo-google-fonts/manrope';
 
 const { width } = Dimensions.get('window');
@@ -134,6 +135,7 @@ export default function App() {
   // Navigation State — default to MY_INSTITUTIONS so user selects a society on first login
   const [activeView, setActiveView] = useState('MPCS');
   const [currentMobileScreen, setCurrentMobileScreen] = useState('MY_INSTITUTIONS');
+  const [returnMobileScreen, setReturnMobileScreen] = useState('HOME');
   const [activeBottomTab, setActiveBottomTab] = useState('home');
   const [activityItems, setActivityItems] = useState([]);
 
@@ -185,6 +187,76 @@ export default function App() {
     activities: { status: '0 ENTRIES', updatedAt: null }
   });
 
+  const [milkSectionStates, setMilkSectionStates] = useState({
+    evidence: { status: 'NOT CAPTURED', updatedAt: null, validUntil: null },
+    operations: { status: 'NOT STARTED', updatedAt: null },
+    activities: { status: 'NOT STARTED', updatedAt: null },
+    compliance: { status: 'NOT STARTED', updatedAt: null }
+  });
+
+  const refreshMilkSectionStatuses = async () => {
+    const socName = selectedSociety?.name || centerName || '';
+    const repMonth = reportingMonth || 'AUG 2024';
+    if (!socName) {
+      setMilkSectionStates({
+        evidence: { status: 'NOT CAPTURED', updatedAt: null, validUntil: null },
+        operations: { status: 'NOT STARTED', updatedAt: null },
+        activities: { status: 'NOT STARTED', updatedAt: null },
+        compliance: { status: 'NOT STARTED', updatedAt: null }
+      });
+      return;
+    }
+
+    const evidenceData = await getMilkSectionData(socName, repMonth, 'evidence');
+    const opsData = await getMilkSectionData(socName, repMonth, 'operations');
+    const actData = await getMilkSectionData(socName, repMonth, 'activities');
+    const compData = await getMilkSectionData(socName, repMonth, 'compliance');
+
+    // Evidence Logic
+    let evidenceStatus = 'NOT CAPTURED';
+    let validUntil = null;
+    if (evidenceData && (evidenceData.imageUri || evidenceData.imageBase64)) {
+      evidenceStatus = 'CAPTURED ✓';
+      validUntil = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+    }
+
+    // Operations Logic
+    let opsStatus = 'NOT STARTED';
+    if (opsData && (
+      (opsData.litres && opsData.litres.toString().trim() !== '') ||
+      (opsData.withdrawal && opsData.withdrawal.toString().trim() !== '') ||
+      (opsData.balance && opsData.balance.toString().trim() !== '')
+    )) {
+      opsStatus = 'COMPLETED ✓';
+    }
+
+    // Activities Logic
+    let actStatus = 'NOT STARTED';
+    if (actData?.activityList && actData.activityList.length > 0) {
+      actStatus = `${actData.activityList.length} ENTRIES ✓`;
+    } else if (actData?.isCompleted) {
+      actStatus = '0 ENTRIES ✓';
+    }
+
+    // Compliance Logic
+    let compStatus = 'NOT STARTED';
+    if (compData && (
+      (compData.auditDate && compData.auditDate.trim() !== '') ||
+      (compData.agmDate && compData.agmDate.trim() !== '') ||
+      compData.hasLoan === true
+    )) {
+      compStatus = 'COMPLETED ✓';
+    }
+
+    setMilkSectionStates({
+      evidence: { status: evidenceStatus, updatedAt: new Date().toISOString(), validUntil },
+      operations: { status: opsStatus, updatedAt: new Date().toISOString() },
+      activities: { status: actStatus, updatedAt: new Date().toISOString() },
+      compliance: { status: compStatus, updatedAt: new Date().toISOString() }
+    });
+  };
+
+
   // Auth & Session State
   const [session, setSession] = useState(null);
   const [authLoading, setAuthLoading] = useState(true);
@@ -200,7 +272,7 @@ export default function App() {
   const [alertHistory, setAlertHistory] = useState([]);
 
   // Operational Ledger States
-  const [reportingMonth, setReportingMonth] = useState('');
+  const [reportingMonth, setReportingMonth] = useState('AUG 2024');
   const [litres, setLitres] = useState('');
   const [withdrawal, setWithdrawal] = useState('');
   const [balance, setBalance] = useState('');
@@ -272,7 +344,7 @@ export default function App() {
     });
 
     // Clear operational ledgers
-    setReportingMonth('');
+    setReportingMonth('AUG 2024');
     setLitres('');
     setWithdrawal('');
     setBalance('');
@@ -331,6 +403,10 @@ export default function App() {
               activities: { status: '0 ENTRIES', updatedAt: null }
             });
           }
+          
+          // Refresh Milk PCS states based on real data
+          await refreshMilkSectionStatuses();
+          
           if (storedParams && storedParams.paramsData) {
             setHasSubmittedMonthlyParams(true);
             if (!withdrawal && storedParams.paramsData.withdrawal) setWithdrawal(storedParams.paramsData.withdrawal);
@@ -339,7 +415,6 @@ export default function App() {
             setHasSubmittedMonthlyParams(false);
           }
         }
-
       }
     })();
     return () => { isMounted = false; };
@@ -397,6 +472,8 @@ export default function App() {
     }
   };
 
+
+
   const loadInstitutionsForUser = async (email = null) => {
     try {
       const activeEmail = getUserEmail(email);
@@ -431,6 +508,7 @@ export default function App() {
     setDistrict(soc?.district || '');
     setActiveView(soc?.type === 'MPCS' ? 'MPCS' : 'MAIN');
     setCurrentMobileScreen('HOME');
+    setActiveBottomTab('home');
 
     if (isNewRegistration) {
       // NEW REGISTRATION: Wipe all fields & 9 sections so new society starts 100% BLANK
@@ -438,6 +516,7 @@ export default function App() {
       setCenterName(soc?.name || '');
       setRegistrationNumber(soc?.code || soc?.regNo || '');
       setDistrict(soc?.district || '');
+      await clearMilkSectionData(soc?.name, reportingMonth || 'AUG 2024');
       await saveMasterStateToStorage({
         centerName: soc?.name || '',
         registrationNumber: soc?.code || soc?.regNo || '',
@@ -450,12 +529,15 @@ export default function App() {
         shareCapitalData: {},
         cscDetailsData: {}
       }, soc?.name || '');
+      await refreshMilkSectionStatuses();
     } else {
       // EXISTING SOCIETY: Load saved data for this specific society only
       await loadMasterStateFromStorage(soc?.name);
       await fetchCloudSocietyData(soc?.name, getUserEmail());
+      await refreshMilkSectionStatuses();
     }
   };
+
 
   // Master State Persistence Handlers (Keyed per Society & User Email)
   const saveMasterStateToStorage = async (overrides = {}, targetSocName = null, explicitEmail = null) => {
@@ -494,7 +576,8 @@ export default function App() {
         totalExpenses: overrides.totalExpenses !== undefined ? overrides.totalExpenses : (businessPerformanceData?.totalExpenses || ''),
         netSurplusDeficit: overrides.netSurplusDeficit !== undefined ? overrides.netSurplusDeficit : (businessPerformanceData?.netSurplusDeficit || ''),
         reportingMonth: overrides.reportingMonth !== undefined ? overrides.reportingMonth : reportingMonth,
-        selectedSociety: overrides.selectedSociety !== undefined ? overrides.selectedSociety : selectedSociety
+        selectedSociety: overrides.selectedSociety !== undefined ? overrides.selectedSociety : selectedSociety,
+        activityItems: overrides.activityItems !== undefined ? overrides.activityItems : activityItems
       };
       await AsyncStorage.setItem(key, JSON.stringify(stateObj));
       await AsyncStorage.setItem(getLastSelectedSocietyKey(userEmail), activeSocName);
@@ -511,26 +594,41 @@ export default function App() {
           }
         }
 
-        saveMpcsSubmission({
-          societyName: activeSocName,
-          registrationNumber: stateObj.registrationNumber || selectedSociety?.regNo || 'SIK/MPCS/2024/01',
-          gpu: gpuVal,
-          district: gpuVal,
-          presidentName: stateObj.presidentName,
-          presidentMobile: stateObj.presidentMobile,
-          managerName: stateObj.managerName,
-          managerMobile: stateObj.managerMobile,
-          auditDone: stateObj.complianceData?.auditDone,
-          auditYear: stateObj.complianceData?.auditYear,
-          auditCategory: stateObj.complianceData?.auditGrade,
-          annualTurnover: stateObj.financialsData?.annualTurnover,
-          profitOrLoss: stateObj.financialsData?.profitOrLoss || 'PROFIT',
-          netProfit: stateObj.financialsData?.netProfit,
-          totalMembers: calcMembers,
-          reportedBy: userProfile?.name || 'Cooperative Inspector',
-          inspectorEmail: userEmail,
-          ...stateObj
-        });
+        if (selectedSociety?.type === 'MILK') {
+          saveMilkPcsSubmission({
+            centerName: activeSocName,
+            centerId: stateObj.registrationNumber || selectedSociety?.regNo || 'MILK/2024/01',
+            district: gpuVal,
+            presidentName: stateObj.presidentName,
+            presidentMobile: stateObj.presidentMobile,
+            managerName: stateObj.managerName,
+            managerMobile: stateObj.managerMobile,
+            reportedBy: userProfile?.name || 'Cooperative Inspector',
+            inspectorEmail: userEmail,
+            ...stateObj
+          });
+        } else {
+          saveMpcsSubmission({
+            societyName: activeSocName,
+            registrationNumber: stateObj.registrationNumber || selectedSociety?.regNo || 'SIK/MPCS/2024/01',
+            gpu: gpuVal,
+            district: gpuVal,
+            presidentName: stateObj.presidentName,
+            presidentMobile: stateObj.presidentMobile,
+            managerName: stateObj.managerName,
+            managerMobile: stateObj.managerMobile,
+            auditDone: stateObj.complianceData?.auditDone,
+            auditYear: stateObj.complianceData?.auditYear,
+            auditCategory: stateObj.complianceData?.auditGrade,
+            annualTurnover: stateObj.financialsData?.annualTurnover,
+            profitOrLoss: stateObj.financialsData?.profitOrLoss || 'PROFIT',
+            netProfit: stateObj.financialsData?.netProfit,
+            totalMembers: calcMembers,
+            reportedBy: userProfile?.name || 'Cooperative Inspector',
+            inspectorEmail: userEmail,
+            ...stateObj
+          });
+        }
       } catch (cloudErr) {
         console.warn('Auto cloud sync exception:', cloudErr);
       }
@@ -572,6 +670,14 @@ export default function App() {
         setCscDetailsData(saved.cscDetailsData || {});
         setBusinessPerformanceData(saved.businessPerformanceData || {});
         if (saved.selectedSociety) setSelectedSociety(saved.selectedSociety);
+
+        if (saved.reportingMonth) setReportingMonth(saved.reportingMonth);
+        if (saved.withdrawal !== undefined) setWithdrawal(saved.withdrawal);
+        if (saved.balance !== undefined) setBalance(saved.balance);
+        if (saved.sales !== undefined && !saved.withdrawal) setWithdrawal(saved.sales);
+        if (saved.deposit !== undefined && !saved.balance) setBalance(saved.deposit);
+        if (saved.activityItems) setActivityItems(saved.activityItems);
+
         return true;
       } else {
         // Society has no saved state yet -> Reset to clean blank fields
@@ -589,12 +695,24 @@ export default function App() {
     const nameStr = typeof socName === 'string' ? socName : (socName?.name || '');
     if (!nameStr || !nameStr.trim()) return;
     try {
-      const { data: rows } = await supabase
-        .from('mpcs_submissions')
-        .select('*')
-        .ilike('society_name', `%${nameStr.trim()}%`)
-        .order('created_at', { ascending: false })
-        .limit(1);
+      let rows = [];
+      if (selectedSociety?.type === 'MILK') {
+        const res = await supabase
+          .from('milk_pcs_submissions')
+          .select('*')
+          .ilike('center_name', `%${nameStr.trim()}%`)
+          .order('created_at', { ascending: false })
+          .limit(1);
+        rows = res.data || [];
+      } else {
+        const res = await supabase
+          .from('mpcs_submissions')
+          .select('*')
+          .ilike('society_name', `%${nameStr.trim()}%`)
+          .order('created_at', { ascending: false })
+          .limit(1);
+        rows = res.data || [];
+      }
 
       if (rows && rows.length > 0) {
         const row = rows[0];
@@ -602,8 +720,12 @@ export default function App() {
         if (typeof fd === 'string') {
           try { fd = JSON.parse(fd); } catch(e) {}
         }
-        if (row.society_name) setCenterName(row.society_name);
-        if (row.registration_number) setRegistrationNumber(row.registration_number);
+        
+        const soc_name = row.society_name || row.center_name;
+        const reg_number = row.registration_number || row.center_id;
+
+        if (soc_name) setCenterName(soc_name);
+        if (reg_number) setRegistrationNumber(reg_number);
         if (fd['1.8'] || fd.panCard) setPanCard(fd['1.8'] || fd.panCard);
         if (fd['1.6'] || fd.regDate) setRegDate(fd['1.6'] || fd.regDate);
         if (row.president_name || fd['2.1']) setPresidentName(row.president_name || fd['2.1']);
@@ -629,8 +751,8 @@ export default function App() {
 
         // Sync to AsyncStorage under THIS society's key
         saveMasterStateToStorage({
-          centerName: row.society_name,
-          registrationNumber: row.registration_number,
+          centerName: soc_name,
+          registrationNumber: reg_number,
           panCard: fd['1.8'] || fd.panCard,
           regDate: fd['1.6'] || fd.regDate,
           presidentName: row.president_name || fd['2.1'],
@@ -645,7 +767,7 @@ export default function App() {
           shareCapitalData: fd.shareCapitalData,
           cscDetailsData: fd.cscDetailsData,
           businessPerformanceData: loadedBizPerf
-        }, row.society_name);
+        }, soc_name);
       }
     } catch (e) {
       console.warn('Cloud fetch error:', e);
@@ -770,8 +892,7 @@ export default function App() {
             setIsSyncing(true);
             processQueue(({ pending }) => {
                 setPendingSyncCount(pending);
-                setIsSyncing(false);
-            }).catch(() => setIsSyncing(false));
+            }).finally(() => setIsSyncing(false));
         }
         // Sync Broadcasts
         fetchAlerts();
@@ -848,19 +969,37 @@ export default function App() {
     if (isSealing && !recordOverride) return;
 
     const recordItem = recordOverride?.rawData || recordOverride;
+    const socName = recordItem?.society_name || recordItem?.center_name || recordItem?.center || selectedSociety?.name || centerName?.trim() || 'Cooperative Collection Center';
+    const repMonth = recordItem?.reporting_month || recordItem?.month || reportingMonth?.trim() || new Date().toLocaleString('en-IN', { month: 'long', year: 'numeric' });
+
+    // Collate Latest Valid Saved Data dynamically for MILK PCS
+    let opsData = null;
+    let evData = null;
+    let actsData = null;
+    let compData = null;
+    if (!recordOverride && selectedSociety?.type === 'MILK') {
+       opsData = await getMilkSectionData(socName, repMonth, 'operations');
+       evData = await getMilkSectionData(socName, repMonth, 'evidence');
+       actsData = await getMilkSectionData(socName, repMonth, 'activities');
+       compData = await getMilkSectionData(socName, repMonth, 'compliance');
+    }
 
     // --- DYNAMIC USER & SOCIETY DEFAULTS ---
-    const activeCenterName = recordItem?.society_name || recordItem?.center_name || recordItem?.center || selectedSociety?.name || centerName?.trim() || 'Cooperative Collection Center';
-    const activeReportingMonth = recordItem?.reporting_month || recordItem?.month || reportingMonth?.trim() || new Date().toLocaleString('en-IN', { month: 'long', year: 'numeric' });
-    const activeLitres = recordItem?.litres ? String(recordItem.litres) : (litres && !isNaN(parseFloat(litres)) ? litres : '0');
-    const activeBalance = recordItem?.bank_balance || recordItem?.balance ? String(recordItem.bank_balance || recordItem.balance) : (balance && !isNaN(parseFloat(balance)) ? balance : '0');
-    const activeWithdrawal = recordItem?.annual_turnover || recordItem?.withdrawal ? String(recordItem.annual_turnover || recordItem.withdrawal) : (withdrawal || '0');
-    const activeReportedBy = recordItem?.reported_by || recordItem?.officer || userProfile?.fullName || reportedBy?.trim() || 'Cooperative Inspector';
+    const activeCenterName = socName;
+    const activeReportingMonth = repMonth;
+    const activeLitres = opsData?.litres ? String(opsData.litres) : (recordItem?.litres ? String(recordItem.litres) : (litres && !isNaN(parseFloat(litres)) ? litres : '0'));
+    const activeBalance = opsData?.balance ? String(opsData.balance) : (recordItem?.bank_balance || recordItem?.balance ? String(recordItem.bank_balance || recordItem.balance) : (balance && !isNaN(parseFloat(balance)) ? balance : '0'));
+    const activeWithdrawal = opsData?.withdrawal ? String(opsData.withdrawal) : (recordItem?.annual_turnover || recordItem?.withdrawal ? String(recordItem.annual_turnover || recordItem.withdrawal) : (withdrawal || '0'));
+    const activeReportedBy = evData?.reportedBy ? evData.reportedBy : (recordItem?.reported_by || recordItem?.officer || userProfile?.fullName || reportedBy?.trim() || 'Cooperative Inspector');
     const activeDistrict = selectedSociety?.district || userProfile?.district || district?.trim() || 'Sikkim';
     
     // Derive activities text
     let activities = '';
-    if (recordItem?.activities) {
+    if (actsData && actsData.activityList) {
+      activities = actsData.activityList.length > 0
+        ? actsData.activityList.map((a, i) => `${i + 1}. ${a.title || JSON.stringify(a)}`).join('\n')
+        : '';
+    } else if (recordItem?.activities) {
       activities = typeof recordItem.activities === 'string' ? recordItem.activities : JSON.stringify(recordItem.activities);
     } else {
       activities = activityItems.length > 0
@@ -869,7 +1008,9 @@ export default function App() {
     }
 
     if (!recordOverride) setIsSealing(true);
-    const locText = location ? `${location.latitude.toFixed(6)}° N, ${location.longitude.toFixed(6)}° E` : 'Gyalshing District GPS';
+    
+    let activeLocation = evData?.location ? evData.location : location;
+    const locText = activeLocation ? `${activeLocation.latitude?.toFixed(6) || ''}° N, ${activeLocation.longitude?.toFixed(6) || ''}° E` : 'Gyalshing District GPS';
     
     // Robust internal calculation for totals
     const pdfMSc = parseInt(mSc) || 0;
@@ -884,6 +1025,8 @@ export default function App() {
     const pdfTotalMale = pdfMSc + pdfMSt + pdfMObc + pdfMGen;
     const pdfTotalFemale = pdfFSc + pdfFSt + pdfFObc + pdfFGen;
     const pdfGrandTotal = pdfTotalMale + pdfTotalFemale;
+
+    const isMilk = selectedSociety?.type === 'MILK' || recordItem?.society_type === 'MILK';
 
     const htmlContent = `
       <html>
@@ -1137,6 +1280,7 @@ export default function App() {
                     </div>
                   </div>
 
+                  ${isMilk ? '' : `
                   <div class="premium-card">
                     <div class="card-header"><span class="card-title">IV. Registered Member Category</span></div>
                     <div class="card-body" style="padding: 10px 15px;">
@@ -1160,6 +1304,7 @@ export default function App() {
                       </table>
                     </div>
                   </div>
+                  `}
 
                   <div class="premium-card">
                     <div class="card-header"><span class="card-title">V. Operations & Events Log</span></div>
@@ -1503,7 +1648,13 @@ export default function App() {
                     saveInstitutionsForUser(updated, session?.user?.email);
                   }}
                   onSelectSociety={(soc) => handleSelectSociety(soc, false)}
-                  onProceedToDashboard={() => setCurrentMobileScreen('HOME')}
+                  onProceedToDashboard={() => {
+                    if (!selectedSociety && institutionsList.length > 0) {
+                      handleSelectSociety(institutionsList[0], false);
+                    } else {
+                      setCurrentMobileScreen('HOME');
+                    }
+                  }}
                   onLogout={handleUserLogout}
                 />
               </View>
@@ -1563,23 +1714,37 @@ export default function App() {
                   />
                 ) : (
                   <>
-                    {currentMobileScreen === 'HOME' && (
+                    {(currentMobileScreen === 'HOME' || !currentMobileScreen) && (
                       <HomeScreen
                         activeModule="MILK"
                         onSwitchModule={(mod) => {
                           if (mod === 'MPCS') setActiveView('MPCS');
                         }}
-                        societyName={selectedSociety?.name || centerName || ''}
-                        centerId={selectedSociety?.code || registrationNumber || ''}
-                        district={selectedSociety?.district || district || ''}
+                        societyName={selectedSociety?.type === 'MILK' ? selectedSociety.name : centerName || ''}
+                        centerId={selectedSociety?.type === 'MILK' ? selectedSociety.code : registrationNumber || ''}
+                        district={selectedSociety?.type === 'MILK' ? selectedSociety.district : district || ''}
+                        selectedSociety={selectedSociety}
                         reportingMonth={reportingMonth || ''}
-                        reportStatus="DRAFT"
-                        progressPercent={imageUri && litres ? 100 : imageUri || litres ? 60 : 20}
-                        completedCount={imageUri && litres ? 5 : imageUri || litres ? 3 : 1}
-                        totalCount={5}
-                        evidenceStatus={imageUri ? "Captured ✓" : "Not captured"}
-                        operationsStatus={litres && balance ? "Completed ✓" : "Not completed"}
-                        activitiesStatus={`${activityItems.length} entries ✓`}
+                        reportStatus={((milkSectionStates?.evidence?.status?.includes('CAPTURED') && !milkSectionStates?.evidence?.status?.includes('NOT')) && milkSectionStates?.operations?.status?.includes('COMPLETED') && (milkSectionStates?.activities?.status?.includes('ENTRIES') || milkSectionStates?.activities?.status?.includes('COMPLETED')) && milkSectionStates?.compliance?.status?.includes('COMPLETED')) ? 'MONTHLY PARAMS OK' : 'DRAFT'}
+                        progressPercent={
+                          Math.round(
+                            ((((milkSectionStates?.evidence?.status?.includes('CAPTURED') && !milkSectionStates?.evidence?.status?.includes('NOT')) || milkSectionStates?.evidence?.status?.includes('Valid')) ? 25 : 0) +
+                            (milkSectionStates?.operations?.status?.includes('COMPLETED') ? 25 : 0) +
+                            ((milkSectionStates?.activities?.status?.includes('ENTRIES') || milkSectionStates?.activities?.status?.includes('COMPLETED')) ? 25 : 0) +
+                            (milkSectionStates?.compliance?.status?.includes('COMPLETED') ? 25 : 0))
+                          )
+                        }
+                        completedCount={
+                          (((milkSectionStates?.evidence?.status?.includes('CAPTURED') && !milkSectionStates?.evidence?.status?.includes('NOT')) || milkSectionStates?.evidence?.status?.includes('Valid')) ? 1 : 0) +
+                          (milkSectionStates?.operations?.status?.includes('COMPLETED') ? 1 : 0) +
+                          ((milkSectionStates?.activities?.status?.includes('ENTRIES') || milkSectionStates?.activities?.status?.includes('COMPLETED')) ? 1 : 0) +
+                          (milkSectionStates?.compliance?.status?.includes('COMPLETED') ? 1 : 0)
+                        }
+                        totalCount={4}
+                        evidenceStatus={(milkSectionStates?.evidence?.validUntil && new Date() >= new Date(milkSectionStates.evidence.validUntil)) ? 'EXPIRED' : (milkSectionStates?.evidence?.status || 'NOT CAPTURED')}
+                        operationsStatus={milkSectionStates?.operations?.status || 'NOT STARTED'}
+                        activitiesStatus={milkSectionStates?.activities?.status || 'NOT STARTED'}
+                        complianceStatus={milkSectionStates?.compliance?.status || 'NOT STARTED'}
                         lastUpdated=""
                         activeAlert={activeAlert}
                         onDismissAlert={dismissAlert}
@@ -1587,8 +1752,14 @@ export default function App() {
                         institutionsList={institutionsList}
                         onSelectSociety={handleSelectSociety}
                         onManageInstitutions={() => setCurrentMobileScreen('MY_INSTITUTIONS')}
-                        onNavigateScreen={(scr) => setCurrentMobileScreen(scr)}
-                        onReviewSubmit={() => setCurrentMobileScreen('REVIEW')}
+                        onNavigateScreen={(scr) => {
+                          setReturnMobileScreen('HOME');
+                          setCurrentMobileScreen(scr);
+                        }}
+                        onReviewSubmit={() => {
+                          setReturnMobileScreen('HOME');
+                          setCurrentMobileScreen('REVIEW');
+                        }}
                         activeTab={activeBottomTab}
                         onTabPress={(tab) => setActiveBottomTab(tab)}
                       />
@@ -1596,49 +1767,58 @@ export default function App() {
 
                     {currentMobileScreen === 'EVIDENCE' && (
                       <DigitalEvidenceScreen
-                        imageUri={imageUri}
-                        location={location}
-                        timestamp={timestamp}
-                        reportedBy={reportedBy}
-                        setReportedBy={setReportedBy}
-                        onTakePic={captureImage}
-                        onPickGallery={async () => {
-                          try {
-                            let res = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], base64: true, quality: 0.8 });
-                            if (!res.canceled) {
-                              setImageUri(res.assets[0].uri);
-                              setImageBase64(res.assets[0].base64);
-                              setTimestamp(new Date().toLocaleString('en-IN'));
-                            }
-                          } catch(e) {}
+                        societyName={selectedSociety?.name || centerName}
+                        reportingMonth={reportingMonth}
+                        onSave={() => {
+                          refreshMilkSectionStatuses();
                         }}
-                        onNext={() => setCurrentMobileScreen('OPERATIONS')}
-                        onBack={() => setCurrentMobileScreen('HOME')}
+                        onSaveNext={() => {
+                          refreshMilkSectionStatuses();
+                          if (returnMobileScreen === 'REVIEW') {
+                            setCurrentMobileScreen('REVIEW');
+                          } else {
+                            setCurrentMobileScreen('OPERATIONS');
+                          }
+                        }}
+                        onBack={() => setCurrentMobileScreen(returnMobileScreen || 'HOME')}
                       />
                     )}
 
                     {currentMobileScreen === 'OPERATIONS' && (
                       <OperationsScreen
+                        societyName={selectedSociety?.name || centerName}
                         reportingMonth={reportingMonth}
-                        setReportingMonth={setReportingMonth}
-                        litres={litres}
-                        setLitres={setLitres}
-                        withdrawal={withdrawal}
-                        setWithdrawal={setWithdrawal}
-                        balance={balance}
-                        setBalance={setBalance}
-                        onNext={() => setCurrentMobileScreen('ACTIVITIES')}
-                        onBack={() => setCurrentMobileScreen('EVIDENCE')}
+                        onSave={() => {
+                          refreshMilkSectionStatuses();
+                        }}
+                        onSaveNext={() => {
+                          refreshMilkSectionStatuses();
+                          if (returnMobileScreen === 'REVIEW') {
+                            setCurrentMobileScreen('REVIEW');
+                          } else {
+                            setCurrentMobileScreen('ACTIVITIES');
+                          }
+                        }}
+                        onBack={() => setCurrentMobileScreen(returnMobileScreen || 'HOME')}
                       />
                     )}
 
                     {currentMobileScreen === 'ACTIVITIES' && (
                       <ActivitiesScreen
-                        activityList={activityItems}
-                        onAddActivity={(newAct) => setActivityItems(prev => [...prev, newAct])}
-                        onDeleteActivity={(id) => setActivityItems(prev => prev.filter(a => a.id !== id))}
-                        onNext={() => setCurrentMobileScreen('PROFILE')}
-                        onBack={() => setCurrentMobileScreen('OPERATIONS')}
+                        societyName={selectedSociety?.name || centerName}
+                        reportingMonth={reportingMonth}
+                        onSave={() => {
+                          refreshMilkSectionStatuses();
+                        }}
+                        onSaveNext={() => {
+                          refreshMilkSectionStatuses();
+                          if (returnMobileScreen === 'REVIEW') {
+                            setCurrentMobileScreen('REVIEW');
+                          } else {
+                            setCurrentMobileScreen('COMPLIANCE');
+                          }
+                        }}
+                        onBack={() => setCurrentMobileScreen(returnMobileScreen || 'HOME')}
                       />
                     )}
 
@@ -1658,8 +1838,14 @@ export default function App() {
                         managerMobile={managerMobile}
                         setManagerMobile={setManagerMobile}
                         lastUpdated=""
-                        onNext={() => setCurrentMobileScreen('DEMOGRAPHICS')}
-                        onBack={() => setCurrentMobileScreen('ACTIVITIES')}
+                        onSave={(data) => {
+                          if (data) saveMasterStateToStorage(data);
+                        }}
+                        onSaveNext={(data) => {
+                          if (data) saveMasterStateToStorage(data);
+                          setCurrentMobileScreen('DEMOGRAPHICS');
+                        }}
+                        onBack={() => setCurrentMobileScreen('HOME')}
                       />
                     )}
 
@@ -1670,47 +1856,40 @@ export default function App() {
                         mObc={mObc} setMObc={setMObc} fObc={fObc} setFObc={setFObc}
                         mGen={mGen} setMGen={setMGen} fGen={fGen} setFGen={setFGen}
                         lastUpdated=""
-                        onNext={() => setCurrentMobileScreen('COMPLIANCE')}
+                        onSave={(data) => {
+                          if (data) saveMasterStateToStorage(data);
+                        }}
+                        onSaveNext={(data) => {
+                          if (data) saveMasterStateToStorage(data);
+                          setCurrentMobileScreen('HOME');
+                        }}
                         onBack={() => setCurrentMobileScreen('PROFILE')}
                       />
                     )}
 
                     {currentMobileScreen === 'COMPLIANCE' && (
                       <ComplianceScreen
-                        hasLoan={hasLoan}
-                        setHasLoan={setHasLoan}
-                        loanType={loanType}
-                        setLoanType={setLoanType}
-                        loanSanctionDate={loanSanctionDate}
-                        setLoanSanctionDate={setLoanSanctionDate}
-                        loanBeneficiaries={loanBeneficiaries}
-                        setLoanBeneficiaries={setLoanBeneficiaries}
-                        loanExtended={loanExtended}
-                        setLoanExtended={setLoanExtended}
-                        loanRecovered={loanRecovered}
-                        setLoanRecovered={setLoanRecovered}
-                        loanOutstanding={loanOutstanding}
-                        setLoanOutstanding={setLoanOutstanding}
-                        auditDate={auditDate}
-                        setAuditDate={setAuditDate}
-                        auditYear={auditYear}
-                        setAuditYear={setAuditYear}
-                        agmDate={agmDate}
-                        setAgmDate={setAgmDate}
-                        agmYear={agmYear}
-                        setAgmYear={setAgmYear}
-                        lastUpdated=""
-                        onNext={() => setCurrentMobileScreen('REVIEW')}
-                        onBack={() => setCurrentMobileScreen('DEMOGRAPHICS')}
+                        societyName={selectedSociety?.name || centerName}
+                        reportingMonth={reportingMonth}
+                        onSave={() => {
+                          refreshMilkSectionStatuses();
+                        }}
+                        onSaveNext={() => {
+                          refreshMilkSectionStatuses();
+                          setCurrentMobileScreen('REVIEW');
+                        }}
+                        onBack={() => setCurrentMobileScreen(returnMobileScreen || 'HOME')}
                       />
                     )}
 
                     {currentMobileScreen === 'REVIEW' && (
                       <ReviewSubmitScreen
                         reportingMonth={reportingMonth || ''}
-                        hasImage={!!imageUri}
-                        hasOperations={!!litres && !!balance}
-                        activityCount={activityItems.length}
+                        milkSectionStates={milkSectionStates}
+                        onNavigateScreen={(screenName) => {
+                          setReturnMobileScreen('REVIEW');
+                          setCurrentMobileScreen(screenName);
+                        }}
                         isSealing={isSealing}
                         onCompileAndSeal={generatePDF}
                         onBack={() => setCurrentMobileScreen('HOME')}
@@ -1815,10 +1994,10 @@ export default function App() {
                         centerId={selectedSociety?.code || registrationNumber || ''}
                         district={selectedSociety?.district || district || ''}
                         reportingMonth={reportingMonth || ''}
-                        reportStatus={(sectionStates?.evidence?.status?.includes('CAPTURED') && sectionStates?.sales?.status?.includes('COMPLETED') && sectionStates?.business?.status?.includes('COMPLETED')) ? 'MONTHLY PARAMS OK' : 'DRAFT'}
+                        reportStatus={((sectionStates?.evidence?.status?.includes('CAPTURED') && !sectionStates?.evidence?.status?.includes('NOT')) && sectionStates?.sales?.status?.includes('COMPLETED') && sectionStates?.business?.status?.includes('COMPLETED')) ? 'MONTHLY PARAMS OK' : 'DRAFT'}
                         progressPercent={
                           Math.round(
-                            ((sectionStates?.evidence?.status?.includes('CAPTURED') || sectionStates?.evidence?.status?.includes('Valid') ? 20 : 0) +
+                            ((((sectionStates?.evidence?.status?.includes('CAPTURED') && !sectionStates?.evidence?.status?.includes('NOT')) || sectionStates?.evidence?.status?.includes('Valid')) ? 20 : 0) +
                             (sectionStates?.sales?.status?.includes('COMPLETED') ? 20 : 0) +
                             (sectionStates?.business?.status?.includes('COMPLETED') ? 20 : 0) +
                             (!cscTransData?.isCscActive || sectionStates?.csc?.status?.includes('COMPLETED') ? 20 : 0) +
@@ -1827,7 +2006,7 @@ export default function App() {
                         }
                         hasSubmittedMonthlyParams={false} // Disable global lock
                         completedCount={
-                          ((sectionStates?.evidence?.status?.includes('CAPTURED') || sectionStates?.evidence?.status?.includes('Valid')) ? 1 : 0) +
+                          (((sectionStates?.evidence?.status?.includes('CAPTURED') && !sectionStates?.evidence?.status?.includes('NOT')) || sectionStates?.evidence?.status?.includes('Valid')) ? 1 : 0) +
                           (sectionStates?.sales?.status?.includes('COMPLETED') ? 1 : 0) +
                           (sectionStates?.business?.status?.includes('COMPLETED') ? 1 : 0) +
                           ((!cscTransData?.isCscActive || sectionStates?.csc?.status?.includes('COMPLETED')) ? 1 : 0) +
@@ -1866,8 +2045,11 @@ export default function App() {
                         setLatitude={(val) => setLocation(prev => ({ ...prev, latitude: parseFloat(val) }))}
                         longitude={location?.longitude ? String(location.longitude) : ""}
                         setLongitude={(val) => setLocation(prev => ({ ...prev, longitude: parseFloat(val) }))}
-                        onSaveNext={() => {
-                          updateSectionState('evidence', { status: 'CAPTURED ✓', validUntil: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString() });
+                        onSaveNext={(validUntil) => {
+                          saveMasterStateToStorage({
+                            evidence: { status: 'CAPTURED ✓', validUntil, timestamp, location }
+                          });
+                          updateSectionState('evidence', { status: 'CAPTURED ✓', validUntil });
                           setCurrentMobileScreen('MPCS_REVIEW');
                         }}
                         onBack={() => setCurrentMobileScreen('MPCS_REVIEW')}
@@ -1963,6 +2145,7 @@ export default function App() {
                         activityItems={activityItems}
                         setActivityItems={setActivityItems}
                         onSaveNext={() => {
+                          saveMasterStateToStorage({ activityItems });
                           updateSectionState('activities', { status: 'COMPLETED ✓' });
                           setCurrentMobileScreen('MPCS_REVIEW');
                         }}
@@ -2224,27 +2407,16 @@ const styles = StyleSheet.create({
   },
   mobileShellWrapper: {
     flex: 1,
-    backgroundColor: Platform.OS === 'web' ? '#0F172A' : '#F8F5F2',
+    backgroundColor: '#F8F5F2',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: Platform.OS === 'web' ? 16 : 0,
     width: '100%',
   },
   mobileDeviceFrame: {
     width: '100%',
-    maxWidth: Platform.OS === 'web' ? 440 : '100%',
-    height: Platform.OS === 'web' ? 880 : '100%',
-    maxHeight: Platform.OS === 'web' ? '94vh' : '100%',
+    height: '100%',
     backgroundColor: '#F8F5F2',
-    borderRadius: Platform.OS === 'web' ? 32 : 0,
-    borderWidth: Platform.OS === 'web' ? 8 : 0,
-    borderColor: '#1E293B',
     overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 20 },
-    shadowOpacity: 0.4,
-    shadowRadius: 25,
-    elevation: 20,
   },
   govEmblem: {
     width: 60,

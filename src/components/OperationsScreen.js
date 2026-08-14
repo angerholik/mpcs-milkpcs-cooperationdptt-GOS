@@ -1,144 +1,228 @@
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, TextInput, ScrollView, Platform } from 'react-native';
-import { MaterialIcons } from '@expo/vector-icons';
+import React, { useState, useEffect } from 'react';
+import { getMilkSectionData, saveMilkSectionData } from '../utils/monthlySyncManager';
+import {
+  View, Text, StyleSheet, TouchableOpacity, TextInput,
+  ScrollView, Platform, Pressable
+} from 'react-native';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 
 const COLORS = {
-  primary: '#6B1212',
-  primaryLight: '#FAF0F0',
+  surface: '#ffffff',
   bg: '#F8F5F2',
-  cardBg: '#FFFFFF',
-  textPrimary: '#0F172A',
-  textSecondary: '#64748B',
-  border: '#E2E8F0',
+  slate800: '#1e293b',
+  slate700: '#334155',
+  slate600: '#475569',
+  slate500: '#64748b',
+  slate400: '#94a3b8',
+  slate300: '#cbd5e1',
+  slate200: '#e2e8f0',
+  slate100: '#f1f5f9',
+  slate50: '#f8fafc',
+  primary: '#7a1a1f',
+  primaryLight: '#FEF2F2',
+  emerald700: '#047857',
+  emerald500: '#10b981',
+  emerald50: '#ecfdf5',
 };
 
-const FONT_FAMILY = Platform.select({
-  web: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-  ios: 'System',
-  android: 'Roboto',
-});
+const FONT_FAMILY = 'Manrope';
 
 export default function OperationsScreen({
+  societyName = "",
   reportingMonth = "",
-  setReportingMonth,
-  litres = "",
-  setLitres,
-  withdrawal = "",
-  setWithdrawal,
-  balance = "",
-  setBalance,
+  onSave,
+  onSaveNext,
   onNext,
   onBack
 }) {
+  const [litres, setLitres] = useState("");
+  const [withdrawal, setWithdrawal] = useState("");
+  const [balance, setBalance] = useState("");
+  const [isSaved, setIsSaved] = useState(false);
+
+  useEffect(() => {
+    (async () => {
+      const data = await getMilkSectionData(societyName, reportingMonth, 'operations');
+      if (data) {
+        setLitres(data.litres || "");
+        setWithdrawal(data.withdrawal || "");
+        setBalance(data.balance || "");
+      }
+    })();
+  }, [societyName, reportingMonth]);
+
+  const handleSave = async () => {
+    await saveMilkSectionData(societyName, reportingMonth, 'operations', { litres, withdrawal, balance });
+    setIsSaved(true);
+    setTimeout(() => setIsSaved(false), 2500);
+    if (onSave) onSave();
+  };
+
+  const handleSaveAndNext = async () => {
+    await saveMilkSectionData(societyName, reportingMonth, 'operations', { litres, withdrawal, balance });
+    if (onSaveNext) {
+      onSaveNext();
+    } else if (onNext) {
+      onNext();
+    }
+  };
+
+  const parseNum = (val) => {
+    if (!val) return 0;
+    const clean = val.toString().replace(/,/g, '');
+    const num = parseFloat(clean);
+    return isNaN(num) ? 0 : num;
+  };
+
+  const formatCurrency = (val) => {
+    if (!val) return "";
+    const clean = val.toString().replace(/,/g, '');
+    if (isNaN(clean) || clean === "") return clean;
+    return parseFloat(clean).toLocaleString('en-IN');
+  };
+
+  const handleWithdrawalChange = (text) => {
+    setWithdrawal(formatCurrency(text));
+  };
+
+  const handleBalanceChange = (text) => {
+    setBalance(formatCurrency(text));
+  };
+
+  const handleLitresChange = (text) => {
+    setLitres(formatCurrency(text));
+  };
   return (
     <View style={styles.container}>
-      {/* Top Bar Header */}
+      {/* ── Top Header ── */}
       <View style={styles.topBar}>
+        <LinearGradient
+          colors={['#7a1a1f', '#4a1017']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 0 }}
+          style={StyleSheet.absoluteFillObject}
+        />
         <TouchableOpacity style={styles.backBtn} onPress={onBack} activeOpacity={0.7}>
-          <MaterialIcons name="arrow-back" size={22} color="#FFFFFF" />
+          <MaterialCommunityIcons name="arrow-left" size={24} color="#FFFFFF" />
         </TouchableOpacity>
-        <Text style={styles.screenTitleHeader}>Monthly Operations</Text>
-        <Text style={styles.stepIndicator}>2 of 5</Text>
+        <View style={styles.topBarTitleContainer}>
+          <Text style={styles.moduleTag}>MILK PCS</Text>
+          <Text style={styles.screenTitleHeader}>Monthly Collection & Deposit</Text>
+        </View>
       </View>
 
-      <ScrollView style={styles.scrollContent} contentContainerStyle={styles.scrollInner} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        style={styles.scrollContent}
+        contentContainerStyle={styles.scrollInner}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+      >
         {/* Reporting Month Card */}
-        <View style={styles.monthCard}>
-          <View style={styles.iconCircle}>
-            <MaterialIcons name="calendar-today" size={18} color={COLORS.primary} />
+        <View style={styles.card}>
+          <View style={styles.cardHeaderRow}>
+            <View style={styles.cardIconBox}>
+              <MaterialCommunityIcons name="calendar-month-outline" size={18} color={COLORS.primary} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.cardHeaderTitle}>Reporting Period</Text>
+              <Text style={styles.cardHeaderSub}>Select the month for this return</Text>
+            </View>
           </View>
-          <View style={{ flex: 1, marginLeft: 12 }}>
-            <Text style={styles.fieldLabel}>REPORTING MONTH</Text>
+          <View style={styles.inputBox}>
+            <MaterialCommunityIcons name="calendar-clock-outline" size={16} color={COLORS.slate400} style={styles.inputIcon} />
             <TextInput
-              style={styles.monthInputText}
+              style={styles.textInput}
               value={reportingMonth}
-              onChangeText={setReportingMonth}
+              editable={false}
               placeholder="e.g. August 2026"
-              placeholderTextColor="#94A3B8"
+              placeholderTextColor={COLORS.slate400}
             />
           </View>
         </View>
 
-        {/* Unified Operations Form Card */}
-        <View style={styles.formCard}>
-          <View style={styles.formHeaderRow}>
-            <MaterialIcons name="analytics" size={18} color={COLORS.primary} />
-            <Text style={styles.formHeaderTitle}>Monthly Figures & Procurement</Text>
+        {/* Operations Data Form Card */}
+        <View style={styles.card}>
+          <View style={styles.cardHeaderRow}>
+            <View style={styles.cardIconBox}>
+              <MaterialCommunityIcons name="chart-bar" size={18} color={COLORS.primary} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.cardHeaderTitle}>Collections & Withdrawals</Text>
+              <Text style={styles.cardHeaderSub}>Monthly operational figures</Text>
+            </View>
           </View>
 
-          {/* Input 1: Litres Collected */}
+          {/* Litres Collected */}
           <View style={styles.inputGroup}>
-            <Text style={styles.fieldLabel}>LITRES COLLECTED (LITRES)</Text>
+            <Text style={styles.inputLabel}>TOTAL LITRES COLLECTED</Text>
             <View style={styles.inputBox}>
-              <View style={styles.leftIconBox}>
-                <MaterialIcons name="opacity" size={18} color={COLORS.primary} />
-              </View>
+              <MaterialCommunityIcons name="water-outline" size={16} color={COLORS.slate400} style={styles.inputIcon} />
               <TextInput
                 style={styles.textInput}
                 value={litres}
-                onChangeText={setLitres}
-                placeholder="Enter total litres procured (e.g. 12,480)"
-                placeholderTextColor="#94A3B8"
+                onChangeText={handleLitresChange}
+                placeholder="0"
+                placeholderTextColor={COLORS.slate300}
                 keyboardType="numeric"
               />
-              <Text style={styles.unitText}>Litres</Text>
+              <Text style={styles.unitText}>L</Text>
             </View>
           </View>
 
-          {/* Input 2: Total Withdrawal */}
+          {/* Total Withdrawal */}
           <View style={styles.inputGroup}>
-            <Text style={styles.fieldLabel}>TOTAL WITHDRAWAL (RS)</Text>
+            <Text style={styles.inputLabel}>TOTAL WITHDRAWAL (RS)</Text>
             <View style={styles.inputBox}>
-              <View style={styles.leftIconBox}>
-                <Text style={styles.currencySymbol}>₹</Text>
-              </View>
+              <Text style={styles.currencySymbol}>₹</Text>
               <TextInput
                 style={styles.textInput}
                 value={withdrawal}
-                onChangeText={setWithdrawal}
-                placeholder="Enter total disbursement (e.g. 1,84,500)"
-                placeholderTextColor="#94A3B8"
+                onChangeText={handleWithdrawalChange}
+                placeholder="0"
+                placeholderTextColor={COLORS.slate300}
                 keyboardType="numeric"
               />
             </View>
           </View>
 
-          {/* Input 3: Bank Closing Balance */}
+          {/* Closing Balance */}
           <View style={styles.inputGroup}>
-            <Text style={styles.fieldLabel}>BANK CLOSING BALANCE (RS)</Text>
+            <Text style={styles.inputLabel}>CLOSING BALANCE (RS)</Text>
             <View style={styles.inputBox}>
-              <View style={styles.leftIconBox}>
-                <MaterialIcons name="account-balance" size={18} color={COLORS.primary} />
-              </View>
+              <Text style={styles.currencySymbol}>₹</Text>
               <TextInput
                 style={styles.textInput}
                 value={balance}
-                onChangeText={setBalance}
-                placeholder="Enter closing bank balance (e.g. 4,82,650)"
-                placeholderTextColor="#94A3B8"
+                onChangeText={handleBalanceChange}
+                placeholder="0"
+                placeholderTextColor={COLORS.slate300}
                 keyboardType="numeric"
               />
             </View>
           </View>
         </View>
-
-        {/* Helper Directive Banner */}
-        <View style={styles.directiveBanner}>
-          <MaterialIcons name="info-outline" size={18} color={COLORS.primary} />
-          <Text style={styles.directiveText}>
-            Ensure all figures match the official society ledger records for {reportingMonth || 'this month'}.
-          </Text>
-        </View>
       </ScrollView>
 
-      {/* Nav Actions */}
+      {/* ── Bottom Navigation Bar ── */}
       <View style={styles.bottomBar}>
         <TouchableOpacity style={styles.navBackBtn} onPress={onBack} activeOpacity={0.7}>
           <Text style={styles.buttonTextSecondary}>BACK</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.navNextBtn} onPress={onNext} activeOpacity={0.85}>
-          <Text style={styles.buttonTextPrimary}>NEXT</Text>
-        </TouchableOpacity>
+
+        <Pressable
+          style={({ pressed }) => [styles.navNextBtn, pressed && { transform: [{ scale: 0.98 }] }]}
+          onPress={handleSaveAndNext}
+        >
+          <LinearGradient
+            colors={['#7a1a1f', '#4a1017']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={StyleSheet.absoluteFillObject}
+          />
+          <Text style={styles.buttonTextPrimary}>SAVE & NEXT</Text>
+          <MaterialCommunityIcons name="arrow-right" size={16} color="#ffffff" />
+        </Pressable>
       </View>
     </View>
   );
@@ -147,187 +231,174 @@ export default function OperationsScreen({
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.bg },
   topBar: {
-    backgroundColor: COLORS.primary,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
     paddingHorizontal: 16,
-    paddingVertical: 14,
-    paddingTop: Platform.OS === 'ios' ? 44 : 14,
-  },
-  backBtn: { padding: 4 },
-  screenTitleHeader: {
-    color: '#FFFFFF',
-    fontFamily: FONT_FAMILY,
-    fontSize: 17,
-    fontWeight: '600',
-  },
-  stepIndicator: {
-    color: 'rgba(255, 255, 255, 0.85)',
-    fontFamily: FONT_FAMILY,
-    fontSize: 12,
-    fontWeight: '400',
-  },
-  scrollContent: { flex: 1 },
-  scrollInner: { padding: 16 },
-
-  monthCard: {
-    backgroundColor: COLORS.cardBg,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: COLORS.border,
+    paddingTop: Platform.OS === 'ios' ? 48 : 16,
+    paddingBottom: 16,
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 14,
-    marginBottom: 16,
-    elevation: 1,
+    position: 'relative',
+    overflow: 'hidden',
   },
-  iconCircle: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: COLORS.primaryLight,
+  backBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.15)',
     alignItems: 'center',
     justifyContent: 'center',
+    marginRight: 12,
   },
-  fieldLabel: {
+  topBarTitleContainer: { flex: 1 },
+  moduleTag: {
+    color: 'rgba(255,255,255,0.7)',
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 1.2,
+    marginBottom: 2,
     fontFamily: FONT_FAMILY,
-    fontSize: 12,
-    fontWeight: '500',
-    color: COLORS.textSecondary,
-    letterSpacing: 0.3,
   },
-  monthInputText: {
+  screenTitleHeader: {
+    color: '#ffffff',
+    fontSize: 18,
+    fontWeight: '800',
     fontFamily: FONT_FAMILY,
-    fontSize: 16,
-    fontWeight: '600',
-    color: COLORS.textPrimary,
-    marginTop: 2,
-    outlineStyle: 'none',
   },
+  scrollContent: { flex: 1 },
+  scrollInner: { padding: 16, paddingBottom: 40, gap: 16 },
 
-  formCard: {
-    backgroundColor: COLORS.cardBg,
+  card: {
+    backgroundColor: COLORS.surface,
     borderRadius: 16,
     padding: 16,
     borderWidth: 1,
-    borderColor: COLORS.border,
-    marginBottom: 16,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
-    shadowRadius: 6,
-    gap: 16,
+    borderColor: COLORS.slate200,
+    ...Platform.select({
+      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.04, shadowRadius: 8 },
+      android: { elevation: 2 },
+      web: { boxShadow: '0 4px 12px rgba(0,0,0,0.03)' }
+    }),
   },
-  formHeaderRow: {
+  cardHeaderRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    paddingBottom: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F1F5F9',
+    marginBottom: 16,
   },
-  formHeaderTitle: {
-    fontFamily: FONT_FAMILY,
-    fontSize: 16,
-    fontWeight: '600',
-    color: COLORS.textPrimary,
+  cardIconBox: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: COLORS.primaryLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
   },
+  cardHeaderTitle: { fontSize: 15, fontWeight: '800', color: COLORS.slate800, fontFamily: FONT_FAMILY },
+  cardHeaderSub: { fontSize: 12, color: COLORS.slate500, marginTop: 2, fontFamily: FONT_FAMILY },
+
   inputGroup: {
-    gap: 6,
+    marginBottom: 16,
+  },
+  inputLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: COLORS.slate500,
+    marginBottom: 8,
+    letterSpacing: 0.5,
+    fontFamily: FONT_FAMILY,
   },
   inputBox: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
+    height: 48,
+    backgroundColor: COLORS.slate50,
     borderWidth: 1,
-    borderColor: '#CBD5E1',
+    borderColor: COLORS.slate200,
     borderRadius: 10,
     paddingHorizontal: 12,
-    height: 48,
   },
-  leftIconBox: {
-    width: 28,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 4,
-  },
+  inputIcon: { marginRight: 8 },
   currencySymbol: {
-    fontFamily: FONT_FAMILY,
     fontSize: 16,
-    fontWeight: '500',
-    color: COLORS.primary,
+    color: COLORS.slate400,
+    fontWeight: '600',
+    marginRight: 8,
+    fontFamily: FONT_FAMILY,
   },
   textInput: {
     flex: 1,
+    fontSize: 14,
+    color: COLORS.slate800,
+    fontWeight: '700',
     fontFamily: FONT_FAMILY,
-    fontSize: 15,
-    fontWeight: '400',
-    color: COLORS.textPrimary,
-    outlineStyle: 'none',
   },
   unitText: {
+    fontSize: 12,
+    color: COLORS.slate400,
+    fontWeight: '600',
     fontFamily: FONT_FAMILY,
-    fontSize: 13,
-    fontWeight: '400',
-    color: COLORS.textSecondary,
-    marginLeft: 6,
-  },
-
-  directiveBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: COLORS.primaryLight,
-    borderWidth: 1,
-    borderColor: '#FCA5A5',
-    padding: 14,
-    borderRadius: 12,
-    gap: 10,
-    marginBottom: 16,
-  },
-  directiveText: {
-    flex: 1,
-    fontFamily: FONT_FAMILY,
-    fontSize: 13,
-    color: COLORS.primary,
-    fontWeight: '400',
-    lineHeight: 18,
   },
 
   bottomBar: {
     flexDirection: 'row',
     padding: 16,
-    backgroundColor: '#FFFFFF',
+    paddingBottom: Platform.OS === 'ios' ? 32 : 16,
+    backgroundColor: COLORS.surface,
     borderTopWidth: 1,
-    borderTopColor: COLORS.border,
+    borderTopColor: COLORS.slate200,
     gap: 12,
   },
   navBackBtn: {
     flex: 1,
-    paddingVertical: 14,
-    borderRadius: 10,
+    height: 50,
+    borderRadius: 12,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: COLORS.slate200,
+    backgroundColor: COLORS.surface,
     alignItems: 'center',
+    justifyContent: 'center',
   },
-  buttonTextSecondary: {
-    color: COLORS.textSecondary,
-    fontFamily: FONT_FAMILY,
-    fontSize: 15,
-    fontWeight: '600',
+  navSaveBtn: {
+    flex: 1,
+    height: 50,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    borderColor: COLORS.slate300,
+    backgroundColor: COLORS.slate50,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+  },
+  navSaveBtnSuccess: {
+    borderColor: COLORS.emerald500,
+    backgroundColor: COLORS.emerald50,
   },
   navNextBtn: {
-    flex: 1,
-    paddingVertical: 14,
-    borderRadius: 10,
-    backgroundColor: COLORS.primary,
+    flex: 2,
+    height: 50,
+    borderRadius: 12,
+    overflow: 'hidden',
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  buttonTextSecondary: {
+    color: COLORS.slate700,
+    fontSize: 13,
+    fontWeight: '800',
+    fontFamily: FONT_FAMILY,
+  },
+  buttonTextSave: {
+    color: COLORS.slate700,
+    fontSize: 13,
+    fontWeight: '800',
+    fontFamily: FONT_FAMILY,
   },
   buttonTextPrimary: {
-    color: '#FFFFFF',
+    color: '#ffffff',
+    fontSize: 13,
+    fontWeight: '800',
     fontFamily: FONT_FAMILY,
-    fontSize: 15,
-    fontWeight: '600',
   },
 });

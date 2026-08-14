@@ -50,11 +50,12 @@ export default function MpcsReviewSubmitScreen({
 
   const evidenceState = sectionStates.evidence || { status: 'NOT CAPTURED' };
   const isValid = evidenceState.validUntil && new Date() < new Date(evidenceState.validUntil);
-  const hasCaptured = evidenceState.status.includes('CAPTURED') || evidenceState.status.includes('Valid') || evidenceState.status.includes('EXPIRED');
+  const isEvidenceCaptured = (st) => Boolean(st) && st.includes('CAPTURED') && !st.includes('NOT');
+  const hasCaptured = isEvidenceCaptured(evidenceState.status) || evidenceState.status?.includes('Valid') || evidenceState.status?.includes('EXPIRED');
   
   const isEvidenceComplete = hasCaptured && isValid;
   
-  const displayEvidenceStatus = (!isValid && hasCaptured) ? 'EXPIRED' : evidenceState.status;
+  const displayEvidenceStatus = (!isValid && hasCaptured) ? 'EXPIRED' : (evidenceState.status || 'NOT CAPTURED');
 
   const evidenceSubText = isValid 
     ? `Valid until ${formatTime(evidenceState.validUntil)}` 

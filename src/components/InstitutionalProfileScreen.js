@@ -40,10 +40,13 @@ export default function InstitutionalProfileScreen({
   managerMobile = "",
   setManagerMobile,
   lastUpdated = "Not verified",
+  onSave,
+  onSaveNext,
   onNext,
   onBack
 }) {
   const [modalVisible, setModalVisible] = useState(false);
+  const [isSaved, setIsSaved] = useState(false);
 
   // Form State inside Modal
   const [editCenter, setEditCenter] = useState(centerName);
@@ -70,11 +73,32 @@ export default function InstitutionalProfileScreen({
     if (setManagerName) setManagerName(editMgrName);
     if (setManagerMobile) setManagerMobile(editMgrMob);
     setModalVisible(false);
+    setIsSaved(true);
+    setTimeout(() => setIsSaved(false), 2500);
+    if (onSave) {
+      onSave({
+        centerName: editCenter,
+        regNo: editRegNo,
+        presidentName: editPresName,
+        presidentMobile: editPresMob,
+        managerName: editMgrName,
+        managerMobile: editMgrMob
+      });
+    }
+  };
+
+  const handleSaveAndNext = () => {
+    handleSaveProfile();
+    if (onSaveNext) {
+      onSaveNext();
+    } else if (onNext) {
+      onNext();
+    }
   };
 
   return (
     <View style={styles.container}>
-      {/* Top Bar matching STITCH (Red Header from App/Dashboard context) */}
+      {/* Top Header */}
       <View style={styles.topBar}>
         <LinearGradient
           colors={['#7a1a1f', '#4a1017']}
@@ -93,26 +117,49 @@ export default function InstitutionalProfileScreen({
 
       {/* Sticky Action Banner at Top */}
       <View style={styles.stickyActionBanner}>
-        <View style={styles.btnWrapper}>
-          <Pressable 
-            style={({ hovered, pressed }) => [
-              styles.editCtaBtn,
-              pressed && { transform: [{ scale: 0.98 }] },
-              hovered && Platform.OS === 'web' && { shadowOpacity: 0.4 }
-            ]}
-            onPress={() => setModalVisible(true)}
-          >
-            <LinearGradient
-              colors={['#7a1a1f', '#4a1017']}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-              style={StyleSheet.absoluteFillObject}
-            />
-            <MaterialCommunityIcons name="pencil-outline" size={18} color="#ffffff" />
-            <Text style={styles.editCtaText}>Edit Identification</Text>
-          </Pressable>
+        <View style={{ flexDirection: 'row', gap: 8 }}>
+          <View style={[styles.btnWrapper, { flex: 1 }]}>
+            <Pressable 
+              style={({ hovered, pressed }) => [
+                styles.editCtaBtn,
+                pressed && { transform: [{ scale: 0.98 }] },
+                hovered && Platform.OS === 'web' && { shadowOpacity: 0.4 }
+              ]}
+              onPress={() => setModalVisible(true)}
+            >
+              <LinearGradient
+                colors={['#7a1a1f', '#4a1017']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={StyleSheet.absoluteFillObject}
+              />
+              <MaterialCommunityIcons name="pencil-outline" size={16} color="#ffffff" />
+              <Text style={styles.editCtaText}>Edit Profile</Text>
+            </Pressable>
+          </View>
+
+          <View style={[styles.btnWrapper, { flex: 1 }]}>
+            <Pressable 
+              style={({ hovered, pressed }) => [
+                styles.editCtaBtn,
+                pressed && { transform: [{ scale: 0.98 }] },
+                hovered && Platform.OS === 'web' && { shadowOpacity: 0.4 }
+              ]}
+              onPress={handleSaveAndNext}
+            >
+              <LinearGradient
+                colors={['#047857', '#064e3b']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={StyleSheet.absoluteFillObject}
+              />
+              <Text style={styles.editCtaText}>Save & Next</Text>
+              <MaterialCommunityIcons name="arrow-right" size={16} color="#ffffff" />
+            </Pressable>
+          </View>
         </View>
       </View>
+
 
       {/* Decorative Ambient Background Blobs */}
       <View style={styles.bgBlobTop} pointerEvents="none" />
@@ -120,7 +167,7 @@ export default function InstitutionalProfileScreen({
       <View style={styles.bgBlobBottomRight} pointerEvents="none" />
 
       <ScrollView style={styles.scrollContent} contentContainerStyle={styles.scrollInner} showsVerticalScrollIndicator={false}>
-        {/* Status Banner */}
+        {/* Profile Status Banner */}
         <View style={styles.alertCard}>
           <View style={styles.alertIconBox}>
             <MaterialCommunityIcons name="office-building-outline" size={20} color={COLORS.amber900} />
@@ -131,7 +178,7 @@ export default function InstitutionalProfileScreen({
           </View>
         </View>
 
-        {/* Section 1: Identification */}
+        {/* Section 1: Society Identification */}
         <View style={styles.card}>
           <View style={styles.cardHeaderRow}>
             <View style={styles.cardIconBox}>
@@ -148,15 +195,6 @@ export default function InstitutionalProfileScreen({
             <View style={styles.infoCol}>
               <Text style={styles.infoLabel}>REGISTRATION NUMBER</Text>
               <Text style={styles.infoValue}>{regNo || "-"}</Text>
-            </View>
-          </View>
-          
-          <View style={styles.divider} />
-
-          <View style={styles.infoGrid}>
-            <View style={styles.infoCol}>
-              <Text style={styles.infoLabel}>CENTER ID / CODE</Text>
-              <Text style={styles.infoValue}>{centerId || "-"}</Text>
             </View>
           </View>
         </View>
@@ -202,14 +240,14 @@ export default function InstitutionalProfileScreen({
           <TouchableOpacity style={StyleSheet.absoluteFillObject} activeOpacity={1} onPress={() => setModalVisible(false)} />
           <View style={styles.modalCard}>
             <View style={styles.modalHeaderRow}>
-              <Text style={styles.modalTitle}>Edit Society Profile</Text>
+              <Text style={styles.modalTitle}>Edit Institutional Profile</Text>
               <TouchableOpacity style={styles.closeBtnCircle} onPress={() => setModalVisible(false)} activeOpacity={0.7}>
                 <MaterialCommunityIcons name="close" size={18} color={COLORS.slate500} />
               </TouchableOpacity>
             </View>
 
             <ScrollView style={styles.modalFormScroll} showsVerticalScrollIndicator={false}>
-              <Text style={styles.modalSectionTitle}>Identification Details</Text>
+              <Text style={styles.modalSectionTitle}>Society Identification</Text>
               <View style={styles.modalFormGroup}>
                 <Text style={styles.modalLabel}>Milk Center Name</Text>
                 <TextInput style={styles.modalInput} value={editCenter} onChangeText={setEditCenter} placeholder="Enter center name" placeholderTextColor={COLORS.slate400} />
@@ -341,11 +379,11 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
   },
   alertCard: {
-    backgroundColor: 'rgba(254, 252, 232, 0.8)', // amber-50/80 roughly
+    backgroundColor: 'rgba(254, 252, 232, 0.8)',
     borderRadius: 14,
     padding: 12,
     flexDirection: 'row',
-    alignItems: 'center', // Center vertically
+    alignItems: 'center',
     gap: 10,
     borderWidth: 1,
     borderColor: 'rgba(253, 230, 138, 0.5)',
@@ -473,12 +511,14 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(15, 23, 42, 0.65)', // slate-900/65
+    backgroundColor: 'rgba(15, 23, 42, 0.65)',
     justifyContent: 'flex-end',
     zIndex: 9999,
   },
   modalCard: {
     width: '100%',
+    maxWidth: 500,
+    alignSelf: 'center',
     backgroundColor: COLORS.surface,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,

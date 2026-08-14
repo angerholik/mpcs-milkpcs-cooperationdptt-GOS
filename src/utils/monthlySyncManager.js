@@ -96,3 +96,66 @@ export async function getSectionStates(societyName, reportingMonth) {
     return null;
   }
 }
+
+export async function saveMilkSectionStates(societyName, reportingMonth, sectionStates) {
+  try {
+    const key = `MILK_SECTION_STATES_${(societyName || 'default').toLowerCase()}_${(reportingMonth || 'current').toLowerCase()}`;
+    await AsyncStorage.setItem(key, JSON.stringify(sectionStates));
+    return true;
+  } catch (e) {
+    console.warn('Failed to save milk section states:', e);
+    return false;
+  }
+}
+
+export async function getMilkSectionStates(societyName, reportingMonth) {
+  try {
+    const key = `MILK_SECTION_STATES_${(societyName || 'default').toLowerCase()}_${(reportingMonth || 'current').toLowerCase()}`;
+    const raw = await AsyncStorage.getItem(key);
+    if (!raw) return null;
+    return JSON.parse(raw);
+  } catch (e) {
+    console.warn('Failed to load milk section states:', e);
+    return null;
+  }
+}
+
+const MILK_DATA_PREFIX = '@milk_data_';
+
+export async function saveMilkSectionData(societyName, reportingMonth, sectionKey, payload) {
+  try {
+    const key = `${MILK_DATA_PREFIX}${(societyName || 'default').toLowerCase()}_${(reportingMonth || 'current').toLowerCase()}_${sectionKey}`;
+    await AsyncStorage.setItem(key, JSON.stringify(payload));
+    return true;
+  } catch (e) {
+    console.warn(`Failed to save milk section data for ${sectionKey}:`, e);
+    return false;
+  }
+}
+
+export async function getMilkSectionData(societyName, reportingMonth, sectionKey) {
+  try {
+    const key = `${MILK_DATA_PREFIX}${(societyName || 'default').toLowerCase()}_${(reportingMonth || 'current').toLowerCase()}_${sectionKey}`;
+    const raw = await AsyncStorage.getItem(key);
+    if (!raw) return null;
+    return JSON.parse(raw);
+  } catch (e) {
+    console.warn(`Failed to load milk section data for ${sectionKey}:`, e);
+    return null;
+  }
+}
+
+export async function clearMilkSectionData(societyName, reportingMonth) {
+  try {
+    const sections = ['evidence', 'operations', 'activities', 'compliance'];
+    for (const sec of sections) {
+      const key = `${MILK_DATA_PREFIX}${(societyName || 'default').toLowerCase()}_${(reportingMonth || 'current').toLowerCase()}_${sec}`;
+      await AsyncStorage.removeItem(key);
+    }
+    return true;
+  } catch (e) {
+    console.warn('Failed to clear milk section data:', e);
+    return false;
+  }
+}
+

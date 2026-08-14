@@ -34,6 +34,8 @@ const COLORS = {
 
 const FONT_FAMILY = 'Manrope';
 
+const isEvidenceCaptured = (st) => Boolean(st) && st.includes('CAPTURED') && !st.includes('NOT');
+
 export default function HomeScreen({
   activeModule = 'MILK',
   onSwitchModule,
@@ -180,7 +182,7 @@ export default function HomeScreen({
           ]}
           onPress={() => {
             if (!onNavigateScreen) return;
-            if (!evidenceStatus?.includes('CAPTURED') && !evidenceStatus?.includes('Valid')) {
+            if (!isEvidenceCaptured(evidenceStatus) && !evidenceStatus?.includes('Valid')) {
               onNavigateScreen('MPCS_EVIDENCE');
             } else if (!salesStatus?.includes('COMPLETED')) {
               onNavigateScreen('MPCS_SALES');
@@ -202,7 +204,7 @@ export default function HomeScreen({
               ]}
             >
               <Text style={styles.nextStepBtnText}>
-                {(!evidenceStatus?.includes('CAPTURED') && !evidenceStatus?.includes('Valid'))
+                {(!isEvidenceCaptured(evidenceStatus) && !evidenceStatus?.includes('Valid'))
                   ? 'Next Step: Digital Evidence (Live Visit)'
                   : !salesStatus?.includes('COMPLETED')
                     ? 'Next Step: Monthly Sales / Deposit'
@@ -258,14 +260,14 @@ export default function HomeScreen({
                     <View style={styles.moduleCardHeader}>
                       <View style={[
                         styles.moduleIconBox, 
-                        {backgroundColor: evidenceStatus === 'CAPTURED ✓' ? COLORS.emerald50 : COLORS.slate50, borderColor: evidenceStatus === 'CAPTURED ✓' ? '#a7f3d0' : COLORS.slate100},
+                        {backgroundColor: isEvidenceCaptured(evidenceStatus) ? COLORS.emerald50 : COLORS.slate50, borderColor: isEvidenceCaptured(evidenceStatus) ? '#a7f3d0' : COLORS.slate100},
                         Platform.OS === 'web' && { transition: 'all 0.3s' },
                         hovered && { backgroundColor: '#fef2f2', borderColor: '#fee2e2' }
                       ]}>
-                        <MaterialCommunityIcons name="image-outline" size={24} color={evidenceStatus === 'CAPTURED ✓' ? COLORS.emerald700 : hovered ? '#7a1a1f' : COLORS.slate400} />
+                        <MaterialCommunityIcons name="image-outline" size={24} color={isEvidenceCaptured(evidenceStatus) ? COLORS.emerald700 : hovered ? '#7a1a1f' : COLORS.slate400} />
                       </View>
-                      <View style={[styles.statusPill, {backgroundColor: evidenceStatus.includes('CAPTURED') ? COLORS.emerald50 : COLORS.slate100, borderColor: evidenceStatus.includes('CAPTURED') ? 'rgba(16,185,129,0.3)' : 'rgba(226,232,240,0.5)'}]}>
-                        <Text style={[styles.statusPillText, {color: evidenceStatus.includes('CAPTURED') ? COLORS.emerald700 : COLORS.slate500}]}>
+                      <View style={[styles.statusPill, {backgroundColor: isEvidenceCaptured(evidenceStatus) ? COLORS.emerald50 : COLORS.slate100, borderColor: isEvidenceCaptured(evidenceStatus) ? 'rgba(16,185,129,0.3)' : 'rgba(226,232,240,0.5)'}]}>
+                        <Text style={[styles.statusPillText, {color: isEvidenceCaptured(evidenceStatus) ? COLORS.emerald700 : COLORS.slate500}]}>
                           {evidenceStatus || 'NOT CAPTURED'}
                         </Text>
                       </View>

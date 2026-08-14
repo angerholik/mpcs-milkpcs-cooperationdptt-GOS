@@ -1,24 +1,28 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, Platform } from 'react-native';
-import { MaterialIcons } from '@expo/vector-icons';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, Platform, Pressable } from 'react-native';
+import { MaterialIcons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 
 const COLORS = {
-  primary: '#7C1C1C',
-  primaryLight: '#FEF2F2',
-  bg: '#F8F5F2',
-  cardBg: '#FFFFFF',
-  textPrimary: '#0F172A',
-  textSecondary: '#64748B',
-  border: '#E2E8F0',
-  success: '#10B981',
-  successBg: '#ECFDF5',
+  surface: '#ffffff',
+  slate800: '#1e293b',
+  slate700: '#334155',
+  slate600: '#475569',
+  slate500: '#64748b',
+  slate400: '#94a3b8',
+  slate300: '#cbd5e1',
+  slate200: '#e2e8f0',
+  slate100: '#f1f5f9',
+  slate50: '#f8fafc',
+  primary: '#7a1a1f',
+  amber900: '#78350f',
+  amber100: '#fef3c7',
+  emerald700: '#047857',
+  emerald500: '#10b981',
+  emerald50: '#ecfdf5',
 };
 
-const FONT_FAMILY = Platform.select({
-  web: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-  ios: 'System',
-  android: 'Roboto',
-});
+const FONT_FAMILY = 'Manrope';
 
 export default function DemographicsScreen({
   mSc = '', setMSc, fSc = '', setFSc,
@@ -26,10 +30,13 @@ export default function DemographicsScreen({
   mObc = '', setMObc, fObc = '', setFObc,
   mGen = '', setMGen, fGen = '', setFGen,
   lastUpdated = "Not verified",
+  onSave,
+  onSaveNext,
   onNext,
   onBack
 }) {
   const [modalVisible, setModalVisible] = useState(false);
+  const [isSaved, setIsSaved] = useState(false);
 
   // Modal Temp State
   const [tMSc, setTMSc] = useState(mSc);
@@ -40,6 +47,13 @@ export default function DemographicsScreen({
   const [tFObc, setTFObc] = useState(fObc);
   const [tMGen, setTMGen] = useState(mGen);
   const [tFGen, setTFGen] = useState(fGen);
+
+  useEffect(() => {
+    setTMSc(mSc || ''); setTFSc(fSc || '');
+    setTMSt(mSt || ''); setTFSt(fSt || '');
+    setTMObc(mObc || ''); setTFObc(fObc || '');
+    setTMGen(mGen || ''); setTFGen(fGen || '');
+  }, [mSc, fSc, mSt, fSt, mObc, fObc, mGen, fGen]);
 
   const calcTotal = (m, f) => (parseInt(m) || 0) + (parseInt(f) || 0);
 
@@ -62,40 +76,123 @@ export default function DemographicsScreen({
     if (setMGen) setMGen(tMGen);
     if (setFGen) setFGen(tFGen);
     setModalVisible(false);
+    setIsSaved(true);
+    setTimeout(() => setIsSaved(false), 2500);
+    if (onSave) {
+      onSave({
+        mSc: tMSc, fSc: tFSc,
+        mSt: tMSt, fSt: tFSt,
+        mObc: tMObc, fObc: tFObc,
+        mGen: tMGen, fGen: tFGen
+      });
+    }
   };
 
-  const categories = [
-    { label: 'SC Category', m: mSc, f: fSc, tot: scTotal },
-    { label: 'ST Category', m: mSt, f: fSt, tot: stTotal },
-    { label: 'OBC Category', m: mObc, f: fObc, tot: obcTotal },
-    { label: 'General Category', m: mGen, f: fGen, tot: genTotal },
+  const handleSaveAndNext = () => {
+    handleSave();
+    if (onSaveNext) {
+      onSaveNext();
+    } else if (onNext) {
+      onNext();
+    }
+  };
+
+  const demographicsData = [
+    { category: 'SC', male: mSc, female: fSc, total: scTotal },
+    { category: 'ST', male: mSt, female: fSt, total: stTotal },
+    { category: 'OBC', male: mObc, female: fObc, total: obcTotal },
+    { category: 'General', male: mGen, female: fGen, total: genTotal },
   ];
 
   return (
     <View style={styles.container}>
       {/* Top Header */}
       <View style={styles.topBar}>
+        <LinearGradient
+          colors={['#7a1a1f', '#4a1017']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 0 }}
+          style={StyleSheet.absoluteFillObject}
+        />
         <TouchableOpacity style={styles.backBtn} onPress={onBack} activeOpacity={0.7}>
-          <MaterialIcons name="arrow-back" size={22} color="#FFFFFF" />
+          <MaterialCommunityIcons name="arrow-left" size={24} color="#FFFFFF" />
         </TouchableOpacity>
-        <View style={{ flex: 1, marginLeft: 10 }}>
+        <View style={styles.topBarTitleContainer}>
           <Text style={styles.moduleTag}>MILK PCS</Text>
-          <Text style={styles.screenTitleHeader}>Society Demographics</Text>
+          <Text style={styles.screenTitleHeader}>Registered Demographics</Text>
         </View>
       </View>
 
+      {/* Sticky Action Banner at Top */}
+      <View style={styles.stickyActionBanner}>
+        <View style={{ flexDirection: 'row', gap: 8 }}>
+          <View style={[styles.btnWrapper, { flex: 1 }]}>
+            <Pressable 
+              style={({ hovered, pressed }) => [
+                styles.editCtaBtn,
+                pressed && { transform: [{ scale: 0.98 }] },
+                hovered && Platform.OS === 'web' && { shadowOpacity: 0.4 }
+              ]}
+              onPress={() => setModalVisible(true)}
+            >
+              <LinearGradient
+                colors={['#7a1a1f', '#4a1017']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={StyleSheet.absoluteFillObject}
+              />
+              <MaterialCommunityIcons name="pencil-outline" size={16} color="#ffffff" />
+              <Text style={styles.editCtaText}>Edit Demographics</Text>
+            </Pressable>
+          </View>
+
+          <View style={[styles.btnWrapper, { flex: 1 }]}>
+            <Pressable 
+              style={({ hovered, pressed }) => [
+                styles.editCtaBtn,
+                pressed && { transform: [{ scale: 0.98 }] },
+                hovered && Platform.OS === 'web' && { shadowOpacity: 0.4 }
+              ]}
+              onPress={handleSaveAndNext}
+            >
+              <LinearGradient
+                colors={['#047857', '#064e3b']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={StyleSheet.absoluteFillObject}
+              />
+              <Text style={styles.editCtaText}>Save & Next</Text>
+              <MaterialCommunityIcons name="arrow-right" size={16} color="#ffffff" />
+            </Pressable>
+          </View>
+        </View>
+      </View>
+
+
+      {/* Decorative Ambient Background Blobs */}
+      <View style={styles.bgBlobTop} pointerEvents="none" />
+      <View style={styles.bgBlobBottomLeft} pointerEvents="none" />
+      <View style={styles.bgBlobBottomRight} pointerEvents="none" />
+
       <ScrollView style={styles.scrollContent} contentContainerStyle={styles.scrollInner} showsVerticalScrollIndicator={false}>
-        {/* Status Banner */}
-        <View style={styles.statusBanner}>
-          <MaterialIcons name="info" size={18} color={COLORS.primary} />
-          <Text style={styles.statusTitle}>Last updated: {lastUpdated}</Text>
+        {/* Profile Status Banner */}
+        <View style={styles.alertCard}>
+          <View style={styles.alertIconBox}>
+            <MaterialCommunityIcons name="account-group-outline" size={20} color={COLORS.amber900} />
+          </View>
+          <View style={styles.alertBody}>
+            <Text style={styles.alertTitle}>Demographics Data</Text>
+            <Text style={styles.alertText}>Last updated: {lastUpdated}</Text>
+          </View>
         </View>
 
-        {/* Demographics Card */}
+        {/* Demographic Table Card */}
         <View style={styles.card}>
           <View style={styles.cardHeaderRow}>
-            <MaterialIcons name="groups" size={18} color={COLORS.primary} />
-            <Text style={styles.cardHeaderTitle}>Member Breakdown</Text>
+            <View style={styles.cardIconBox}>
+              <MaterialCommunityIcons name="account-multiple" size={20} color={COLORS.primary} />
+            </View>
+            <Text style={styles.cardHeaderTitle}>Category-wise Member Breakdown</Text>
           </View>
 
           {/* Table Header */}
@@ -107,16 +204,16 @@ export default function DemographicsScreen({
           </View>
 
           {/* Table Rows */}
-          {categories.map((cat) => (
-            <View style={styles.tableRow} key={cat.label}>
-              <Text style={[styles.cellCategory, { flex: 1.2 }]}>{cat.label}</Text>
-              <Text style={[styles.cellValue, { flex: 1, textAlign: 'center' }]}>{cat.m !== '' ? cat.m : '-'}</Text>
-              <Text style={[styles.cellValue, { flex: 1, textAlign: 'center' }]}>{cat.f !== '' ? cat.f : '-'}</Text>
-              <Text style={[styles.cellTotal, { flex: 1, textAlign: 'right' }]}>{cat.tot || '-'}</Text>
+          {demographicsData.map((row) => (
+            <View style={styles.tableRow} key={row.category}>
+              <Text style={[styles.cellCategory, { flex: 1.2 }]}>{row.category}</Text>
+              <Text style={[styles.cellValue, { flex: 1, textAlign: 'center' }]}>{row.male !== '' ? row.male : '-'}</Text>
+              <Text style={[styles.cellValue, { flex: 1, textAlign: 'center' }]}>{row.female !== '' ? row.female : '-'}</Text>
+              <Text style={[styles.cellTotal, { flex: 1, textAlign: 'right' }]}>{row.total || '-'}</Text>
             </View>
           ))}
 
-          {/* Grand Total */}
+          {/* Grand Total Row */}
           <View style={styles.grandTotalRow}>
             <Text style={[styles.grandTotalLabel, { flex: 1.2 }]}>GRAND TOTAL</Text>
             <Text style={[styles.grandTotalVal, { flex: 1, textAlign: 'center' }]}>{maleSum || '-'}</Text>
@@ -125,10 +222,6 @@ export default function DemographicsScreen({
           </View>
         </View>
 
-        {/* Action Button */}
-        <TouchableOpacity style={styles.editCtaBtn} onPress={() => setModalVisible(true)} activeOpacity={0.85}>
-          <Text style={styles.editCtaText}>VIEW / EDIT DEMOGRAPHICS</Text>
-        </TouchableOpacity>
       </ScrollView>
 
       {/* In-App Slide-Up Sheet */}
@@ -139,74 +232,86 @@ export default function DemographicsScreen({
             <View style={styles.modalHeaderRow}>
               <Text style={styles.modalTitle}>Edit Demographics</Text>
               <TouchableOpacity style={styles.closeBtnCircle} onPress={() => setModalVisible(false)} activeOpacity={0.7}>
-                <MaterialIcons name="close" size={18} color="#64748B" />
+                <MaterialCommunityIcons name="close" size={18} color={COLORS.slate500} />
               </TouchableOpacity>
             </View>
 
             <ScrollView style={styles.modalFormScroll} showsVerticalScrollIndicator={false}>
-              {/* SC */}
+              
               <View style={styles.modalCategoryGroup}>
-                <Text style={styles.modalCategoryTitle}>SC Category</Text>
+                <Text style={styles.modalSectionTitle}>SC Category</Text>
                 <View style={styles.modalInputRow}>
                   <View style={{ flex: 1 }}>
                     <Text style={styles.modalLabel}>Male Members</Text>
-                    <TextInput style={styles.modalInput} keyboardType="numeric" value={tMSc} onChangeText={setTMSc} placeholder="0" placeholderTextColor="#94A3B8" />
+                    <TextInput style={styles.modalInput} keyboardType="numeric" value={tMSc} onChangeText={(val) => setTMSc(val.replace(/[^0-9]/g, ''))} placeholder="0" placeholderTextColor={COLORS.slate400} />
                   </View>
                   <View style={{ flex: 1 }}>
                     <Text style={styles.modalLabel}>Female Members</Text>
-                    <TextInput style={styles.modalInput} keyboardType="numeric" value={tFSc} onChangeText={setTFSc} placeholder="0" placeholderTextColor="#94A3B8" />
+                    <TextInput style={styles.modalInput} keyboardType="numeric" value={tFSc} onChangeText={(val) => setTFSc(val.replace(/[^0-9]/g, ''))} placeholder="0" placeholderTextColor={COLORS.slate400} />
                   </View>
                 </View>
               </View>
 
-              {/* ST */}
               <View style={styles.modalCategoryGroup}>
-                <Text style={styles.modalCategoryTitle}>ST Category</Text>
+                <Text style={styles.modalSectionTitle}>ST Category</Text>
                 <View style={styles.modalInputRow}>
                   <View style={{ flex: 1 }}>
                     <Text style={styles.modalLabel}>Male Members</Text>
-                    <TextInput style={styles.modalInput} keyboardType="numeric" value={tMSt} onChangeText={setTMSt} placeholder="0" placeholderTextColor="#94A3B8" />
+                    <TextInput style={styles.modalInput} keyboardType="numeric" value={tMSt} onChangeText={(val) => setTMSt(val.replace(/[^0-9]/g, ''))} placeholder="0" placeholderTextColor={COLORS.slate400} />
                   </View>
                   <View style={{ flex: 1 }}>
                     <Text style={styles.modalLabel}>Female Members</Text>
-                    <TextInput style={styles.modalInput} keyboardType="numeric" value={tFSt} onChangeText={setTFSt} placeholder="0" placeholderTextColor="#94A3B8" />
+                    <TextInput style={styles.modalInput} keyboardType="numeric" value={tFSt} onChangeText={(val) => setTFSt(val.replace(/[^0-9]/g, ''))} placeholder="0" placeholderTextColor={COLORS.slate400} />
                   </View>
                 </View>
               </View>
 
-              {/* OBC */}
               <View style={styles.modalCategoryGroup}>
-                <Text style={styles.modalCategoryTitle}>OBC Category</Text>
+                <Text style={styles.modalSectionTitle}>OBC Category</Text>
                 <View style={styles.modalInputRow}>
                   <View style={{ flex: 1 }}>
                     <Text style={styles.modalLabel}>Male Members</Text>
-                    <TextInput style={styles.modalInput} keyboardType="numeric" value={tMObc} onChangeText={setTMObc} placeholder="0" placeholderTextColor="#94A3B8" />
+                    <TextInput style={styles.modalInput} keyboardType="numeric" value={tMObc} onChangeText={(val) => setTMObc(val.replace(/[^0-9]/g, ''))} placeholder="0" placeholderTextColor={COLORS.slate400} />
                   </View>
                   <View style={{ flex: 1 }}>
                     <Text style={styles.modalLabel}>Female Members</Text>
-                    <TextInput style={styles.modalInput} keyboardType="numeric" value={tFObc} onChangeText={setTFObc} placeholder="0" placeholderTextColor="#94A3B8" />
+                    <TextInput style={styles.modalInput} keyboardType="numeric" value={tFObc} onChangeText={(val) => setTFObc(val.replace(/[^0-9]/g, ''))} placeholder="0" placeholderTextColor={COLORS.slate400} />
                   </View>
                 </View>
               </View>
 
-              {/* General */}
               <View style={styles.modalCategoryGroup}>
-                <Text style={styles.modalCategoryTitle}>General Category</Text>
+                <Text style={styles.modalSectionTitle}>General Category</Text>
                 <View style={styles.modalInputRow}>
                   <View style={{ flex: 1 }}>
                     <Text style={styles.modalLabel}>Male Members</Text>
-                    <TextInput style={styles.modalInput} keyboardType="numeric" value={tMGen} onChangeText={setTMGen} placeholder="0" placeholderTextColor="#94A3B8" />
+                    <TextInput style={styles.modalInput} keyboardType="numeric" value={tMGen} onChangeText={(val) => setTMGen(val.replace(/[^0-9]/g, ''))} placeholder="0" placeholderTextColor={COLORS.slate400} />
                   </View>
                   <View style={{ flex: 1 }}>
                     <Text style={styles.modalLabel}>Female Members</Text>
-                    <TextInput style={styles.modalInput} keyboardType="numeric" value={tFGen} onChangeText={setTFGen} placeholder="0" placeholderTextColor="#94A3B8" />
+                    <TextInput style={styles.modalInput} keyboardType="numeric" value={tFGen} onChangeText={(val) => setTFGen(val.replace(/[^0-9]/g, ''))} placeholder="0" placeholderTextColor={COLORS.slate400} />
                   </View>
                 </View>
               </View>
 
-              <TouchableOpacity style={styles.saveModalBtn} onPress={handleSave} activeOpacity={0.85}>
-                <Text style={styles.saveModalText}>SAVE DEMOGRAPHICS RECORD</Text>
-              </TouchableOpacity>
+              <View style={[styles.btnWrapper, { marginTop: 16, marginBottom: 20 }]}>
+                <Pressable 
+                  style={({ hovered, pressed }) => [
+                    styles.saveModalBtn,
+                    pressed && { transform: [{ scale: 0.98 }] },
+                    hovered && Platform.OS === 'web' && { shadowOpacity: 0.4 }
+                  ]}
+                  onPress={handleSave}
+                >
+                  <LinearGradient
+                    colors={['#7a1a1f', '#4a1017']}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 0 }}
+                    style={StyleSheet.absoluteFillObject}
+                  />
+                  <Text style={styles.saveModalText}>Save Changes</Text>
+                </Pressable>
+              </View>
             </ScrollView>
           </View>
         </View>
@@ -216,53 +321,190 @@ export default function DemographicsScreen({
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.bg, position: 'relative' },
+  container: { flex: 1, backgroundColor: COLORS.slate50, position: 'relative' },
   topBar: {
-    backgroundColor: COLORS.primary,
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
+    paddingHorizontal: 12,
     paddingVertical: 12,
     paddingTop: Platform.OS === 'ios' ? 44 : 12,
+    overflow: 'hidden',
   },
-  backBtn: { padding: 4 },
-  moduleTag: { color: 'rgba(255,255,255,0.7)', fontSize: 10, fontWeight: '700', letterSpacing: 0.8 },
-  screenTitleHeader: { color: '#FFFFFF', fontFamily: FONT_FAMILY, fontSize: 16, fontWeight: '700' },
+  backBtn: { 
+    padding: 8,
+    marginRight: 8,
+  },
+  topBarTitleContainer: {
+    flex: 1,
+  },
+  stickyActionBanner: {
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(226, 232, 240, 0.8)',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    zIndex: 10,
+  },
+  bgBlobTop: {
+    position: 'absolute',
+    top: -40,
+    right: -40,
+    width: 260,
+    height: 260,
+    borderRadius: 130,
+    backgroundColor: 'rgba(122, 26, 31, 0.08)',
+    zIndex: -1,
+  },
+  bgBlobBottomLeft: {
+    position: 'absolute',
+    bottom: 80,
+    left: -50,
+    width: 240,
+    height: 240,
+    borderRadius: 120,
+    backgroundColor: 'rgba(180, 83, 9, 0.06)',
+    zIndex: -1,
+  },
+  bgBlobBottomRight: {
+    position: 'absolute',
+    top: '40%',
+    right: -60,
+    width: 220,
+    height: 220,
+    borderRadius: 110,
+    backgroundColor: 'rgba(122, 26, 31, 0.05)',
+    zIndex: -1,
+  },
+  moduleTag: { 
+    color: 'rgba(255,255,255,0.7)', 
+    fontFamily: FONT_FAMILY,
+    fontSize: 8, 
+    fontWeight: '800', 
+    letterSpacing: 1.2,
+    marginBottom: 2,
+  },
+  screenTitleHeader: { 
+    color: '#FFFFFF', 
+    fontFamily: FONT_FAMILY, 
+    fontSize: 16, 
+    fontWeight: '800',
+    letterSpacing: -0.16,
+  },
   scrollContent: { flex: 1 },
-  scrollInner: { padding: 14 },
-  statusBanner: {
-    backgroundColor: COLORS.primaryLight,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: '#FECACA',
+  scrollInner: { 
+    padding: 12,
+    gap: 12,
+    paddingBottom: 40,
+  },
+  alertCard: {
+    backgroundColor: 'rgba(254, 252, 232, 0.8)',
+    borderRadius: 14,
+    padding: 12,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    padding: 12,
-    marginBottom: 14,
-  },
-  statusTitle: { fontFamily: FONT_FAMILY, fontSize: 12, fontWeight: '700', color: COLORS.primary },
-  card: {
-    backgroundColor: COLORS.cardBg,
-    borderRadius: 14,
-    padding: 14,
+    gap: 10,
     borderWidth: 1,
-    borderColor: COLORS.border,
-    marginBottom: 14,
+    borderColor: 'rgba(253, 230, 138, 0.5)',
+    shadowColor: '#0f172a',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    elevation: 2,
   },
-  cardHeaderRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 12 },
-  cardHeaderTitle: { fontFamily: FONT_FAMILY, fontSize: 14, fontWeight: '700', color: COLORS.textPrimary },
-  tableHeaderRow: { flexDirection: 'row', backgroundColor: '#F8FAFC', paddingVertical: 8, paddingHorizontal: 10, borderRadius: 6, marginBottom: 6 },
-  colHeader: { fontFamily: FONT_FAMILY, fontSize: 11, fontWeight: '700', color: COLORS.textSecondary },
-  tableRow: { flexDirection: 'row', paddingVertical: 10, paddingHorizontal: 10, borderBottomWidth: 1, borderBottomColor: '#F1F5F9' },
-  cellCategory: { fontFamily: FONT_FAMILY, fontSize: 12, fontWeight: '700', color: COLORS.textPrimary },
-  cellValue: { fontFamily: FONT_FAMILY, fontSize: 12, color: COLORS.textPrimary },
+  alertIconBox: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: COLORS.amber100,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  alertBody: {
+    flex: 1,
+    paddingRight: 8,
+  },
+  alertTitle: {
+    fontFamily: FONT_FAMILY,
+    fontSize: 13,
+    fontWeight: '800',
+    color: COLORS.amber900,
+    marginBottom: 2,
+  },
+  alertText: {
+    fontFamily: FONT_FAMILY,
+    fontSize: 11,
+    fontWeight: '500',
+    color: 'rgba(146, 64, 14, 0.9)',
+  },
+  card: {
+    backgroundColor: COLORS.surface,
+    borderRadius: 16,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(226,232,240,0.6)',
+    shadowColor: '#0f172a',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.08,
+    shadowRadius: 20,
+    elevation: 3,
+  },
+  cardHeaderRow: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    gap: 10, 
+    marginBottom: 12 
+  },
+  cardIconBox: {
+    width: 32,
+    height: 32,
+    borderRadius: 10,
+    backgroundColor: COLORS.slate50,
+    borderWidth: 1,
+    borderColor: COLORS.slate100,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cardHeaderTitle: { 
+    fontFamily: FONT_FAMILY, 
+    fontSize: 14, 
+    fontWeight: '700', 
+    color: COLORS.slate800,
+    letterSpacing: -0.14,
+  },
+  tableHeaderRow: { flexDirection: 'row', backgroundColor: COLORS.slate50, paddingVertical: 8, paddingHorizontal: 10, borderRadius: 6, marginBottom: 6 },
+  colHeader: { fontFamily: FONT_FAMILY, fontSize: 11, fontWeight: '700', color: COLORS.slate500 },
+  tableRow: { flexDirection: 'row', paddingVertical: 10, paddingHorizontal: 10, borderBottomWidth: 1, borderBottomColor: COLORS.slate50 },
+  cellCategory: { fontFamily: FONT_FAMILY, fontSize: 12, fontWeight: '700', color: COLORS.slate800 },
+  cellValue: { fontFamily: FONT_FAMILY, fontSize: 12, color: COLORS.slate700 },
   cellTotal: { fontFamily: FONT_FAMILY, fontSize: 12, fontWeight: '700', color: COLORS.primary },
-  grandTotalRow: { flexDirection: 'row', backgroundColor: COLORS.primaryLight, paddingVertical: 10, paddingHorizontal: 10, borderRadius: 6, marginTop: 8 },
+  grandTotalRow: { flexDirection: 'row', backgroundColor: 'rgba(122, 26, 31, 0.05)', paddingVertical: 10, paddingHorizontal: 10, borderRadius: 6, marginTop: 8 },
   grandTotalLabel: { fontFamily: FONT_FAMILY, fontSize: 12, fontWeight: '800', color: COLORS.primary },
-  grandTotalVal: { fontFamily: FONT_FAMILY, fontSize: 12, fontWeight: '800', color: COLORS.textPrimary },
-  editCtaBtn: { backgroundColor: COLORS.primary, paddingVertical: 14, borderRadius: 10, alignItems: 'center' },
-  editCtaText: { color: '#FFFFFF', fontFamily: FONT_FAMILY, fontSize: 13, fontWeight: '700' },
+  grandTotalVal: { fontFamily: FONT_FAMILY, fontSize: 12, fontWeight: '800', color: COLORS.slate800 },
+
+  btnWrapper: {
+    borderRadius: 16,
+    shadowColor: COLORS.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
+    overflow: 'hidden',
+  },
+  editCtaBtn: { 
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 12, 
+    paddingHorizontal: 16,
+  },
+  editCtaText: { 
+    color: '#FFFFFF', 
+    fontFamily: FONT_FAMILY, 
+    fontSize: 13, 
+    fontWeight: '700',
+    letterSpacing: 0.5,
+  },
 
   // In-App Slide-Up Sheet
   inAppModalOverlay: {
@@ -277,49 +519,90 @@ const styles = StyleSheet.create({
   },
   modalCard: {
     width: '100%',
-    backgroundColor: '#FFFFFF',
+    maxWidth: 500,
+    alignSelf: 'center',
+    backgroundColor: COLORS.surface,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     padding: 20,
     paddingBottom: Platform.OS === 'ios' ? 34 : 20,
     maxHeight: '85%',
+    shadowColor: '#0f172a',
+    shadowOffset: { width: 0, height: -10 },
+    shadowOpacity: 0.1,
+    shadowRadius: 40,
     elevation: 25,
   },
   modalHeaderRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingBottom: 12,
+    paddingBottom: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#F1F5F9',
-    marginBottom: 12,
+    borderBottomColor: COLORS.slate100,
+    marginBottom: 16,
   },
-  modalTitle: { fontFamily: FONT_FAMILY, fontSize: 16, fontWeight: '700', color: COLORS.textPrimary },
+  modalTitle: { 
+    fontFamily: FONT_FAMILY, 
+    fontSize: 16, 
+    fontWeight: '800', 
+    color: COLORS.slate800,
+    letterSpacing: -0.16,
+  },
   closeBtnCircle: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: '#F1F5F9',
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: COLORS.slate50,
+    borderWidth: 1,
+    borderColor: COLORS.slate100,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  modalFormScroll: { maxHeight: 420 },
+  modalFormScroll: { 
+    maxHeight: 500 
+  },
   modalCategoryGroup: { marginBottom: 14 },
-  modalCategoryTitle: { fontFamily: FONT_FAMILY, fontSize: 12, fontWeight: '700', color: COLORS.primary, marginBottom: 6 },
+  modalSectionTitle: { 
+    fontFamily: FONT_FAMILY, 
+    fontSize: 12, 
+    fontWeight: '800', 
+    color: COLORS.slate800, 
+    marginBottom: 12 
+  },
   modalInputRow: { flexDirection: 'row', gap: 10 },
-  modalLabel: { fontFamily: FONT_FAMILY, fontSize: 11, fontWeight: '500', color: COLORS.textSecondary, marginBottom: 4 },
+  modalLabel: { 
+    fontFamily: FONT_FAMILY, 
+    fontSize: 9, 
+    fontWeight: '800', 
+    color: COLORS.slate500,
+    letterSpacing: 1.2,
+    marginBottom: 6,
+  },
   modalInput: {
     borderWidth: 1,
-    borderColor: '#CBD5E1',
+    borderColor: COLORS.slate200,
     borderRadius: 10,
-    paddingHorizontal: 12,
+    paddingHorizontal: 14,
     height: 42,
     fontFamily: FONT_FAMILY,
     fontSize: 13,
-    color: COLORS.textPrimary,
-    backgroundColor: '#FAFAFA',
-    outlineStyle: 'none',
+    fontWeight: '500',
+    color: COLORS.slate800,
+    backgroundColor: COLORS.slate50,
+    ...(Platform.OS === 'web' && { outlineStyle: 'none' }),
   },
-  saveModalBtn: { backgroundColor: COLORS.primary, paddingVertical: 14, borderRadius: 10, alignItems: 'center', marginTop: 10, marginBottom: 10 },
-  saveModalText: { color: '#FFFFFF', fontFamily: FONT_FAMILY, fontSize: 13, fontWeight: '700' },
+  saveModalBtn: { 
+    alignItems: 'center', 
+    justifyContent: 'center',
+    paddingVertical: 12, 
+    paddingHorizontal: 16,
+  },
+  saveModalText: { 
+    color: '#FFFFFF', 
+    fontFamily: FONT_FAMILY, 
+    fontSize: 13, 
+    fontWeight: '700',
+    letterSpacing: 0.5,
+  },
 });
