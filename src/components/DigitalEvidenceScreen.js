@@ -151,8 +151,8 @@ export default function DigitalEvidenceScreen({
   };
 
   const displayImage = imageUri || DEFAULT_BUILDING_IMAGE;
-  const gpsDisplay = location 
- 
+  const gpsDisplay = location
+
     ? (typeof location === 'string' ? location : `${location.latitude ? location.latitude.toFixed(4) : (location.coords?.latitude?.toFixed(4) || '')} N, ${location.longitude ? location.longitude.toFixed(4) : (location.coords?.longitude?.toFixed(4) || '')} E`)
     : '';
   const timeDisplay = timestamp || '';
@@ -242,12 +242,7 @@ export default function DigitalEvidenceScreen({
             </Pressable>
           )}
 
-          {!imageUri && (
-             <TouchableOpacity style={styles.galleryBtn} onPress={handlePickGallery} activeOpacity={0.7}>
-               <MaterialCommunityIcons name="image-multiple-outline" size={16} color={COLORS.primary} style={{ marginRight: 8 }} />
-               <Text style={styles.galleryBtnText}>CHOOSE FROM GALLERY</Text>
-             </TouchableOpacity>
-          )}
+
         </View>
 
         {/* ── GPS & Location Card ── */}
@@ -277,19 +272,7 @@ export default function DigitalEvidenceScreen({
           </View>
 
           {/* Device / Captured By */}
-          <View style={{ gap: 5, marginTop: 12 }}>
-            <Text style={styles.inputLabel}>Captured By (Inspector)</Text>
-            <View style={styles.inputBox}>
-              <MaterialCommunityIcons name="account-outline" size={15} color={COLORS.slate400} style={styles.inputIcon} />
-              <TextInput
-                style={styles.textInput}
-                value={officerValue}
-                onChangeText={setReportedBy}
-                placeholder="Enter officer name..."
-                placeholderTextColor={COLORS.slate300}
-              />
-            </View>
-          </View>
+
         </View>
       </ScrollView>
 
@@ -354,7 +337,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: { flex: 1 },
   scrollInner: { padding: 16, paddingBottom: 40, gap: 16 },
-  
+
   monthCard: {
     flexDirection: 'row',
     alignItems: 'center',

@@ -518,6 +518,7 @@ export default function App() {
       setDistrict(soc?.district || '');
       await clearMilkSectionData(soc?.name, reportingMonth || 'AUG 2024');
       await saveMasterStateToStorage({
+        type: soc?.type,
         centerName: soc?.name || '',
         registrationNumber: soc?.code || soc?.regNo || '',
         demographicsData: [],
@@ -577,7 +578,8 @@ export default function App() {
         netSurplusDeficit: overrides.netSurplusDeficit !== undefined ? overrides.netSurplusDeficit : (businessPerformanceData?.netSurplusDeficit || ''),
         reportingMonth: overrides.reportingMonth !== undefined ? overrides.reportingMonth : reportingMonth,
         selectedSociety: overrides.selectedSociety !== undefined ? overrides.selectedSociety : selectedSociety,
-        activityItems: overrides.activityItems !== undefined ? overrides.activityItems : activityItems
+        activityItems: overrides.activityItems !== undefined ? overrides.activityItems : activityItems,
+        type: overrides.type !== undefined ? overrides.type : selectedSociety?.type
       };
       await AsyncStorage.setItem(key, JSON.stringify(stateObj));
       await AsyncStorage.setItem(getLastSelectedSocietyKey(userEmail), activeSocName);
@@ -594,7 +596,12 @@ export default function App() {
           }
         }
 
-        if (selectedSociety?.type === 'MILK') {
+        if (stateObj.type === 'MILK') {
+          const repMonth = stateObj.reportingMonth || new Date().toLocaleString('en-IN', { month: 'short', year: 'numeric' }).toUpperCase();
+          const opsData = await getMilkSectionData(activeSocName, repMonth, 'operations');
+          const compData = await getMilkSectionData(activeSocName, repMonth, 'compliance');
+          const actsData = await getMilkSectionData(activeSocName, repMonth, 'activities');
+
           saveMilkPcsSubmission({
             centerName: activeSocName,
             centerId: stateObj.registrationNumber || selectedSociety?.regNo || 'MILK/2024/01',
@@ -605,6 +612,18 @@ export default function App() {
             managerMobile: stateObj.managerMobile,
             reportedBy: userProfile?.name || 'Cooperative Inspector',
             inspectorEmail: userEmail,
+            litres: opsData?.litres || '',
+            balance: opsData?.balance || '',
+            withdrawal: opsData?.withdrawal || '',
+            activities: actsData ? JSON.stringify(actsData) : '',
+            hasLoan: compData?.hasLoan,
+            loanName: compData?.loanType,
+            loanAmount: compData?.loanAmount,
+            paidAmount: compData?.loanRepaid,
+            remainingDue: compData?.loanDue,
+            auditDone: compData?.auditDate ? `Yes (${compData.auditDate})` : (stateObj.complianceData?.auditDone || 'No'),
+            auditYear: compData?.auditYear || stateObj.complianceData?.auditYear,
+            agmDone: compData?.agmDate ? `Yes (${compData.agmDate})` : 'No',
             ...stateObj
           });
         } else {
@@ -1359,25 +1378,35 @@ export default function App() {
     const submissionData = {
       centerName: activeCenterName, 
       centerId: activeCenterName, 
-      registrationNumber, presidentName, presidentMobile, managerName, managerMobile, 
+      registrationNumber, 
+      presidentName: presidentName || selectedSociety?.presidentName || '', 
+      presidentMobile: presidentMobile || selectedSociety?.presidentMobile || '', 
+      managerName: managerName || selectedSociety?.managerName || '', 
+      managerMobile: managerMobile || selectedSociety?.managerMobile || '', 
       reportingMonth: activeReportingMonth, 
       reportedBy: activeReportedBy, 
-      litres: activeLitres, 
-      sales: withdrawal || '0',
-      withdrawal: withdrawal || '0', 
+      litres: activeLitres || '0', 
+      sales: activeWithdrawal || '0',
+      withdrawal: activeWithdrawal || '0', 
       deposit: activeBalance || '0',
-      balance: activeBalance,
-      totalTurnover: withdrawal || '0',
+      balance: activeBalance || '0',
+      totalTurnover: activeWithdrawal || '0',
       totalIncome: businessPerformanceData?.totalIncome || '',
       totalExpenses: businessPerformanceData?.totalExpenses || '',
       netSurplusDeficit: businessPerformanceData?.netSurplusDeficit || '',
       mSc, fSc, mSt, fSt, mObc, fObc, mGen, fGen,
       totalMale: String(totalMaleCalc), totalFemale: String(totalFemaleCalc), totalMembers: String(totalMembersCalc),
-      hasLoan, loanName, loanAmount, paidAmount, remainingDue, activities,
-      auditDone: auditDate ? `Yes (${auditDate})` : 'No',
-      auditDate, auditYear,
-      agmDone: agmDate ? `Yes (${agmDate})` : 'No',
-      agmDate,
+      hasLoan: compData?.hasLoan ?? hasLoan, 
+      loanName: compData?.loanType ?? loanName, 
+      loanAmount: compData?.loanAmount ?? loanAmount, 
+      paidAmount: compData?.loanRepaid ?? paidAmount, 
+      remainingDue: compData?.loanDue ?? remainingDue, 
+      activities,
+      auditDone: compData?.auditDate ? `Yes (${compData.auditDate})` : (auditDate ? `Yes (${auditDate})` : 'No'),
+      auditDate: compData?.auditDate ?? auditDate, 
+      auditYear: compData?.auditYear ?? auditYear,
+      agmDone: compData?.agmDate ? `Yes (${compData.agmDate})` : (agmDate ? `Yes (${agmDate})` : 'No'),
+      agmDate: compData?.agmDate ?? agmDate,
       gpsLat: location?.latitude ?? null, gpsLng: location?.longitude ?? null,
       capturedAt: timestamp || new Date().toISOString(),
       // Append all data sets to ensure they are captured in offline queue and cloud DB
@@ -1453,7 +1482,7 @@ export default function App() {
             const res = await saveMilkPcsSubmission({
               ...submissionData,
               centerName: activeCenterName,
-              centerId: activeCenterId,
+              centerId: activeCenterName,
               district: activeDistrict,
               reportedBy: activeReportedBy,
               photoUrl: uploadedPhotoUrl
@@ -1511,9 +1540,9 @@ export default function App() {
       setIsSealing(false);
 
       if (isCloudSaved) {
-        showToast('✅ Cloud Sync OK: Submission uploaded to Supabase server.');
+        Alert.alert('Success', '✅ Submission successfully uploaded to the Admin Database.');
       } else if (isOfflineSaved) {
-        showToast('⚠️ Saved Offline: Data cached locally. Will sync later.', true);
+        Alert.alert('Offline Mode', '⚠️ Saved Offline: Data cached locally. Will sync later.');
       }
 
       return { success: isCloudSaved || isOfflineSaved, error: sbError };
@@ -1767,7 +1796,7 @@ export default function App() {
 
                     {currentMobileScreen === 'EVIDENCE' && (
                       <DigitalEvidenceScreen
-                        societyName={selectedSociety?.name || centerName}
+                        societyName={selectedSociety?.name || centerName?.trim()}
                         reportingMonth={reportingMonth}
                         onSave={() => {
                           refreshMilkSectionStatuses();
@@ -1786,7 +1815,7 @@ export default function App() {
 
                     {currentMobileScreen === 'OPERATIONS' && (
                       <OperationsScreen
-                        societyName={selectedSociety?.name || centerName}
+                        societyName={selectedSociety?.name || centerName?.trim()}
                         reportingMonth={reportingMonth}
                         onSave={() => {
                           refreshMilkSectionStatuses();
@@ -1805,7 +1834,7 @@ export default function App() {
 
                     {currentMobileScreen === 'ACTIVITIES' && (
                       <ActivitiesScreen
-                        societyName={selectedSociety?.name || centerName}
+                        societyName={selectedSociety?.name || centerName?.trim()}
                         reportingMonth={reportingMonth}
                         onSave={() => {
                           refreshMilkSectionStatuses();
@@ -1869,7 +1898,7 @@ export default function App() {
 
                     {currentMobileScreen === 'COMPLIANCE' && (
                       <ComplianceScreen
-                        societyName={selectedSociety?.name || centerName}
+                        societyName={selectedSociety?.name || centerName?.trim()}
                         reportingMonth={reportingMonth}
                         onSave={() => {
                           refreshMilkSectionStatuses();
@@ -1914,7 +1943,7 @@ export default function App() {
                   />
                 ) : activeBottomTab === 'profile' ? (
                   <MpcsInstitutionalProfileScreen
-                    societyName={selectedSociety?.name || centerName || ''}
+                    societyName={selectedSociety?.name || centerName?.trim() || ''}
                     panCard={panCard || selectedSociety?.panCard || ''}
                     regNumber={selectedSociety?.regNo || registrationNumber || ''}
                     regDate={regDate || selectedSociety?.regDate || ''}
@@ -1990,7 +2019,7 @@ export default function App() {
                         onSwitchModule={(mod) => {
                           if (mod === 'MILK') setActiveView('MAIN');
                         }}
-                        societyName={selectedSociety?.name || centerName || ''}
+                        societyName={selectedSociety?.name || centerName?.trim() || ''}
                         centerId={selectedSociety?.code || registrationNumber || ''}
                         district={selectedSociety?.district || district || ''}
                         reportingMonth={reportingMonth || ''}
@@ -2155,7 +2184,7 @@ export default function App() {
 
                     {currentMobileScreen === 'MPCS_INST_PROFILE' && (
                       <MpcsInstitutionalProfileScreen
-                        societyName={selectedSociety?.name || centerName || ''}
+                        societyName={selectedSociety?.name || centerName?.trim() || ''}
                         panCard={panCard || selectedSociety?.panCard || ''}
                         regNumber={selectedSociety?.regNo || registrationNumber || ''}
                         regDate={regDate || selectedSociety?.regDate || ''}
@@ -2303,7 +2332,7 @@ export default function App() {
 
                     {currentMobileScreen === 'MPCS_REVIEW' && (
                       <MpcsReviewSubmitScreen
-                        societyName={selectedSociety?.name || centerName || ''}
+                        societyName={selectedSociety?.name || centerName?.trim() || ''}
                         reportingMonth={reportingMonth || ''}
                         sectionStates={sectionStates}
                         cscIsActive={cscTransData?.isCscActive || false}

@@ -70,7 +70,7 @@ export default function HomeScreen({
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor={COLORS.primary} />
-      
+
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.headerLeft}>
@@ -79,7 +79,7 @@ export default function HomeScreen({
           </TouchableOpacity>
           <Text style={styles.brandTitle}>CORE</Text>
         </View>
-        
+
         <View style={styles.headerRight}>
           <TouchableOpacity style={styles.societySelector} onPress={onManageInstitutions}>
             <Text style={styles.societySelectorText}>{selectedSociety?.name || societyName || 'KHORONG'}</Text>
@@ -97,7 +97,7 @@ export default function HomeScreen({
         <View style={styles.stickyActionBanner}>
           <View style={styles.alertCard}>
             <View style={styles.alertIconBox}>
-              <MaterialCommunityIcons name="alert-outline" size={20} color={COLORS.amber700} />
+              <MaterialCommunityIcons name="alert-outline" size={20} color={COLORS.emerald700} />
             </View>
             <View style={styles.alertBody}>
               <Text style={styles.alertTitle}>Action Required</Text>
@@ -118,13 +118,13 @@ export default function HomeScreen({
       <View style={styles.bgBlobBottomRight} pointerEvents="none" />
 
       <ScrollView style={styles.scrollContent} contentContainerStyle={styles.scrollInner} showsVerticalScrollIndicator={false}>
-        
+
 
 
         {/* Society Overview Card */}
         <View style={styles.overviewCard}>
           <View style={styles.overviewHeader}>
-            <View style={{flex: 1}}>
+            <View style={{ flex: 1 }}>
               <Text style={styles.societyTitle}>{societyName || selectedSociety?.name || 'Gyalshing Milk Center'}</Text>
               <View style={styles.locationRow}>
                 <MaterialCommunityIcons name="map-marker-outline" size={16} color={COLORS.slate400} />
@@ -136,7 +136,7 @@ export default function HomeScreen({
               <Text style={styles.activeBadgeText}>ACTIVE</Text>
             </View>
           </View>
-          
+
           <View style={styles.overviewGrid}>
             <View style={styles.overviewGridItem}>
               <Text style={styles.gridLabel}>SOCIETY CODE</Text>
@@ -170,7 +170,7 @@ export default function HomeScreen({
             </View>
             <View style={styles.progressBarBg}>
               <View style={[
-                styles.progressBarFill, 
+                styles.progressBarFill,
                 { width: `${Math.min(100, Math.max(0, progressPercent))}%`, backgroundColor: progressPercent === 100 ? COLORS.emerald500 : '#dc2626' },
                 Platform.OS === 'web' && { filter: 'drop-shadow(0 0 8px rgba(122,26,31,0.5))', backgroundImage: progressPercent === 100 ? 'linear-gradient(to right, #10b981, #047857)' : 'linear-gradient(to right, #dc2626, #be123c, #7a1a1f)' }
               ]} />
@@ -181,7 +181,7 @@ export default function HomeScreen({
           </View>
         </View>
 
-        <Pressable 
+        <Pressable
           style={({ hovered, pressed }) => [
             styles.nextStepBtnWrapper,
             pressed && { transform: [{ scale: 0.98 }] },
@@ -223,11 +223,11 @@ export default function HomeScreen({
                         ? 'Next Step: Compliance Updates'
                         : 'Next Step: Review & Submit Return'}
               </Text>
-              <MaterialCommunityIcons 
-                name="arrow-right" 
-                size={18} 
-                color="#ffffff" 
-                style={hovered && { transform: [{ translateX: 4 }] }} 
+              <MaterialCommunityIcons
+                name="arrow-right"
+                size={18}
+                color="#ffffff"
+                style={hovered && { transform: [{ translateX: 4 }] }}
               />
             </LinearGradient>
           )}
@@ -235,14 +235,14 @@ export default function HomeScreen({
 
         {/* Tabs Grid */}
         <View style={styles.tabContainer}>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={[styles.tabBtn, internalTab === 'monthly' && styles.tabBtnActive]}
             onPress={() => setInternalTab('monthly')}
             activeOpacity={0.9}
           >
             <Text style={[styles.tabText, internalTab === 'monthly' && styles.tabTextActive]}>Monthly Data</Text>
           </TouchableOpacity>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={[styles.tabBtn, internalTab === 'master' && styles.tabBtnActive]}
             onPress={() => setInternalTab('master')}
             activeOpacity={0.9}
@@ -255,10 +255,10 @@ export default function HomeScreen({
         {internalTab === 'monthly' && (
           <View style={styles.sectionContainer}>
             <Text style={styles.sectionTitle}>Monthly Data Entries</Text>
-            
+
             <View style={styles.monthlyGrid}>
               {/* Digital Evidence */}
-              <Pressable 
+              <Pressable
                 style={({ hovered }) => [
                   styles.moduleCard,
                   Platform.OS === 'web' && { transition: 'all 0.3s' },
@@ -270,15 +270,15 @@ export default function HomeScreen({
                   <>
                     <View style={styles.moduleCardHeader}>
                       <View style={[
-                        styles.moduleIconBox, 
-                        {backgroundColor: isEvidenceCaptured(evidenceStatus) ? COLORS.emerald50 : COLORS.slate50, borderColor: isEvidenceCaptured(evidenceStatus) ? '#a7f3d0' : COLORS.slate100},
+                        styles.moduleIconBox,
+                        { backgroundColor: isEvidenceCaptured(evidenceStatus) ? COLORS.emerald50 : COLORS.slate50, borderColor: isEvidenceCaptured(evidenceStatus) ? '#a7f3d0' : COLORS.slate100 },
                         Platform.OS === 'web' && { transition: 'all 0.3s' },
                         hovered && { backgroundColor: '#fef2f2', borderColor: '#fee2e2' }
                       ]}>
                         <MaterialCommunityIcons name="image-outline" size={24} color={isEvidenceCaptured(evidenceStatus) ? COLORS.emerald700 : hovered ? '#7a1a1f' : COLORS.slate400} />
                       </View>
-                      <View style={[styles.statusPill, {backgroundColor: isEvidenceCaptured(evidenceStatus) ? COLORS.emerald50 : COLORS.slate100, borderColor: isEvidenceCaptured(evidenceStatus) ? 'rgba(16,185,129,0.3)' : 'rgba(226,232,240,0.5)'}]}>
-                        <Text style={[styles.statusPillText, {color: isEvidenceCaptured(evidenceStatus) ? COLORS.emerald700 : COLORS.slate500}]}>
+                      <View style={[styles.statusPill, { backgroundColor: isEvidenceCaptured(evidenceStatus) ? COLORS.emerald50 : COLORS.slate100, borderColor: isEvidenceCaptured(evidenceStatus) ? 'rgba(16,185,129,0.3)' : 'rgba(226,232,240,0.5)' }]}>
+                        <Text style={[styles.statusPillText, { color: isEvidenceCaptured(evidenceStatus) ? COLORS.emerald700 : COLORS.slate500 }]}>
                           {evidenceStatus || 'NOT CAPTURED'}
                         </Text>
                       </View>
@@ -289,8 +289,8 @@ export default function HomeScreen({
                 )}
               </Pressable>
 
-              {/* Sales & Deposit */}
-              <Pressable 
+              {/* Collection  & Deposit */}
+              <Pressable
                 style={({ hovered }) => [
                   styles.moduleCard,
                   Platform.OS === 'web' && { transition: 'all 0.3s' },
@@ -302,27 +302,27 @@ export default function HomeScreen({
                   <>
                     <View style={styles.moduleCardHeader}>
                       <View style={[
-                        styles.moduleIconBox, 
-                        {backgroundColor: operationsStatus?.includes('COMPLETED') ? COLORS.emerald50 : COLORS.amber50, borderColor: operationsStatus?.includes('COMPLETED') ? '#a7f3d0' : 'rgba(254,243,199,0.5)'},
+                        styles.moduleIconBox,
+                        { backgroundColor: operationsStatus?.includes('COMPLETED') ? COLORS.emerald50 : COLORS.emerald50, borderColor: operationsStatus?.includes('COMPLETED') ? '#a7f3d0' : 'rgba(16,185,129,0.3)' },
                         Platform.OS === 'web' && { transition: 'all 0.3s' },
-                        hovered && { backgroundColor: '#fef3c7', borderColor: '#fde68a' }
+                        hovered && { backgroundColor: '#ecfdf5', borderColor: '#a7f3d0' }
                       ]}>
-                        <MaterialCommunityIcons name="wallet-outline" size={24} color={operationsStatus?.includes('COMPLETED') ? COLORS.emerald700 : COLORS.amber600} />
+                        <MaterialCommunityIcons name="wallet-outline" size={24} color={operationsStatus?.includes('COMPLETED') ? COLORS.emerald700 : COLORS.emerald700} />
                       </View>
-                      <View style={[styles.statusPill, {backgroundColor: operationsStatus?.includes('COMPLETED') ? COLORS.emerald50 : COLORS.amber50, borderColor: operationsStatus?.includes('COMPLETED') ? 'rgba(16,185,129,0.3)' : 'rgba(254,243,199,0.5)'}]}>
-                        <Text style={[styles.statusPillText, {color: operationsStatus?.includes('COMPLETED') ? COLORS.emerald700 : COLORS.amber700}]}>
+                      <View style={[styles.statusPill, { backgroundColor: operationsStatus?.includes('COMPLETED') ? COLORS.emerald50 : COLORS.emerald50, borderColor: operationsStatus?.includes('COMPLETED') ? 'rgba(16,185,129,0.3)' : 'rgba(16,185,129,0.3)' }]}>
+                        <Text style={[styles.statusPillText, { color: operationsStatus?.includes('COMPLETED') ? COLORS.emerald700 : COLORS.emerald700 }]}>
                           {operationsStatus || 'NOT COMPLETED'}
                         </Text>
                       </View>
                     </View>
-                    <Text style={[styles.moduleCardTitle, Platform.OS === 'web' && { transition: 'all 0.3s' }, hovered && { color: '#7a1a1f' }]}>Monthly Sales / Deposit</Text>
-                    <Text style={styles.moduleCardDesc}>Record daily sales and verify bank deposits.</Text>
+                    <Text style={[styles.moduleCardTitle, Platform.OS === 'web' && { transition: 'all 0.3s' }, hovered && { color: '#7a1a1f' }]}>Monthly Collection / Deposit</Text>
+                    <Text style={styles.moduleCardDesc}>Record daily collection and verify bank deposits.</Text>
                   </>
                 )}
               </Pressable>
 
               {/* Activities */}
-              <Pressable 
+              <Pressable
                 style={({ hovered }) => [
                   styles.moduleCard,
                   Platform.OS === 'web' && { transition: 'all 0.3s' },
@@ -334,15 +334,15 @@ export default function HomeScreen({
                   <>
                     <View style={styles.moduleCardHeader}>
                       <View style={[
-                        styles.moduleIconBox, 
-                        {backgroundColor: (activitiesStatus === '0 ENTRIES' || activitiesStatus === 'NOT COMPLETED') ? COLORS.slate50 : COLORS.emerald50, borderColor: (activitiesStatus === '0 ENTRIES' || activitiesStatus === 'NOT COMPLETED') ? COLORS.slate100 : '#a7f3d0'},
+                        styles.moduleIconBox,
+                        { backgroundColor: (activitiesStatus === '0 ENTRIES' || activitiesStatus === 'NOT COMPLETED') ? COLORS.slate50 : COLORS.emerald50, borderColor: (activitiesStatus === '0 ENTRIES' || activitiesStatus === 'NOT COMPLETED') ? COLORS.slate100 : '#a7f3d0' },
                         Platform.OS === 'web' && { transition: 'all 0.3s' },
                         hovered && { backgroundColor: '#fef2f2', borderColor: '#fee2e2' }
                       ]}>
                         <MaterialCommunityIcons name="format-list-checks" size={24} color={(activitiesStatus === '0 ENTRIES' || activitiesStatus === 'NOT COMPLETED') ? (hovered ? '#7a1a1f' : COLORS.slate400) : COLORS.emerald700} />
                       </View>
-                      <View style={[styles.statusPill, {backgroundColor: (activitiesStatus === '0 ENTRIES' || activitiesStatus === 'NOT COMPLETED') ? COLORS.slate100 : COLORS.emerald50, borderColor: (activitiesStatus === '0 ENTRIES' || activitiesStatus === 'NOT COMPLETED') ? 'rgba(226,232,240,0.5)' : 'rgba(16,185,129,0.3)'}]}>
-                        <Text style={[styles.statusPillText, {color: (activitiesStatus === '0 ENTRIES' || activitiesStatus === 'NOT COMPLETED') ? COLORS.slate500 : COLORS.emerald700}]}>
+                      <View style={[styles.statusPill, { backgroundColor: (activitiesStatus === '0 ENTRIES' || activitiesStatus === 'NOT COMPLETED') ? COLORS.slate100 : COLORS.emerald50, borderColor: (activitiesStatus === '0 ENTRIES' || activitiesStatus === 'NOT COMPLETED') ? 'rgba(226,232,240,0.5)' : 'rgba(16,185,129,0.3)' }]}>
+                        <Text style={[styles.statusPillText, { color: (activitiesStatus === '0 ENTRIES' || activitiesStatus === 'NOT COMPLETED') ? COLORS.slate500 : COLORS.emerald700 }]}>
                           {activitiesStatus}
                         </Text>
                       </View>
@@ -354,7 +354,7 @@ export default function HomeScreen({
               </Pressable>
 
               {/* Compliance */}
-              <Pressable 
+              <Pressable
                 style={({ hovered }) => [
                   styles.moduleCard,
                   Platform.OS === 'web' && { transition: 'all 0.3s' },
@@ -366,15 +366,15 @@ export default function HomeScreen({
                   <>
                     <View style={styles.moduleCardHeader}>
                       <View style={[
-                        styles.moduleIconBox, 
-                        {backgroundColor: complianceStatus?.includes('COMPLETED') ? COLORS.emerald50 : COLORS.slate50, borderColor: complianceStatus?.includes('COMPLETED') ? '#a7f3d0' : COLORS.slate100},
+                        styles.moduleIconBox,
+                        { backgroundColor: complianceStatus?.includes('COMPLETED') ? COLORS.emerald50 : COLORS.slate50, borderColor: complianceStatus?.includes('COMPLETED') ? '#a7f3d0' : COLORS.slate100 },
                         Platform.OS === 'web' && { transition: 'all 0.3s' },
                         hovered && { backgroundColor: '#fef2f2', borderColor: '#fee2e2' }
                       ]}>
                         <MaterialCommunityIcons name="shield-check-outline" size={24} color={complianceStatus?.includes('COMPLETED') ? COLORS.emerald700 : hovered ? '#7a1a1f' : COLORS.slate400} />
                       </View>
-                      <View style={[styles.statusPill, {backgroundColor: complianceStatus?.includes('COMPLETED') ? COLORS.emerald50 : COLORS.slate100, borderColor: complianceStatus?.includes('COMPLETED') ? 'rgba(16,185,129,0.3)' : 'rgba(226,232,240,0.5)'}]}>
-                        <Text style={[styles.statusPillText, {color: complianceStatus?.includes('COMPLETED') ? COLORS.emerald700 : COLORS.slate500}]}>
+                      <View style={[styles.statusPill, { backgroundColor: complianceStatus?.includes('COMPLETED') ? COLORS.emerald50 : COLORS.slate100, borderColor: complianceStatus?.includes('COMPLETED') ? 'rgba(16,185,129,0.3)' : 'rgba(226,232,240,0.5)' }]}>
+                        <Text style={[styles.statusPillText, { color: complianceStatus?.includes('COMPLETED') ? COLORS.emerald700 : COLORS.slate500 }]}>
                           {complianceStatus || 'NOT COMPLETED'}
                         </Text>
                       </View>
@@ -397,7 +397,7 @@ export default function HomeScreen({
                 { id: 'PROFILE', title: 'Institutional Profile', icon: 'office-building-outline', updated: '12 Aug 2024' },
                 { id: 'DEMOGRAPHICS', title: 'Registered Demographics', icon: 'account-group-outline', updated: '01 Jan 2024' }
               ].map((item, index) => (
-                <Pressable 
+                <Pressable
                   key={item.id}
                   style={({ hovered }) => [
                     styles.masterListItem,
@@ -416,7 +416,7 @@ export default function HomeScreen({
                         ]}>
                           <MaterialCommunityIcons name={item.icon} size={20} color={hovered ? '#7a1a1f' : COLORS.slate600} />
                         </View>
-                        <View style={{flex: 1}}>
+                        <View style={{ flex: 1 }}>
                           <Text style={[styles.masterListTitle, Platform.OS === 'web' && { transition: 'all 0.3s' }, hovered && { color: '#7a1a1f' }]}>{item.title}</Text>
                           <View style={styles.masterListSubRow}>
                             <MaterialCommunityIcons name="clock-time-four-outline" size={12} color={COLORS.slate400} />
@@ -426,15 +426,15 @@ export default function HomeScreen({
                       </View>
                       <View style={styles.masterListRight}>
                         <View style={[
-                          {width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center', backgroundColor: COLORS.slate50, borderWidth: 1, borderColor: COLORS.slate100},
+                          { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center', backgroundColor: COLORS.slate50, borderWidth: 1, borderColor: COLORS.slate100 },
                           Platform.OS === 'web' && { transition: 'all 0.3s' },
                           hovered && { backgroundColor: '#7a1a1f', borderColor: 'transparent' }
                         ]}>
-                          <MaterialCommunityIcons 
-                            name="arrow-right" 
-                            size={18} 
-                            color={hovered ? '#ffffff' : COLORS.slate400} 
-                            style={[Platform.OS === 'web' && { transition: 'transform 0.3s' }, hovered && { transform: [{ translateX: 2 }] }]} 
+                          <MaterialCommunityIcons
+                            name="arrow-right"
+                            size={18}
+                            color={hovered ? '#ffffff' : COLORS.slate400}
+                            style={[Platform.OS === 'web' && { transition: 'transform 0.3s' }, hovered && { transform: [{ translateX: 2 }] }]}
                           />
                         </View>
                       </View>
@@ -445,9 +445,9 @@ export default function HomeScreen({
             </View>
           </View>
         )}
-        
+
         {/* Extra padding for bottom nav */}
-        <View style={{height: 60}} />
+        <View style={{ height: 60 }} />
       </ScrollView>
 
       <BottomNav activeTab={activeTab} onTabPress={onTabPress} />
@@ -771,7 +771,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   badgeWarning: {
-    backgroundColor: COLORS.amber50,
+    backgroundColor: COLORS.emerald50,
     borderColor: 'rgba(245,158,11,0.3)',
     borderWidth: 1,
   },
@@ -936,17 +936,17 @@ const styles = StyleSheet.create({
   },
   moduleCardTitle: {
     fontFamily: FONT_FAMILY,
-    fontSize: 17,
+    fontSize: 14,
     fontWeight: '800',
     color: COLORS.slate800,
-    marginBottom: 6,
+    marginBottom: 4,
   },
   moduleCardDesc: {
     fontFamily: FONT_FAMILY,
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: '500',
     color: COLORS.slate500,
-    lineHeight: 24, // leading-relaxed
+    lineHeight: 18,
   },
   masterListContainer: {
     gap: 12,
@@ -956,26 +956,26 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     backgroundColor: COLORS.surface,
-    borderRadius: 24,
-    padding: 20,
+    borderRadius: 16,
+    padding: 16,
     borderWidth: 1,
     borderColor: 'rgba(226,232,240,0.6)',
     shadowColor: '#0f172a',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.05,
-    shadowRadius: 20,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 10,
     elevation: 2,
   },
   masterListLeft: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 20, // gap-md
+    gap: 16,
     flex: 1,
   },
   masterListIcon: {
-    width: 48, // w-12
-    height: 48,
-    borderRadius: 16,
+    width: 44,
+    height: 44,
+    borderRadius: 12,
     borderWidth: 1,
     borderColor: COLORS.slate100,
     backgroundColor: COLORS.slate50,
@@ -984,10 +984,10 @@ const styles = StyleSheet.create({
   },
   masterListTitle: {
     fontFamily: FONT_FAMILY,
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '800',
     color: COLORS.slate800,
-    marginBottom: 4,
+    marginBottom: 2,
   },
   masterListSubRow: {
     flexDirection: 'row',

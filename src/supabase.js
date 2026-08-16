@@ -85,9 +85,9 @@ export async function saveMilkPcsSubmission(params) {
       }
     }
 
-    const auditDoneVal = params?.auditDone || params?.audit_done || 'Yes';
-    const auditYearVal = params?.auditYear || params?.audit_year || '2025';
-    const agmDoneVal   = params?.agmDone   || params?.agm_done   || 'Yes';
+    const auditDoneVal = params?.auditDone || params?.audit_done || '';
+    const auditYearVal = params?.auditYear || params?.audit_year || '';
+    const agmDoneVal   = params?.agmDone   || params?.agm_done   || '';
 
     const activitiesData = typeof activities === 'string' && activities.startsWith('{') 
       ? activities 
@@ -155,11 +155,11 @@ export async function saveMilkPcsSubmission(params) {
       console.log('[CORE] Updating existing Milk PCS submission record with REVISED marker:', existingId);
       const updatePayload = {
         ...row,
-        activities: {
-          ...(typeof activitiesData === 'object' ? activitiesData : { raw: activitiesData }),
+        activities: JSON.stringify({
+          ...(typeof activitiesData === 'string' && activitiesData.startsWith('{') ? JSON.parse(activitiesData) : (typeof activitiesData === 'object' ? activitiesData : { raw: activitiesData })),
           is_updated: true,
           updated_at: new Date().toISOString()
-        }
+        })
       };
       const res = await supabase.from('milk_pcs_submissions').update(updatePayload).eq('id', existingId).select();
       data = res.data;
