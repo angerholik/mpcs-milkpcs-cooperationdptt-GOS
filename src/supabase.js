@@ -138,10 +138,16 @@ export async function saveMilkPcsSubmission(params) {
 
     let existingId = null;
     if (cleanCenter && cleanCenter !== 'Cooperative Collection Center') {
-      const { data: existingRows } = await supabase
+      let query = supabase
         .from('milk_pcs_submissions')
         .select('id')
-        .ilike('center_name', `%${cleanCenter}%`)
+        .ilike('center_name', `%${cleanCenter}%`);
+      
+      if (cleanMonth) {
+        query = query.eq('reporting_month', cleanMonth);
+      }
+
+      const { data: existingRows } = await query
         .order('created_at', { ascending: false })
         .limit(1);
 

@@ -991,21 +991,26 @@ export default function App() {
     const socName = recordItem?.society_name || recordItem?.center_name || recordItem?.center || selectedSociety?.name || centerName?.trim() || 'Cooperative Collection Center';
     const repMonth = recordItem?.reporting_month || recordItem?.month || reportingMonth?.trim() || new Date().toLocaleString('en-IN', { month: 'long', year: 'numeric' });
 
+    // --- DECLARE activeCenterName & activeReportingMonth BEFORE use (TDZ fix) ---
+    const activeCenterName = socName;
+    const activeReportingMonth = repMonth;
+
     // Collate Latest Valid Saved Data dynamically for MILK PCS
     let opsData = null;
     let evData = null;
     let actsData = null;
     let compData = null;
     if (!recordOverride && selectedSociety?.type === 'MILK') {
-       opsData = await getMilkSectionData(socName, repMonth, 'operations');
-       evData = await getMilkSectionData(socName, repMonth, 'evidence');
-       actsData = await getMilkSectionData(socName, repMonth, 'activities');
-       compData = await getMilkSectionData(socName, repMonth, 'compliance');
+       console.log('[CORE DEBUG] getMilkSectionData keys:', { activeCenterName, activeReportingMonth });
+       opsData = await getMilkSectionData(activeCenterName, activeReportingMonth, 'operations');
+       evData = await getMilkSectionData(activeCenterName, activeReportingMonth, 'evidence');
+       actsData = await getMilkSectionData(activeCenterName, activeReportingMonth, 'activities');
+       compData = await getMilkSectionData(activeCenterName, activeReportingMonth, 'compliance');
+       console.log('[CORE DEBUG] OPERATIONS DATA', opsData);
+       console.log('[CORE DEBUG] EVIDENCE DATA', evData);
+       console.log('[CORE DEBUG] ACTIVITIES DATA', actsData);
+       console.log('[CORE DEBUG] COMPLIANCE DATA', compData);
     }
-
-    // --- DYNAMIC USER & SOCIETY DEFAULTS ---
-    const activeCenterName = socName;
-    const activeReportingMonth = repMonth;
     const activeLitres = opsData?.litres ? String(opsData.litres) : (recordItem?.litres ? String(recordItem.litres) : (litres && !isNaN(parseFloat(litres)) ? litres : '0'));
     const activeBalance = opsData?.balance ? String(opsData.balance) : (recordItem?.bank_balance || recordItem?.balance ? String(recordItem.bank_balance || recordItem.balance) : (balance && !isNaN(parseFloat(balance)) ? balance : '0'));
     const activeWithdrawal = opsData?.withdrawal ? String(opsData.withdrawal) : (recordItem?.annual_turnover || recordItem?.withdrawal ? String(recordItem.annual_turnover || recordItem.withdrawal) : (withdrawal || '0'));
@@ -1479,13 +1484,46 @@ export default function App() {
             });
             sbError = res.error;
           } else {
-            const res = await saveMilkPcsSubmission({
+            console.log('[CORE DEBUG] OPERATIONS DATA', opsData);
+            console.log('[CORE DEBUG] EVIDENCE DATA', evData);
+            console.log('[CORE DEBUG] ACTIVITIES DATA', actsData);
+            console.log('[CORE DEBUG] COMPLIANCE DATA', compData);
+            
+            const finalPayload = {
               ...submissionData,
               centerName: activeCenterName,
               centerId: activeCenterName,
               district: activeDistrict,
               reportedBy: activeReportedBy,
               photoUrl: uploadedPhotoUrl
+            };
+            
+            console.log('[CORE DEBUG] COMPILE & SEAL FINAL PAYLOAD', {
+              society: finalPayload.centerName,
+              reportingMonth: finalPayload.reportingMonth,
+              litres: finalPayload.litres,
+              withdrawal: finalPayload.withdrawal,
+              balance: finalPayload.balance,
+              presidentName: finalPayload.presidentName,
+              managerName: finalPayload.managerName,
+              reportedBy: finalPayload.reportedBy,
+              hasLoan: finalPayload.hasLoan,
+              loanName: finalPayload.loanName,
+              loanAmount: finalPayload.loanAmount,
+              paidAmount: finalPayload.paidAmount,
+              remainingDue: finalPayload.remainingDue,
+              activities: finalPayload.activities,
+              gpsLat: finalPayload.gpsLat,
+              gpsLng: finalPayload.gpsLng,
+              capturedAt: finalPayload.capturedAt
+            });
+
+            const res = await saveMilkPcsSubmission(finalPayload);
+            
+            console.log('[CORE DEBUG] SUPABASE RESULT', {
+              operation: 'UPSERT',
+              error: res.error,
+              returned_row: res.data ? res.data[0] : null
             });
             sbError = res.error;
           }
@@ -1800,9 +1838,11 @@ export default function App() {
                         reportingMonth={reportingMonth}
                         onSave={() => {
                           refreshMilkSectionStatuses();
+                          saveMasterStateToStorage({});
                         }}
                         onSaveNext={() => {
                           refreshMilkSectionStatuses();
+                          saveMasterStateToStorage({});
                           if (returnMobileScreen === 'REVIEW') {
                             setCurrentMobileScreen('REVIEW');
                           } else {
@@ -1819,9 +1859,11 @@ export default function App() {
                         reportingMonth={reportingMonth}
                         onSave={() => {
                           refreshMilkSectionStatuses();
+                          saveMasterStateToStorage({});
                         }}
                         onSaveNext={() => {
                           refreshMilkSectionStatuses();
+                          saveMasterStateToStorage({});
                           if (returnMobileScreen === 'REVIEW') {
                             setCurrentMobileScreen('REVIEW');
                           } else {
@@ -1838,9 +1880,11 @@ export default function App() {
                         reportingMonth={reportingMonth}
                         onSave={() => {
                           refreshMilkSectionStatuses();
+                          saveMasterStateToStorage({});
                         }}
                         onSaveNext={() => {
                           refreshMilkSectionStatuses();
+                          saveMasterStateToStorage({});
                           if (returnMobileScreen === 'REVIEW') {
                             setCurrentMobileScreen('REVIEW');
                           } else {
@@ -1902,9 +1946,11 @@ export default function App() {
                         reportingMonth={reportingMonth}
                         onSave={() => {
                           refreshMilkSectionStatuses();
+                          saveMasterStateToStorage({});
                         }}
                         onSaveNext={() => {
                           refreshMilkSectionStatuses();
+                          saveMasterStateToStorage({});
                           setCurrentMobileScreen('REVIEW');
                         }}
                         onBack={() => setCurrentMobileScreen(returnMobileScreen || 'HOME')}
@@ -1920,7 +1966,7 @@ export default function App() {
                           setCurrentMobileScreen(screenName);
                         }}
                         isSealing={isSealing}
-                        onCompileAndSeal={generatePDF}
+                        onCompileAndSeal={() => generatePDF(null)}
                         onBack={() => setCurrentMobileScreen('HOME')}
                       />
                     )}
@@ -2338,7 +2384,7 @@ export default function App() {
                         cscIsActive={cscTransData?.isCscActive || false}
                         activitiesCount={activityItems.length}
                         onNavigateSection={(screenKey) => setCurrentMobileScreen(screenKey)}
-                        onSubmitReturn={generatePDF}
+                        onSubmitReturn={() => generatePDF(null)}
                         onBack={() => setCurrentMobileScreen('HOME')}
                       />
                     )}
