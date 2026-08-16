@@ -89,14 +89,27 @@ export async function saveMilkPcsSubmission(params) {
     const auditYearVal = params?.auditYear || params?.audit_year || '';
     const agmDoneVal   = params?.agmDone   || params?.agm_done   || '';
 
-    const activitiesData = typeof activities === 'string' && activities.startsWith('{') 
-      ? activities 
-      : JSON.stringify({
-          audit_done: auditDoneVal,
-          audit_year: auditYearVal,
-          agm_done: agmDoneVal,
-          user_notes: activities || ''
-        });
+    // Always merge audit_done/audit_year/agm_done into whatever activities payload was
+    // passed in, rather than an either/or branch — previously, whenever `activities`
+    // already looked like a JSON object (e.g. the activity log's own {activityList,
+    // isCompleted} shape), this code used it as-is and silently dropped Audit/AGM data
+    // entirely, even when the caller explicitly supplied it.
+    let baseActivities = {};
+    if (typeof activities === 'string' && activities.trim().startsWith('{')) {
+      try {
+        baseActivities = JSON.parse(activities);
+      } catch (e) {
+        baseActivities = { user_notes: activities };
+      }
+    } else {
+      baseActivities = { user_notes: activities || '' };
+    }
+    const activitiesData = JSON.stringify({
+      ...baseActivities,
+      audit_done: auditDoneVal,
+      audit_year: auditYearVal,
+      agm_done: agmDoneVal
+    });
 
     const row = {
       center_name: centerName || 'Cooperative Collection Center',

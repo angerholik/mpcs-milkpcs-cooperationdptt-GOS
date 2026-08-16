@@ -441,14 +441,14 @@ function MilkDetailModal({ row, onClose }) {
               <div className="detail-item"><span className="lbl">Latest AGM Conducted</span><span className="val">{auditAgm.agm_done === 'Yes' ? (auditAgm.agm_date !== '—' ? `Yes (${auditAgm.agm_date})` : 'Yes') : 'No'}</span></div>
             </div>
           </Sec>
-          <Sec title="II. Operations Ledger">
+          <Sec title="III. Operations Ledger">
             <div className="detail-grid">
               <div className="detail-item"><span className="lbl">Litres</span><span className="val" style={{color:'var(--emerald)',fontWeight:800}}>{fmtL(row.litres)}</span></div>
               <div className="detail-item"><span className="lbl">Bank Balance</span><span className="val val-money">{fmtRs(row.balance)}</span></div>
               <div className="detail-item"><span className="lbl">Withdrawal</span><span className="val val-money">{fmtRs(row.withdrawal)}</span></div>
             </div>
           </Sec>
-          <Sec title="III. Registered Caste Demographics">
+          <Sec title="IV. Registered Caste Demographics">
             <div style={{overflowX: 'auto', marginBottom: '10px'}}>
               <table style={{width:'100%', borderCollapse:'collapse', fontSize:'12px'}}>
                 <thead>
@@ -486,7 +486,7 @@ function MilkDetailModal({ row, onClose }) {
             </div>
           </Sec>
           {row.activities && (
-            <Sec title="IV. Activities">
+            <Sec title="V. Activities">
               <div style={{fontSize:'13px',color:'#374151',lineHeight:'1.7',background:'#F8FAFC',borderRadius:'8px',padding:'12px 16px',whiteSpace:'pre-wrap',border:'1px solid #E5E7EB'}}>
                 {(() => {
                   if (typeof row.activities === 'string' && row.activities.startsWith('{')) {
@@ -495,6 +495,20 @@ function MilkDetailModal({ row, onClose }) {
                       let innerParsed = parsed;
                       if (parsed.raw && typeof parsed.raw === 'string' && parsed.raw.startsWith('{')) {
                         innerParsed = JSON.parse(parsed.raw);
+                      }
+                      // Milk PCS activity log shape: { activityList: [...], isCompleted }
+                      if (Array.isArray(innerParsed.activityList) && innerParsed.activityList.length > 0) {
+                        return innerParsed.activityList.map((item, idx) => (
+                          <div key={item.id || idx} style={{marginBottom: idx < innerParsed.activityList.length - 1 ? '10px' : 0}}>
+                            <span style={{fontWeight: 800, color: '#0F172A'}}>{idx + 1}. {item.title || item.type || 'Activity'}</span>
+                            {(item.count || item.participants) && (
+                              <span style={{color: '#64748B'}}>
+                                {' '}({item.count ? `${item.count} sessions` : ''}{item.count && item.participants ? ', ' : ''}{item.participants ? `${item.participants} participants` : ''})
+                              </span>
+                            )}
+                            {item.desc && <div style={{color: '#475569', marginTop: '2px'}}>{item.desc}</div>}
+                          </div>
+                        ));
                       }
                       return innerParsed.user_notes || innerParsed.raw || '—';
                     } catch(e) {
@@ -507,7 +521,7 @@ function MilkDetailModal({ row, onClose }) {
             </Sec>
           )}
           {row.has_loan && (
-            <Sec title="V. Loan">
+            <Sec title="VI. Loan">
               <div className="detail-grid">
                 <div className="detail-item"><span className="lbl">Loan Name</span><span className="val">{row.loan_name||'—'}</span></div>
                 <div className="detail-item"><span className="lbl">Loan Amount</span><span className="val val-money">{fmtRs(row.loan_amount)}</span></div>
@@ -516,7 +530,7 @@ function MilkDetailModal({ row, onClose }) {
               </div>
             </Sec>
           )}
-          <Sec title="VI. Verification">
+          <Sec title="VII. Verification">
             <div className="detail-grid">
               <div className="detail-item"><span className="lbl">Captured At</span><span className="val">{row.captured_at||'—'}</span></div>
             </div>
