@@ -166,6 +166,21 @@ export default function App() {
   const [panCard, setPanCard] = useState('');
   const [regDate, setRegDate] = useState('');
 
+  // Milk PCS Master Data — Audit, AGM & Loan Setup (done once/year or once per loan,
+  // not monthly — lives on the Institutional Profile screen, not Compliance).
+  const [masterAuditDate, setMasterAuditDate] = useState('');
+  const [masterAuditYear, setMasterAuditYear] = useState('');
+  const [masterAuditStatus, setMasterAuditStatus] = useState('Pending');
+  const [masterAgmDate, setMasterAgmDate] = useState('');
+  const [masterAgmYear, setMasterAgmYear] = useState('');
+  const [masterAgmStatus, setMasterAgmStatus] = useState('Pending');
+  const [masterHasLoan, setMasterHasLoan] = useState(false);
+  const [masterLoanType, setMasterLoanType] = useState('');
+  const [masterLoanSanctionDate, setMasterLoanSanctionDate] = useState('');
+  const [masterLoanBeneficiaries, setMasterLoanBeneficiaries] = useState('');
+  const [masterLoanExtended, setMasterLoanExtended] = useState('');
+  const [masterLoanCleared, setMasterLoanCleared] = useState(false);
+
   // Persistent MPCS Section Data States
   const [demographicsData, setDemographicsData] = useState([]);
   const [complianceData, setComplianceData] = useState({});
@@ -246,14 +261,14 @@ export default function App() {
       actStatus = '0 ENTRIES ✓';
     }
 
-    // Compliance Logic
-    let compStatus = 'NOT STARTED';
-    if (compData && (
-      (compData.auditDate && compData.auditDate.trim() !== '') ||
-      (compData.agmDate && compData.agmDate.trim() !== '') ||
-      compData.hasLoan === true
-    )) {
-      compStatus = 'COMPLETED ✓';
+    // Compliance Logic — now only tracks the MONTHLY loan repayment status.
+    // Audit/AGM moved to Master Data (Institutional Profile) since they're annual, not monthly.
+    // If there's no active loan (or it was already cleared), there's nothing to fill in
+    // this month, so the section is trivially complete.
+    const loanIsActive = masterHasLoan && !masterLoanCleared;
+    let compStatus = 'COMPLETED ✓';
+    if (loanIsActive) {
+      compStatus = (compData && compData.loanRecovered && compData.loanOutstanding) ? 'COMPLETED ✓' : 'NOT STARTED';
     }
 
     setMilkSectionStates({
@@ -380,6 +395,20 @@ export default function App() {
     setAuditYear('');
     setAgmDate('');
     setAgmYear('');
+
+    // Clear Milk PCS Master Data — Audit, AGM & Loan Setup
+    setMasterAuditDate('');
+    setMasterAuditYear('');
+    setMasterAuditStatus('Pending');
+    setMasterAgmDate('');
+    setMasterAgmYear('');
+    setMasterAgmStatus('Pending');
+    setMasterHasLoan(false);
+    setMasterLoanType('');
+    setMasterLoanSanctionDate('');
+    setMasterLoanBeneficiaries('');
+    setMasterLoanExtended('');
+    setMasterLoanCleared(false);
 
     // Clear evidence & activities
     setImageUri(null);
@@ -567,6 +596,18 @@ export default function App() {
         presidentMobile: overrides.presidentMobile !== undefined ? overrides.presidentMobile : presidentMobile,
         managerName: overrides.managerName !== undefined ? overrides.managerName : managerName,
         managerMobile: overrides.managerMobile !== undefined ? overrides.managerMobile : managerMobile,
+        masterAuditDate: overrides.masterAuditDate !== undefined ? overrides.masterAuditDate : masterAuditDate,
+        masterAuditYear: overrides.masterAuditYear !== undefined ? overrides.masterAuditYear : masterAuditYear,
+        masterAuditStatus: overrides.masterAuditStatus !== undefined ? overrides.masterAuditStatus : masterAuditStatus,
+        masterAgmDate: overrides.masterAgmDate !== undefined ? overrides.masterAgmDate : masterAgmDate,
+        masterAgmYear: overrides.masterAgmYear !== undefined ? overrides.masterAgmYear : masterAgmYear,
+        masterAgmStatus: overrides.masterAgmStatus !== undefined ? overrides.masterAgmStatus : masterAgmStatus,
+        masterHasLoan: overrides.masterHasLoan !== undefined ? overrides.masterHasLoan : masterHasLoan,
+        masterLoanType: overrides.masterLoanType !== undefined ? overrides.masterLoanType : masterLoanType,
+        masterLoanSanctionDate: overrides.masterLoanSanctionDate !== undefined ? overrides.masterLoanSanctionDate : masterLoanSanctionDate,
+        masterLoanBeneficiaries: overrides.masterLoanBeneficiaries !== undefined ? overrides.masterLoanBeneficiaries : masterLoanBeneficiaries,
+        masterLoanExtended: overrides.masterLoanExtended !== undefined ? overrides.masterLoanExtended : masterLoanExtended,
+        masterLoanCleared: overrides.masterLoanCleared !== undefined ? overrides.masterLoanCleared : masterLoanCleared,
         demographicsData: overrides.demographicsData !== undefined ? overrides.demographicsData : demographicsData,
         complianceData: overrides.complianceData !== undefined ? overrides.complianceData : complianceData,
         financialsData: overrides.financialsData !== undefined ? overrides.financialsData : financialsData,
@@ -609,6 +650,7 @@ export default function App() {
           const opsData = await getMilkSectionData(activeSocName, repMonth, 'operations');
           const compData = await getMilkSectionData(activeSocName, repMonth, 'compliance');
           const actsData = await getMilkSectionData(activeSocName, repMonth, 'activities');
+          const loanIsActive = !!stateObj.masterHasLoan && !stateObj.masterLoanCleared;
 
           saveMilkPcsSubmission({
             centerName: activeSocName,
@@ -620,18 +662,18 @@ export default function App() {
             managerMobile: stateObj.managerMobile,
             reportedBy: userProfile?.name || 'Cooperative Inspector',
             inspectorEmail: userEmail,
-            litres: opsData?.litres || '',
-            balance: opsData?.balance || '',
-            withdrawal: opsData?.withdrawal || '',
             activities: actsData ? JSON.stringify(actsData) : '',
-            hasLoan: compData?.hasLoan,
-            loanName: compData?.loanType,
-            loanAmount: compData?.loanAmount,
-            paidAmount: compData?.loanRepaid,
-            remainingDue: compData?.loanDue,
-            auditDone: compData?.auditDate ? `Yes (${compData.auditDate})` : (stateObj.complianceData?.auditDone || 'No'),
-            auditYear: compData?.auditYear || stateObj.complianceData?.auditYear,
-            agmDone: compData?.agmDate ? `Yes (${compData.agmDate})` : 'No',
+            // Loan setup (type, who sanctioned it, total amount) is Master Data — set once.
+            // Only the monthly recovered/outstanding progress comes from the monthly section.
+            hasLoan: loanIsActive,
+            loanName: stateObj.masterLoanType,
+            loanAmount: stateObj.masterLoanExtended,
+            paidAmount: loanIsActive ? (compData?.loanRecovered || '') : '',
+            remainingDue: loanIsActive ? (compData?.loanOutstanding || '') : '',
+            // Audit & AGM are Master Data now (done once/year, not monthly).
+            auditDone: stateObj.masterAuditDate ? `Yes (${stateObj.masterAuditDate})` : 'No',
+            auditYear: stateObj.masterAuditYear,
+            agmDone: stateObj.masterAgmDate ? `Yes (${stateObj.masterAgmDate})` : 'No',
             ...stateObj,
             litres: opsData?.litres || '',
             balance: opsData?.balance || '',
@@ -690,6 +732,18 @@ export default function App() {
         setPresidentMobile(saved.presidentMobile || '');
         setManagerName(saved.managerName || '');
         setManagerMobile(saved.managerMobile || '');
+        setMasterAuditDate(saved.masterAuditDate || '');
+        setMasterAuditYear(saved.masterAuditYear || '');
+        setMasterAuditStatus(saved.masterAuditStatus || 'Pending');
+        setMasterAgmDate(saved.masterAgmDate || '');
+        setMasterAgmYear(saved.masterAgmYear || '');
+        setMasterAgmStatus(saved.masterAgmStatus || 'Pending');
+        setMasterHasLoan(saved.masterHasLoan || false);
+        setMasterLoanType(saved.masterLoanType || '');
+        setMasterLoanSanctionDate(saved.masterLoanSanctionDate || '');
+        setMasterLoanBeneficiaries(saved.masterLoanBeneficiaries || '');
+        setMasterLoanExtended(saved.masterLoanExtended || '');
+        setMasterLoanCleared(saved.masterLoanCleared || false);
         setDemographicsData(saved.demographicsData || []);
         setComplianceData(saved.complianceData || {});
         setFinancialsData(saved.financialsData || {});
@@ -1063,6 +1117,19 @@ export default function App() {
 
     const isMilk = selectedSociety?.type === 'MILK' || recordItem?.society_type === 'MILK';
 
+    // Values printed on the sealed document. For Milk PCS, Audit/AGM/loan-setup are
+    // now Master Data (set once on Institutional Profile) rather than monthly entries,
+    // so pull them from master state here — same source used for the Supabase submission
+    // above — instead of the legacy top-level auditDate/agmDate/hasLoan variables (which
+    // are only ever populated for the MPCS flow).
+    const pdfLoanIsActive = isMilk ? (masterHasLoan && !masterLoanCleared) : hasLoan;
+    const pdfLoanName = isMilk ? masterLoanType : loanName;
+    const pdfLoanAmount = isMilk ? masterLoanExtended : loanAmount;
+    const pdfRemainingDue = isMilk ? (compData?.loanOutstanding || '') : remainingDue;
+    const pdfAuditDate = isMilk ? masterAuditDate : auditDate;
+    const pdfAuditYear = isMilk ? masterAuditYear : auditYear;
+    const pdfAgmDate = isMilk ? masterAgmDate : agmDate;
+
     const htmlContent = `
       <html>
         <head>
@@ -1287,14 +1354,14 @@ export default function App() {
                     </div>
                   </div>
 
-                  ${hasLoan ? `
+                  ${pdfLoanIsActive ? `
                   <div class="premium-card">
                     <div class="card-header"><span class="card-title" style="color: #B45309;">VI. Financial Liability Details</span></div>
                     <div class="card-body">
                       <table class="data-table">
-                        <tr class="data-row"><td class="data-label">Scheme Name</td><td class="data-value">${loanName || 'N/A'}</td></tr>
-                        <tr class="data-row"><td class="data-label">Total Disbursed</td><td class="data-value">₹ ${parseFloat(loanAmount || 0).toLocaleString('en-IN')}</td></tr>
-                        <tr class="data-row"><td class="data-label">Current Liability</td><td class="data-value" style="color: #EF4444; font-weight: 900;">₹ ${parseFloat(remainingDue || 0).toLocaleString('en-IN')}</td></tr>
+                        <tr class="data-row"><td class="data-label">Scheme Name</td><td class="data-value">${pdfLoanName || 'N/A'}</td></tr>
+                        <tr class="data-row"><td class="data-label">Total Disbursed</td><td class="data-value">₹ ${parseFloat(pdfLoanAmount || 0).toLocaleString('en-IN')}</td></tr>
+                        <tr class="data-row"><td class="data-label">Current Liability</td><td class="data-value" style="color: #EF4444; font-weight: 900;">₹ ${parseFloat(pdfRemainingDue || 0).toLocaleString('en-IN')}</td></tr>
                       </table>
                     </div>
                   </div>
@@ -1309,8 +1376,8 @@ export default function App() {
                         <tr class="data-row"><td class="data-label">Reporting Month</td><td class="data-value">${reportingMonth || 'N/A'}</td></tr>
                         <tr class="data-row"><td class="data-label">Litres Collected</td><td class="data-value">${litres} L</td></tr>
                         <tr class="data-row"><td class="data-label">Bank Balance</td><td class="data-value financial-val">₹ ${parseFloat(balance || 0).toLocaleString('en-IN')}</td></tr>
-                        <tr class="data-row"><td class="data-label">Audit Conducted Date</td><td class="data-value">${auditDate || 'N/A'} (Year: ${auditYear || 'N/A'})</td></tr>
-                        <tr class="data-row"><td class="data-label">AGM Conducted Date</td><td class="data-value">${agmDate || 'N/A'}</td></tr>
+                        <tr class="data-row"><td class="data-label">Audit Conducted Date</td><td class="data-value">${pdfAuditDate || 'N/A'} (Year: ${pdfAuditYear || 'N/A'})</td></tr>
+                        <tr class="data-row"><td class="data-label">AGM Conducted Date</td><td class="data-value">${pdfAgmDate || 'N/A'}</td></tr>
                       </table>
                     </div>
                   </div>
@@ -1412,17 +1479,17 @@ export default function App() {
       netSurplusDeficit: businessPerformanceData?.netSurplusDeficit || '',
       mSc, fSc, mSt, fSt, mObc, fObc, mGen, fGen,
       totalMale: String(totalMaleCalc), totalFemale: String(totalFemaleCalc), totalMembers: String(totalMembersCalc),
-      hasLoan: compData?.hasLoan ?? hasLoan, 
-      loanName: compData?.loanType ?? loanName, 
-      loanAmount: compData?.loanAmount ?? loanAmount, 
-      paidAmount: compData?.loanRepaid ?? paidAmount, 
-      remainingDue: compData?.loanDue ?? remainingDue, 
+      hasLoan: isMilk ? (masterHasLoan && !masterLoanCleared) : (compData?.hasLoan ?? hasLoan), 
+      loanName: isMilk ? masterLoanType : (compData?.loanType ?? loanName), 
+      loanAmount: isMilk ? masterLoanExtended : (compData?.loanAmount ?? loanAmount), 
+      paidAmount: isMilk ? ((masterHasLoan && !masterLoanCleared) ? (compData?.loanRecovered || '') : '') : (compData?.loanRepaid ?? paidAmount), 
+      remainingDue: isMilk ? ((masterHasLoan && !masterLoanCleared) ? (compData?.loanOutstanding || '') : '') : (compData?.loanDue ?? remainingDue), 
       activities,
-      auditDone: compData?.auditDate ? `Yes (${compData.auditDate})` : (auditDate ? `Yes (${auditDate})` : 'No'),
-      auditDate: compData?.auditDate ?? auditDate, 
-      auditYear: compData?.auditYear ?? auditYear,
-      agmDone: compData?.agmDate ? `Yes (${compData.agmDate})` : (agmDate ? `Yes (${agmDate})` : 'No'),
-      agmDate: compData?.agmDate ?? agmDate,
+      auditDone: isMilk ? (masterAuditDate ? `Yes (${masterAuditDate})` : 'No') : (compData?.auditDate ? `Yes (${compData.auditDate})` : (auditDate ? `Yes (${auditDate})` : 'No')),
+      auditDate: isMilk ? masterAuditDate : (compData?.auditDate ?? auditDate), 
+      auditYear: isMilk ? masterAuditYear : (compData?.auditYear ?? auditYear),
+      agmDone: isMilk ? (masterAgmDate ? `Yes (${masterAgmDate})` : 'No') : (compData?.agmDate ? `Yes (${compData.agmDate})` : (agmDate ? `Yes (${agmDate})` : 'No')),
+      agmDate: isMilk ? masterAgmDate : (compData?.agmDate ?? agmDate),
       gpsLat: location?.latitude ?? null, gpsLng: location?.longitude ?? null,
       capturedAt: timestamp || new Date().toISOString(),
       // Append all data sets to ensure they are captured in offline queue and cloud DB
@@ -1780,7 +1847,33 @@ export default function App() {
                     setManagerName={setManagerName}
                     managerMobile={managerMobile}
                     setManagerMobile={setManagerMobile}
+                    auditDate={masterAuditDate}
+                    setAuditDate={setMasterAuditDate}
+                    auditYear={masterAuditYear}
+                    setAuditYear={setMasterAuditYear}
+                    auditStatus={masterAuditStatus}
+                    setAuditStatus={setMasterAuditStatus}
+                    agmDate={masterAgmDate}
+                    setAgmDate={setMasterAgmDate}
+                    agmYear={masterAgmYear}
+                    setAgmYear={setMasterAgmYear}
+                    agmStatus={masterAgmStatus}
+                    setAgmStatus={setMasterAgmStatus}
+                    hasLoan={masterHasLoan}
+                    setHasLoan={setMasterHasLoan}
+                    loanType={masterLoanType}
+                    setLoanType={setMasterLoanType}
+                    loanSanctionDate={masterLoanSanctionDate}
+                    setLoanSanctionDate={setMasterLoanSanctionDate}
+                    loanBeneficiaries={masterLoanBeneficiaries}
+                    setLoanBeneficiaries={setMasterLoanBeneficiaries}
+                    loanExtended={masterLoanExtended}
+                    setLoanExtended={setMasterLoanExtended}
+                    loanCleared={masterLoanCleared}
                     lastUpdated=""
+                    onSave={(data) => {
+                      if (data) saveMasterStateToStorage(data);
+                    }}
                     onNext={() => {
                       setCurrentMobileScreen('DEMOGRAPHICS');
                       setActiveBottomTab('home');
@@ -1921,6 +2014,29 @@ export default function App() {
                         setManagerName={setManagerName}
                         managerMobile={managerMobile}
                         setManagerMobile={setManagerMobile}
+                        auditDate={masterAuditDate}
+                        setAuditDate={setMasterAuditDate}
+                        auditYear={masterAuditYear}
+                        setAuditYear={setMasterAuditYear}
+                        auditStatus={masterAuditStatus}
+                        setAuditStatus={setMasterAuditStatus}
+                        agmDate={masterAgmDate}
+                        setAgmDate={setMasterAgmDate}
+                        agmYear={masterAgmYear}
+                        setAgmYear={setMasterAgmYear}
+                        agmStatus={masterAgmStatus}
+                        setAgmStatus={setMasterAgmStatus}
+                        hasLoan={masterHasLoan}
+                        setHasLoan={setMasterHasLoan}
+                        loanType={masterLoanType}
+                        setLoanType={setMasterLoanType}
+                        loanSanctionDate={masterLoanSanctionDate}
+                        setLoanSanctionDate={setMasterLoanSanctionDate}
+                        loanBeneficiaries={masterLoanBeneficiaries}
+                        setLoanBeneficiaries={setMasterLoanBeneficiaries}
+                        loanExtended={masterLoanExtended}
+                        setLoanExtended={setMasterLoanExtended}
+                        loanCleared={masterLoanCleared}
                         lastUpdated=""
                         onSave={(data) => {
                           if (data) saveMasterStateToStorage(data);
@@ -1955,6 +2071,14 @@ export default function App() {
                       <ComplianceScreen
                         societyName={selectedSociety?.name || centerName?.trim()}
                         reportingMonth={reportingMonth}
+                        masterHasLoan={masterHasLoan}
+                        masterLoanCleared={masterLoanCleared}
+                        masterLoanType={masterLoanType}
+                        masterLoanExtended={masterLoanExtended}
+                        onLoanCleared={() => {
+                          setMasterLoanCleared(true);
+                          saveMasterStateToStorage({ masterLoanCleared: true });
+                        }}
                         onSave={() => {
                           refreshMilkSectionStatuses();
                           saveMasterStateToStorage({});
