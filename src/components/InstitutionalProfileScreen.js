@@ -227,6 +227,11 @@ export default function InstitutionalProfileScreen({
     }
   };
 
+  const handleSaveAndExit = () => {
+    handleSaveProfile();
+    if (onBack) onBack();
+  };
+
   return (
     <View style={styles.container}>
       {/* Top Header */}
@@ -272,6 +277,19 @@ export default function InstitutionalProfileScreen({
           <View style={[styles.btnWrapper, { flex: 1 }]}>
             <Pressable 
               style={({ hovered, pressed }) => [
+                styles.saveExitBtn,
+                pressed && { transform: [{ scale: 0.98 }] }
+              ]}
+              onPress={handleSaveAndExit}
+            >
+              <MaterialCommunityIcons name="content-save-check-outline" size={16} color={COLORS.primary} />
+              <Text style={styles.saveExitText}>Save & Exit</Text>
+            </Pressable>
+          </View>
+
+          <View style={[styles.btnWrapper, { flex: 1 }]}>
+            <Pressable 
+              style={({ hovered, pressed }) => [
                 styles.editCtaBtn,
                 pressed && { transform: [{ scale: 0.98 }] },
                 hovered && Platform.OS === 'web' && { shadowOpacity: 0.4 }
@@ -290,6 +308,14 @@ export default function InstitutionalProfileScreen({
           </View>
         </View>
       </View>
+
+      {/* Save Confirmation Toast */}
+      {isSaved && (
+        <View style={styles.toastBanner} pointerEvents="none">
+          <MaterialCommunityIcons name="check-circle" size={16} color="#ffffff" />
+          <Text style={styles.toastText}>Profile saved successfully</Text>
+        </View>
+      )}
 
 
       {/* Decorative Ambient Background Blobs */}
@@ -863,6 +889,49 @@ const styles = StyleSheet.create({
     fontSize: 13, 
     fontWeight: '700',
     letterSpacing: 0.5,
+  },
+  saveExitBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 12,
+    paddingHorizontal: 10,
+    borderRadius: 16,
+    borderWidth: 1.5,
+    borderColor: COLORS.primary,
+    backgroundColor: '#FFFFFF',
+  },
+  saveExitText: {
+    color: COLORS.primary,
+    fontFamily: FONT_FAMILY,
+    fontSize: 12,
+    fontWeight: '700',
+    letterSpacing: 0.3,
+  },
+  toastBanner: {
+    position: 'absolute',
+    top: 100,
+    alignSelf: 'center',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: COLORS.emerald700,
+    paddingVertical: 10,
+    paddingHorizontal: 18,
+    borderRadius: 30,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 10,
+    elevation: 10,
+    zIndex: 10000,
+  },
+  toastText: {
+    color: '#FFFFFF',
+    fontFamily: FONT_FAMILY,
+    fontSize: 12,
+    fontWeight: '700',
   },
 
   // In-App Slide-Up Sheet

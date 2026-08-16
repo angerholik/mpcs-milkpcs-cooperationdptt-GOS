@@ -139,6 +139,13 @@ const MILK_FIELD_ORDER = [
   'gps_lat', 'gps_lng'
 ];
 
+// The app stores audit_done/agm_done as a descriptive string like "Yes (12 Aug 2026)",
+// not a bare "Yes" — so every check in this file needs to match the prefix, not the
+// exact value. Use this helper everywhere instead of `=== 'Yes'`.
+function isYes(val) {
+  return typeof val === 'string' && val.trim().toLowerCase().startsWith('yes');
+}
+
 // Helper to parse Milk Audit & AGM details
 function getMilkAuditAgm(row) {
   if (!row) return { audit_done: 'No', audit_year: '—', agm_done: 'No', agm_date: '—' };
@@ -429,16 +436,21 @@ function MilkDetailModal({ row, onClose }) {
           <Sec title="I. Institutional Profile">
             <div className="detail-grid">
               <div className="detail-item"><span className="lbl">Center Name</span><span className="val">{row.center_name||'—'}</span></div>
+              <div className="detail-item"><span className="lbl">Registration Number</span><span className="val">{row.registration_number||'—'}</span></div>
               <div className="detail-item"><span className="lbl">Reporting Month</span><span className="val">{row.reporting_month||'—'}</span></div>
               <div className="detail-item"><span className="lbl">Reported By</span><span className="val">{row.reported_by||'—'}</span></div>
+              <div className="detail-item"><span className="lbl">President Name</span><span className="val">{row.president_name||'—'}</span></div>
+              <div className="detail-item"><span className="lbl">President Mobile</span><span className="val">{row.president_mobile||'—'}</span></div>
+              <div className="detail-item"><span className="lbl">Manager Name</span><span className="val">{row.manager_name||'—'}</span></div>
+              <div className="detail-item"><span className="lbl">Manager Mobile</span><span className="val">{row.manager_mobile||'—'}</span></div>
               <div className="detail-item"><span className="lbl">Submitted At</span><span className="val">{row.created_at?new Date(row.created_at).toLocaleString('en-IN'):'—'}</span></div>
             </div>
           </Sec>
           <Sec title="II. Audit / AGM Details">
             <div className="detail-grid">
-              <div className="detail-item"><span className="lbl">Latest Audit Conducted</span><span className="val">{auditAgm.audit_done === 'Yes' ? 'Yes' : 'No'}</span></div>
+              <div className="detail-item"><span className="lbl">Latest Audit Conducted</span><span className="val">{isYes(auditAgm.audit_done) ? 'Yes' : 'No'}</span></div>
               <div className="detail-item"><span className="lbl">Audit Year</span><span className="val">{auditAgm.audit_year || '—'}</span></div>
-              <div className="detail-item"><span className="lbl">Latest AGM Conducted</span><span className="val">{auditAgm.agm_done === 'Yes' ? (auditAgm.agm_date !== '—' ? `Yes (${auditAgm.agm_date})` : 'Yes') : 'No'}</span></div>
+              <div className="detail-item"><span className="lbl">Latest AGM Conducted</span><span className="val">{isYes(auditAgm.agm_done) ? (auditAgm.agm_date !== '—' ? `Yes (${auditAgm.agm_date})` : 'Yes') : 'No'}</span></div>
             </div>
           </Sec>
           <Sec title="III. Operations Ledger">
@@ -532,9 +544,16 @@ function MilkDetailModal({ row, onClose }) {
           )}
           <Sec title="VII. Verification">
             <div className="detail-grid">
-              <div className="detail-item"><span className="lbl">Captured At</span><span className="val">{row.captured_at||'—'}</span></div>
+              <div className="detail-item">
+                <span className="lbl">Field Visit Timestamp</span>
+                <span className="val">{row.captured_at ? new Date(row.captured_at).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' }) : 'Not captured'}</span>
+              </div>
+              <div className="detail-item">
+                <span className="lbl">GPS Location</span>
+                <span className="val">{row.gps_lat && row.gps_lng ? `${Number(row.gps_lat).toFixed(5)}°N, ${Number(row.gps_lng).toFixed(5)}°E` : 'Not captured'}</span>
+              </div>
             </div>
-            {row.gps_lat && row.gps_lng && (
+            {row.gps_lat && row.gps_lng ? (
               <div style={{marginTop:'12px', borderRadius:'12px', overflow:'hidden', border:'1.5px solid var(--border)'}}>
                 <iframe 
                   title="Location Preview"
@@ -550,6 +569,10 @@ function MilkDetailModal({ row, onClose }) {
                    style={{display:'block', padding:'10px', background:'var(--emerald-pale)', color:'var(--emerald)', textAlign:'center', fontSize:'12px', fontWeight:800, textDecoration:'none', borderTop:'1.5px solid var(--border)'}}>
                    View Full Map ↗
                 </a>
+              </div>
+            ) : (
+              <div style={{marginTop:'12px', padding:'12px 16px', borderRadius:'10px', background:'#F8FAFC', border:'1px solid #E2E8F0', fontSize:'12px', color:'#64748B', fontStyle:'italic'}}>
+                No GPS coordinates were captured for this submission's Digital Evidence photo.
               </div>
             )}
           </Sec>
@@ -592,7 +615,7 @@ function MPCSDetailModal({ row, onClose }) {
             <h2 style={{fontSize:'22px',fontWeight:900,color:'var(--text-primary)'}}>{row.society_name || 'Society Name Missing'}</h2>
             <div style={{marginTop:'8px',display:'flex',gap:'8px',flexWrap:'wrap'}}>
               {row.is_profit === 'Yes' ? <span className="badge badge-green">PROFITABLE</span> : <span className="badge badge-red">LOSS MAKING</span>}
-              {row.audit_done === 'Yes' && <span className="badge badge-gold">AUDITED: {row.audit_year}</span>}
+              {isYes(row.audit_done) && <span className="badge badge-gold">AUDITED: {row.audit_year}</span>}
             </div>
           </div>
           <button className="modal-close" onClick={onClose}><Icon d={I.close} size={18}/></button>
@@ -696,7 +719,7 @@ function MPCSDetailModal({ row, onClose }) {
               let auditStatusStr = 'Pending';
               if (rawAuditStatus) {
                 auditStatusStr = (rawAuditStatus.toLowerCase() === 'completed' || rawAuditStatus.toLowerCase() === 'yes') ? 'Completed' : 'Pending';
-              } else if (auditAgm.audit_done === 'Yes' || fd['4.1']) {
+              } else if (isYes(auditAgm.audit_done) || fd['4.1']) {
                 auditStatusStr = 'Completed';
               }
 
@@ -704,7 +727,7 @@ function MPCSDetailModal({ row, onClose }) {
               let agmStatusStr = 'Pending';
               if (rawAgmStatus) {
                 agmStatusStr = (rawAgmStatus.toLowerCase() === 'completed' || rawAgmStatus.toLowerCase() === 'yes') ? 'Completed' : 'Pending';
-              } else if (auditAgm.agm_done === 'Yes' || fd['4.4']) {
+              } else if (isYes(auditAgm.agm_done) || fd['4.4']) {
                 agmStatusStr = 'Completed';
               }
 
@@ -1127,13 +1150,13 @@ function DistrictPerformance({ milkRows = [], mpcsRows = [] }) {
   const mpcsTotal = mpcsRows.length || 1;
   const mpcsCscCount = useMemo(() => mpcsRows.filter(r => r.form_data?.['9.1'] === 'Yes' || r.form_data?.['9.7z'] === 'Yes').length, [mpcsRows]);
   const mpcsMonthlyDeposit = useMemo(() => mpcsRows.reduce((s, r) => s + (parseFloat(r.form_data?.['7.71'] || r.bank_balance) || 0), 0), [mpcsRows]);
-  const mpcsAgmCompletedCount = useMemo(() => mpcsAuditAgmList.filter(x => x.agm_done === 'Yes').length, [mpcsAuditAgmList]);
-  const mpcsAuditedCount = useMemo(() => mpcsAuditAgmList.filter(x => x.audit_done === 'Yes').length, [mpcsAuditAgmList]);
+  const mpcsAgmCompletedCount = useMemo(() => mpcsAuditAgmList.filter(x => isYes(x.agm_done)).length, [mpcsAuditAgmList]);
+  const mpcsAuditedCount = useMemo(() => mpcsAuditAgmList.filter(x => isYes(x.audit_done)).length, [mpcsAuditAgmList]);
 
   const milkTotal = milkRows.length || 1;
   const milkTotalLitres = useMemo(() => milkRows.reduce((s, r) => s + (parseFloat(r.litres) || 0), 0), [milkRows]);
-  const milkAgmCompletedCount = useMemo(() => milkAuditAgmList.filter(x => x.agm_done === 'Yes').length, [milkAuditAgmList]);
-  const milkAuditedCount = useMemo(() => milkAuditAgmList.filter(x => x.audit_done === 'Yes').length, [milkAuditAgmList]);
+  const milkAgmCompletedCount = useMemo(() => milkAuditAgmList.filter(x => isYes(x.agm_done)).length, [milkAuditAgmList]);
+  const milkAuditedCount = useMemo(() => milkAuditAgmList.filter(x => isYes(x.audit_done)).length, [milkAuditAgmList]);
 
   const chartData = useMemo(() => {
     const subdivisions = ['Gyalshing HQ', 'Dentam', 'Yuksom', 'Tashiding', 'Yangthang', 'Pelling', 'Legship'];
@@ -1145,7 +1168,7 @@ function DistrictPerformance({ milkRows = [], mpcsRows = [] }) {
          milk_vol: mSub.reduce((s,r) => s + (parseFloat(r.litres)||0), 0),
          mpcs_count: mpSub.length,
          profits: mpSub.filter(r => r.is_profit === 'Yes').length,
-         audits: mpSub.filter(r => r.audit_done === 'Yes').length
+         audits: mpSub.filter(r => isYes(r.audit_done)).length
        };
     });
   }, [milkRows, mpcsRows]);
@@ -1276,7 +1299,7 @@ function AuditOverview({ mpcsRows, onSelectSociety }) {
 
   const stats = useMemo(() => {
     const total = mpcsRows.length;
-    const audited = mpcsRows.filter(r => r.audit_done === 'Yes').length;
+    const audited = mpcsRows.filter(r => isYes(r.audit_done)).length;
     const pending = mpcsRows.filter(r => r.audit_done !== 'Yes').length;
     const gradeA = mpcsRows.filter(r => r.audit_category === 'A').length;
     const gradeB = mpcsRows.filter(r => r.audit_category === 'B').length;
@@ -1462,7 +1485,7 @@ function AuditOverview({ mpcsRows, onSelectSociety }) {
                 </tr>
               ) : (
                 filtered.map((row, idx) => {
-                  const isAudited = row.audit_done === 'Yes';
+                  const isAudited = isYes(row.audit_done);
                   const grade = row.audit_category || 'N/A';
                   const gradeColor = grade === 'A' ? '#047857' : grade === 'B' ? '#1D4ED8' : grade === 'C' ? '#D97706' : grade === 'D' ? '#B91C1C' : '#64748B';
                   const agmDate = row.form_data && row.form_data['4.4'] ? row.form_data['4.4'] : '—';
@@ -1720,7 +1743,7 @@ function Dashboard({ onLogout }) {
         profits: d.filter(r=>r.is_profit==='PROFIT'||r.is_profit==='Yes').length,
         losses: d.filter(r=>r.is_profit==='LOSS'||r.is_profit==='No').length,
         neutral: d.filter(r=>r.is_profit==='NO_PROFIT_NO_LOSS').length,
-        audits: d.filter(r=>r.audit_done==='Yes').length,
+        audits: d.filter(r=>isYes(r.audit_done)).length,
         cscs: d.filter(r=>r.form_data?.['9.1']==='Yes').length,
         loans: d.filter(r=>r.has_loan).length,
       });
@@ -1786,7 +1809,7 @@ function Dashboard({ onLogout }) {
     if (filterMpcsProfitStatus) d = d.filter(r => r.is_profit === filterMpcsProfitStatus);
     if (filterMpcsAuditGrade) d = d.filter(r => r.audit_category === filterMpcsAuditGrade);
 
-    if (activeFilter === 'audit') d = d.filter(r => r.audit_done === 'Yes');
+    if (activeFilter === 'audit') d = d.filter(r => isYes(r.audit_done));
     if (activeFilter === 'profit') d = d.filter(r => r.is_profit === 'Yes');
     if (activeFilter === 'loan') d = d.filter(r => r.has_loan);
     setMpcsFiltered(d);
@@ -2712,8 +2735,8 @@ function Dashboard({ onLogout }) {
                               </td>
                               <td style={{fontSize:'13px', color:'#334155', fontWeight:600}}>{row.reported_by||'—'}</td>
                               <td style={{textAlign:'center'}}><span className="badge badge-green" style={{fontSize:'10px'}}>{row.reporting_month||'—'}</span></td>
-                              <td style={{textAlign:'center'}}><span className={`badge ${mAuditAgm.audit_done==='Yes'?'badge-green':'badge-red'}`} style={{fontSize:'10px'}}>{mAuditAgm.audit_done==='Yes'?'Yes':'No'}</span></td>
-                              <td style={{textAlign:'center'}}><span className={`badge ${mAuditAgm.agm_done==='Yes'?'badge-green':'badge-red'}`} style={{fontSize:'10px'}}>{mAuditAgm.agm_done==='Yes'?'Yes':'No'}</span></td>
+                              <td style={{textAlign:'center'}}><span className={`badge ${isYes(mAuditAgm.audit_done)?'badge-green':'badge-red'}`} style={{fontSize:'10px'}}>{isYes(mAuditAgm.audit_done)?'Yes':'No'}</span></td>
+                              <td style={{textAlign:'center'}}><span className={`badge ${isYes(mAuditAgm.agm_done)?'badge-green':'badge-red'}`} style={{fontSize:'10px'}}>{isYes(mAuditAgm.agm_done)?'Yes':'No'}</span></td>
                               <td style={{textAlign:'center'}}>
                                 {row.photo_url
                                   ? <img src={row.photo_url} alt="Evidence" onClick={e=>{e.stopPropagation();window.open(row.photo_url,'_blank');}}
@@ -2891,7 +2914,7 @@ function Dashboard({ onLogout }) {
                               <span style={{fontFamily:'monospace', background:'#F1F5F9', padding:'2px 6px', borderRadius:'4px', color:'#334155', fontWeight:700}}>{row.registration_number||'—'}</span>
                             </td>
                             <td style={{textAlign:'center'}}>
-                              {auditAgm.audit_done === 'Yes' 
+                              {isYes(auditAgm.audit_done) 
                                 ? <span className="badge badge-green" style={{fontSize:'10px'}}>{auditAgm.audit_year !== '—' ? auditAgm.audit_year : 'Yes'}</span> 
                                 : <span className="badge badge-red" style={{fontSize:'10px'}}>No</span>}
                             </td>

@@ -608,6 +608,14 @@ export default function App() {
         masterLoanBeneficiaries: overrides.masterLoanBeneficiaries !== undefined ? overrides.masterLoanBeneficiaries : masterLoanBeneficiaries,
         masterLoanExtended: overrides.masterLoanExtended !== undefined ? overrides.masterLoanExtended : masterLoanExtended,
         masterLoanCleared: overrides.masterLoanCleared !== undefined ? overrides.masterLoanCleared : masterLoanCleared,
+        mSc: overrides.mSc !== undefined ? overrides.mSc : mSc,
+        fSc: overrides.fSc !== undefined ? overrides.fSc : fSc,
+        mSt: overrides.mSt !== undefined ? overrides.mSt : mSt,
+        fSt: overrides.fSt !== undefined ? overrides.fSt : fSt,
+        mObc: overrides.mObc !== undefined ? overrides.mObc : mObc,
+        fObc: overrides.fObc !== undefined ? overrides.fObc : fObc,
+        mGen: overrides.mGen !== undefined ? overrides.mGen : mGen,
+        fGen: overrides.fGen !== undefined ? overrides.fGen : fGen,
         demographicsData: overrides.demographicsData !== undefined ? overrides.demographicsData : demographicsData,
         complianceData: overrides.complianceData !== undefined ? overrides.complianceData : complianceData,
         financialsData: overrides.financialsData !== undefined ? overrides.financialsData : financialsData,
@@ -668,12 +676,20 @@ export default function App() {
             hasLoan: loanIsActive,
             loanName: stateObj.masterLoanType,
             loanAmount: stateObj.masterLoanExtended,
-            paidAmount: loanIsActive ? (compData?.loanRecovered || '') : '',
-            remainingDue: loanIsActive ? (compData?.loanOutstanding || '') : '',
+            paidAmount: loanIsActive ? (compData?.loanRecovered || '0') : '',
+            remainingDue: loanIsActive ? (compData?.loanOutstanding || stateObj.masterLoanExtended || '0') : '',
             // Audit & AGM are Master Data now (done once/year, not monthly).
             auditDone: stateObj.masterAuditDate ? `Yes (${stateObj.masterAuditDate})` : 'No',
             auditYear: stateObj.masterAuditYear,
             agmDone: stateObj.masterAgmDate ? `Yes (${stateObj.masterAgmDate})` : 'No',
+            // GPS/timestamp evidence is captured once on the Digital Evidence screen and
+            // otherwise sits in local state — include it here too so a later silent sync
+            // (triggered by saving any other section) doesn't wipe it back to null. Photo
+            // upload itself stays Compile & Seal-only since it's an actual file upload,
+            // not cheap to repeat on every background sync.
+            gpsLat: location?.latitude ?? null,
+            gpsLng: location?.longitude ?? null,
+            capturedAt: timestamp || undefined,
             ...stateObj,
             litres: opsData?.litres || '',
             balance: opsData?.balance || '',
@@ -744,6 +760,14 @@ export default function App() {
         setMasterLoanBeneficiaries(saved.masterLoanBeneficiaries || '');
         setMasterLoanExtended(saved.masterLoanExtended || '');
         setMasterLoanCleared(saved.masterLoanCleared || false);
+        setMSc(saved.mSc || '');
+        setFSc(saved.fSc || '');
+        setMSt(saved.mSt || '');
+        setFSt(saved.fSt || '');
+        setMObc(saved.mObc || '');
+        setFObc(saved.fObc || '');
+        setMGen(saved.mGen || '');
+        setFGen(saved.fGen || '');
         setDemographicsData(saved.demographicsData || []);
         setComplianceData(saved.complianceData || {});
         setFinancialsData(saved.financialsData || {});
@@ -1483,8 +1507,8 @@ export default function App() {
       hasLoan: isMilk ? (masterHasLoan && !masterLoanCleared) : (compData?.hasLoan ?? hasLoan), 
       loanName: isMilk ? masterLoanType : (compData?.loanType ?? loanName), 
       loanAmount: isMilk ? masterLoanExtended : (compData?.loanAmount ?? loanAmount), 
-      paidAmount: isMilk ? ((masterHasLoan && !masterLoanCleared) ? (compData?.loanRecovered || '') : '') : (compData?.loanRepaid ?? paidAmount), 
-      remainingDue: isMilk ? ((masterHasLoan && !masterLoanCleared) ? (compData?.loanOutstanding || '') : '') : (compData?.loanDue ?? remainingDue), 
+      paidAmount: isMilk ? ((masterHasLoan && !masterLoanCleared) ? (compData?.loanRecovered || '0') : '') : (compData?.loanRepaid ?? paidAmount), 
+      remainingDue: isMilk ? ((masterHasLoan && !masterLoanCleared) ? (compData?.loanOutstanding || masterLoanExtended || '0') : '') : (compData?.loanDue ?? remainingDue), 
       activities,
       auditDone: isMilk ? (masterAuditDate ? `Yes (${masterAuditDate})` : 'No') : (compData?.auditDate ? `Yes (${compData.auditDate})` : (auditDate ? `Yes (${auditDate})` : 'No')),
       auditDate: isMilk ? masterAuditDate : (compData?.auditDate ?? auditDate), 
@@ -1626,25 +1650,31 @@ export default function App() {
           addMilkCenter(centerName.trim(), district).then(updated => { if (updated) setMilkCenters(updated); });
       }
 
-      if (Platform.OS === 'web') {
-        try {
-          const printWin = window.open('', '_blank');
-          if (printWin) {
-            printWin.document.write(htmlContent);
-            printWin.document.close();
-            setTimeout(() => { printWin.focus(); printWin.print(); }, 300);
+      // Only auto-open/share the PDF when this is an explicit "View PDF" request from
+      // Records (recordOverride is set). A fresh Compile & Seal just saves silently —
+      // the record is immediately available in Records, and "View PDF" there triggers
+      // this same function with the saved data to regenerate and open the PDF on demand.
+      if (recordOverride) {
+        if (Platform.OS === 'web') {
+          try {
+            const printWin = window.open('', '_blank');
+            if (printWin) {
+              printWin.document.write(htmlContent);
+              printWin.document.close();
+              setTimeout(() => { printWin.focus(); printWin.print(); }, 300);
+            }
+          } catch(e) {
+            console.warn('Web print error:', e);
           }
-        } catch(e) {
-          console.warn('Web print error:', e);
-        }
-      } else {
-        try {
-          const printResult = await Print.printToFileAsync({ html: htmlContent });
-          if (printResult?.uri && await Sharing.isAvailableAsync()) {
-            await Sharing.shareAsync(printResult.uri, { UTI: '.pdf', mimeType: 'application/pdf' });
+        } else {
+          try {
+            const printResult = await Print.printToFileAsync({ html: htmlContent });
+            if (printResult?.uri && await Sharing.isAvailableAsync()) {
+              await Sharing.shareAsync(printResult.uri, { UTI: '.pdf', mimeType: 'application/pdf' });
+            }
+          } catch (err) {
+            console.warn('PDF Error:', err);
           }
-        } catch (err) {
-          console.warn('PDF Error:', err);
         }
       }
 
