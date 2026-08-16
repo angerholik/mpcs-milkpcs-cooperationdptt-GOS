@@ -218,7 +218,7 @@ export default function App() {
   });
 
   const refreshMilkSectionStatuses = async () => {
-    const socName = selectedSociety?.name || centerName || '';
+    const socName = selectedSociety?.name || centerName?.trim() || '';
     const repMonth = reportingMonth || getCurrentMonthLabel();
     if (!socName) {
       setMilkSectionStates({
@@ -272,10 +272,10 @@ export default function App() {
     }
 
     setMilkSectionStates({
-      evidence: { status: evidenceStatus, updatedAt: new Date().toISOString(), validUntil },
-      operations: { status: opsStatus, updatedAt: new Date().toISOString() },
-      activities: { status: actStatus, updatedAt: new Date().toISOString() },
-      compliance: { status: compStatus, updatedAt: new Date().toISOString() }
+      evidence: { status: evidenceStatus, updatedAt: evidenceStatus === 'CAPTURED ✓' ? new Date().toISOString() : null, validUntil },
+      operations: { status: opsStatus, updatedAt: opsStatus === 'COMPLETED ✓' ? new Date().toISOString() : null },
+      activities: { status: actStatus, updatedAt: actStatus.includes('ENTRIES') ? new Date().toISOString() : null },
+      compliance: { status: compStatus, updatedAt: compStatus === 'COMPLETED ✓' ? new Date().toISOString() : null }
     });
   };
 
@@ -422,7 +422,7 @@ export default function App() {
   useEffect(() => {
     let isMounted = true;
     (async () => {
-      const socName = selectedSociety?.name || centerName || '';
+      const socName = selectedSociety?.name || centerName?.trim() || '';
       const repMonth = reportingMonth || getCurrentMonthLabel();
       if (socName) {
         const storedParams = await getMonthlyParams(socName, repMonth);
@@ -502,7 +502,7 @@ export default function App() {
       }
     };
     setSectionStates(newState);
-    const socName = selectedSociety?.name || centerName || '';
+    const socName = selectedSociety?.name || centerName?.trim() || '';
     const repMonth = reportingMonth || getCurrentMonthLabel();
     if (socName) {
       await saveSectionStates(socName, repMonth, newState);
@@ -581,7 +581,7 @@ export default function App() {
   const saveMasterStateToStorage = async (overrides = {}, targetSocName = null, explicitEmail = null) => {
     try {
       const userEmail = getUserEmail(explicitEmail);
-      const rawSocName = targetSocName || selectedSociety?.name || centerName;
+      const rawSocName = targetSocName || selectedSociety?.name || centerName?.trim();
       const activeSocName = typeof rawSocName === 'string' ? rawSocName : (rawSocName?.name || '');
       if (!activeSocName || !activeSocName.trim()) return;
 
@@ -729,7 +729,7 @@ export default function App() {
     try {
       const userEmail = getUserEmail(explicitEmail);
       const lastSocKey = getLastSelectedSocietyKey(userEmail);
-      const rawSocName = targetSocName || (await AsyncStorage.getItem(lastSocKey)) || selectedSociety?.name || centerName;
+      const rawSocName = targetSocName || (await AsyncStorage.getItem(lastSocKey)) || selectedSociety?.name || centerName?.trim();
       const activeSocName = typeof rawSocName === 'string' ? rawSocName : (rawSocName?.name || '');
       if (!activeSocName || !activeSocName.trim()) {
         resetAllFormFields();

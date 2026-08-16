@@ -75,23 +75,29 @@ export default function OperationsScreen({
     return isNaN(num) ? 0 : num;
   };
 
-  const formatCurrency = (val) => {
-    if (!val) return "";
-    const clean = val.toString().replace(/,/g, '');
-    if (isNaN(clean) || clean === "") return clean;
-    return parseFloat(clean).toLocaleString('en-IN');
+  // Reformatting the value with comma grouping on every keystroke (the old
+  // formatCurrency-on-change approach) resets the text input's cursor position
+  // to the start after each render on web, which corrupts continued typing —
+  // this is what caused values to appear truncated/scrambled. Keep the raw
+  // digits in state while typing; comma formatting is only for display
+  // elsewhere (PDF, admin dashboard), not for this input's own value.
+  const sanitizeNumeric = (text) => {
+    let cleaned = (text || '').replace(/[^0-9.]/g, '');
+    const parts = cleaned.split('.');
+    if (parts.length > 2) cleaned = parts[0] + '.' + parts.slice(1).join('');
+    return cleaned;
   };
 
   const handleWithdrawalChange = (text) => {
-    setWithdrawal(formatCurrency(text));
+    setWithdrawal(sanitizeNumeric(text));
   };
 
   const handleBalanceChange = (text) => {
-    setBalance(formatCurrency(text));
+    setBalance(sanitizeNumeric(text));
   };
 
   const handleLitresChange = (text) => {
-    setLitres(formatCurrency(text));
+    setLitres(sanitizeNumeric(text));
   };
   return (
     <View style={styles.container}>
