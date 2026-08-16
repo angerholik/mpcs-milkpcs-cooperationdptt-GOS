@@ -1374,8 +1374,9 @@ export default function App() {
                     <div class="card-body">
                       <table class="data-table">
                         <tr class="data-row"><td class="data-label">Reporting Month</td><td class="data-value">${reportingMonth || 'N/A'}</td></tr>
-                        <tr class="data-row"><td class="data-label">Litres Collected</td><td class="data-value">${litres} L</td></tr>
-                        <tr class="data-row"><td class="data-label">Bank Balance</td><td class="data-value financial-val">₹ ${parseFloat(balance || 0).toLocaleString('en-IN')}</td></tr>
+                        <tr class="data-row"><td class="data-label">Litres Collected</td><td class="data-value">${isMilk ? activeLitres : litres} L</td></tr>
+                        <tr class="data-row"><td class="data-label">Withdrawal</td><td class="data-value financial-val">₹ ${parseFloat((isMilk ? activeWithdrawal : withdrawal) || 0).toLocaleString('en-IN')}</td></tr>
+                        <tr class="data-row"><td class="data-label">Bank Balance</td><td class="data-value financial-val">₹ ${parseFloat((isMilk ? activeBalance : balance) || 0).toLocaleString('en-IN')}</td></tr>
                         <tr class="data-row"><td class="data-label">Audit Conducted Date</td><td class="data-value">${pdfAuditDate || 'N/A'} (Year: ${pdfAuditYear || 'N/A'})</td></tr>
                         <tr class="data-row"><td class="data-label">AGM Conducted Date</td><td class="data-value">${pdfAgmDate || 'N/A'}</td></tr>
                       </table>
