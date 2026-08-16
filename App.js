@@ -114,6 +114,14 @@ const COLORS = {
   success: '#10B981'
 };
 
+// Canonical current-month label used as the single source of truth for
+// every "reporting month" fallback in this file. Using one shared helper
+// (instead of a hardcoded past month, or ad-hoc Date.toLocaleString calls
+// with differing formats) prevents the same submission from being written
+// under two different month strings and creating duplicate Supabase rows.
+const getCurrentMonthLabel = () =>
+  new Date().toLocaleString('en-IN', { month: 'long', year: 'numeric' });
+
 export default function App() {
   const [fontsLoaded, fontError] = useFonts({
     Manrope: Manrope_400Regular,
@@ -196,7 +204,7 @@ export default function App() {
 
   const refreshMilkSectionStatuses = async () => {
     const socName = selectedSociety?.name || centerName || '';
-    const repMonth = reportingMonth || 'AUG 2024';
+    const repMonth = reportingMonth || getCurrentMonthLabel();
     if (!socName) {
       setMilkSectionStates({
         evidence: { status: 'NOT CAPTURED', updatedAt: null, validUntil: null },
@@ -272,7 +280,7 @@ export default function App() {
   const [alertHistory, setAlertHistory] = useState([]);
 
   // Operational Ledger States
-  const [reportingMonth, setReportingMonth] = useState('AUG 2024');
+  const [reportingMonth, setReportingMonth] = useState(getCurrentMonthLabel());
   const [litres, setLitres] = useState('');
   const [withdrawal, setWithdrawal] = useState('');
   const [balance, setBalance] = useState('');
@@ -344,7 +352,7 @@ export default function App() {
     });
 
     // Clear operational ledgers
-    setReportingMonth('AUG 2024');
+    setReportingMonth(getCurrentMonthLabel());
     setLitres('');
     setWithdrawal('');
     setBalance('');
@@ -386,7 +394,7 @@ export default function App() {
     let isMounted = true;
     (async () => {
       const socName = selectedSociety?.name || centerName || '';
-      const repMonth = reportingMonth || 'AUG 2024';
+      const repMonth = reportingMonth || getCurrentMonthLabel();
       if (socName) {
         const storedParams = await getMonthlyParams(socName, repMonth);
         const sStates = await getSectionStates(socName, repMonth);
@@ -466,7 +474,7 @@ export default function App() {
     };
     setSectionStates(newState);
     const socName = selectedSociety?.name || centerName || '';
-    const repMonth = reportingMonth || 'AUG 2024';
+    const repMonth = reportingMonth || getCurrentMonthLabel();
     if (socName) {
       await saveSectionStates(socName, repMonth, newState);
     }
@@ -516,7 +524,7 @@ export default function App() {
       setCenterName(soc?.name || '');
       setRegistrationNumber(soc?.code || soc?.regNo || '');
       setDistrict(soc?.district || '');
-      await clearMilkSectionData(soc?.name, reportingMonth || 'AUG 2024');
+      await clearMilkSectionData(soc?.name, reportingMonth || getCurrentMonthLabel());
       await saveMasterStateToStorage({
         type: soc?.type,
         centerName: soc?.name || '',
@@ -597,7 +605,7 @@ export default function App() {
         }
 
         if (stateObj.type === 'MILK') {
-          const repMonth = stateObj.reportingMonth || new Date().toLocaleString('en-IN', { month: 'short', year: 'numeric' }).toUpperCase();
+          const repMonth = stateObj.reportingMonth || getCurrentMonthLabel();
           const opsData = await getMilkSectionData(activeSocName, repMonth, 'operations');
           const compData = await getMilkSectionData(activeSocName, repMonth, 'compliance');
           const actsData = await getMilkSectionData(activeSocName, repMonth, 'activities');
@@ -624,7 +632,10 @@ export default function App() {
             auditDone: compData?.auditDate ? `Yes (${compData.auditDate})` : (stateObj.complianceData?.auditDone || 'No'),
             auditYear: compData?.auditYear || stateObj.complianceData?.auditYear,
             agmDone: compData?.agmDate ? `Yes (${compData.agmDate})` : 'No',
-            ...stateObj
+            ...stateObj,
+            litres: opsData?.litres || '',
+            balance: opsData?.balance || '',
+            withdrawal: opsData?.withdrawal || ''
           });
         } else {
           saveMpcsSubmission({
@@ -989,7 +1000,7 @@ export default function App() {
 
     const recordItem = recordOverride?.rawData || recordOverride;
     const socName = recordItem?.society_name || recordItem?.center_name || recordItem?.center || selectedSociety?.name || centerName?.trim() || 'Cooperative Collection Center';
-    const repMonth = recordItem?.reporting_month || recordItem?.month || reportingMonth?.trim() || new Date().toLocaleString('en-IN', { month: 'long', year: 'numeric' });
+    const repMonth = recordItem?.reporting_month || recordItem?.month || reportingMonth?.trim() || getCurrentMonthLabel();
 
     // --- DECLARE activeCenterName & activeReportingMonth BEFORE use (TDZ fix) ---
     const activeCenterName = socName;
