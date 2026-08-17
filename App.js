@@ -941,7 +941,13 @@ export default function App() {
       });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, sbSession) => {
-      if (sbSession?.user) {
+      // Only re-run the full auth-success flow (which navigates to
+      // MY_INSTITUTIONS) on a genuine new sign-in. Supabase fires this same
+      // listener with a valid session for TOKEN_REFRESHED too — which
+      // happens silently whenever the tab/app regains focus — and without
+      // this guard every tab switch was yanking the user back to "Add New
+      // Institution" mid-task, regardless of what screen they were on.
+      if (sbSession?.user && event === 'SIGNED_IN') {
         handleUserAuthSuccess(sbSession.user);
       } else if (event === 'SIGNED_OUT') {
         setSession(null);

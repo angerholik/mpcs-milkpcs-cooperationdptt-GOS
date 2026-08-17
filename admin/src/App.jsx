@@ -352,11 +352,6 @@ function LoginPage() {
             {loading ? 'Verifying...' : 'Access Dashboard →'}
           </button>
           
-          <button type="button" onClick={() => { localStorage.setItem('core_bypass', 'true'); window.location.reload(); }}
-            style={{width:'100%',padding:'13px',fontSize:'10px',color:'#94A3B8',background:'transparent',border:'1px dashed rgba(6,78,59,0.3)',borderRadius:'8px',marginTop:'16px',fontWeight:'700',letterSpacing:'0.5px'}}>
-            DEVELOPMENT BYPASS (INTERNAL USE ONLY)
-          </button>
-
           <p style={{fontSize:'11px',color:'#9CA3AF',textAlign:'center',marginTop:'20px'}}>
             FOR OFFICIAL USE ONLY • UNAUTHORIZED ACCESS PROHIBITED • v2.0.4-beta</p>
         </form>
@@ -3642,13 +3637,6 @@ export default function App() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Local Development Bypass
-    if (localStorage.getItem('core_bypass') === 'true') {
-      setSession({ user: { email: 'admin@sikkim.gov.in' } });
-      setLoading(false);
-      return;
-    }
-
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setLoading(false);
