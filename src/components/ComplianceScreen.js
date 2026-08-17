@@ -53,21 +53,30 @@ export default function ComplianceScreen({
 
   // Monthly loan repayment tracking
   const [loanRecovered, setLoanRecovered] = useState('');
-  const [loanOutstanding, setLoanOutstanding] = useState('');
 
   // Temporary state for modal
   const [tempLoanRecovered, setTempLoanRecovered] = useState('');
-  const [tempLoanOutstanding, setTempLoanOutstanding] = useState('');
 
   const loanIsActive = masterHasLoan && !masterLoanCleared;
+
+  // Outstanding is derived, never entered directly: it's always
+  // (amount extended at loan setup) - (recovered to date), so it can't
+  // drift out of sync with what the inspector actually reports as recovered.
+  const computeOutstanding = (recoveredValue) => {
+    const extended = parseFloat(masterLoanExtended) || 0;
+    const recovered = parseFloat(recoveredValue) || 0;
+    const outstanding = extended - recovered;
+    return Math.max(outstanding, 0).toString();
+  };
+
+  const loanOutstanding = computeOutstanding(loanRecovered);
 
   useEffect(() => {
     (async () => {
       const data = await getMilkSectionData(societyName, reportingMonth, 'compliance');
       if (data) {
         setLoanRecovered(data.loanRecovered || '');
-        setLoanOutstanding(data.loanOutstanding || '');
-        if (data.loanRecovered || data.loanOutstanding) {
+        if (data.loanRecovered) {
           setLastVerified(new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }));
         }
       }
@@ -76,12 +85,11 @@ export default function ComplianceScreen({
 
   const openModal = () => {
     setTempLoanRecovered(loanRecovered);
-    setTempLoanOutstanding(loanOutstanding);
     setModalVisible(true);
   };
 
   const saveToLocal = async (newData) => {
-    const isCompleted = !loanIsActive || !!(newData.loanRecovered && newData.loanOutstanding);
+    const isCompleted = !loanIsActive || !!newData.loanRecovered;
     const payload = { ...newData, isCompleted };
     await saveMilkSectionData(societyName, reportingMonth, 'compliance', payload);
     return isCompleted;
@@ -89,11 +97,10 @@ export default function ComplianceScreen({
 
   const handleSaveModal = async () => {
     setLoanRecovered(tempLoanRecovered);
-    setLoanOutstanding(tempLoanOutstanding);
     setLastVerified(new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }));
     setModalVisible(false);
 
-    await saveToLocal({ loanRecovered: tempLoanRecovered, loanOutstanding: tempLoanOutstanding });
+    await saveToLocal({ loanRecovered: tempLoanRecovered, loanOutstanding: computeOutstanding(tempLoanRecovered) });
     if (onSave) onSave();
   };
 
@@ -292,8 +299,15 @@ export default function ComplianceScreen({
                 <TextInput style={styles.modalInput} value={tempLoanRecovered} onChangeText={setTempLoanRecovered} placeholder="e.g. 200000" keyboardType="numeric" placeholderTextColor={COLORS.slate400} />
               </View>
               <View style={styles.modalFormGroup}>
-                <Text style={styles.modalLabel}>Amount Outstanding (Rs.)</Text>
-                <TextInput style={styles.modalInput} value={tempLoanOutstanding} onChangeText={setTempLoanOutstanding} placeholder="e.g. 300000" keyboardType="numeric" placeholderTextColor={COLORS.slate400} />
+                <Text style={styles.modalLabel}>Amount Outstanding (Rs.) — auto-calculated</Text>
+                <View style={[styles.modalInput, styles.modalInputReadOnly]}>
+                  <Text style={styles.modalReadOnlyValue}>
+                    {`Rs. ${computeOutstanding(tempLoanRecovered)}`}
+                  </Text>
+                </View>
+                <Text style={styles.modalHelperText}>
+                  Amount Extended (Rs. {masterLoanExtended || '0'}) − Recovered to Date
+                </Text>
               </View>
 
               <View style={[styles.btnWrapper, { marginTop: 24, marginBottom: 20 }]}>
@@ -468,6 +482,15 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: COLORS.slate200, borderRadius: 10, paddingHorizontal: 14, height: 42,
     fontFamily: FONT_FAMILY, fontSize: 13, fontWeight: '500', color: COLORS.slate800, backgroundColor: COLORS.slate50,
     ...(Platform.OS === 'web' && { outlineStyle: 'none' }),
+  },
+  modalInputReadOnly: {
+    justifyContent: 'center', backgroundColor: COLORS.slate100, borderColor: COLORS.slate200,
+  },
+  modalReadOnlyValue: {
+    fontFamily: FONT_FAMILY, fontSize: 13, fontWeight: '700', color: COLORS.slate700,
+  },
+  modalHelperText: {
+    fontFamily: FONT_FAMILY, fontSize: 10, fontWeight: '500', color: COLORS.slate400, marginTop: 4,
   },
   saveModalBtn: { alignItems: 'center', justifyContent: 'center', paddingVertical: 12, paddingHorizontal: 16 },
   saveModalText: { color: '#FFFFFF', fontFamily: FONT_FAMILY, fontSize: 13, fontWeight: '700', letterSpacing: 0.5 },
