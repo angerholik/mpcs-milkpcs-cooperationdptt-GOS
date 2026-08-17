@@ -3631,6 +3631,34 @@ function AddOfficerModal({ onClose, onSave }) {
   );
 }
 
+// This portal is district-wide oversight (broadcasts, all societies' data,
+// user management) — being logged in isn't enough to get in, the account
+// must specifically carry the System Admin role. Any inspector can log in
+// via Supabase Auth (the mobile app registers CI/ACI accounts the same
+// way), so without this check every field inspector could open the admin
+// dashboard too.
+const isSystemAdmin = (session) => session?.user?.user_metadata?.role === 'System Admin';
+
+// ─── AccessDenied ─────────────────────────────────────────────────────────────
+function AccessDenied({ email, onLogout }) {
+  return (
+    <div style={{minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center', background:'linear-gradient(135deg, #7F1D1D 0%, #450A0A 100%)', padding:'20px'}}>
+      <div style={{width:'100%', maxWidth:'420px', background:'rgba(255,255,255,0.97)', borderRadius:'24px', boxShadow:'0 30px 80px rgba(0,0,0,0.25)', padding:'40px 36px', textAlign:'center'}}>
+        <div style={{width:'64px', height:'64px', borderRadius:'50%', background:'#FEF2F2', display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto 20px'}}>
+          <Icon d={I.lock} size={28} color="#DC2626"/>
+        </div>
+        <h2 style={{fontSize:'18px', fontWeight:800, color:'#1E293B', margin:'0 0 8px'}}>Access Denied</h2>
+        <p style={{fontSize:'13px', color:'#64748B', margin:'0 0 24px', lineHeight:1.5}}>
+          {email} is signed in but isn't provisioned for admin access. This portal is restricted to System Admins.
+        </p>
+        <button onClick={onLogout} className="btn-primary" style={{width:'100%', padding:'13px', fontSize:'14px'}}>
+          Sign Out
+        </button>
+      </div>
+    </div>
+  );
+}
+
 // ─── App Root ─────────────────────────────────────────────────────────────────
 export default function App() {
   const [session, setSession] = useState(null);
@@ -3659,5 +3687,7 @@ export default function App() {
     );
   }
 
-  return session ? <Dashboard onLogout={handleLogout}/> : <LoginPage />;
+  if (!session) return <LoginPage />;
+  if (!isSystemAdmin(session)) return <AccessDenied email={session.user.email} onLogout={handleLogout}/>;
+  return <Dashboard onLogout={handleLogout}/>;
 }
