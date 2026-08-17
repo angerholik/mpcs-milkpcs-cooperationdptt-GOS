@@ -212,6 +212,16 @@ const Login = ({ onLoginSuccess, onRegisterSuccess }) => {
 
       const { error: dbErr } = await supabase.from('officer_registry').insert([officerRecord]);
       if (dbErr) {
+        // supabase.auth.signUp() above already creates a real session the
+        // instant it succeeds, and App.js listens for that independently
+        // (onAuthStateChange) — it doesn't wait for this function to return
+        // or check whether officer_registry insert below succeeded. So
+        // without signing back out here, a failed profile insert still logs
+        // the inspector into the app: a "ghost" account with a working
+        // login but no name/role/mobile on record, invisible to the admin
+        // Users & Roles page. Sign out so App.js's listener reverts to the
+        // login screen instead of leaving them stranded mid-app.
+        try { await supabase.auth.signOut(); } catch (e) {}
         setLoading(false);
         const errorMsg = dbErr.message.includes('duplicate') ? 'This email is already registered.' : dbErr.message;
         if (Platform.OS === 'web') alert('Registration failed: ' + errorMsg);
