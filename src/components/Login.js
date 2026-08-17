@@ -112,8 +112,9 @@ const Login = ({ onLoginSuccess, onRegisterSuccess }) => {
         password: password,
       });
 
+      setLoading(false);
+
       if (!error && data?.user) {
-        setLoading(false);
         const user = {
           fullName: data.user.user_metadata?.fullName || fullName || (email.includes('aci') ? 'Assistant Inspector' : 'Cooperative Inspector'),
           email: email.trim(),
@@ -123,12 +124,27 @@ const Login = ({ onLoginSuccess, onRegisterSuccess }) => {
         if (onLoginSuccess) onLoginSuccess(user);
         return;
       }
-    } catch (e) {
-      console.warn('Supabase sign in attempt warning:', e);
-    }
 
-    setTimeout(() => {
+      // Auth server responded but rejected the credentials. Previously this
+      // fell through to a silent local-only "success" below, so a mistyped
+      // password looked like a normal login while every save afterwards
+      // failed quietly against Supabase (now enforced by RLS). Block entry
+      // and say why instead.
+      const msg = error?.message || 'Invalid email or password. Please try again.';
+      if (Platform.OS === 'web') alert(msg);
+      else Alert.alert('Sign In Failed', msg);
+    } catch (e) {
       setLoading(false);
+      // Could not reach the auth server at all (offline/no network), not a
+      // rejected password. The app supports offline field work, so let the
+      // inspector continue locally — but say so plainly instead of
+      // pretending this was a normal sign-in, since their reports won't
+      // actually sync until they sign in again with a connection.
+      console.warn('Supabase sign in network error, continuing offline:', e);
+      const msg = "No network connection. Continuing in offline mode — please sign in again once you're back online so your reports can sync.";
+      if (Platform.OS === 'web') alert(msg);
+      else Alert.alert('Offline Mode', msg);
+
       const user = {
         fullName: fullName || (email.includes('aci') ? 'Assistant Inspector' : 'Cooperative Inspector'),
         email: email.trim(),
@@ -136,7 +152,7 @@ const Login = ({ onLoginSuccess, onRegisterSuccess }) => {
         district: 'Gyalshing',
       };
       if (onLoginSuccess) onLoginSuccess(user);
-    }, 600);
+    }
   };
 
   const handleRegisterSubmit = async () => {
@@ -152,7 +168,7 @@ const Login = ({ onLoginSuccess, onRegisterSuccess }) => {
 
     try {
       try {
-        await supabase.auth.signUp({
+        const { error: authErr } = await supabase.auth.signUp({
           email: email.trim(),
           password: password,
           options: {
@@ -164,8 +180,27 @@ const Login = ({ onLoginSuccess, onRegisterSuccess }) => {
             }
           }
         });
+        // A rejected signUp (e.g. duplicate email, weak password) used to be
+        // ignored entirely — the code below would still create an
+        // officer_registry profile row, so the inspector looked registered
+        // but had no real login and could never actually sign in or save
+        // data. Stop here and say why instead.
+        if (authErr) {
+          setLoading(false);
+          const msg = authErr.message || 'Failed to create your login. Please try again.';
+          if (Platform.OS === 'web') alert('Registration Failed: ' + msg);
+          else Alert.alert('Registration Failed', msg);
+          return;
+        }
       } catch (authErr) {
-        console.warn('Auth sign up notice:', authErr);
+        // Could not reach the auth server at all (offline/no network), not
+        // a rejected signup. Let the inspector continue so they aren't
+        // stranded in the field, but say so plainly — this profile row
+        // won't have a working login until they register again online.
+        console.warn('Auth sign up network error, continuing offline:', authErr);
+        const msg = "No network connection. Your registration will be saved locally — please register again once you're back online so your login actually works.";
+        if (Platform.OS === 'web') alert(msg);
+        else Alert.alert('Offline Mode', msg);
       }
 
       const officerRecord = {
