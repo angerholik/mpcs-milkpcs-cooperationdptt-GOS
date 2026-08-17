@@ -525,30 +525,24 @@ export default function App() {
 
 
   const loadInstitutionsForUser = async (email = null) => {
+    // No fallback demo institutions here: a fresh inspector account starts
+    // with zero registered institutions, and adds real ones via "Add New
+    // Institution". This used to silently seed and persist two fake
+    // societies ("Dentam MPCS" / "Gyalshing Milk Center") into every new
+    // user's own storage, making a brand-new inspector look like they were
+    // already managing two real cooperatives.
     try {
       const activeEmail = getUserEmail(email);
       const key = getUserInstitutionsKey(activeEmail);
-      const defaultList = [
-        { id: 'inst-default-1', name: 'Dentam MPCS', type: 'MPCS', gpu: 'Dentam GPU', regNo: 'SIK/MPCS/2024/01' },
-        { id: 'inst-default-2', name: 'Gyalshing Milk Center', type: 'MILK', gpu: 'Gyalshing GPU', regNo: 'SIK/MILK/2024/02' }
-      ];
-      if (!key) { setInstitutionsList(defaultList); return defaultList; }
+      if (!key) { setInstitutionsList([]); return []; }
       const raw = await AsyncStorage.getItem(key);
-      const list = raw ? JSON.parse(raw) : null;
-      const initialList = (list && list.length > 0) ? list : defaultList;
-      setInstitutionsList(initialList);
-      if (!list || list.length === 0) {
-        saveInstitutionsForUser(initialList, activeEmail);
-      }
-      return initialList;
+      const list = raw ? JSON.parse(raw) : [];
+      setInstitutionsList(list);
+      return list;
     } catch (e) {
       console.warn('loadInstitutionsForUser error:', e);
-      const defaultList = [
-        { id: 'inst-default-1', name: 'Dentam MPCS', type: 'MPCS', gpu: 'Dentam GPU', regNo: 'SIK/MPCS/2024/01' },
-        { id: 'inst-default-2', name: 'Gyalshing Milk Center', type: 'MILK', gpu: 'Gyalshing GPU', regNo: 'SIK/MILK/2024/02' }
-      ];
-      setInstitutionsList(defaultList);
-      return defaultList;
+      setInstitutionsList([]);
+      return [];
     }
   };
 
