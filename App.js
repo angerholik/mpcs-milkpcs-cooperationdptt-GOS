@@ -122,6 +122,19 @@ const COLORS = {
 const getCurrentMonthLabel = () =>
   new Date().toLocaleString('en-IN', { month: 'long', year: 'numeric' });
 
+// Every screen's Save/Save & Next fires an unawaited cloud sync to Supabase
+// (see saveMasterStateToStorage below). Each sync independently looks up
+// "does a row for this center+month already exist?" and then inserts or
+// updates. On a slow connection several of these end up in flight at once,
+// and without serialization an earlier-triggered-but-slower-to-resolve sync
+// can land AFTER a later, more complete one and overwrite it with its own
+// stale snapshot — e.g. Activities entries appearing to vanish from the
+// admin panel until some later screen's save re-syncs everything. Chaining
+// every cloud sync through this single promise forces them to run one at a
+// time, in the order they were triggered, so a later sync can never be
+// clobbered by an earlier one that just happened to finish later.
+let cloudSyncQueue = Promise.resolve();
+
 export default function App() {
   const [fontsLoaded, fontError] = useFonts({
     Manrope: Manrope_400Regular,
@@ -642,6 +655,11 @@ export default function App() {
       await AsyncStorage.setItem(getLastSelectedSocietyKey(userEmail), activeSocName);
 
       // ── Cloud Sync to Supabase Backend on Every Master Data Save ──
+      // Queued so concurrent saves from different screens can't race each
+      // other's Supabase find-existing-then-insert/update calls and let an
+      // earlier-triggered-but-slower-to-resolve sync clobber a later, more
+      // complete one with stale data (see cloudSyncQueue comment above).
+      cloudSyncQueue = cloudSyncQueue.then(async () => {
       try {
         const gpuVal = selectedSociety?.gpu || selectedSociety?.district || 'Dentam GPU';
         let calcMembers = 0;
@@ -660,7 +678,7 @@ export default function App() {
           const actsData = await getMilkSectionData(activeSocName, repMonth, 'activities');
           const loanIsActive = !!stateObj.masterHasLoan && !stateObj.masterLoanCleared;
 
-          saveMilkPcsSubmission({
+          await saveMilkPcsSubmission({
             centerName: activeSocName,
             centerId: stateObj.registrationNumber || selectedSociety?.regNo || 'MILK/2024/01',
             district: gpuVal,
@@ -696,7 +714,7 @@ export default function App() {
             withdrawal: opsData?.withdrawal || ''
           });
         } else {
-          saveMpcsSubmission({
+          await saveMpcsSubmission({
             societyName: activeSocName,
             registrationNumber: stateObj.registrationNumber || selectedSociety?.regNo || 'SIK/MPCS/2024/01',
             gpu: gpuVal,
@@ -720,6 +738,7 @@ export default function App() {
       } catch (cloudErr) {
         console.warn('Auto cloud sync exception:', cloudErr);
       }
+      });
     } catch (e) {
       console.warn('Failed to save master state locally:', e);
     }
