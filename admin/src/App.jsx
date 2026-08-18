@@ -1126,75 +1126,76 @@ function GlobalBroadcast({ activeTab }) {
 
   return (
     <div className="card fade-in" style={{
-      marginBottom: '32px', 
-      padding: '24px', 
+      marginBottom: '16px',
+      padding: '14px 16px',
       background: 'rgba(255, 255, 255, 0.4)',
       border: '1px solid var(--border-hard)',
       position: 'relative',
       overflow: 'hidden'
     }}>
       <div style={{
-        position:'absolute', top:0, left:0, bottom:0, width:'4px', 
+        position:'absolute', top:0, left:0, bottom:0, width:'4px',
         background:'linear-gradient(to bottom, var(--emerald-light), var(--gold))'
       }} />
-      
-      <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'16px'}}>
-        <div style={{display:'flex', alignItems:'center', gap:'12px'}}>
+
+      <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'10px'}}>
+        <div style={{display:'flex', alignItems:'center', gap:'10px'}}>
           <div style={{
-            width:'36px', height:'36px', borderRadius:'10px', 
-            background:'var(--emerald-deep)', display:'flex', 
-            alignItems:'center', justifyContent:'center', fontSize:'18px'
+            width:'26px', height:'26px', borderRadius:'8px',
+            background:'var(--emerald-deep)', display:'flex',
+            alignItems:'center', justifyContent:'center', fontSize:'14px'
           }}>
-            <Icon d={I.logout} size={18} color="#fff" />
+            <Icon d={I.logout} size={13} color="#fff" />
           </div>
           <div>
-            <h4 style={{fontSize:'12px', fontWeight:900, color:'var(--emerald)', textTransform:'uppercase', letterSpacing:'1.5px'}}>
+            <h4 style={{fontSize:'11px', fontWeight:900, color:'var(--emerald)', textTransform:'uppercase', letterSpacing:'1.2px'}}>
               Emergency Comm Terminal
             </h4>
-            <p style={{fontSize:'10px', color:'var(--text-muted)', fontWeight:600}}>
+            <p style={{fontSize:'9px', color:'var(--text-muted)', fontWeight:600}}>
               Push encrypted notifications to all active field officers
             </p>
           </div>
         </div>
-        <div className="badge badge-gold" style={{fontSize:'9px'}}>ENCRYPTED CHANNEL</div>
+        <div className="badge badge-gold" style={{fontSize:'8px'}}>ENCRYPTED CHANNEL</div>
       </div>
 
-      <div style={{display:'flex', gap:'12px', alignItems:'flex-end'}}>
-        <div className="field-group" style={{flex:1}}>
-          <label className="field-label" style={{fontSize:'9px'}}>Broadcast Payload</label>
-          <input 
-             className="field-input" 
+      <div style={{display:'flex', gap:'10px', alignItems:'flex-end'}}>
+        <div className="field-group" style={{flex:1, marginBottom: 0}}>
+          <label className="field-label" style={{fontSize:'8px'}}>Broadcast Payload</label>
+          <input
+             className="field-input"
              placeholder="Synchronize directive with all stations (e.g. Audit Window Closing)..."
              value={msg}
              onChange={e=>setMsg(e.target.value)}
              style={{
-               background:'rgba(255,255,255,0.7)', 
+               background:'rgba(255,255,255,0.7)',
                borderColor:'var(--border-hard)',
-               fontSize: '14px',
+               fontSize: '12px',
                fontWeight: 600,
-               padding: '12px 16px'
+               padding: '8px 12px',
+               height: '34px'
              }}
           />
         </div>
-        <button 
-          className="btn-primary" 
-          onClick={handleSend} 
-          disabled={sending || !msg.trim()} 
+        <button
+          className="btn-primary"
+          onClick={handleSend}
+          disabled={sending || !msg.trim()}
           style={{
-            height: '46px', 
-            padding: '0 24px', 
-            display:'flex', 
-            alignItems:'center', 
-            gap:'10px',
+            height: '34px',
+            padding: '0 16px',
+            display:'flex',
+            alignItems:'center',
+            gap:'8px',
             opacity: !msg.trim() ? 0.6 : 1
           }}
         >
           {sending ? (
-            <div className="spinner" style={{width:'16px', height:'16px', borderWidth:'2px', borderTopColor:'#fff'}}/>
+            <div className="spinner" style={{width:'13px', height:'13px', borderWidth:'2px', borderTopColor:'#fff'}}/>
           ) : (
-            <Icon d={I.submit} size={16} color="#fff" />
+            <Icon d={I.submit} size={13} color="#fff" />
           )}
-          <span style={{fontWeight:800, textTransform:'uppercase', fontSize:'11px', letterSpacing:'1px'}}>
+          <span style={{fontWeight:800, textTransform:'uppercase', fontSize:'10px', letterSpacing:'0.8px'}}>
             {sending ? 'TRANSMITTING...' : 'INITIATE BROADCAST'}
           </span>
         </button>
