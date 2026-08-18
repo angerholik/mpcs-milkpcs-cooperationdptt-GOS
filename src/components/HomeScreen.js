@@ -265,6 +265,16 @@ export default function HomeScreen({
           >
             <Text style={[styles.tabText, internalTab === 'master' && styles.tabTextActive]}>Master Data</Text>
           </TouchableOpacity>
+          {/* Member Data is a standalone roster, not one of the Master Data
+              tiles — tapping it navigates straight to the screen rather than
+              switching internalTab, since there's nothing to show inline here. */}
+          <TouchableOpacity
+            style={styles.tabBtn}
+            onPress={() => onNavigateScreen && onNavigateScreen('MEMBERS')}
+            activeOpacity={0.9}
+          >
+            <Text style={styles.tabText}>Member Data</Text>
+          </TouchableOpacity>
         </View>
 
         {/* Monthly Data Section */}
@@ -414,8 +424,7 @@ export default function HomeScreen({
             <View style={styles.masterListContainer}>
               {[
                 { id: 'PROFILE', title: 'Institutional Profile', icon: 'office-building-outline', updated: formatLastUpdated(masterDataUpdated.instProfile) },
-                { id: 'DEMOGRAPHICS', title: 'Registered Demographics', icon: 'account-group-outline', updated: formatLastUpdated(masterDataUpdated.demographics) },
-                { id: 'MEMBERS', title: 'Member Data', icon: 'account-multiple-outline', updated: formatLastUpdated(masterDataUpdated.members) }
+                { id: 'DEMOGRAPHICS', title: 'Registered Demographics', icon: 'account-group-outline', updated: formatLastUpdated(masterDataUpdated.demographics) }
               ].map((item, index) => (
                 <Pressable
                   key={item.id}

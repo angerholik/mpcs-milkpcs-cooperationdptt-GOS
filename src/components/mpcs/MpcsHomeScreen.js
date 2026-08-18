@@ -248,12 +248,22 @@ export default function HomeScreen({
           >
             <Text style={[styles.tabText, internalTab === 'monthly' && styles.tabTextActive]}>Monthly Data</Text>
           </TouchableOpacity>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={[styles.tabBtn, internalTab === 'master' && styles.tabBtnActive]}
             onPress={() => setInternalTab('master')}
             activeOpacity={0.9}
           >
             <Text style={[styles.tabText, internalTab === 'master' && styles.tabTextActive]}>Master Data</Text>
+          </TouchableOpacity>
+          {/* Member Data is a standalone roster, not one of the Master Data
+              tiles — tapping it navigates straight to the screen rather than
+              switching internalTab, since there's nothing to show inline here. */}
+          <TouchableOpacity
+            style={styles.tabBtn}
+            onPress={() => onNavigateScreen && onNavigateScreen('MPCS_MEMBERS')}
+            activeOpacity={0.9}
+          >
+            <Text style={styles.tabText}>Member Data</Text>
           </TouchableOpacity>
         </View>
 
@@ -447,8 +457,7 @@ export default function HomeScreen({
                 { id: 'MPCS_DIVIDEND', title: 'Dividend Details', icon: 'cash-multiple', updated: formatLastUpdated(masterDataUpdated.dividend) },
                 { id: 'MPCS_SHARE_CAPITAL', title: 'Share Capital', icon: 'chart-pie', updated: formatLastUpdated(masterDataUpdated.shareCapital) },
                 { id: 'MPCS_CSC_DETAILS', title: 'CSC Details', icon: 'laptop', updated: formatLastUpdated(masterDataUpdated.csc) },
-                { id: 'MPCS_LOAN', title: 'Loan Details', icon: 'bank-outline', updated: formatLastUpdated(masterDataUpdated.loan) },
-                { id: 'MPCS_MEMBERS', title: 'Member Data', icon: 'account-multiple-outline', updated: formatLastUpdated(masterDataUpdated.members) }
+                { id: 'MPCS_LOAN', title: 'Loan Details', icon: 'bank-outline', updated: formatLastUpdated(masterDataUpdated.loan) }
               ].map((item, index) => (
                 <Pressable 
                   key={item.id}
