@@ -578,7 +578,7 @@ export default function App() {
     } else {
       // EXISTING SOCIETY: Load saved data for this specific society only
       await loadMasterStateFromStorage(soc?.name);
-      await fetchCloudSocietyData(soc?.name, getUserEmail());
+      await fetchCloudSocietyData(soc?.name, getUserEmail(), soc?.type);
       await refreshMilkSectionStatuses();
     }
   };
@@ -812,12 +812,18 @@ export default function App() {
     }
   };
 
-  const fetchCloudSocietyData = async (socName, userEmail) => {
+  const fetchCloudSocietyData = async (socName, userEmail, societyType) => {
     const nameStr = typeof socName === 'string' ? socName : (socName?.name || '');
     if (!nameStr || !nameStr.trim()) return;
+    // Prefer the type passed explicitly by the caller over selectedSociety —
+    // callers that just called setSelectedSociety(soc) moments earlier in
+    // the same function see the pre-update value here (React state updates
+    // don't apply mid-function), which silently queried the wrong table
+    // (mpcs_submissions instead of milk_pcs_submissions) and found no match.
+    const isMilk = (societyType || selectedSociety?.type) === 'MILK';
     try {
       let rows = [];
-      if (selectedSociety?.type === 'MILK') {
+      if (isMilk) {
         const res = await supabase
           .from('milk_pcs_submissions')
           .select('*')
@@ -853,6 +859,42 @@ export default function App() {
         if (row.president_mobile) setPresidentMobile(row.president_mobile);
         if (row.manager_mobile) setManagerMobile(row.manager_mobile);
         if (row.manager_name) setManagerName(row.manager_name);
+
+        // Milk PCS stores demographics as flat columns (not inside a
+        // form_data JSON blob like MPCS), and audit/AGM inside the
+        // `activities` JSON column rather than as their own columns —
+        // pull both into local display state the same way the admin
+        // dashboard already parses them (getMilkAuditAgm).
+        if (isMilk) {
+          if (row.m_sc !== null && row.m_sc !== undefined) setMSc(String(row.m_sc));
+          if (row.f_sc !== null && row.f_sc !== undefined) setFSc(String(row.f_sc));
+          if (row.m_st !== null && row.m_st !== undefined) setMSt(String(row.m_st));
+          if (row.f_st !== null && row.f_st !== undefined) setFSt(String(row.f_st));
+          if (row.m_obc !== null && row.m_obc !== undefined) setMObc(String(row.m_obc));
+          if (row.f_obc !== null && row.f_obc !== undefined) setFObc(String(row.f_obc));
+          if (row.m_gen !== null && row.m_gen !== undefined) setMGen(String(row.m_gen));
+          if (row.f_gen !== null && row.f_gen !== undefined) setFGen(String(row.f_gen));
+
+          if (row.activities && typeof row.activities === 'string' && row.activities.trim().startsWith('{')) {
+            try {
+              const parsedActs = JSON.parse(row.activities);
+              if (parsedActs.audit_done) {
+                const isYes = String(parsedActs.audit_done).trim().toLowerCase().startsWith('yes');
+                setMasterAuditStatus(isYes ? 'Completed' : 'Pending');
+                const dateMatch = String(parsedActs.audit_done).match(/\(([^)]+)\)/);
+                if (dateMatch) setMasterAuditDate(dateMatch[1]);
+              }
+              if (parsedActs.audit_year) setMasterAuditYear(parsedActs.audit_year);
+              if (parsedActs.agm_done) {
+                const isYes = String(parsedActs.agm_done).trim().toLowerCase().startsWith('yes');
+                setMasterAgmStatus(isYes ? 'Completed' : 'Pending');
+                const dateMatch = String(parsedActs.agm_done).match(/\(([^)]+)\)/);
+                if (dateMatch) setMasterAgmDate(dateMatch[1]);
+              }
+              if (parsedActs.agm_year) setMasterAgmYear(parsedActs.agm_year);
+            } catch (e) {}
+          }
+        }
 
         if (fd.demographicsData) setDemographicsData(fd.demographicsData);
         if (fd.complianceData) setComplianceData(fd.complianceData);
