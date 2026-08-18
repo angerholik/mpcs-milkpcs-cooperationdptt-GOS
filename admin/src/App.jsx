@@ -2439,15 +2439,15 @@ function Dashboard({ onLogout }) {
                   <div style={{display:'flex', flexDirection:'column', gap:'8px', fontSize:'13px'}}>
                     <div style={{display:'flex', justifyContent:'space-between', padding:'10px 0', borderBottom:'1px solid #F1F5F9', cursor:'pointer'}} onClick={() => setActiveTab('OFFICERS')}>
                       <span style={{color:'#64748B', fontWeight:600}}>Field Officers Active</span>
-                      <strong style={{color:'#059669', fontWeight:800}}>{officers.length || 28}</strong>
+                      <strong style={{color:'#059669', fontWeight:800}}>{officers.length}</strong>
                     </div>
                     <div style={{display:'flex', justifyContent:'space-between', padding:'10px 0', borderBottom:'1px solid #F1F5F9', cursor:'pointer'}} onClick={() => setActiveTab('AUDIT')}>
                       <span style={{color:'#64748B', fontWeight:600}}>Pending Audits</span>
-                      <strong style={{color:'#D97706', fontWeight:800}}>{mpcsRows.filter(r=>r.audit_done!=='Yes').length || 5}</strong>
+                      <strong style={{color:'#D97706', fontWeight:800}}>{mpcsRows.filter(r=>!isYes(r.audit_done)).length}</strong>
                     </div>
                     <div style={{display:'flex', justifyContent:'space-between', padding:'10px 0', borderBottom:'1px solid #F1F5F9', cursor:'pointer'}} onClick={() => setActiveTab('MILK')}>
-                      <span style={{color:'#64748B', fontWeight:600}}>New Submissions Today</span>
-                      <strong style={{color:'#2563EB', fontWeight:800}}>{milkRows.length || 12}</strong>
+                      <span style={{color:'#64748B', fontWeight:600}}>Total Milk Submissions</span>
+                      <strong style={{color:'#2563EB', fontWeight:800}}>{milkRows.length}</strong>
                     </div>
                     <div style={{display:'flex', justifyContent:'space-between', padding:'10px 0'}}>
                       <span style={{color:'#64748B', fontWeight:600}}>Data Sync Engine</span>
@@ -2583,29 +2583,31 @@ function Dashboard({ onLogout }) {
                       </tr>
                     </thead>
                     <tbody>
-                      {[
-                        { name: 'CI Mukund Pradhan', role: 'Cooperative Inspector (CI)', ci: 'System Admin', units: 'Sardong, Gitan Karmatara, Dentam, Banthen', status: 'ACTIVE' },
-                        { name: 'ACI Deepesh Pradhan', role: 'Assistant Inspector (ACI)', ci: 'CI Mukund Pradhan', units: 'Sardong Lungzik MPCS', status: 'ACTIVE' },
-                        { name: 'ACI Tenzing Norbu', role: 'Assistant Inspector (ACI)', ci: 'CI Mukund Pradhan', units: 'Gitan Karmatara MPCS', status: 'ACTIVE' },
-                        { name: 'ACI Birkha Subba', role: 'Field Officer (ACI)', ci: 'CI Mukund Pradhan', units: 'Dentam Dairy MPCS', status: 'ACTIVE' },
-                        { name: 'ACI Pempa Bhutia', role: 'Field Officer (ACI)', ci: 'CI Mukund Pradhan', units: 'Banthen MPCS', status: 'ACTIVE' },
-                        ...officers.map(o => ({
-                          name: o.name,
-                          role: o.role || 'ACI / Field Officer',
-                          ci: 'CI Mukund Pradhan',
-                          units: 'Gyalshing District MPCS',
-                          status: 'ACTIVE'
-                        }))
-                      ].map((off, idx) => (
-                        <tr key={idx}>
-                          <td>{idx + 1}</td>
-                          <td><strong>{off.name}</strong></td>
-                          <td><span className={off.role.includes('Cooperative Inspector')?'badge badge-gold':'badge badge-purple'}>{off.role}</span></td>
-                          <td>{off.ci}</td>
-                          <td><span style={{fontSize:'12px', color:'#334155'}}>{off.units}</span></td>
-                          <td><span className="badge badge-green">{off.status}</span></td>
+                      {officers.length === 0 ? (
+                        <tr>
+                          <td colSpan={6} style={{textAlign:'center', padding:'32px', color:'#94A3B8'}}>
+                            No officers have registered yet. Inspectors appear here once they sign up from the mobile app.
+                          </td>
                         </tr>
-                      ))}
+                      ) : officers.map((off, idx) => {
+                        // hierarchyMapping only holds whatever "Assign ACI to Unit" delegations
+                        // were made this session (it isn't persisted to the database) — so this
+                        // reflects a real assignment when one exists, and says so honestly when
+                        // it doesn't, rather than showing the same fabricated unit name for
+                        // every officer regardless of what they actually cover.
+                        const assignment = Object.entries(hierarchyMapping).find(([, m]) => m.aci === off.name);
+                        const role = off.role || 'ACI / Field Officer';
+                        return (
+                          <tr key={off.id || idx}>
+                            <td>{idx + 1}</td>
+                            <td><strong>{off.name}</strong></td>
+                            <td><span className={role.includes('Cooperative Inspector')?'badge badge-gold':'badge badge-purple'}>{role}</span></td>
+                            <td>{assignment ? assignment[1].ci : <span style={{color:'#94A3B8', fontStyle:'italic'}}>Not yet assigned</span>}</td>
+                            <td>{assignment ? <span style={{fontSize:'12px', color:'#334155'}}>{assignment[0]}</span> : <span style={{color:'#94A3B8', fontStyle:'italic'}}>Not yet assigned</span>}</td>
+                            <td><span className="badge badge-green">ACTIVE</span></td>
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>
