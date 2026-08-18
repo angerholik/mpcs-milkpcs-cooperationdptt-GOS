@@ -2404,11 +2404,12 @@ export default function App() {
                         reportStatus={((sectionStates?.evidence?.status?.includes('CAPTURED') && !sectionStates?.evidence?.status?.includes('NOT')) && sectionStates?.sales?.status?.startsWith('COMPLETED') && sectionStates?.business?.status?.startsWith('COMPLETED')) ? 'MONTHLY PARAMS OK' : 'DRAFT'}
                         progressPercent={
                           Math.round(
-                            ((((sectionStates?.evidence?.status?.includes('CAPTURED') && !sectionStates?.evidence?.status?.includes('NOT')) || sectionStates?.evidence?.status?.includes('Valid')) ? 20 : 0) +
-                            (sectionStates?.sales?.status?.startsWith('COMPLETED') ? 20 : 0) +
-                            (sectionStates?.business?.status?.startsWith('COMPLETED') ? 20 : 0) +
-                            (!cscTransData?.isCscActive || sectionStates?.csc?.status?.startsWith('COMPLETED') ? 20 : 0) +
-                            (activityItems.length > 0 ? 20 : 0))
+                            (((((sectionStates?.evidence?.status?.includes('CAPTURED') && !sectionStates?.evidence?.status?.includes('NOT')) || sectionStates?.evidence?.status?.includes('Valid')) ? 1 : 0) +
+                            (sectionStates?.sales?.status?.startsWith('COMPLETED') ? 1 : 0) +
+                            (sectionStates?.business?.status?.startsWith('COMPLETED') ? 1 : 0) +
+                            (!cscDetailsData?.isCscActive || sectionStates?.csc?.status?.startsWith('COMPLETED') ? 1 : 0) +
+                            (!(loanData?.hasLoan && !loanData?.loanCleared) || sectionStates?.loan?.status?.startsWith('COMPLETED') ? 1 : 0) +
+                            (activityItems.length > 0 ? 1 : 0)) / 6) * 100
                           )
                         }
                         hasSubmittedMonthlyParams={false} // Disable global lock
@@ -2416,10 +2417,11 @@ export default function App() {
                           (((sectionStates?.evidence?.status?.includes('CAPTURED') && !sectionStates?.evidence?.status?.includes('NOT')) || sectionStates?.evidence?.status?.includes('Valid')) ? 1 : 0) +
                           (sectionStates?.sales?.status?.startsWith('COMPLETED') ? 1 : 0) +
                           (sectionStates?.business?.status?.startsWith('COMPLETED') ? 1 : 0) +
-                          ((!cscTransData?.isCscActive || sectionStates?.csc?.status?.startsWith('COMPLETED')) ? 1 : 0) +
+                          ((!cscDetailsData?.isCscActive || sectionStates?.csc?.status?.startsWith('COMPLETED')) ? 1 : 0) +
+                          ((!(loanData?.hasLoan && !loanData?.loanCleared) || sectionStates?.loan?.status?.startsWith('COMPLETED')) ? 1 : 0) +
                           (activityItems.length > 0 ? 1 : 0)
                         }
-                        totalCount={5}
+                        totalCount={6}
                         evidenceStatus={
                           (sectionStates?.evidence?.validUntil && new Date() >= new Date(sectionStates.evidence.validUntil)) ? 'EXPIRED' : (sectionStates?.evidence?.status || 'NOT CAPTURED')
                         }
@@ -2757,7 +2759,13 @@ export default function App() {
                         societyName={selectedSociety?.name || centerName?.trim() || ''}
                         reportingMonth={reportingMonth || ''}
                         sectionStates={sectionStates}
-                        cscIsActive={cscTransData?.isCscActive || false}
+                        // cscDetailsData.isCscActive is the authoritative flag set on the
+                        // CSC Details Master Data screen — cscTransData carries its own,
+                        // separate (and never actually kept in sync) isCscActive, which
+                        // showed "CSC Services Not Available" here even when CSC Details
+                        // said Active.
+                        cscIsActive={!!cscDetailsData?.isCscActive}
+                        loanIsActive={!!(loanData?.hasLoan && !loanData?.loanCleared)}
                         activitiesCount={activityItems.length}
                         onNavigateSection={(screenKey) => setCurrentMobileScreen(screenKey)}
                         onSubmitReturn={() => generatePDF(null)}

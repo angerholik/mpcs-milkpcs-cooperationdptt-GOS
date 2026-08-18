@@ -32,6 +32,7 @@ export default function MpcsReviewSubmitScreen({
   reportingMonth = "",
   sectionStates = {},
   cscIsActive = false,
+  loanIsActive = false,
   activitiesCount = 0,
   onSubmitReturn,
   onNavigateSection,
@@ -75,6 +76,9 @@ export default function MpcsReviewSubmitScreen({
   const cscState = sectionStates.csc || { status: 'NOT COMPLETED' };
   const isCscComplete = cscState.status.startsWith('COMPLETED') || cscState.status.includes('UPDATED');
 
+  const loanState = sectionStates.loan || { status: 'NOT COMPLETED' };
+  const isLoanComplete = loanState.status.startsWith('COMPLETED') || loanState.status.includes('UPDATED');
+
   const activitiesState = sectionStates.activities || { status: '0 ENTRIES' };
   const isActivitiesComplete = activitiesCount > 0;
 
@@ -112,8 +116,17 @@ export default function MpcsReviewSubmitScreen({
       isOptional: !cscIsActive,
       screenKey: 'MPCS_CSC_TRANS',
     },
-    { 
-      title: 'Activities / Events Log',   
+    {
+      title: 'Loan Status',
+      status: !loanIsActive ? 'NO ACTIVE LOAN' : loanState.status,
+      subText: (!loanIsActive || !loanState.updatedAt) ? '' : `Last updated ${formatTime(loanState.updatedAt)}`,
+      isComplete: !loanIsActive ? false : isLoanComplete,
+      isNA: !loanIsActive,
+      isOptional: !loanIsActive,
+      screenKey: 'MPCS_LOAN_STATUS',
+    },
+    {
+      title: 'Activities / Events Log',
       status: `${activitiesCount} ENTRIES`, 
       subText: activitiesState.updatedAt ? `Last updated ${formatTime(activitiesState.updatedAt)}` : '',
       isComplete: isActivitiesComplete, 
@@ -211,6 +224,7 @@ export default function MpcsReviewSubmitScreen({
               <Text style={styles.cardHeaderSub}>
                 Tap any section to independently view or update it.
                 {!cscIsActive ? '  •  CSC: Optional' : ''}
+                {!loanIsActive ? '  •  Loan: Optional' : ''}
               </Text>
             </View>
           </View>
