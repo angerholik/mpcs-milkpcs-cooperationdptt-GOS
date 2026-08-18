@@ -1586,13 +1586,11 @@ function Dashboard({ onLogout, session }) {
   // MILK PCS state
   const [milkRows, setMilkRows]   = useState([]);
   const [milkFiltered, setMilkFiltered] = useState([]);
-  const [milkStats, setMilkStats] = useState({total:0,litres:0,members:0,balance:0});
   const [milkSelected, setMilkSelected] = useState(null);
 
   // MPCS state
   const [mpcsRows, setMpcsRows]   = useState([]);
   const [mpcsFiltered, setMpcsFiltered] = useState([]);
-  const [mpcsStats, setMpcsStats] = useState({total:0,turnover:0,members:0,societies:0});
   const [mpcsSelected, setMpcsSelected] = useState(null);
   
   // Modal & Interactive states
@@ -1698,6 +1696,39 @@ function Dashboard({ onLogout, session }) {
     });
   }, [mpcsRows, userRole, assignedUnits]);
 
+  // Derived from the SCOPED rows, not the raw fetch — these used to be
+  // computed once in fetchAll from the full district-wide dataset and
+  // stored as plain state, so every KPI card fed by them (turnover,
+  // litres, member counts, audit/profit breakdowns, etc.) showed
+  // district-wide numbers to a scoped CI regardless of their jurisdiction.
+  const milkStats = useMemo(() => {
+    const d = scopedMilkRows;
+    return {
+      total: d.length,
+      litres: d.reduce((s,r)=>s+(parseFloat(r.litres)||0),0),
+      withdrawal: d.reduce((s,r)=>s+(parseFloat(r.withdrawal)||0),0),
+      members: d.reduce((s,r)=>s+(parseInt(r.total_members)||0),0),
+      balance: d.reduce((s,r)=>s+(parseFloat(r.balance)||0),0),
+      loans: d.filter(r=>r.has_loan).length,
+    };
+  }, [scopedMilkRows]);
+
+  const mpcsStats = useMemo(() => {
+    const d = scopedMpcsRows;
+    return {
+      total: d.length,
+      turnover: d.reduce((s,r)=>s+(parseFloat(r.annual_turnover)||0),0),
+      members: d.reduce((s,r)=>s+(parseInt(r.total_members)||0),0),
+      societies: new Set(d.map(r=>r.registration_authority).filter(Boolean)).size,
+      profits: d.filter(r=>r.is_profit==='PROFIT'||r.is_profit==='Yes').length,
+      losses: d.filter(r=>r.is_profit==='LOSS'||r.is_profit==='No').length,
+      neutral: d.filter(r=>r.is_profit==='NO_PROFIT_NO_LOSS').length,
+      audits: d.filter(r=>isYes(r.audit_done)).length,
+      cscs: d.filter(r=>r.form_data?.['9.1']==='Yes').length,
+      loans: d.filter(r=>r.has_loan).length,
+    };
+  }, [scopedMpcsRows]);
+
   // Mutation Handlers
   const handleSaveMilkReport = async (newRecord) => {
     const { error } = await supabase.from('milk_pcs_submissions').insert([newRecord]);
@@ -1786,7 +1817,7 @@ function Dashboard({ onLogout, session }) {
 
   const recentActivities = useMemo(() => {
     const items = [];
-    (mpcsRows || []).forEach(r => {
+    (scopedMpcsRows || []).forEach(r => {
       items.push({
         id: `mpcs-${r.id || Math.random()}`,
         title: `Official MPCS Return: ${r.society_name || 'Cooperative Society'}`,
@@ -1801,7 +1832,7 @@ function Dashboard({ onLogout, session }) {
         isMpcs: true
       });
     });
-    (milkRows || []).forEach(r => {
+    (scopedMilkRows || []).forEach(r => {
       items.push({
         id: `milk-${r.id || Math.random()}`,
         title: `Milk Collection: ${r.center_name || 'Collection Center'} (${r.litres || 0} L)`,
@@ -1817,7 +1848,7 @@ function Dashboard({ onLogout, session }) {
       });
     });
     return items.sort((a, b) => new Date(b.timeStr || 0) - new Date(a.timeStr || 0)).slice(0, 6);
-  }, [mpcsRows, milkRows]);
+  }, [scopedMpcsRows, scopedMilkRows]);
 
   const fetchAll = useCallback(async (isInitial = false) => {
     if (isInitial) setLoading(true);
@@ -1828,32 +1859,10 @@ function Dashboard({ onLogout, session }) {
     ]);
     if (milkRes.error) { setError(milkRes.error.message); }
     else {
-      const d = milkRes.data || [];
-      setMilkRows(d);
-      setMilkStats({
-        total: d.length,
-        litres: d.reduce((s,r)=>s+(parseFloat(r.litres)||0),0),
-        withdrawal: d.reduce((s,r)=>s+(parseFloat(r.withdrawal)||0),0),
-        members: d.reduce((s,r)=>s+(parseInt(r.total_members)||0),0),
-        balance: d.reduce((s,r)=>s+(parseFloat(r.balance)||0),0),
-        loans: d.filter(r=>r.has_loan).length,
-      });
+      setMilkRows(milkRes.data || []);
     }
     if (!mpcsRes.error) {
-      const d = (mpcsRes.data || []).map(normalizeMpcsAuditFields);
-      setMpcsRows(d);
-      setMpcsStats({
-        total: d.length,
-        turnover: d.reduce((s,r)=>s+(parseFloat(r.annual_turnover)||0),0),
-        members: d.reduce((s,r)=>s+(parseInt(r.total_members)||0),0),
-        societies: new Set(d.map(r=>r.registration_authority).filter(Boolean)).size,
-        profits: d.filter(r=>r.is_profit==='PROFIT'||r.is_profit==='Yes').length,
-        losses: d.filter(r=>r.is_profit==='LOSS'||r.is_profit==='No').length,
-        neutral: d.filter(r=>r.is_profit==='NO_PROFIT_NO_LOSS').length,
-        audits: d.filter(r=>isYes(r.audit_done)).length,
-        cscs: d.filter(r=>r.form_data?.['9.1']==='Yes').length,
-        loans: d.filter(r=>r.has_loan).length,
-      });
+      setMpcsRows((mpcsRes.data || []).map(normalizeMpcsAuditFields));
     }
     const { data: offRes } = await supabase.from('officer_registry').select('*').order('created_at', { ascending: false });
     if (offRes) setOfficers(offRes);
@@ -1933,25 +1942,26 @@ function Dashboard({ onLogout, session }) {
     setMpcsFiltered(d);
   },[scopedMpcsRows,searchQ,activeFilter,filterMpcsAuthority,filterMpcsAuditStatus,filterMpcsProfitStatus,filterMpcsAuditGrade]);
 
-  const centerOptions = [...new Set(milkRows.map(r=>r.center_name).filter(Boolean))].sort();
-  const districtOptions = [...new Set(milkRows.map(r=>r.district).filter(Boolean))].sort();
-  const mpcsAuthorityOptions = [...new Set(mpcsRows.map(r=>r.registration_authority).filter(Boolean))].sort();
+  const centerOptions = [...new Set(scopedMilkRows.map(r=>r.center_name).filter(Boolean))].sort();
+  const districtOptions = [...new Set(scopedMilkRows.map(r=>r.district).filter(Boolean))].sort();
+  const mpcsAuthorityOptions = [...new Set(scopedMpcsRows.map(r=>r.registration_authority).filter(Boolean))].sort();
 
-  // Chart Calculations
+  // Chart Calculations — sourced from scoped rows so a CI's district/regional
+  // breakdowns don't reveal figures from outside their assigned jurisdiction.
   const chartData_MilkMonth = useMemo(() => {
     return MONTHS.map(m => {
-      const rows = milkRows.filter(r => r.reporting_month === m);
+      const rows = scopedMilkRows.filter(r => r.reporting_month === m);
       return {
         name: m.substring(0,3),
         litres: rows.reduce((s,r) => s + (parseFloat(r.litres)||0), 0),
         count: rows.length
       };
     }).filter(d => d.count > 0 || d.name === 'Jan'); // show at least Jan
-  }, [milkRows]);
+  }, [scopedMilkRows]);
 
   const chartData_District = useMemo(() => {
     const districts = {};
-    milkRows.forEach(r => {
+    scopedMilkRows.forEach(r => {
       if (!r.district) return;
       const cleanName = r.district.replace(/Cooperation\s+Department\s+|ARCS\s+/gi, '').trim();
       if (!districts[cleanName]) {
@@ -1961,34 +1971,34 @@ function Dashboard({ onLogout, session }) {
       districts[cleanName].members += (parseInt(r.total_members) || 0);
     });
     return Object.values(districts).sort((a, b) => b.members - a.members);
-  }, [milkRows]);
+  }, [scopedMilkRows]);
 
   // MPCS Calculations
   const chartData_MpcsProfit = useMemo(() => {
-    const profits = mpcsRows.filter(r => r.is_profit === 'Yes').length;
-    const losses = mpcsRows.filter(r => r.is_profit === 'No').length;
+    const profits = scopedMpcsRows.filter(r => r.is_profit === 'Yes').length;
+    const losses = scopedMpcsRows.filter(r => r.is_profit === 'No').length;
     return [
       { name: 'Profitable', value: profits, color: 'var(--emerald-light)' },
       { name: 'Loss Making', value: losses, color: '#EF4444' },
     ].filter(d => d.value > 0);
-  }, [mpcsRows]);
+  }, [scopedMpcsRows]);
 
   const chartData_MpcsAudit = useMemo(() => {
     const grades = { 'A': 0, 'B': 0, 'C': 0, 'D': 0 };
-    mpcsRows.forEach(r => { if (r.audit_category && grades[r.audit_category] !== undefined) grades[r.audit_category]++; });
+    scopedMpcsRows.forEach(r => { if (r.audit_category && grades[r.audit_category] !== undefined) grades[r.audit_category]++; });
     return Object.keys(grades).map(k => ({ name: `Grade ${k}`, value: grades[k] }));
-  }, [mpcsRows]);
+  }, [scopedMpcsRows]);
 
   const chartData_MpcsRegional = useMemo(() => {
     const data = {};
-    mpcsRows.forEach(r => {
+    scopedMpcsRows.forEach(r => {
       const auth = (r.registration_authority || 'Unknown').replace('Cooperation Department ', '');
       if (!data[auth]) data[auth] = { name: auth, turnover: 0, balance: 0 };
       data[auth].turnover += (parseFloat(r.annual_turnover) || 0);
       data[auth].balance += (parseFloat(r.bank_balance) || 0);
     });
     return Object.values(data).sort((a,b) => b.turnover - a.turnover);
-  }, [mpcsRows]);
+  }, [scopedMpcsRows]);
 
   const CustomTooltip = ({ active, payload, label }) => {
     if (active && payload && payload.length) {
@@ -2494,11 +2504,11 @@ function Dashboard({ onLogout, session }) {
                     </div>
                     <div style={{display:'flex', justifyContent:'space-between', padding:'10px 0', borderBottom:'1px solid #F1F5F9', cursor:'pointer'}} onClick={() => setActiveTab('AUDIT')}>
                       <span style={{color:'#64748B', fontWeight:600}}>Pending Audits</span>
-                      <strong style={{color:'#D97706', fontWeight:800}}>{mpcsRows.filter(r=>!isYes(r.audit_done)).length}</strong>
+                      <strong style={{color:'#D97706', fontWeight:800}}>{scopedMpcsRows.filter(r=>!isYes(r.audit_done)).length}</strong>
                     </div>
                     <div style={{display:'flex', justifyContent:'space-between', padding:'10px 0', borderBottom:'1px solid #F1F5F9', cursor:'pointer'}} onClick={() => setActiveTab('MILK')}>
                       <span style={{color:'#64748B', fontWeight:600}}>Total Milk Submissions</span>
-                      <strong style={{color:'#2563EB', fontWeight:800}}>{milkRows.length}</strong>
+                      <strong style={{color:'#2563EB', fontWeight:800}}>{milkStats.total}</strong>
                     </div>
                     <div style={{display:'flex', justifyContent:'space-between', padding:'10px 0'}}>
                       <span style={{color:'#64748B', fontWeight:600}}>Data Sync Engine</span>
@@ -2553,7 +2563,7 @@ function Dashboard({ onLogout, session }) {
           )}
 
           {/* Module Views */}
-          {activeTab === 'STATS' && <DistrictPerformance milkRows={milkRows} mpcsRows={mpcsRows} />}
+          {activeTab === 'STATS' && <DistrictPerformance milkRows={scopedMilkRows} mpcsRows={scopedMpcsRows} />}
 
           {/* 📄 REPORTS & EXPORT CENTER */}
           {activeTab === 'REPORTS' && (
@@ -2563,7 +2573,7 @@ function Dashboard({ onLogout, session }) {
                   <h2 style={{fontSize:'20px', fontWeight:900, color:'#0F172A'}}>📄 Reports & Export Center</h2>
                   <p style={{fontSize:'12px', color:'#64748B', marginTop:'2px'}}>Generate and download official district co-operative oversight reports</p>
                 </div>
-                <button className="btn-primary" onClick={() => downloadCSV(milkRows, 'Gyalshing_District_Master_Report')}>
+                <button className="btn-primary" onClick={() => downloadCSV(scopedMilkRows, 'Gyalshing_District_Master_Report')}>
                   <Icon d={I.download} size={14} color="#FFF"/> Download Master CSV
                 </button>
               </div>
@@ -2586,7 +2596,7 @@ function Dashboard({ onLogout, session }) {
                   <input type="date" className="field-input" defaultValue="2026-08-07"/>
                 </div>
               </div>
-              <button className="btn-primary" onClick={() => downloadCSV(mpcsRows, 'Filtered_MPCS_Report')}>
+              <button className="btn-primary" onClick={() => downloadCSV(scopedMpcsRows, 'Filtered_MPCS_Report')}>
                 Generate & Export Filtered Report
               </button>
             </div>
@@ -2711,12 +2721,12 @@ function Dashboard({ onLogout, session }) {
                     <div style={{display:'flex', alignItems:'center', gap:'12px'}}>
                        <h2 style={{fontSize:'22px', fontWeight:900, color: '#0F172A', lineHeight:1}}>Milk PCS Units Registry & Returns</h2>
                        <span className="badge badge-green" style={{padding:'4px 10px', fontSize:'11px', fontWeight:800}}>
-                         {milkStats.total || milkRows.length} Total Submissions
+                         {milkStats.total} Total Submissions
                        </span>
                     </div>
                  </div>
                  <div style={{display:'flex', gap: '8px'}}>
-                    <button className="btn-primary" onClick={()=>downloadCSV(milkRows, 'Milk_PCS_Submissions')} style={{padding: '8px 14px', fontSize: '12px', height:'38px', display: 'flex', alignItems:'center', gap:'6px'}}>
+                    <button className="btn-primary" onClick={()=>downloadCSV(scopedMilkRows, 'Milk_PCS_Submissions')} style={{padding: '8px 14px', fontSize: '12px', height:'38px', display: 'flex', alignItems:'center', gap:'6px'}}>
                       <Icon d={I.download} size={14} color="#fff"/> Export CSV
                     </button>
                  </div>
@@ -2768,7 +2778,7 @@ function Dashboard({ onLogout, session }) {
                 </div>
                 {(filterMonth||filterCenter||filterDistrict||searchQ||activeFilter) && (
                   <div style={{marginTop:'12px', paddingTop:'10px', borderTop:'1px solid #F1F5F9', fontSize:'12px', color:'#047857', fontWeight:700, display:'flex', alignItems:'center', gap:'6px'}}>
-                    🔍 Showing <strong>{milkFiltered.length}</strong> of <strong>{milkRows.length}</strong> submitted Milk PCS records
+                    🔍 Showing <strong>{milkFiltered.length}</strong> of <strong>{scopedMilkRows.length}</strong> submitted Milk PCS records
                   </div>
                 )}
               </div>
@@ -2792,7 +2802,7 @@ function Dashboard({ onLogout, session }) {
                   <div style={{padding:'60px',textAlign:'center',color:'#9CA3AF'}}>
                     <div style={{fontSize:'40px',marginBottom:'12px'}}>📭</div>
                     <div style={{fontWeight:700}}>No Milk PCS submissions found</div>
-                    <div style={{fontSize:'13px',marginTop:'4px'}}>{milkRows.length===0?'No records yet — submit a form from the Milk PCS app!':'Try adjusting your filters.'}</div>
+                    <div style={{fontSize:'13px',marginTop:'4px'}}>{scopedMilkRows.length===0?'No records yet — submit a form from the Milk PCS app!':'Try adjusting your filters.'}</div>
                   </div>
                 ) : (
                   <div style={{overflowX:'auto'}}>
@@ -2879,7 +2889,7 @@ function Dashboard({ onLogout, session }) {
                   <button className="btn-ghost" onClick={()=>setShowCharts(!showCharts)} style={{padding: '8px 14px', fontSize: '12px', height:'38px'}}>
                     {showCharts ? 'Hide Analytics' : 'Show Analytics'}
                   </button>
-                  <button className="btn-primary" onClick={()=>downloadCSV(mpcsRows, 'MPCS_Returns')} style={{padding: '8px 14px', fontSize: '12px', height:'38px', display: 'flex', alignItems:'center', gap:'6px'}}>
+                  <button className="btn-primary" onClick={()=>downloadCSV(scopedMpcsRows, 'MPCS_Returns')} style={{padding: '8px 14px', fontSize: '12px', height:'38px', display: 'flex', alignItems:'center', gap:'6px'}}>
                     <Icon d={I.download} size={14} color="#fff"/> Export CSV
                   </button>
                </div>
@@ -2952,7 +2962,7 @@ function Dashboard({ onLogout, session }) {
 
               {(searchQ || filterMpcsAuditStatus || filterMpcsProfitStatus || filterMpcsAuditGrade || activeFilter) && (
                 <div style={{marginTop:'12px', paddingTop:'10px', borderTop:'1px solid #F1F5F9', fontSize:'12px', color:'#047857', fontWeight:700, display:'flex', alignItems:'center', gap:'6px'}}>
-                  🔍 Showing <strong>{mpcsFiltered.length}</strong> of <strong>{mpcsRows.length}</strong> registered MPCS societies
+                  🔍 Showing <strong>{mpcsFiltered.length}</strong> of <strong>{scopedMpcsRows.length}</strong> registered MPCS societies
                 </div>
               )}
             </div>
