@@ -1590,7 +1590,7 @@ function AuditOverview({ mpcsRows, onSelectSociety }) {
 }
 
 // ─── Dashboard ────────────────────────────────────────────────────────────────
-function Dashboard({ onLogout }) {
+function Dashboard({ onLogout, session }) {
   const [activeTab, setActiveTab] = useState('DASHBOARD'); // 'DASHBOARD' | 'MILK' | 'MPCS' | 'AUDIT' | 'STATS' | 'OFFICERS'
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => localStorage.getItem('mpcs_admin_sidebar_collapsed') === 'true');
@@ -1624,27 +1624,32 @@ function Dashboard({ onLogout }) {
   const [showSupportModal, setShowSupportModal] = useState(false);
   const [yearFilter, setYearFilter] = useState('This Year');
 
-  // 🌲 Hierarchy & ACI Assignment State
+  // 🌲 Hierarchy & ACI Assignment State — loaded from the unit_assignments
+  // table in fetchAll(); starts empty rather than seeded with fictional
+  // delegations, since this now reflects real, persisted assignments.
   const [showAssignAciModal, setShowAssignAciModal] = useState(false);
   const [showHierarchyTree, setShowHierarchyTree] = useState(true);
-  const [hierarchyMapping, setHierarchyMapping] = useState({
-    'Sardong Lungzik MPCS': { ci: 'CI Mukund Pradhan', aci: 'ACI Deepesh Pradhan', district: 'Gyalshing' },
-    'Gitan Karmatara MPCS': { ci: 'CI Mukund Pradhan', aci: 'ACI Tenzing Norbu', district: 'Gyalshing' },
-    'Dentam Dairy MPCS':    { ci: 'CI Mukund Pradhan', aci: 'ACI Birkha Subba', district: 'Dentam' },
-    'Banthen MPCS':         { ci: 'CI Mukund Pradhan', aci: 'ACI Pempa Bhutia', district: 'Pelling' },
-    'Pelling Co-op MPCS':   { ci: 'CI Passang Gyatso',  aci: 'ACI Karma Bhutia', district: 'Pelling' },
-    'Yuksom Dairy MPCS':    { ci: 'CI Kazi Sherpa',     aci: 'ACI Sonam Subba', district: 'Yuksom' },
-  });
+  const [hierarchyMapping, setHierarchyMapping] = useState({});
 
-  const handleAssignAci = (unitName, aciName) => {
+  const handleAssignAci = async (unitName, aciName) => {
+    const ciName = session?.user?.user_metadata?.fullName || session?.user?.email || 'System Admin';
+    const { error } = await supabase.from('unit_assignments').upsert({
+      unit_name: unitName,
+      ci_name: ciName,
+      aci_name: aciName,
+      district: (() => {
+        const r = mpcsRows.find(r => r.society_name === unitName);
+        return r?.district || r?.form_data?.gpu || r?.form_data?.gpu_name || r?.form_data?.district || null;
+      })(),
+      updated_at: new Date().toISOString()
+    });
+    if (error) {
+      alert('Failed to save delegation: ' + error.message);
+      return;
+    }
     setHierarchyMapping(prev => ({
       ...prev,
-      [unitName]: {
-        ...(prev[unitName] || {}),
-        ci: 'CI Mukund Pradhan',
-        aci: aciName,
-        district: 'Gyalshing'
-      }
+      [unitName]: { ci: ciName, aci: aciName, district: prev[unitName]?.district }
     }));
     setShowAssignAciModal(false);
     alert(`Delegation Updated: ${aciName} has been assigned to manage ${unitName}.`);
@@ -1821,7 +1826,16 @@ function Dashboard({ onLogout }) {
     }
     const { data: offRes } = await supabase.from('officer_registry').select('*').order('created_at', { ascending: false });
     if (offRes) setOfficers(offRes);
-    
+
+    const { data: assignRes } = await supabase.from('unit_assignments').select('*');
+    if (assignRes) {
+      const mapping = {};
+      assignRes.forEach(a => {
+        mapping[a.unit_name] = { ci: a.ci_name, aci: a.aci_name, district: a.district };
+      });
+      setHierarchyMapping(mapping);
+    }
+
     setLoading(false);
   }, []);
 
@@ -3453,21 +3467,13 @@ function AssignAciModal({ mpcsRows, officers, hierarchyMapping, onClose, onSave 
   const [selectedAci, setSelectedAci] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const availableUnits = Array.from(new Set([
-    'Sardong Lungzik MPCS',
-    'Gitan Karmatara MPCS',
-    'Dentam Dairy MPCS',
-    'Banthen MPCS',
-    'Pelling Co-op MPCS',
-    'Yuksom Dairy MPCS',
-    ...mpcsRows.map(s => s.society_name).filter(Boolean)
-  ]));
+  const availableUnits = Array.from(new Set(mpcsRows.map(s => s.society_name).filter(Boolean)));
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (!selectedUnit || !selectedAci) return alert('Please select both an MPCS Unit and an ACI / Field Officer.');
     setLoading(true);
-    onSave(selectedUnit, selectedAci);
+    await onSave(selectedUnit, selectedAci);
     setLoading(false);
   };
 
@@ -3498,10 +3504,6 @@ function AssignAciModal({ mpcsRows, officers, hierarchyMapping, onClose, onSave 
               {officers.map(o => (
                 <option key={o.id || o.name} value={o.name}>{o.name} ({o.role || 'ACI / Field Officer'})</option>
               ))}
-              <option value="ACI Deepesh Pradhan">ACI Deepesh Pradhan (Assistant Inspector)</option>
-              <option value="ACI Tenzing Norbu">ACI Tenzing Norbu (Assistant Inspector)</option>
-              <option value="ACI Birkha Subba">ACI Birkha Subba (Field Officer)</option>
-              <option value="ACI Pempa Bhutia">ACI Pempa Bhutia (Field Officer)</option>
             </select>
           </div>
           <button type="submit" className="btn-primary" disabled={loading} style={{width:'100%', padding:'12px', borderRadius:'4px', fontSize:'13px', fontWeight:800}}>
@@ -3515,26 +3517,13 @@ function AssignAciModal({ mpcsRows, officers, hierarchyMapping, onClose, onSave 
 
 // ─── OfficerHierarchyTree ─────────────────────────────────────────────────────
 function OfficerHierarchyTree({ hierarchyMapping, userRole }) {
-  const inspectors = {
-    'CI Mukund Pradhan': {
-      role: 'Cooperative Inspector',
-      jurisdiction: 'Gyalshing HQ & Dentam',
-      units: []
-    },
-    'CI Passang Gyatso': {
-      role: 'Cooperative Inspector',
-      jurisdiction: 'Pelling Subdivision',
-      units: []
-    },
-    'CI Kazi Sherpa': {
-      role: 'Cooperative Inspector',
-      jurisdiction: 'Yuksom Subdivision',
-      units: []
-    }
-  };
+  // Built entirely from real unit_assignments delegations — no seeded
+  // inspectors, so a CI only appears here once they've actually delegated
+  // a unit to an ACI.
+  const inspectors = {};
 
   Object.entries(hierarchyMapping).forEach(([unitName, mapping]) => {
-    const ciName = mapping.ci || 'CI Mukund Pradhan';
+    const ciName = mapping.ci || 'Unassigned CI';
     if (!inspectors[ciName]) {
       inspectors[ciName] = { role: 'Cooperative Inspector', jurisdiction: mapping.district || 'Gyalshing District', units: [] };
     }
@@ -3569,6 +3558,11 @@ function OfficerHierarchyTree({ hierarchyMapping, userRole }) {
 
       {/* Inspector Nodes */}
       <div style={{display:'flex', flexDirection:'column', gap:'16px', paddingLeft:'20px', borderLeft:'2px dashed #94A3B8'}}>
+        {Object.keys(inspectors).length === 0 && (
+          <div style={{padding:'16px', color:'#94A3B8', fontSize:'12px', fontStyle:'italic'}}>
+            No delegations yet. Use "Assign ACI to Unit" to delegate an MPCS or Milk unit to a field officer.
+          </div>
+        )}
         {Object.entries(inspectors).map(([ciName, info]) => (
           <div key={ciName} style={{background:'#FFFFFF', border:'1px solid #CBD5E1', borderRadius:'4px', padding:'16px'}}>
             <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'12px', borderBottom:'1px solid #F1F5F9', paddingBottom:'8px'}}>
@@ -3716,5 +3710,5 @@ export default function App() {
 
   if (!session) return <LoginPage />;
   if (!isSystemAdmin(session)) return <AccessDenied email={session.user.email} onLogout={handleLogout}/>;
-  return <Dashboard onLogout={handleLogout}/>;
+  return <Dashboard onLogout={handleLogout} session={session}/>;
 }
