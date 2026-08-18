@@ -1654,7 +1654,11 @@ function Dashboard({ onLogout, session }) {
     }));
     setShowAssignAciModal(false);
     setAssignAciPrefillUnit(null);
-    alert(`Delegation Updated: ${aciName} has been assigned to manage ${unitName}.`);
+    // alert() blocks the main thread synchronously, before the browser gets a
+    // chance to paint the modal-closed state — without the defer, the alert
+    // popped up in front of the modal still showing "Updating Delegation...",
+    // making it look stuck even though the save had already succeeded.
+    setTimeout(() => alert(`Delegation Updated: ${aciName} has been assigned to manage ${unitName}.`), 0);
   };
 
   const handleRevokeAci = async (unitName) => {
@@ -1711,7 +1715,10 @@ function Dashboard({ onLogout, session }) {
     } else {
       fetchAll();
       setShowAddMilkModal(false);
-      alert('Milk collection record saved successfully!');
+      // Deferred: alert() blocks synchronously, before the browser paints the
+      // modal-closed state, so it used to pop up in front of the modal still
+      // showing its "Saving..." button — looked stuck even though it worked.
+      setTimeout(() => alert('Milk collection record saved successfully!'), 0);
     }
   };
 
@@ -1722,7 +1729,7 @@ function Dashboard({ onLogout, session }) {
     } else {
       fetchAll();
       setShowAddMpcsModal(false);
-      alert('MPCS Society registered successfully!');
+      setTimeout(() => alert('MPCS Society registered successfully!'), 0);
     }
   };
 
@@ -1733,7 +1740,7 @@ function Dashboard({ onLogout, session }) {
     } else {
       fetchAll();
       setShowScheduleAuditModal(false);
-      alert('Audit status and grade updated successfully!');
+      setTimeout(() => alert('Audit status and grade updated successfully!'), 0);
     }
   };
 
@@ -3091,7 +3098,7 @@ function Dashboard({ onLogout, session }) {
             } else {
               fetchAll();
               setShowAddOfficer(false);
-              alert(`Officer ${newOff.name} has been provisioned. \n\nIMPORTANT: Please ensure you run the SQL trigger script provided in the documentation to automatically create the Auth account.`);
+              setTimeout(() => alert(`Officer ${newOff.name} has been provisioned. \n\nIMPORTANT: Please ensure you run the SQL trigger script provided in the documentation to automatically create the Auth account.`), 0);
             }
           }}
         />
