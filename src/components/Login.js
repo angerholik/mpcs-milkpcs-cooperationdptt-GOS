@@ -62,7 +62,7 @@ function SikkimEmblem() {
 
 const Login = ({ onLoginSuccess, onRegisterSuccess }) => {
   const [tab, setTab] = useState('register'); // 'signin' or 'register'
-  const [role, setRole] = useState('CI'); // 'CI' or 'ACI'
+  const [role, setRole] = useState('CI'); // 'CI', 'ACI', or 'PA'
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [mobile, setMobile] = useState('');
@@ -164,7 +164,7 @@ const Login = ({ onLoginSuccess, onRegisterSuccess }) => {
     }
 
     setLoading(true);
-    const roleTitle = role === 'CI' ? 'Cooperative Inspector (CI)' : 'Assistant CI (ACI)';
+    const roleTitle = role === 'CI' ? 'Cooperative Inspector (CI)' : role === 'ACI' ? 'Assistant CI (ACI)' : 'Project Assistant (PA)';
 
     try {
       try {
@@ -309,7 +309,7 @@ const Login = ({ onLoginSuccess, onRegisterSuccess }) => {
               {tab === 'register' ? (
                 <>
                   <Text style={styles.cardSubtitle}>
-                    Create Inspector Credentials (CI / ACI) for Cooperative Portal Access
+                    Create Inspector Credentials (CI / ACI / PA) for Cooperative Portal Access
                   </Text>
 
                   {/* Role Selector Toggle */}
@@ -358,6 +358,29 @@ const Login = ({ onLoginSuccess, onRegisterSuccess }) => {
                           <View style={styles.inactiveRoleContent}>
                             <MaterialCommunityIcons name="shield-account-outline" size={16} color={COLORS.slate500} />
                             <Text style={styles.inactiveRoleText}>ACI (Assistant CI)</Text>
+                          </View>
+                        )}
+                      </TouchableOpacity>
+
+                      <TouchableOpacity
+                        style={{ flex: 1 }}
+                        onPress={() => setRole('PA')}
+                        activeOpacity={0.85}
+                      >
+                        {role === 'PA' ? (
+                          <LinearGradient
+                            colors={['#7a1a1f', '#4a1017']}
+                            start={{ x: 0, y: 0 }}
+                            end={{ x: 1, y: 0 }}
+                            style={styles.activeRoleGradient}
+                          >
+                            <MaterialCommunityIcons name="account-hard-hat" size={16} color="#FFFFFF" />
+                            <Text style={styles.activeRoleText}>PA (Project Assistant)</Text>
+                          </LinearGradient>
+                        ) : (
+                          <View style={styles.inactiveRoleContent}>
+                            <MaterialCommunityIcons name="account-hard-hat-outline" size={16} color={COLORS.slate500} />
+                            <Text style={styles.inactiveRoleText}>PA (Project Assistant)</Text>
                           </View>
                         )}
                       </TouchableOpacity>

@@ -2583,7 +2583,7 @@ function Dashboard({ onLogout, session }) {
               <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'20px'}}>
                 <div>
                   <h2 style={{fontSize:'20px', fontWeight:900, color:'#0F172A'}}>👤 Governance Hierarchy & User Roles Portal</h2>
-                  <p style={{fontSize:'12px', color:'#64748B', marginTop:'2px'}}>System Admin ➔ Cooperative Inspector (CI) ➔ MPCS & Milk Units ➔ Assistant Inspector (ACI)</p>
+                  <p style={{fontSize:'12px', color:'#64748B', marginTop:'2px'}}>Cooperative Inspector (CI) ➔ ACI ➔ PA</p>
                 </div>
                 <div style={{display:'flex', gap:'10px'}}>
                   <button className="btn-ghost" onClick={() => setShowHierarchyTree(!showHierarchyTree)}>
@@ -2636,7 +2636,7 @@ function Dashboard({ onLogout, session }) {
                           <tr key={off.id || idx}>
                             <td>{idx + 1}</td>
                             <td><strong>{off.name}</strong></td>
-                            <td><span className={role.includes('Cooperative Inspector')?'badge badge-gold':'badge badge-purple'}>{role}</span></td>
+                            <td><span className={role.includes('Cooperative Inspector')?'badge badge-gold':role.includes('Project Assistant')?'badge badge-green':'badge badge-purple'}>{role}</span></td>
                             <td>{assignment ? assignment[1].ci : <span style={{color:'#94A3B8', fontStyle:'italic'}}>Not yet assigned</span>}</td>
                             <td>{assignment ? <span style={{fontSize:'12px', color:'#334155'}}>{assignment[0]}</span> : <span style={{color:'#94A3B8', fontStyle:'italic'}}>Not yet assigned</span>}</td>
                             <td><span className="badge badge-green">ACTIVE</span></td>
@@ -3571,7 +3571,7 @@ function OfficerHierarchyTree({ hierarchyMapping, userRole, onRevoke, onReassign
             <Icon d={I.members} size={18} color="#7F1D1D"/> District Governance Hierarchy Map
           </h3>
           <p style={{fontSize:'11px', color:'#64748B', marginTop:'2px'}}>
-            System Admin ➔ Cooperative Inspector (CI) ➔ MPCS & Milk Units ➔ Assistant Inspector (ACI)
+            Cooperative Inspector (CI) ➔ ACI ➔ PA
           </p>
         </div>
         <span className="badge badge-gold">Official Governance Tree</span>
@@ -3651,7 +3651,7 @@ function AddOfficerModal({ onClose, onSave }) {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [mobile, setMobile] = useState('');
-  const [role, setRole] = useState('Field Officer');
+  const [role, setRole] = useState('Assistant CI (ACI)');
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e) => {
@@ -3688,9 +3688,9 @@ function AddOfficerModal({ onClose, onSave }) {
           <div className="field-group" style={{marginBottom:'32px'}}>
             <label className="field-label">Officer Role</label>
             <select className="field-input" value={role} onChange={e=>setRole(e.target.value)} style={{appearance:'none', background:`url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="%236B7280" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>') no-repeat right 12px center`, backgroundSize:'16px'}}>
-              <option value="Field Officer">Field Officer</option>
-              <option value="Inspector">Inspector</option>
-              <option value="ARCS Office">ARCS Office</option>
+              <option value="Cooperative Inspector (CI)">Cooperative Inspector (CI)</option>
+              <option value="Assistant CI (ACI)">Assistant CI (ACI)</option>
+              <option value="Project Assistant (PA)">Project Assistant (PA)</option>
               <option value="System Admin">System Admin</option>
             </select>
           </div>
