@@ -193,9 +193,32 @@ function getMilkAuditAgm(row) {
   };
 }
 
+// The MPCS Compliance screen in the mobile app stores the inspector's actual
+// audit answer under form_data.complianceData.auditStatus ("Completed"/"Pending"),
+// not in the top-level audit_done column — older submissions (and any client
+// still hitting the pre-fix code path) can have audit_done as null even though
+// complianceData.auditStatus is correct. Fall back to it so already-submitted
+// records display their real status instead of defaulting to "No".
+function normalizeMpcsAuditFields(row) {
+  let fd = row.form_data || {};
+  if (typeof fd === 'string') {
+    try { fd = JSON.parse(fd); } catch (e) { fd = {}; }
+  }
+  const compliance = fd.complianceData || {};
+  let audit_done = row.audit_done;
+  if (!audit_done && compliance.auditStatus) {
+    audit_done = compliance.auditStatus === 'Completed'
+      ? `Yes${compliance.auditDate ? ` (${compliance.auditDate})` : ''}`
+      : 'No';
+  }
+  const audit_year = row.audit_year || compliance.auditYear || fd['4.2'] || null;
+  const audit_category = row.audit_category || fd['4.3'] || null;
+  return { ...row, audit_done, audit_year, audit_category };
+}
+
 // Helper to parse MPCS Audit & AGM details
 function getMpcsAuditAgm(row) {
-  if (!row) return { audit_done: 'No', audit_year: '—', audit_category: '—', agm_done: 'No', agm_date: '—' };
+  if (!row) return { audit_done: 'No', audit_year: '—', audit_category: '—', audit_status: 'Not Completed', agm_done: 'No', agm_date: '—' };
   const fd = row.form_data || {};
   let audit_done = row.audit_done || (fd['4.1'] || 'No');
   let audit_year = row.audit_year || fd['4.2'] || '—';
@@ -204,7 +227,7 @@ function getMpcsAuditAgm(row) {
   let agm_done = (fd['4.4'] || row.agm_done || (fd['4.1'] === 'Yes' ? 'Yes' : 'No'));
   if (agm_done !== 'No' && agm_done !== 'Yes') agm_done = 'Yes';
 
-  return { audit_done, audit_year, audit_category, agm_done, agm_date };
+  return { audit_done, audit_year, audit_category, audit_status: isYes(audit_done) ? 'Completed' : 'Not Completed', agm_done, agm_date };
 }
 
 const downloadCSV = (rows, filename) => {
@@ -674,11 +697,14 @@ function MPCSDetailModal({ row, onClose }) {
                 </thead>
                 <tbody>
                   {(() => {
+                    // The mobile app's demographics screen labels the 4th caste row
+                    // "Others", not "GEN" — match on any alias so that data entered
+                    // as "Others" in the app still lands in the General row here.
                     const categories = [
-                      {lbl: 'SC', mKey: '3.1', fKey: '3.2'},
-                      {lbl: 'ST', mKey: '3.3', fKey: '3.4'},
-                      {lbl: 'OBC', mKey: '3.5', fKey: '3.6'},
-                      {lbl: 'GEN', mKey: '3.7', fKey: '3.8'}
+                      {lbl: 'SC', mKey: '3.1', fKey: '3.2', aliases: ['SC']},
+                      {lbl: 'ST', mKey: '3.3', fKey: '3.4', aliases: ['ST']},
+                      {lbl: 'OBC', mKey: '3.5', fKey: '3.6', aliases: ['OBC']},
+                      {lbl: 'GEN', mKey: '3.7', fKey: '3.8', aliases: ['GEN', 'GENERAL', 'OTHERS', 'OTHER']}
                     ];
                     let sumMale = 0;
                     let sumFemale = 0;
@@ -687,10 +713,10 @@ function MPCSDetailModal({ row, onClose }) {
                       let mVal = parseInt(fd[cat.mKey]) || 0;
                       let fVal = parseInt(fd[cat.fKey]) || 0;
                       if (!mVal && !fVal && Array.isArray(fd.demographicsData)) {
-                        const item = fd.demographicsData.find(d => 
-                          (d.casteCategory || d.category || '').toUpperCase() === cat.lbl ||
-                          (d.casteCategory || d.category || '').toUpperCase().startsWith(cat.lbl)
-                        );
+                        const item = fd.demographicsData.find(d => {
+                          const c = (d.casteCategory || d.category || '').toUpperCase();
+                          return cat.aliases.some(a => c === a || c.startsWith(a));
+                        });
                         if (item) {
                           mVal = parseInt(item.male || item.maleMembers) || 0;
                           fVal = parseInt(item.female || item.femaleMembers) || 0;
@@ -1750,7 +1776,7 @@ function Dashboard({ onLogout }) {
       });
     }
     if (!mpcsRes.error) {
-      const d = mpcsRes.data || [];
+      const d = (mpcsRes.data || []).map(normalizeMpcsAuditFields);
       setMpcsRows(d);
       setMpcsStats({
         total: d.length,
@@ -2931,9 +2957,9 @@ function Dashboard({ onLogout }) {
                               <span style={{fontFamily:'monospace', background:'#F1F5F9', padding:'2px 6px', borderRadius:'4px', color:'#334155', fontWeight:700}}>{row.registration_number||'—'}</span>
                             </td>
                             <td style={{textAlign:'center'}}>
-                              {isYes(auditAgm.audit_done) 
-                                ? <span className="badge badge-green" style={{fontSize:'10px'}}>{auditAgm.audit_year !== '—' ? auditAgm.audit_year : 'Yes'}</span> 
-                                : <span className="badge badge-red" style={{fontSize:'10px'}}>No</span>}
+                              <span className={`badge ${isYes(auditAgm.audit_done) ? 'badge-green' : 'badge-red'}`} style={{fontSize:'10px'}}>
+                                {auditAgm.audit_status}
+                              </span>
                             </td>
                             <td style={{textAlign:'center', fontWeight:800, color:'#0F172A'}}>{row.total_members||0}</td>
                             <td style={{textAlign:'right', fontWeight:800, color:'#7F1D1D', whiteSpace:'nowrap'}}>{fmtRs(row.annual_turnover)}</td>

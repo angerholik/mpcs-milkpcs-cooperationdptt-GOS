@@ -718,9 +718,12 @@ export default function App() {
             presidentMobile: stateObj.presidentMobile,
             managerName: stateObj.managerName,
             managerMobile: stateObj.managerMobile,
-            auditDone: stateObj.complianceData?.auditDone,
+            // complianceData holds { auditStatus: 'Completed'|'Pending', auditDate, auditYear, ... }
+            // from MpcsComplianceAuditScreen — there is no auditDone/auditGrade field.
+            auditDone: stateObj.complianceData?.auditStatus === 'Completed'
+              ? `Yes${stateObj.complianceData?.auditDate ? ` (${stateObj.complianceData.auditDate})` : ''}`
+              : 'No',
             auditYear: stateObj.complianceData?.auditYear,
-            auditCategory: stateObj.complianceData?.auditGrade,
             annualTurnover: stateObj.financialsData?.annualTurnover,
             profitOrLoss: stateObj.financialsData?.profitOrLoss || 'PROFIT',
             netProfit: stateObj.financialsData?.netProfit,
