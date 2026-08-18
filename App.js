@@ -2330,22 +2330,22 @@ export default function App() {
                         centerId={selectedSociety?.code || registrationNumber || ''}
                         district={selectedSociety?.district || district || ''}
                         reportingMonth={reportingMonth || ''}
-                        reportStatus={((sectionStates?.evidence?.status?.includes('CAPTURED') && !sectionStates?.evidence?.status?.includes('NOT')) && sectionStates?.sales?.status?.includes('COMPLETED') && sectionStates?.business?.status?.includes('COMPLETED')) ? 'MONTHLY PARAMS OK' : 'DRAFT'}
+                        reportStatus={((sectionStates?.evidence?.status?.includes('CAPTURED') && !sectionStates?.evidence?.status?.includes('NOT')) && sectionStates?.sales?.status?.startsWith('COMPLETED') && sectionStates?.business?.status?.startsWith('COMPLETED')) ? 'MONTHLY PARAMS OK' : 'DRAFT'}
                         progressPercent={
                           Math.round(
                             ((((sectionStates?.evidence?.status?.includes('CAPTURED') && !sectionStates?.evidence?.status?.includes('NOT')) || sectionStates?.evidence?.status?.includes('Valid')) ? 20 : 0) +
-                            (sectionStates?.sales?.status?.includes('COMPLETED') ? 20 : 0) +
-                            (sectionStates?.business?.status?.includes('COMPLETED') ? 20 : 0) +
-                            (!cscTransData?.isCscActive || sectionStates?.csc?.status?.includes('COMPLETED') ? 20 : 0) +
+                            (sectionStates?.sales?.status?.startsWith('COMPLETED') ? 20 : 0) +
+                            (sectionStates?.business?.status?.startsWith('COMPLETED') ? 20 : 0) +
+                            (!cscTransData?.isCscActive || sectionStates?.csc?.status?.startsWith('COMPLETED') ? 20 : 0) +
                             (activityItems.length > 0 ? 20 : 0))
                           )
                         }
                         hasSubmittedMonthlyParams={false} // Disable global lock
                         completedCount={
                           (((sectionStates?.evidence?.status?.includes('CAPTURED') && !sectionStates?.evidence?.status?.includes('NOT')) || sectionStates?.evidence?.status?.includes('Valid')) ? 1 : 0) +
-                          (sectionStates?.sales?.status?.includes('COMPLETED') ? 1 : 0) +
-                          (sectionStates?.business?.status?.includes('COMPLETED') ? 1 : 0) +
-                          ((!cscTransData?.isCscActive || sectionStates?.csc?.status?.includes('COMPLETED')) ? 1 : 0) +
+                          (sectionStates?.sales?.status?.startsWith('COMPLETED') ? 1 : 0) +
+                          (sectionStates?.business?.status?.startsWith('COMPLETED') ? 1 : 0) +
+                          ((!cscTransData?.isCscActive || sectionStates?.csc?.status?.startsWith('COMPLETED')) ? 1 : 0) +
                           (activityItems.length > 0 ? 1 : 0)
                         }
                         totalCount={5}

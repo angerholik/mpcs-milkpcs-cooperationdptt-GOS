@@ -1,4 +1,6 @@
 import React, { useState } from 'react';
+import * as ImagePicker from 'expo-image-picker';
+import * as Location from 'expo-location';
 import {
   View, Text, StyleSheet, TouchableOpacity, Image, TextInput,
   ScrollView, Platform, Pressable
@@ -47,20 +49,72 @@ export default function MpcsDigitalEvidenceScreen({
 }) {
   const [isCapturing, setIsCapturing] = useState(false);
 
-  const handleCapturePhoto = () => {
+  // Real camera + GPS capture, matching the Milk PCS Digital Evidence
+  // screen — this previously just set a hardcoded stock photo URL and fake
+  // coordinates (27.4400, 88.5900) on a timer regardless of what was
+  // actually in front of the inspector or where they actually were.
+  const applyCaptureResult = async (result) => {
+    if (result.canceled) return;
+    setImageUri && setImageUri(result.assets[0].uri);
+
+    const now = new Date();
+    const formattedTime = now.toLocaleDateString('en-IN', {
+      day: 'numeric', month: 'long', year: 'numeric',
+      hour: '2-digit', minute: '2-digit'
+    });
+    setTimestamp && setTimestamp(formattedTime);
+
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status === 'granted') {
+        const loc = await Location.getCurrentPositionAsync({});
+        setLatitude && setLatitude(String(loc.coords.latitude));
+        setLongitude && setLongitude(String(loc.coords.longitude));
+      }
+    } catch (e) {
+      console.warn('Location capture failed:', e);
+    }
+  };
+
+  const handleCapturePhoto = async () => {
     setIsCapturing(true);
-    setTimeout(() => {
-      // Mock photo URI if none exists
-      if (!imageUri && setImageUri) {
-        setImageUri("https://images.unsplash.com/photo-1527153857715-3908f2bae5e8?w=800&auto=format&fit=crop&q=60");
-      }
-      if (setTimestamp) {
-        setTimestamp(new Date().toLocaleString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }));
-      }
-      if (!latitude && setLatitude) setLatitude("27.4400");
-      if (!longitude && setLongitude) setLongitude("88.5900");
-      setIsCapturing(false);
-    }, 400);
+    try {
+      const result = await ImagePicker.launchCameraAsync({
+        mediaTypes: ['images'],
+        allowsEditing: true,
+        quality: 0.8,
+      });
+      await applyCaptureResult(result);
+    } catch (e) {
+      console.warn('Camera failed:', e);
+    }
+    setIsCapturing(false);
+  };
+
+  const handlePickGallery = async () => {
+    setIsCapturing(true);
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        allowsEditing: true,
+        quality: 0.8,
+      });
+      await applyCaptureResult(result);
+    } catch (e) {
+      console.warn('Gallery failed:', e);
+    }
+    setIsCapturing(false);
+  };
+
+  // Previously the button wired directly to `onPress={onSaveNext}`, so the
+  // press event object (not a real date) was what App.js received as
+  // `validUntil` — comparing "now < new Date(pressEvent)" is always false,
+  // so evidence showed as EXPIRED immediately after every single capture,
+  // regardless of when it actually happened. Compute a real 24-hour expiry
+  // here, matching the Milk PCS Digital Evidence screen.
+  const handleSaveAndNext = () => {
+    const validUntil = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+    if (onSaveNext) onSaveNext(validUntil);
   };
 
   return (
@@ -146,7 +200,7 @@ export default function MpcsDigitalEvidenceScreen({
                 styles.captureBox,
                 pressed && { backgroundColor: COLORS.slate100 }
               ]}
-              onPress={handleCapturePhoto}
+              onPress={handlePickGallery}
             >
               <View style={styles.captureCircle}>
                 <MaterialCommunityIcons name="camera-plus-outline" size={26} color={COLORS.primary} />
@@ -235,7 +289,7 @@ export default function MpcsDigitalEvidenceScreen({
         </TouchableOpacity>
         <Pressable
           style={({ pressed }) => [styles.navNextBtn, pressed && { transform: [{ scale: 0.98 }] }]}
-          onPress={onSaveNext}
+          onPress={handleSaveAndNext}
         >
           <LinearGradient
             colors={['#7a1a1f', '#4a1017']}

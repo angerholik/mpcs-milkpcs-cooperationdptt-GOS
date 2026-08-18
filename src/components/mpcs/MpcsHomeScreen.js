@@ -36,6 +36,14 @@ const FONT_FAMILY = 'Manrope';
 
 const isEvidenceCaptured = (st) => Boolean(st) && st.includes('CAPTURED') && !st.includes('NOT');
 
+// The GPU name is stored as whatever the inspector typed when registering
+// the institution, not guaranteed to already say "GPU" — append the suffix
+// for display without doubling it up for GPU names that already include it.
+const formatGpuLabel = (value) => {
+  if (!value) return value;
+  return /\bgpu\b/i.test(value) ? value : `${value} GPU`;
+};
+
 export default function HomeScreen({
   activeModule = 'MILK',
   onSwitchModule,
@@ -127,7 +135,7 @@ export default function HomeScreen({
               <Text style={styles.societyTitle}>{selectedSociety?.name || societyName}</Text>
               <View style={styles.locationRow}>
                 <MaterialCommunityIcons name="map-marker-outline" size={16} color={COLORS.slate400} />
-                <Text style={styles.societyLocation}>{district || "Ranchi, Jharkhand"}</Text>
+                <Text style={styles.societyLocation}>{formatGpuLabel(district) || "Ranchi, Jharkhand"}</Text>
               </View>
             </View>
             <View style={styles.activeBadge}>
@@ -135,15 +143,11 @@ export default function HomeScreen({
               <Text style={styles.activeBadgeText}>ACTIVE</Text>
             </View>
           </View>
-          
+
           <View style={styles.overviewGrid}>
             <View style={styles.overviewGridItem}>
-              <Text style={styles.gridLabel}>SOCIETY CODE</Text>
-              <Text style={styles.gridValue}>{centerId}</Text>
-            </View>
-            <View style={styles.overviewGridItem}>
-              <Text style={styles.gridLabel}>REGISTRATION</Text>
-              <Text style={styles.gridValue}>12-MAR-2018</Text>
+              <Text style={styles.gridLabel}>REGISTRATION NUMBER</Text>
+              <Text style={styles.gridValue}>{selectedSociety?.regNo || centerId || '—'}</Text>
             </View>
           </View>
         </View>
@@ -184,7 +188,7 @@ export default function HomeScreen({
             if (!onNavigateScreen) return;
             if (!isEvidenceCaptured(evidenceStatus) && !evidenceStatus?.includes('Valid')) {
               onNavigateScreen('MPCS_EVIDENCE');
-            } else if (!salesStatus?.includes('COMPLETED')) {
+            } else if (!salesStatus?.startsWith('COMPLETED')) {
               onNavigateScreen('MPCS_SALES');
             } else if (activitiesStatus === '0 ENTRIES' || activitiesStatus === 'NOT COMPLETED') {
               onNavigateScreen('MPCS_ACTIVITIES');
@@ -206,7 +210,7 @@ export default function HomeScreen({
               <Text style={styles.nextStepBtnText}>
                 {(!isEvidenceCaptured(evidenceStatus) && !evidenceStatus?.includes('Valid'))
                   ? 'Next Step: Digital Evidence (Live Visit)'
-                  : !salesStatus?.includes('COMPLETED')
+                  : !salesStatus?.startsWith('COMPLETED')
                     ? 'Next Step: Monthly Sales / Deposit'
                     : activitiesStatus === '0 ENTRIES' || activitiesStatus === 'NOT COMPLETED'
                       ? 'Next Step: Activities & Events Log (Live Visit)'
@@ -292,21 +296,21 @@ export default function HomeScreen({
                     <View style={styles.moduleCardHeader}>
                       <View style={[
                         styles.moduleIconBox, 
-                        {backgroundColor: salesStatus?.includes('COMPLETED') ? COLORS.emerald50 : COLORS.amber50, borderColor: salesStatus?.includes('COMPLETED') ? '#a7f3d0' : 'rgba(254,243,199,0.5)'},
+                        {backgroundColor: salesStatus?.startsWith('COMPLETED') ? COLORS.emerald50 : COLORS.amber50, borderColor: salesStatus?.startsWith('COMPLETED') ? '#a7f3d0' : 'rgba(254,243,199,0.5)'},
                         Platform.OS === 'web' && { transition: 'all 0.3s' },
                         hovered && { backgroundColor: '#fef3c7', borderColor: '#fde68a' }
                       ]}>
-                        <MaterialCommunityIcons name="wallet-outline" size={24} color={salesStatus?.includes('COMPLETED') ? COLORS.emerald700 : COLORS.amber600} />
+                        <MaterialCommunityIcons name="wallet-outline" size={24} color={salesStatus?.startsWith('COMPLETED') ? COLORS.emerald700 : COLORS.amber600} />
                       </View>
-                      <View style={[styles.statusPill, {backgroundColor: salesStatus?.includes('COMPLETED') ? COLORS.emerald50 : COLORS.amber50, borderColor: salesStatus?.includes('COMPLETED') ? 'rgba(16,185,129,0.3)' : 'rgba(254,243,199,0.5)'}]}>
-                        <Text style={[styles.statusPillText, {color: salesStatus?.includes('COMPLETED') ? COLORS.emerald700 : COLORS.amber700}]}>
+                      <View style={[styles.statusPill, {backgroundColor: salesStatus?.startsWith('COMPLETED') ? COLORS.emerald50 : COLORS.amber50, borderColor: salesStatus?.startsWith('COMPLETED') ? 'rgba(16,185,129,0.3)' : 'rgba(254,243,199,0.5)'}]}>
+                        <Text style={[styles.statusPillText, {color: salesStatus?.startsWith('COMPLETED') ? COLORS.emerald700 : COLORS.amber700}]}>
                           {salesStatus}
                         </Text>
                       </View>
                     </View>
                     <Text style={[styles.moduleCardTitle, Platform.OS === 'web' && { transition: 'all 0.3s' }, hovered && { color: '#7a1a1f' }]}>Sales &amp; Deposit</Text>
                     <Text style={styles.moduleCardDesc}>
-                      {salesStatus?.includes('COMPLETED') ? 'Monthly parameter saved.' : 'Record daily sales and verify bank deposits.'}
+                      {salesStatus?.startsWith('COMPLETED') ? 'Monthly parameter saved.' : 'Record daily sales and verify bank deposits.'}
                     </Text>
                   </>
                 )}
@@ -326,21 +330,21 @@ export default function HomeScreen({
                     <View style={styles.moduleCardHeader}>
                       <View style={[
                         styles.moduleIconBox, 
-                        {backgroundColor: businessStatus?.includes('COMPLETED') ? COLORS.emerald50 : COLORS.slate50, borderColor: businessStatus?.includes('COMPLETED') ? '#a7f3d0' : COLORS.slate100},
+                        {backgroundColor: businessStatus?.startsWith('COMPLETED') ? COLORS.emerald50 : COLORS.slate50, borderColor: businessStatus?.startsWith('COMPLETED') ? '#a7f3d0' : COLORS.slate100},
                         Platform.OS === 'web' && { transition: 'all 0.3s' },
                         hovered && { backgroundColor: '#fef2f2', borderColor: '#fee2e2' }
                       ]}>
-                        <MaterialCommunityIcons name="chart-bar" size={24} color={businessStatus?.includes('COMPLETED') ? COLORS.emerald700 : hovered ? '#7a1a1f' : COLORS.slate400} />
+                        <MaterialCommunityIcons name="chart-bar" size={24} color={businessStatus?.startsWith('COMPLETED') ? COLORS.emerald700 : hovered ? '#7a1a1f' : COLORS.slate400} />
                       </View>
-                      <View style={[styles.statusPill, {backgroundColor: businessStatus?.includes('COMPLETED') ? COLORS.emerald50 : COLORS.slate100, borderColor: businessStatus?.includes('COMPLETED') ? 'rgba(16,185,129,0.3)' : 'rgba(226,232,240,0.5)'}]}>
-                        <Text style={[styles.statusPillText, {color: businessStatus?.includes('COMPLETED') ? COLORS.emerald700 : COLORS.slate500}]}>
+                      <View style={[styles.statusPill, {backgroundColor: businessStatus?.startsWith('COMPLETED') ? COLORS.emerald50 : COLORS.slate100, borderColor: businessStatus?.startsWith('COMPLETED') ? 'rgba(16,185,129,0.3)' : 'rgba(226,232,240,0.5)'}]}>
+                        <Text style={[styles.statusPillText, {color: businessStatus?.startsWith('COMPLETED') ? COLORS.emerald700 : COLORS.slate500}]}>
                           {businessStatus}
                         </Text>
                       </View>
                     </View>
                     <Text style={[styles.moduleCardTitle, Platform.OS === 'web' && { transition: 'all 0.3s' }, hovered && { color: '#7a1a1f' }]}>Business Performance</Text>
                     <Text style={styles.moduleCardDesc}>
-                      {businessStatus?.includes('COMPLETED') ? 'P&L metrics saved.' : 'KPI metrics and overall performance assessment.'}
+                      {businessStatus?.startsWith('COMPLETED') ? 'P&L metrics saved.' : 'KPI metrics and overall performance assessment.'}
                     </Text>
                   </>
                 )}

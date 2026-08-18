@@ -61,14 +61,19 @@ export default function MpcsReviewSubmitScreen({
     ? `Valid until ${formatTime(evidenceState.validUntil)}` 
     : ((!isValid && hasCaptured) ? 'Please recapture evidence' : (evidenceState.updatedAt ? `Captured ${formatTime(evidenceState.updatedAt)}` : ''));
 
+  // .includes('COMPLETED') matched the literal string 'NOT COMPLETED' too
+  // (it contains "COMPLETED" as a substring), so every section rendered as
+  // done — green checkmark and green pill — before it actually was.
+  // startsWith is safe here since the only two values ever set are
+  // 'NOT COMPLETED' and 'COMPLETED ✓'.
   const salesState = sectionStates.sales || { status: 'NOT COMPLETED' };
-  const isSalesComplete = salesState.status.includes('COMPLETED') || salesState.status.includes('UPDATED');
+  const isSalesComplete = salesState.status.startsWith('COMPLETED') || salesState.status.includes('UPDATED');
 
   const businessState = sectionStates.business || { status: 'NOT COMPLETED' };
-  const isBusinessComplete = businessState.status.includes('COMPLETED') || businessState.status.includes('UPDATED');
+  const isBusinessComplete = businessState.status.startsWith('COMPLETED') || businessState.status.includes('UPDATED');
 
   const cscState = sectionStates.csc || { status: 'NOT COMPLETED' };
-  const isCscComplete = cscState.status.includes('COMPLETED') || cscState.status.includes('UPDATED');
+  const isCscComplete = cscState.status.startsWith('COMPLETED') || cscState.status.includes('UPDATED');
 
   const activitiesState = sectionStates.activities || { status: '0 ENTRIES' };
   const isActivitiesComplete = activitiesCount > 0;
