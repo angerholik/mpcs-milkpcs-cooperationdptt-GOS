@@ -193,27 +193,36 @@ function getMilkAuditAgm(row) {
   };
 }
 
-// The MPCS Compliance screen in the mobile app stores the inspector's actual
-// audit answer under form_data.complianceData.auditStatus ("Completed"/"Pending"),
-// not in the top-level audit_done column — older submissions (and any client
-// still hitting the pre-fix code path) can have audit_done as null even though
-// complianceData.auditStatus is correct. Fall back to it so already-submitted
-// records display their real status instead of defaulting to "No".
+// The MPCS Compliance & Financial Performance screens in the mobile app write
+// the inspector's actual answers into form_data.complianceData.auditStatus and
+// form_data.financialsData.profitOrLoss — the top-level audit_done/is_profit
+// columns are a separate, historically unreliable derivation (one submission
+// path silently defaulted audit_done to "No" and is_profit to "PROFIT"
+// regardless of what was entered, before that was fixed at the source). Once
+// complianceData/financialsData exist on a row they are the authoritative
+// answer, so prefer them outright rather than only filling gaps — that also
+// keeps already-submitted records (e.g. Bermiok MPCS) correct without needing
+// a resubmission or a database backfill.
 function normalizeMpcsAuditFields(row) {
   let fd = row.form_data || {};
   if (typeof fd === 'string') {
     try { fd = JSON.parse(fd); } catch (e) { fd = {}; }
   }
   const compliance = fd.complianceData || {};
+  const financials = fd.financialsData || {};
   let audit_done = row.audit_done;
-  if (!audit_done && compliance.auditStatus) {
+  if (compliance.auditStatus) {
     audit_done = compliance.auditStatus === 'Completed'
       ? `Yes${compliance.auditDate ? ` (${compliance.auditDate})` : ''}`
       : 'No';
   }
-  const audit_year = row.audit_year || compliance.auditYear || fd['4.2'] || null;
+  const audit_year = compliance.auditYear || row.audit_year || fd['4.2'] || null;
   const audit_category = row.audit_category || fd['4.3'] || null;
-  return { ...row, audit_done, audit_year, audit_category };
+  const is_profit = financials.profitOrLoss || row.is_profit;
+  const net_profit_loss = financials.profitOrLoss === 'NO_PROFIT_NO_LOSS'
+    ? null
+    : (financials.netProfit || row.net_profit_loss);
+  return { ...row, audit_done, audit_year, audit_category, is_profit, net_profit_loss };
 }
 
 // Helper to parse MPCS Audit & AGM details
@@ -1848,12 +1857,14 @@ function Dashboard({ onLogout }) {
     if (q) d = d.filter(r=>(r.society_name||'').toLowerCase().includes(q)||(r.registration_authority||'').toLowerCase().includes(q)||(r.president_name||'').toLowerCase().includes(q));
     
     if (filterMpcsAuthority) d = d.filter(r => r.registration_authority === filterMpcsAuthority);
-    if (filterMpcsAuditStatus) d = d.filter(r => r.audit_done === filterMpcsAuditStatus);
+    // audit_done is stored as "Yes (28 Jul 2026)", not a bare "Yes" — an exact-match
+    // filter against the "Audit Done" option never matched a real record.
+    if (filterMpcsAuditStatus) d = d.filter(r => filterMpcsAuditStatus === 'Yes' ? isYes(r.audit_done) : !isYes(r.audit_done));
     if (filterMpcsProfitStatus) d = d.filter(r => r.is_profit === filterMpcsProfitStatus);
     if (filterMpcsAuditGrade) d = d.filter(r => r.audit_category === filterMpcsAuditGrade);
 
     if (activeFilter === 'audit') d = d.filter(r => isYes(r.audit_done));
-    if (activeFilter === 'profit') d = d.filter(r => r.is_profit === 'Yes');
+    if (activeFilter === 'profit') d = d.filter(r => r.is_profit === 'PROFIT' || r.is_profit === 'Yes');
     if (activeFilter === 'loan') d = d.filter(r => r.has_loan);
     setMpcsFiltered(d);
   },[scopedMpcsRows,searchQ,activeFilter,filterMpcsAuthority,filterMpcsAuditStatus,filterMpcsProfitStatus,filterMpcsAuditGrade]);

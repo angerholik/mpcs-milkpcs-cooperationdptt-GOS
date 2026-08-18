@@ -1601,12 +1601,25 @@ export default function App() {
       paidAmount: isMilk ? ((masterHasLoan && !masterLoanCleared) ? (compData?.loanRecovered || '0') : '') : (compData?.loanRepaid ?? paidAmount), 
       remainingDue: isMilk ? ((masterHasLoan && !masterLoanCleared) ? (compData?.loanOutstanding || masterLoanExtended || '0') : '') : (compData?.loanDue ?? remainingDue),
       activities: activitiesForSubmission,
-      auditDone: isMilk ? (masterAuditDate ? `Yes (${masterAuditDate})` : 'No') : (compData?.auditDate ? `Yes (${compData.auditDate})` : (auditDate ? `Yes (${auditDate})` : 'No')),
-      auditDate: isMilk ? masterAuditDate : (compData?.auditDate ?? auditDate), 
-      auditYear: isMilk ? masterAuditYear : (compData?.auditYear ?? auditYear),
-      agmDone: isMilk ? (masterAgmDate ? `Yes (${masterAgmDate})` : 'No') : (compData?.agmDate ? `Yes (${compData.agmDate})` : (agmDate ? `Yes (${agmDate})` : 'No')),
-      agmDate: isMilk ? masterAgmDate : (compData?.agmDate ?? agmDate),
-      agmYear: isMilk ? masterAgmYear : (compData?.agmYear ?? agmYear),
+      // compData comes from getMilkSectionData(..., 'compliance'), which only the
+      // Milk PCS ComplianceScreen ever writes (via saveMilkSectionData) — for MPCS
+      // it is always null, and the local auditDate/agmDate state below it is never
+      // set by any screen either. Both fallbacks always resolved to 'No', silently
+      // overwriting whatever audit/AGM status the MPCS Compliance & Audit screen
+      // had just saved into the live complianceData master state moments earlier
+      // (the actual source of truth — same one MpcsComplianceAuditScreen writes to).
+      auditDone: isMilk ? (masterAuditDate ? `Yes (${masterAuditDate})` : 'No') : (complianceData?.auditStatus === 'Completed' ? `Yes${complianceData?.auditDate ? ` (${complianceData.auditDate})` : ''}` : 'No'),
+      auditDate: isMilk ? masterAuditDate : (complianceData?.auditDate || auditDate),
+      auditYear: isMilk ? masterAuditYear : (complianceData?.auditYear || auditYear),
+      agmDone: isMilk ? (masterAgmDate ? `Yes (${masterAgmDate})` : 'No') : (complianceData?.agmStatus === 'Completed' ? `Yes${complianceData?.agmDate ? ` (${complianceData.agmDate})` : ''}` : 'No'),
+      agmDate: isMilk ? masterAgmDate : (complianceData?.agmDate || agmDate),
+      agmYear: isMilk ? masterAgmYear : (complianceData?.agmYear || agmYear),
+      // financialsData.profitOrLoss/netProfit were never threaded into this payload,
+      // so saveMpcsSubmission's is_profit column always fell back to its hardcoded
+      // 'PROFIT' default regardless of what was actually selected on the Financial
+      // Performance screen.
+      profitOrLoss: financialsData?.profitOrLoss || 'PROFIT',
+      netProfit: financialsData?.netProfit,
       gpsLat: location?.latitude ?? null, gpsLng: location?.longitude ?? null,
       capturedAt: timestamp || new Date().toISOString(),
       // Append all data sets to ensure they are captured in offline queue and cloud DB
