@@ -962,8 +962,22 @@ export default function App() {
       const lastSocName = (await AsyncStorage.getItem(getLastSelectedSocietyKey(activeEmail)))
         || selectedSociety?.name || centerName?.trim();
       const matchedInstitution = institutions.find(i => i.name === lastSocName);
+      if (matchedInstitution) {
+        // This whole function re-runs from scratch on every mount of the
+        // effect that calls supabase.auth.getSession() — which includes a
+        // full page reload, not just a fresh sign-in. On web, backgrounding
+        // the browser tab for a while and switching back can make Chrome
+        // discard and reload it, re-running this exact path with a still-
+        // valid persisted session. Landing on "Add New Institution" every
+        // time that happens (the old unconditional behavior below) forced
+        // the user to re-select a society they never actually left — restore
+        // straight back into their dashboard instead, the same way tapping
+        // "Select & Open Dashboard" would.
+        await handleSelectSociety(matchedInstitution, false);
+        return;
+      }
       await loadMasterStateFromStorage(lastSocName, activeEmail);
-      await fetchCloudSocietyData(lastSocName, activeEmail, matchedInstitution?.type);
+      await fetchCloudSocietyData(lastSocName, activeEmail);
     }
     setCurrentMobileScreen('MY_INSTITUTIONS');
   };
