@@ -474,7 +474,7 @@ function StatCard({ icon, label, value, color='#7F1D1D', bg='#FEF2F2', sub, onCl
 }
 
 // ─── MilkDetailModal ──────────────────────────────────────────────────────────
-function MilkDetailModal({ row, onClose }) {
+function MilkDetailModal({ row, onClose, submitter }) {
   if (!row) return null;
   const totalMale   = [row.m_sc,row.m_st,row.m_obc,row.m_gen].reduce((s,v)=>s+(parseInt(v)||0),0);
   const totalFemale = [row.f_sc,row.f_st,row.f_obc,row.f_gen].reduce((s,v)=>s+(parseInt(v)||0),0);
@@ -517,7 +517,7 @@ function MilkDetailModal({ row, onClose }) {
               <div className="detail-item"><span className="lbl">Center Name</span><span className="val">{row.center_name||'—'}</span></div>
               <div className="detail-item"><span className="lbl">Registration Number</span><span className="val">{row.registration_number||'—'}</span></div>
               <div className="detail-item"><span className="lbl">Reporting Month</span><span className="val">{row.reporting_month||'—'}</span></div>
-              <div className="detail-item"><span className="lbl">Reported By</span><span className="val">{row.reported_by||'—'}</span></div>
+              <div className="detail-item"><span className="lbl">Reported By</span><span className="val">{submitter||row.reported_by||'—'}</span></div>
               <div className="detail-item"><span className="lbl">President Name</span><span className="val">{row.president_name||'—'}</span></div>
               <div className="detail-item"><span className="lbl">President Mobile</span><span className="val">{row.president_mobile||'—'}</span></div>
               <div className="detail-item"><span className="lbl">Manager Name</span><span className="val">{row.manager_name||'—'}</span></div>
@@ -1870,13 +1870,38 @@ function Dashboard({ onLogout, session }) {
     return date.toLocaleDateString('en-IN', { month: 'short', day: 'numeric' });
   };
 
+  // Submissions only ever recorded a generic role string ("Cooperative Inspector")
+  // as reported_by, never the actual officer — the one thing that reliably
+  // identifies who submitted a return is the inspector's login email, captured
+  // on MPCS returns as form_data.inspectorEmail. Resolve that against the
+  // officer_registry (CI/ACI/PA directory) to surface the real name + role.
+  const officerByEmail = useMemo(() => {
+    const map = {};
+    officers.forEach(o => {
+      if (o.email) map[o.email.trim().toLowerCase()] = o;
+    });
+    return map;
+  }, [officers]);
+
+  const resolveSubmitter = useCallback((row, fallback = 'Field Inspector') => {
+    const email = row?.form_data?.inspectorEmail;
+    const officer = email ? officerByEmail[email.trim().toLowerCase()] : null;
+    if (officer?.name) {
+      const roleAbbrev = /\(([^)]+)\)/.exec(officer.role || '')?.[1];
+      return roleAbbrev ? `${officer.name} (${roleAbbrev})` : officer.name;
+    }
+    const rb = (row?.reported_by || '').trim();
+    const isGenericPlaceholder = ['cooperative inspector', 'field inspector', 'inspector', ''].includes(rb.toLowerCase());
+    return isGenericPlaceholder ? fallback : rb;
+  }, [officerByEmail]);
+
   const recentActivities = useMemo(() => {
     const items = [];
     (scopedMpcsRows || []).forEach(r => {
       items.push({
         id: `mpcs-${r.id || Math.random()}`,
         title: `Official MPCS Return: ${r.society_name || 'Cooperative Society'}`,
-        sub: `Reported by ${r.reported_by || 'Field Inspector'} • ${r.district || 'Sikkim'}`,
+        sub: `Reported by ${resolveSubmitter(r)} • ${r.district || 'Sikkim'}`,
         timeStr: r.created_at,
         badgeText: 'MPCS',
         badgeBg: '#ECFDF5',
@@ -1891,7 +1916,7 @@ function Dashboard({ onLogout, session }) {
       items.push({
         id: `milk-${r.id || Math.random()}`,
         title: `Milk Collection: ${r.center_name || 'Collection Center'} (${r.litres || 0} L)`,
-        sub: `Reported by ${r.reported_by || 'Inspector'} • Balance ₹${parseFloat(r.balance || 0).toLocaleString('en-IN')}`,
+        sub: `Reported by ${resolveSubmitter(r, 'Inspector')} • Balance ₹${parseFloat(r.balance || 0).toLocaleString('en-IN')}`,
         timeStr: r.captured_at || r.created_at,
         badgeText: 'MILK',
         badgeBg: '#FEF3C7',
@@ -1903,7 +1928,7 @@ function Dashboard({ onLogout, session }) {
       });
     });
     return items.sort((a, b) => new Date(b.timeStr || 0) - new Date(a.timeStr || 0)).slice(0, 6);
-  }, [scopedMpcsRows, scopedMilkRows]);
+  }, [scopedMpcsRows, scopedMilkRows, resolveSubmitter]);
 
   const fetchAll = useCallback(async (isInitial = false) => {
     if (isInitial) setLoading(true);
@@ -2600,7 +2625,7 @@ function Dashboard({ onLogout, session }) {
                           <td>{idx + 1}</td>
                           <td><strong>{act.row.center_name || act.row.society_name || 'Society Unit'}</strong></td>
                           <td><span className={`badge ${act.isMpcs ? 'badge-green' : 'badge-gold'}`}>{act.isMpcs ? 'MPCS Report' : 'Milk Report'}</span></td>
-                          <td>{act.row.reported_by || 'Field Inspector'}</td>
+                          <td>{resolveSubmitter(act.row)}</td>
                           <td>{act.timeStr ? new Date(act.timeStr).toLocaleString() : 'Recent'}</td>
                           <td><span className="badge badge-green">Verified</span></td>
                           <td>
@@ -2888,7 +2913,7 @@ function Dashboard({ onLogout, session }) {
                               <td>
                                 <div style={{fontWeight:800, fontSize:'13px', color:'#0F172A'}}>{row.center_name||'—'}</div>
                               </td>
-                              <td style={{fontSize:'13px', color:'#334155', fontWeight:600}}>{row.reported_by||'—'}</td>
+                              <td style={{fontSize:'13px', color:'#334155', fontWeight:600}}>{resolveSubmitter(row, '—')}</td>
                               <td style={{textAlign:'center'}}><span className="badge badge-green" style={{fontSize:'10px'}}>{row.reporting_month||'—'}</span></td>
                               <td style={{textAlign:'center'}}><span className={`badge ${isYes(mAuditAgm.audit_done)?'badge-green':'badge-red'}`} style={{fontSize:'10px'}}>{isYes(mAuditAgm.audit_done)?'Yes':'No'}</span></td>
                               <td style={{textAlign:'center'}}><span className={`badge ${isYes(mAuditAgm.agm_done)?'badge-green':'badge-red'}`} style={{fontSize:'10px'}}>{isYes(mAuditAgm.agm_done)?'Yes':'No'}</span></td>
@@ -3147,7 +3172,7 @@ function Dashboard({ onLogout, session }) {
         </div>
       </main>
 
-      {milkSelected && <MilkDetailModal row={milkSelected} onClose={()=>setMilkSelected(null)}/>}
+      {milkSelected && <MilkDetailModal row={milkSelected} onClose={()=>setMilkSelected(null)} submitter={resolveSubmitter(milkSelected, '—')}/>}
       {mpcsSelected && <MPCSDetailModal row={mpcsSelected} onClose={()=>setMpcsSelected(null)}/>}
       {showAddMilkModal && <AddMilkReportModal onClose={()=>setShowAddMilkModal(false)} onSave={handleSaveMilkReport} />}
       {showAddMpcsModal && <AddMpcsSocietyModal onClose={()=>setShowAddMpcsModal(false)} onSave={handleSaveMpcsSociety} />}
