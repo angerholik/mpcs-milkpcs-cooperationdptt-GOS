@@ -36,6 +36,15 @@ const FONT_FAMILY = 'Manrope';
 
 const isEvidenceCaptured = (st) => Boolean(st) && st.includes('CAPTURED') && !st.includes('NOT');
 
+// The GPU name is stored as whatever the inspector typed when registering
+// the institution (e.g. "Bermiok Daragoan"), not guaranteed to already say
+// "GPU" — append the suffix for display without doubling it up for GPU
+// names that already include it.
+const formatGpuLabel = (value) => {
+  if (!value) return value;
+  return /\bgpu\b/i.test(value) ? value : `${value} GPU`;
+};
+
 export default function HomeScreen({
   activeModule = 'MILK',
   onSwitchModule,
@@ -128,7 +137,7 @@ export default function HomeScreen({
               <Text style={styles.societyTitle}>{societyName || selectedSociety?.name || 'Gyalshing Milk Center'}</Text>
               <View style={styles.locationRow}>
                 <MaterialCommunityIcons name="map-marker-outline" size={16} color={COLORS.slate400} />
-                <Text style={styles.societyLocation}>{district || "Ranchi, Jharkhand"}</Text>
+                <Text style={styles.societyLocation}>{formatGpuLabel(district) || "Ranchi, Jharkhand"}</Text>
               </View>
             </View>
             <View style={styles.activeBadge}>
@@ -139,12 +148,8 @@ export default function HomeScreen({
 
           <View style={styles.overviewGrid}>
             <View style={styles.overviewGridItem}>
-              <Text style={styles.gridLabel}>SOCIETY CODE</Text>
-              <Text style={styles.gridValue}>{centerId}</Text>
-            </View>
-            <View style={styles.overviewGridItem}>
-              <Text style={styles.gridLabel}>REGISTRATION</Text>
-              <Text style={styles.gridValue}>12-MAR-2018</Text>
+              <Text style={styles.gridLabel}>REGISTRATION NUMBER</Text>
+              <Text style={styles.gridValue}>{selectedSociety?.regNo || centerId || '—'}</Text>
             </View>
           </View>
         </View>

@@ -1125,7 +1125,7 @@ export default function App() {
     const activeReportedBy = evData?.reportedBy ? evData.reportedBy : (recordItem?.reported_by || recordItem?.officer || userProfile?.fullName || reportedBy?.trim() || 'Cooperative Inspector');
     const activeDistrict = selectedSociety?.district || userProfile?.district || district?.trim() || 'Sikkim';
     
-    // Derive activities text
+    // Derive activities text (printed on the PDF only — human-readable, flattened)
     let activities = '';
     if (actsData && actsData.activityList) {
       activities = actsData.activityList.length > 0
@@ -1138,6 +1138,19 @@ export default function App() {
         ? activityItems.map((a, i) => `${i + 1}. ${a.text || a.description || a.title || JSON.stringify(a)}`).join('\n')
         : '';
     }
+
+    // Separate value for what actually gets sent to Supabase. The flattened
+    // text above is fine for the printed PDF, but sending it as `activities`
+    // used to silently overwrite the structured activityList JSON that the
+    // routine background sync (saveMasterStateToStorage) already wrote for
+    // this same submission — Compile & Seal running after those saves would
+    // downgrade "3 activities logged with full detail" to a single flat
+    // line. Preserve the structured shape here the same way that sync does.
+    const activitiesForSubmission = actsData
+      ? JSON.stringify(actsData)
+      : (recordItem?.activities
+          ? (typeof recordItem.activities === 'string' ? recordItem.activities : JSON.stringify(recordItem.activities))
+          : '');
 
     if (!recordOverride) setIsSealing(true);
     
@@ -1527,8 +1540,8 @@ export default function App() {
       loanName: isMilk ? masterLoanType : (compData?.loanType ?? loanName), 
       loanAmount: isMilk ? masterLoanExtended : (compData?.loanAmount ?? loanAmount), 
       paidAmount: isMilk ? ((masterHasLoan && !masterLoanCleared) ? (compData?.loanRecovered || '0') : '') : (compData?.loanRepaid ?? paidAmount), 
-      remainingDue: isMilk ? ((masterHasLoan && !masterLoanCleared) ? (compData?.loanOutstanding || masterLoanExtended || '0') : '') : (compData?.loanDue ?? remainingDue), 
-      activities,
+      remainingDue: isMilk ? ((masterHasLoan && !masterLoanCleared) ? (compData?.loanOutstanding || masterLoanExtended || '0') : '') : (compData?.loanDue ?? remainingDue),
+      activities: activitiesForSubmission,
       auditDone: isMilk ? (masterAuditDate ? `Yes (${masterAuditDate})` : 'No') : (compData?.auditDate ? `Yes (${compData.auditDate})` : (auditDate ? `Yes (${auditDate})` : 'No')),
       auditDate: isMilk ? masterAuditDate : (compData?.auditDate ?? auditDate), 
       auditYear: isMilk ? masterAuditYear : (compData?.auditYear ?? auditYear),
