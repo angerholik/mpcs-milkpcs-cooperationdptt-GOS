@@ -38,6 +38,7 @@ export default function ReviewSubmitScreen({
   societyName = "",
   reportingMonth = "",
   milkSectionStates,
+  loanIsActive = false,
   isSealing = false,
   onCompileAndSeal,
   onNavigateScreen,
@@ -94,13 +95,14 @@ export default function ReviewSubmitScreen({
       isNA: false, 
       screenKey: 'ACTIVITIES' 
     },
-    { 
-      title: 'Compliance Updates',   
-      status: compState.status === 'Pending' ? 'NOT COMPLETED' : compState.status,      
-      subText: compState.updatedAt ? `Last updated ${formatTime(compState.updatedAt)}` : '',
-      isComplete: isCompComplete,      
-      isNA: false, 
-      screenKey: 'COMPLIANCE' 
+    {
+      title: 'Loan Status',
+      status: !loanIsActive ? 'NO ACTIVE LOAN' : (compState.status === 'Pending' ? 'NOT COMPLETED' : compState.status),
+      subText: (!loanIsActive || !compState.updatedAt) ? '' : `Last updated ${formatTime(compState.updatedAt)}`,
+      isComplete: !loanIsActive ? false : isCompComplete,
+      isNA: !loanIsActive,
+      isOptional: !loanIsActive,
+      screenKey: 'COMPLIANCE'
     },
   ];
 

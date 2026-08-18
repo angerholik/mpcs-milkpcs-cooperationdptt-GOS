@@ -2092,6 +2092,7 @@ export default function App() {
                     lastUpdated=""
                     onSave={(data) => {
                       if (data) saveMasterStateToStorage(data);
+                      stampMasterDataUpdated('instProfile');
                     }}
                     onNext={() => {
                       setCurrentMobileScreen('DEMOGRAPHICS');
@@ -2115,26 +2116,28 @@ export default function App() {
                         district={selectedSociety?.type === 'MILK' ? selectedSociety.district : district || ''}
                         selectedSociety={selectedSociety}
                         reportingMonth={reportingMonth || ''}
-                        reportStatus={((milkSectionStates?.evidence?.status?.includes('CAPTURED') && !milkSectionStates?.evidence?.status?.includes('NOT')) && milkSectionStates?.operations?.status?.includes('COMPLETED') && (milkSectionStates?.activities?.status?.includes('ENTRIES') || milkSectionStates?.activities?.status?.includes('COMPLETED')) && milkSectionStates?.compliance?.status?.includes('COMPLETED')) ? 'MONTHLY PARAMS OK' : 'DRAFT'}
+                        reportStatus={((milkSectionStates?.evidence?.status?.includes('CAPTURED') && !milkSectionStates?.evidence?.status?.includes('NOT')) && milkSectionStates?.operations?.status?.includes('COMPLETED') && (milkSectionStates?.activities?.status?.includes('ENTRIES') || milkSectionStates?.activities?.status?.includes('COMPLETED')) && (!(masterHasLoan && !masterLoanCleared) || milkSectionStates?.compliance?.status?.includes('COMPLETED'))) ? 'MONTHLY PARAMS OK' : 'DRAFT'}
                         progressPercent={
                           Math.round(
                             ((((milkSectionStates?.evidence?.status?.includes('CAPTURED') && !milkSectionStates?.evidence?.status?.includes('NOT')) || milkSectionStates?.evidence?.status?.includes('Valid')) ? 25 : 0) +
                             (milkSectionStates?.operations?.status?.includes('COMPLETED') ? 25 : 0) +
                             ((milkSectionStates?.activities?.status?.includes('ENTRIES') || milkSectionStates?.activities?.status?.includes('COMPLETED')) ? 25 : 0) +
-                            (milkSectionStates?.compliance?.status?.includes('COMPLETED') ? 25 : 0))
+                            (!(masterHasLoan && !masterLoanCleared) || milkSectionStates?.compliance?.status?.includes('COMPLETED') ? 25 : 0))
                           )
                         }
                         completedCount={
                           (((milkSectionStates?.evidence?.status?.includes('CAPTURED') && !milkSectionStates?.evidence?.status?.includes('NOT')) || milkSectionStates?.evidence?.status?.includes('Valid')) ? 1 : 0) +
                           (milkSectionStates?.operations?.status?.includes('COMPLETED') ? 1 : 0) +
                           ((milkSectionStates?.activities?.status?.includes('ENTRIES') || milkSectionStates?.activities?.status?.includes('COMPLETED')) ? 1 : 0) +
-                          (milkSectionStates?.compliance?.status?.includes('COMPLETED') ? 1 : 0)
+                          ((!(masterHasLoan && !masterLoanCleared) || milkSectionStates?.compliance?.status?.includes('COMPLETED')) ? 1 : 0)
                         }
                         totalCount={4}
                         evidenceStatus={(milkSectionStates?.evidence?.validUntil && new Date() >= new Date(milkSectionStates.evidence.validUntil)) ? 'EXPIRED' : (milkSectionStates?.evidence?.status || 'NOT CAPTURED')}
                         operationsStatus={milkSectionStates?.operations?.status || 'NOT STARTED'}
                         activitiesStatus={milkSectionStates?.activities?.status || 'NOT STARTED'}
                         complianceStatus={milkSectionStates?.compliance?.status || 'NOT STARTED'}
+                        loanIsActive={!!(masterHasLoan && !masterLoanCleared)}
+                        masterDataUpdated={masterDataTimestamps}
                         lastUpdated=""
                         activeAlert={activeAlert}
                         onDismissAlert={dismissAlert}
@@ -2259,9 +2262,11 @@ export default function App() {
                         lastUpdated=""
                         onSave={(data) => {
                           if (data) saveMasterStateToStorage(data);
+                          stampMasterDataUpdated('instProfile');
                         }}
                         onSaveNext={(data) => {
                           if (data) saveMasterStateToStorage(data);
+                          stampMasterDataUpdated('instProfile');
                           setCurrentMobileScreen('DEMOGRAPHICS');
                         }}
                         onBack={() => setCurrentMobileScreen('HOME')}
@@ -2277,9 +2282,11 @@ export default function App() {
                         lastUpdated=""
                         onSave={(data) => {
                           if (data) saveMasterStateToStorage(data);
+                          stampMasterDataUpdated('demographics');
                         }}
                         onSaveNext={(data) => {
                           if (data) saveMasterStateToStorage(data);
+                          stampMasterDataUpdated('demographics');
                           setCurrentMobileScreen('HOME');
                         }}
                         onBack={() => setCurrentMobileScreen('PROFILE')}
@@ -2315,6 +2322,7 @@ export default function App() {
                       <ReviewSubmitScreen
                         reportingMonth={reportingMonth || ''}
                         milkSectionStates={milkSectionStates}
+                        loanIsActive={!!(masterHasLoan && !masterLoanCleared)}
                         onNavigateScreen={(screenName) => {
                           setReturnMobileScreen('REVIEW');
                           setCurrentMobileScreen(screenName);

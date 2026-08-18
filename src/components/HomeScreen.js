@@ -45,6 +45,15 @@ const formatGpuLabel = (value) => {
   return /\bgpu\b/i.test(value) ? value : `${value} GPU`;
 };
 
+// Master Data Directory "Last updated" — previously hardcoded per-item
+// placeholder strings that never reflected an actual save.
+const formatLastUpdated = (isoString) => {
+  if (!isoString) return 'Needs update';
+  const d = new Date(isoString);
+  if (isNaN(d.getTime())) return 'Needs update';
+  return d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+};
+
 export default function HomeScreen({
   activeModule = 'MILK',
   onSwitchModule,
@@ -60,6 +69,8 @@ export default function HomeScreen({
   operationsStatus = "NOT STARTED",
   activitiesStatus = "NOT STARTED",
   complianceStatus = "NOT STARTED",
+  loanIsActive = false,
+  masterDataUpdated = {},
   lastUpdated = "",
   activeAlert,
   onDismissAlert,
@@ -358,7 +369,8 @@ export default function HomeScreen({
                 )}
               </Pressable>
 
-              {/* Compliance */}
+              {/* Loan Status — this screen (key 'COMPLIANCE') only tracks monthly
+                  loan repayment now, not general compliance; see ComplianceScreen.js */}
               <Pressable
                 style={({ hovered }) => [
                   styles.moduleCard,
@@ -372,20 +384,22 @@ export default function HomeScreen({
                     <View style={styles.moduleCardHeader}>
                       <View style={[
                         styles.moduleIconBox,
-                        { backgroundColor: complianceStatus?.includes('COMPLETED') ? COLORS.emerald50 : COLORS.slate50, borderColor: complianceStatus?.includes('COMPLETED') ? '#a7f3d0' : COLORS.slate100 },
+                        { backgroundColor: !loanIsActive ? COLORS.slate50 : complianceStatus?.includes('COMPLETED') ? COLORS.emerald50 : COLORS.amber50, borderColor: !loanIsActive ? COLORS.slate100 : complianceStatus?.includes('COMPLETED') ? '#a7f3d0' : 'rgba(254,243,199,0.5)' },
                         Platform.OS === 'web' && { transition: 'all 0.3s' },
                         hovered && { backgroundColor: '#fef2f2', borderColor: '#fee2e2' }
                       ]}>
-                        <MaterialCommunityIcons name="shield-check-outline" size={24} color={complianceStatus?.includes('COMPLETED') ? COLORS.emerald700 : hovered ? '#7a1a1f' : COLORS.slate400} />
+                        <MaterialCommunityIcons name="bank-outline" size={24} color={!loanIsActive ? COLORS.slate400 : complianceStatus?.includes('COMPLETED') ? COLORS.emerald700 : COLORS.amber600} />
                       </View>
-                      <View style={[styles.statusPill, { backgroundColor: complianceStatus?.includes('COMPLETED') ? COLORS.emerald50 : COLORS.slate100, borderColor: complianceStatus?.includes('COMPLETED') ? 'rgba(16,185,129,0.3)' : 'rgba(226,232,240,0.5)' }]}>
-                        <Text style={[styles.statusPillText, { color: complianceStatus?.includes('COMPLETED') ? COLORS.emerald700 : COLORS.slate500 }]}>
-                          {complianceStatus || 'NOT COMPLETED'}
+                      <View style={[styles.statusPill, { backgroundColor: !loanIsActive ? COLORS.slate100 : complianceStatus?.includes('COMPLETED') ? COLORS.emerald50 : COLORS.amber50, borderColor: !loanIsActive ? 'rgba(226,232,240,0.5)' : complianceStatus?.includes('COMPLETED') ? 'rgba(16,185,129,0.3)' : 'rgba(254,243,199,0.5)' }]}>
+                        <Text style={[styles.statusPillText, { color: !loanIsActive ? COLORS.slate500 : complianceStatus?.includes('COMPLETED') ? COLORS.emerald700 : COLORS.amber700 }]}>
+                          {loanIsActive ? (complianceStatus || 'NOT COMPLETED') : 'NOT APPLICABLE'}
                         </Text>
                       </View>
                     </View>
-                    <Text style={[styles.moduleCardTitle, Platform.OS === 'web' && { transition: 'all 0.3s' }, hovered && { color: '#7a1a1f' }]}>Compliance Updates</Text>
-                    <Text style={styles.moduleCardDesc}>Review statutory filings and compliance metrics.</Text>
+                    <Text style={[styles.moduleCardTitle, Platform.OS === 'web' && { transition: 'all 0.3s' }, hovered && { color: '#7a1a1f' }]}>Loan Status</Text>
+                    <Text style={styles.moduleCardDesc}>
+                      {loanIsActive ? 'Report this month\'s loan recovery.' : 'No active loan on record for this society.'}
+                    </Text>
                   </>
                 )}
               </Pressable>
@@ -399,8 +413,8 @@ export default function HomeScreen({
             <Text style={styles.sectionTitle}>Master Data Directory</Text>
             <View style={styles.masterListContainer}>
               {[
-                { id: 'PROFILE', title: 'Institutional Profile', icon: 'office-building-outline', updated: '12 Aug 2024' },
-                { id: 'DEMOGRAPHICS', title: 'Registered Demographics', icon: 'account-group-outline', updated: '01 Jan 2024' }
+                { id: 'PROFILE', title: 'Institutional Profile', icon: 'office-building-outline', updated: formatLastUpdated(masterDataUpdated.instProfile) },
+                { id: 'DEMOGRAPHICS', title: 'Registered Demographics', icon: 'account-group-outline', updated: formatLastUpdated(masterDataUpdated.demographics) }
               ].map((item, index) => (
                 <Pressable
                   key={item.id}
