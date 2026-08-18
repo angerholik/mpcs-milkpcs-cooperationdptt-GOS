@@ -2276,69 +2276,6 @@ function Dashboard({ onLogout }) {
                 </div>
               </div>
 
-              {/* 5-Column KPI Cards Grid */}
-              <div className="kpi-grid">
-                <div className="kpi-card" style={{cursor:'pointer'}} onClick={() => setActiveTab('MILK')}>
-                  <div className="kpi-header">
-                    <div className="kpi-icon-box" style={{background:'#FEF2F2'}}>
-                      <Icon d={I.litres} size={18} color="#991B1B"/>
-                    </div>
-                    <Icon d={I.info} size={14} color="#94A3B8"/>
-                  </div>
-                  <div className="kpi-title">TOTAL LITRES</div>
-                  <div className="kpi-val">{scopedMilkRows.reduce((a,r)=>a+(parseFloat(r.total_litres||r.litres)||0),0).toLocaleString('en-IN')} L</div>
-                  <div className="kpi-sub">— No change vs last month</div>
-                </div>
-
-                <div className="kpi-card" style={{cursor:'pointer'}} onClick={() => setActiveTab('MILK')}>
-                  <div className="kpi-header">
-                    <div className="kpi-icon-box" style={{background:'#FEF3C7'}}>
-                      <Icon d={I.money} size={18} color="#92400E"/>
-                    </div>
-                    <Icon d={I.info} size={14} color="#94A3B8"/>
-                  </div>
-                  <div className="kpi-title">TOTAL WITHDRAWAL</div>
-                  <div className="kpi-val">₹ 0</div>
-                  <div className="kpi-sub">— No change vs last month</div>
-                </div>
-
-                <div className="kpi-card" style={{cursor:'pointer'}} onClick={() => setActiveTab('MPCS')}>
-                  <div className="kpi-header">
-                    <div className="kpi-icon-box" style={{background:'#D1FAE5'}}>
-                      <Icon d={I.domain} size={18} color="#065F46"/>
-                    </div>
-                    <Icon d={I.info} size={14} color="#94A3B8"/>
-                  </div>
-                  <div className="kpi-title">AGGREGATE BALANCE</div>
-                  <div className="kpi-val">₹ {scopedMpcsRows.reduce((a,r)=>a+(parseFloat(r.bank_balance)||0),0).toLocaleString('en-IN')}</div>
-                  <div className="kpi-sub">— No change vs last month</div>
-                </div>
-
-                <div className="kpi-card" style={{cursor:'pointer'}} onClick={() => setActiveTab('MPCS')}>
-                  <div className="kpi-header">
-                    <div className="kpi-icon-box" style={{background:'#DBEAFE'}}>
-                      <Icon d={I.members} size={18} color="#1E40AF"/>
-                    </div>
-                    <Icon d={I.info} size={14} color="#94A3B8"/>
-                  </div>
-                  <div className="kpi-title">TOTAL MEMBERS</div>
-                  <div className="kpi-val">{scopedMpcsRows.reduce((a,r)=>a+(parseInt(r.total_members)||0),0).toLocaleString('en-IN')}</div>
-                  <div className="kpi-sub">— No change vs last month</div>
-                </div>
-
-                <div className="kpi-card" style={{cursor:'pointer'}} onClick={() => { setActiveTab('MPCS'); setActiveFilter('loan'); }}>
-                  <div className="kpi-header">
-                    <div className="kpi-icon-box" style={{background:'#F3E8FF'}}>
-                      <Icon d={I.lock} size={18} color="#6B21A8"/>
-                    </div>
-                    <Icon d={I.info} size={14} color="#94A3B8"/>
-                  </div>
-                  <div className="kpi-title">ACTIVE LOANS</div>
-                  <div className="kpi-val">{scopedMpcsRows.filter(r=>r.has_loan).length}</div>
-                  <div className="kpi-sub" style={{color:'#7C3AED', fontWeight:700}}>Filtered View Available →</div>
-                </div>
-              </div>
-
               {/* Module Filter Tab Pill Bar */}
               <div style={{display:'flex', gap:'8px', marginBottom:'24px'}}>
                 <TabBtn id="MPCS" label="MPCS Societies" icon={I.domain} count={scopedMpcsRows.length}/>
