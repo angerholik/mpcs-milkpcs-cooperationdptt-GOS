@@ -1661,6 +1661,13 @@ function Dashboard({ onLogout, session }) {
     setShowAssignAciModal(true);
   };
 
+  // Declared here (not down with the rest of "Officer state") because the
+  // RBAC derivation right below needs it, and scopedMilkRows/scopedMpcsRows
+  // right after that need userRole/assignedUnits — officers has to exist
+  // before any of that runs or it's a temporal-dead-zone ReferenceError
+  // that crashes the whole dashboard render immediately after login.
+  const [officers, setOfficers] = useState([]);
+
   // 🛡️ Role-Based Access Control (RBAC) & Entity Assignment Scoping State —
   // derived from who is actually logged in (session), not a manual toggle.
   // A real CI account only ever sees the MPCS/Milk units an admin has
@@ -1729,7 +1736,6 @@ function Dashboard({ onLogout, session }) {
   };
 
   // Officer state
-  const [officers, setOfficers] = useState([]);
   const [officerSelected, setOfficerSelected] = useState(null);
   const [showAddOfficer, setShowAddOfficer] = useState(false);
   const [scopeOfficer, setScopeOfficer] = useState(null); // officer row being scoped, or null
