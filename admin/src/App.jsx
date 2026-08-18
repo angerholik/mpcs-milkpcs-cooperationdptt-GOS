@@ -416,12 +416,18 @@ function LoginPage() {
 }
 
 // ─── StatCard ─────────────────────────────────────────────────────────────────
-function StatCard({ icon, label, value, color='#7F1D1D', bg='#FEF2F2', sub, onClick, active }) {
+function StatCard({ icon, label, value, color='#7F1D1D', bg='#FEF2F2', sub, onClick, active, breakdown, popoverAlign='left' }) {
+  const [hovered, setHovered] = useState(false);
+  const hasBreakdown = Array.isArray(breakdown) && breakdown.length > 0;
+
   return (
-    <div 
-      className={`kpi-card ${active?'active':''}`} 
-      onClick={onClick} 
+    <div
+      className={`kpi-card ${active?'active':''}`}
+      onClick={onClick}
+      onMouseEnter={() => hasBreakdown && setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
       style={{
+        position: 'relative',
         cursor: onClick ? 'pointer' : 'default',
         borderColor: active ? color : '#E2E8F0',
         background: active ? bg : '#FFFFFF',
@@ -440,6 +446,29 @@ function StatCard({ icon, label, value, color='#7F1D1D', bg='#FEF2F2', sub, onCl
       </div>
       <div className="kpi-val" style={{fontSize:'20px', fontWeight:800, color: active ? color : '#0F172A', lineHeight:1.1}}>{value}</div>
       {sub && <div className="kpi-sub" style={{fontSize:'10px', color:'#94A3B8', marginTop:'4px'}}>{sub}</div>}
+
+      {hasBreakdown && hovered && (
+        <div
+          onClick={e => e.stopPropagation()}
+          style={{
+            position: 'absolute', top: 'calc(100% + 8px)',
+            ...(popoverAlign === 'right' ? { right: 0 } : { left: 0 }),
+            minWidth: '260px', maxWidth: '320px',
+            maxHeight: '260px', overflowY: 'auto', background: '#FFFFFF', border: '1px solid #E2E8F0',
+            borderRadius: '8px', boxShadow: '0 12px 24px -8px rgba(15,23,42,0.25)', zIndex: 50, padding: '10px 0'
+          }}
+        >
+          <div style={{fontSize:'10px', fontWeight:800, color:'#64748B', textTransform:'uppercase', letterSpacing:'0.5px', padding:'0 14px 8px', borderBottom:'1px solid #F1F5F9', marginBottom:'4px'}}>
+            {label} — By MPCS ({breakdown.length})
+          </div>
+          {breakdown.map((item, i) => (
+            <div key={i} style={{display:'flex', justifyContent:'space-between', gap:'12px', padding:'6px 14px', fontSize:'12px'}}>
+              <span style={{color:'#334155', fontWeight:600, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap'}}>{item.name}</span>
+              <span style={{color, fontWeight:800, whiteSpace:'nowrap'}}>{item.value}</span>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -1729,6 +1758,32 @@ function Dashboard({ onLogout, session }) {
     };
   }, [scopedMpcsRows]);
 
+  // Per-MPCS contributions behind each Registry KPI card, for the hover breakdown popover
+  const mpcsBreakdowns = useMemo(() => {
+    const d = scopedMpcsRows;
+    const nameOf = r => r.society_name || r.registration_number || 'Unknown Society';
+
+    return {
+      turnover: d
+        .filter(r => (parseFloat(r.annual_turnover) || 0) > 0)
+        .map(r => ({ name: nameOf(r), value: fmtRs(r.annual_turnover), _n: parseFloat(r.annual_turnover) || 0 }))
+        .sort((a, b) => b._n - a._n),
+      members: d
+        .filter(r => (parseInt(r.total_members) || 0) > 0)
+        .map(r => ({ name: nameOf(r), value: fmt(r.total_members), _n: parseInt(r.total_members) || 0 }))
+        .sort((a, b) => b._n - a._n),
+      loans: d
+        .filter(r => r.has_loan)
+        .map(r => ({ name: nameOf(r), value: 'Active' })),
+      audits: d
+        .filter(r => isYes(r.audit_done))
+        .map(r => ({ name: nameOf(r), value: r.audit_year ? `FY ${r.audit_year}` : 'Done' })),
+      profits: d
+        .filter(r => r.is_profit === 'PROFIT' || r.is_profit === 'Yes')
+        .map(r => ({ name: nameOf(r), value: r.net_profit_loss ? fmtRs(r.net_profit_loss) : 'Profit' })),
+    };
+  }, [scopedMpcsRows]);
+
   // Mutation Handlers
   const handleSaveMilkReport = async (newRecord) => {
     const { error } = await supabase.from('milk_pcs_submissions').insert([newRecord]);
@@ -2899,14 +2954,19 @@ function Dashboard({ onLogout, session }) {
 
             {/* 5-Column Equal Grid */}
             <div className="kpi-grid" style={{marginBottom:'24px'}}>
-              <StatCard icon={I.money}   label="Total Turnover" value={fmtRs(mpcsStats.turnover)} color="#450A0A" bg="#FEF2F2"/>
-              <StatCard icon={I.members} label="Total Members" value={fmt(mpcsStats.members)} color="#92400E" bg="#FFFBEB"/>
+              <StatCard icon={I.money}   label="Total Turnover" value={fmtRs(mpcsStats.turnover)} color="#450A0A" bg="#FEF2F2"
+                breakdown={mpcsBreakdowns.turnover}/>
+              <StatCard icon={I.members} label="Total Members" value={fmt(mpcsStats.members)} color="#92400E" bg="#FFFBEB"
+                breakdown={mpcsBreakdowns.members}/>
               <StatCard icon={I.lock}    label="Active Loans" value={mpcsStats.loans} color="#7F1D1D" bg="#FEF2F2"
-                onClick={() => setActiveFilter(activeFilter === 'loan' ? null : 'loan')} active={activeFilter === 'loan'}/>
+                onClick={() => setActiveFilter(activeFilter === 'loan' ? null : 'loan')} active={activeFilter === 'loan'}
+                breakdown={mpcsBreakdowns.loans}/>
               <StatCard icon={I.refresh} label="Audits Done" value={mpcsStats.audits} color="#991B1B" bg="#FEF2F2"
-                onClick={() => setActiveFilter(activeFilter === 'audit' ? null : 'audit')} active={activeFilter === 'audit'}/>
+                onClick={() => setActiveFilter(activeFilter === 'audit' ? null : 'audit')} active={activeFilter === 'audit'}
+                breakdown={mpcsBreakdowns.audits} popoverAlign="right"/>
               <StatCard icon={I.submit}  label="Active Profits" value={mpcsStats.profits} color="#B45309" bg="#FFFBEB"
-                onClick={() => setActiveFilter(activeFilter === 'profit' ? null : 'profit')} active={activeFilter === 'profit'}/>
+                onClick={() => setActiveFilter(activeFilter === 'profit' ? null : 'profit')} active={activeFilter === 'profit'}
+                breakdown={mpcsBreakdowns.profits} popoverAlign="right"/>
             </div>
 
             {/* Structured Filters */}
