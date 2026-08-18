@@ -88,6 +88,7 @@ export async function saveMilkPcsSubmission(params) {
     const auditDoneVal = params?.auditDone || params?.audit_done || '';
     const auditYearVal = params?.auditYear || params?.audit_year || '';
     const agmDoneVal   = params?.agmDone   || params?.agm_done   || '';
+    const agmYearVal   = params?.agmYear   || params?.agm_year   || '';
 
     // Always merge audit_done/audit_year/agm_done into whatever activities payload was
     // passed in, rather than an either/or branch — previously, whenever `activities`
@@ -108,7 +109,8 @@ export async function saveMilkPcsSubmission(params) {
       ...baseActivities,
       audit_done: auditDoneVal,
       audit_year: auditYearVal,
-      agm_done: agmDoneVal
+      agm_done: agmDoneVal,
+      agm_year: agmYearVal
     });
 
     const row = {

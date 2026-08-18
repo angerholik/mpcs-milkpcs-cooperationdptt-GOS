@@ -146,12 +146,17 @@ function isYes(val) {
   return typeof val === 'string' && val.trim().toLowerCase().startsWith('yes');
 }
 
-// Helper to parse Milk Audit & AGM details
+// Helper to parse Milk Audit & AGM details. audit_done/agm_done are stored
+// as "Yes (12 Aug 2026)" / "No" strings (the date is embedded, not its own
+// column) — this pulls the date back out and derives a plain
+// Completed/Pending status alongside the raw year, so the admin UI can show
+// them as separate fields instead of one combined sentence.
 function getMilkAuditAgm(row) {
-  if (!row) return { audit_done: 'No', audit_year: '—', agm_done: 'No', agm_date: '—' };
+  if (!row) return { audit_done: 'No', audit_year: '—', audit_date: '—', audit_status: 'Pending', agm_done: 'No', agm_year: '—', agm_date: '—', agm_status: 'Pending' };
   let audit_done = row.audit_done;
   let audit_year = row.audit_year;
   let agm_done = row.agm_done;
+  let agm_year = row.agm_year;
   let agm_date = row.agm_date || '—';
 
   if (row.activities && typeof row.activities === 'string' && row.activities.startsWith('{')) {
@@ -164,14 +169,28 @@ function getMilkAuditAgm(row) {
       if (innerParsed.audit_done) audit_done = innerParsed.audit_done;
       if (innerParsed.audit_year) audit_year = innerParsed.audit_year;
       if (innerParsed.agm_done) agm_done = innerParsed.agm_done;
+      if (innerParsed.agm_year) agm_year = innerParsed.agm_year;
       if (innerParsed.agm_date) agm_date = innerParsed.agm_date;
     } catch(e) {}
   }
   if (!audit_done) audit_done = '—';
   if (!agm_done) agm_done = '—';
   if (!audit_year) audit_year = '—';
+  if (!agm_year) agm_year = '—';
 
-  return { audit_done, audit_year, agm_done, agm_date };
+  const auditDateMatch = typeof audit_done === 'string' ? audit_done.match(/\(([^)]+)\)/) : null;
+  const agmDateFromDone = typeof agm_done === 'string' ? agm_done.match(/\(([^)]+)\)/) : null;
+
+  return {
+    audit_done,
+    audit_year,
+    audit_date: auditDateMatch ? auditDateMatch[1] : '—',
+    audit_status: isYes(audit_done) ? 'Completed' : 'Pending',
+    agm_done,
+    agm_year,
+    agm_date: agm_date !== '—' ? agm_date : (agmDateFromDone ? agmDateFromDone[1] : '—'),
+    agm_status: isYes(agm_done) ? 'Completed' : 'Pending'
+  };
 }
 
 // Helper to parse MPCS Audit & AGM details
@@ -443,9 +462,12 @@ function MilkDetailModal({ row, onClose }) {
           </Sec>
           <Sec title="II. Audit / AGM Details">
             <div className="detail-grid">
-              <div className="detail-item"><span className="lbl">Latest Audit Conducted</span><span className="val">{isYes(auditAgm.audit_done) ? 'Yes' : 'No'}</span></div>
-              <div className="detail-item"><span className="lbl">Audit Year</span><span className="val">{auditAgm.audit_year || '—'}</span></div>
-              <div className="detail-item"><span className="lbl">Latest AGM Conducted</span><span className="val">{isYes(auditAgm.agm_done) ? (auditAgm.agm_date !== '—' ? `Yes (${auditAgm.agm_date})` : 'Yes') : 'No'}</span></div>
+              <div className="detail-item"><span className="lbl">Last Audit Conducted Year</span><span className="val">{auditAgm.audit_year}</span></div>
+              <div className="detail-item"><span className="lbl">Last Audit Conducted Date</span><span className="val">{auditAgm.audit_date}</span></div>
+              <div className="detail-item"><span className="lbl">Audit Status</span><span className="val">{auditAgm.audit_status}</span></div>
+              <div className="detail-item"><span className="lbl">Last AGM Conducted Year</span><span className="val">{auditAgm.agm_year}</span></div>
+              <div className="detail-item"><span className="lbl">Last AGM Conducted Date</span><span className="val">{auditAgm.agm_date}</span></div>
+              <div className="detail-item"><span className="lbl">AGM Status</span><span className="val">{auditAgm.agm_status}</span></div>
             </div>
           </Sec>
           <Sec title="III. Operations Ledger">

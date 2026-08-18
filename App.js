@@ -694,6 +694,7 @@ export default function App() {
             auditDone: stateObj.masterAuditDate ? `Yes (${stateObj.masterAuditDate})` : 'No',
             auditYear: stateObj.masterAuditYear,
             agmDone: stateObj.masterAgmDate ? `Yes (${stateObj.masterAgmDate})` : 'No',
+            agmYear: stateObj.masterAgmYear,
             // GPS/timestamp evidence is captured once on the Digital Evidence screen and
             // otherwise sits in local state — include it here too so a later silent sync
             // (triggered by saving any other section) doesn't wipe it back to null. Photo
@@ -1587,6 +1588,7 @@ export default function App() {
       auditYear: isMilk ? masterAuditYear : (compData?.auditYear ?? auditYear),
       agmDone: isMilk ? (masterAgmDate ? `Yes (${masterAgmDate})` : 'No') : (compData?.agmDate ? `Yes (${compData.agmDate})` : (agmDate ? `Yes (${agmDate})` : 'No')),
       agmDate: isMilk ? masterAgmDate : (compData?.agmDate ?? agmDate),
+      agmYear: isMilk ? masterAgmYear : (compData?.agmYear ?? agmYear),
       gpsLat: location?.latitude ?? null, gpsLng: location?.longitude ?? null,
       capturedAt: timestamp || new Date().toISOString(),
       // Append all data sets to ensure they are captured in offline queue and cloud DB

@@ -90,11 +90,16 @@ export default function DemographicsScreen({
 
   const handleSaveAndNext = () => {
     handleSave();
-    if (onSaveNext) {
-      onSaveNext();
-    } else if (onNext) {
-      onNext();
-    }
+    // Brief pause so the "saved to database" acknowledgment is actually
+    // visible before this screen navigates away — Demographics is the last
+    // Master Data section, so this always returns to Home immediately.
+    setTimeout(() => {
+      if (onSaveNext) {
+        onSaveNext();
+      } else if (onNext) {
+        onNext();
+      }
+    }, 1100);
   };
 
   const demographicsData = [
@@ -161,8 +166,8 @@ export default function DemographicsScreen({
                 end={{ x: 1, y: 0 }}
                 style={StyleSheet.absoluteFillObject}
               />
-              <Text style={styles.editCtaText}>Save & Next</Text>
-              <MaterialCommunityIcons name="arrow-right" size={16} color="#ffffff" />
+              <Text style={styles.editCtaText}>Submit to Database</Text>
+              <MaterialCommunityIcons name="cloud-check-outline" size={16} color="#ffffff" />
             </Pressable>
           </View>
         </View>
@@ -173,6 +178,13 @@ export default function DemographicsScreen({
       <View style={styles.bgBlobTop} pointerEvents="none" />
       <View style={styles.bgBlobBottomLeft} pointerEvents="none" />
       <View style={styles.bgBlobBottomRight} pointerEvents="none" />
+
+      {isSaved && (
+        <View style={styles.saveToast} pointerEvents="none">
+          <MaterialCommunityIcons name="check-circle" size={18} color="#ffffff" />
+          <Text style={styles.saveToastText}>Demographics data successfully saved to the database</Text>
+        </View>
+      )}
 
       <ScrollView style={styles.scrollContent} contentContainerStyle={styles.scrollInner} showsVerticalScrollIndicator={false}>
         {/* Profile Status Banner */}
@@ -598,11 +610,37 @@ const styles = StyleSheet.create({
     paddingVertical: 12, 
     paddingHorizontal: 16,
   },
-  saveModalText: { 
-    color: '#FFFFFF', 
-    fontFamily: FONT_FAMILY, 
-    fontSize: 13, 
+  saveModalText: {
+    color: '#FFFFFF',
+    fontFamily: FONT_FAMILY,
+    fontSize: 13,
     fontWeight: '700',
     letterSpacing: 0.5,
+  },
+  saveToast: {
+    position: 'absolute',
+    top: 108,
+    left: 16,
+    right: 16,
+    zIndex: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: COLORS.emerald700,
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  saveToastText: {
+    flex: 1,
+    color: '#ffffff',
+    fontFamily: FONT_FAMILY,
+    fontSize: 13,
+    fontWeight: '700',
   },
 });
