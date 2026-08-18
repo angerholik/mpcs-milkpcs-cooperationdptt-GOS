@@ -1717,6 +1717,14 @@ export default function App() {
         ? ((masterHasLoan && !masterLoanCleared) ? (compData?.loanOutstanding || masterLoanExtended || '0') : '')
         : ((loanData?.hasLoan && !loanData?.loanCleared) ? (mpcsLoanMonthlyData?.loanOutstanding || loanData?.loanExtended || '0') : ''),
       loanData,
+      // saveMpcsSubmission's update path replaces form_data wholesale with
+      // whatever's in this object rather than merging with the existing DB
+      // row — same class of bug the activitiesForSubmission comment above
+      // already describes for the flattened `activities` string, except
+      // this field (the actual structured array MpcsActivitiesLogScreen
+      // writes to and the admin dashboard reads from) was missing entirely,
+      // so logging an activity then submitting the return silently wiped it.
+      activityItems,
       activities: activitiesForSubmission,
       // compData comes from getMilkSectionData(..., 'compliance'), which only the
       // Milk PCS ComplianceScreen ever writes (via saveMilkSectionData) — for MPCS
