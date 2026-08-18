@@ -3371,16 +3371,7 @@ function InspectorProfileModal({ userRole, setUserRole, assignedUnits, setAssign
     }
   };
 
-  const allAvailableUnits = Array.from(new Set([
-    'Sardong Lungzik MPCS',
-    'Gitan Karmatara MPCS',
-    'Dentam Dairy MPCS',
-    'Banthen MPCS',
-    'Pelling Co-op MPCS',
-    'Yuksom Dairy MPCS',
-    'Soreng Co-op Society',
-    ...mpcsRows.map(s => s.society_name).filter(Boolean)
-  ]));
+  const allAvailableUnits = Array.from(new Set(mpcsRows.map(s => s.society_name).filter(Boolean)));
 
   return (
     <div className="modal-overlay" onClick={e=>e.target===e.currentTarget&&onClose()}>
