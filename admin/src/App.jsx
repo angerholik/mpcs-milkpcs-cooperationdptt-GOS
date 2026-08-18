@@ -1116,7 +1116,7 @@ function MPCSDetailModal({ row, onClose }) {
               <D l="Authorised Share Capital" v={fd['8.8'] || fd.shareCapitalData?.authorizedCapital} money />
               <D l="Paid-Up Share Capital" v={fd['8.9'] || fd.shareCapitalData?.paidUpCapital} money />
               <D l="Total Member Deposits" v={fd['8.11'] || fd.shareCapitalData?.totalDeposits} money />
-              <D l="As Of Date" v={fd['8.10'] || fd.shareCapitalData?.asOfDate} />
+              <D l="As On Date" v={fd['8.10'] || fd.shareCapitalData?.asOfDate} />
             </div>
           </Sec>
 

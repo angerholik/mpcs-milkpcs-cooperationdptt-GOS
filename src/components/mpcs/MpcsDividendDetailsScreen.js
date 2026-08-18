@@ -25,6 +25,57 @@ const COLORS = {
 
 const FONT_FAMILY = 'Manrope';
 
+const monthMap = { Jan: '01', Feb: '02', Mar: '03', Apr: '04', May: '05', Jun: '06', Jul: '07', Aug: '08', Sep: '09', Oct: '10', Nov: '11', Dec: '12' };
+const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+function formatToIsoDate(displayStr) {
+  if (!displayStr) return '';
+  if (displayStr.includes('-') && displayStr.length === 10 && /^\d{4}/.test(displayStr)) return displayStr;
+  const parts = displayStr.trim().split(' ');
+  if (parts.length === 3) {
+    const day = parts[0].padStart(2, '0');
+    const month = monthMap[parts[1]] || '01';
+    const year = parts[2];
+    return `${year}-${month}-${day}`;
+  }
+  return '';
+}
+
+function formatFromIsoDate(isoStr) {
+  if (!isoStr) return '';
+  const parts = isoStr.split('-');
+  if (parts.length === 3) {
+    const year = parts[0];
+    const monthIdx = parseInt(parts[1], 10) - 1;
+    const day = parseInt(parts[2], 10);
+    const monthName = monthNames[monthIdx] || 'Jan';
+    return `${day} ${monthName} ${year}`;
+  }
+  return isoStr;
+}
+
+// Dividend Year is derived from Distribution Date rather than typed — same
+// financial-year convention (Apr–Mar) already used for Audit/AGM Year.
+function deriveFinancialYear(dateStr) {
+  if (!dateStr) return '';
+  let year, month;
+  if (dateStr.includes('-') && dateStr.length === 10) {
+    const parts = dateStr.split('-');
+    year = parseInt(parts[0], 10);
+    month = parseInt(parts[1], 10);
+  } else {
+    const parts = dateStr.trim().split(' ');
+    if (parts.length === 3) {
+      year = parseInt(parts[2], 10);
+      month = parseInt(monthMap[parts[1]] || '01', 10);
+    } else {
+      return '';
+    }
+  }
+  if (isNaN(year) || isNaN(month)) return '';
+  return month >= 4 ? `${year} - ${year + 1}` : `${year - 1} - ${year}`;
+}
+
 export default function MpcsDividendDetailsScreen({
   lastVerified = "Not verified",
   initialPolicy = "",
@@ -39,7 +90,7 @@ export default function MpcsDividendDetailsScreen({
   const [modalVisible, setModalVisible] = useState(false);
 
   const [dividendPolicy, setDividendPolicy] = useState(initialPolicy);
-  const [dividendAnnounced, setDividendAnnounced] = useState(initialAnnounced);
+  const [dividendAnnounced, setDividendAnnounced] = useState(initialAnnounced || deriveFinancialYear(initialDate));
   const [dividendRate, setDividendRate] = useState(initialRate);
   const [dividendAmount, setDividendAmount] = useState(initialAmount);
   const [distributionDate, setDistributionDate] = useState(initialDate);
@@ -51,6 +102,14 @@ export default function MpcsDividendDetailsScreen({
     if (initialAmount) setDividendAmount(initialAmount);
     if (initialDate) setDistributionDate(initialDate);
   }, [initialPolicy, initialAnnounced, initialRate, initialAmount, initialDate]);
+
+  // Dividend Year is no longer manually entered — it's derived automatically
+  // whenever the Distribution Date changes.
+  const handleDistributionDateSelect = (isoValue) => {
+    const displayDate = formatFromIsoDate(isoValue);
+    setDistributionDate(displayDate);
+    setDividendAnnounced(deriveFinancialYear(isoValue));
+  };
 
   const persistDividend = () => {
     if (onSaveDividend) {
@@ -161,34 +220,34 @@ export default function MpcsDividendDetailsScreen({
 
           <View style={styles.infoGrid}>
             <View style={styles.infoCol}>
-              <Text style={styles.infoLabel}>DIVIDEND POLICY</Text>
-              <Text style={styles.infoValue}>{dividendPolicy || "-"}</Text>
+              <Text style={styles.infoLabel}>DISTRIBUTION DATE</Text>
+              <Text style={styles.infoValue}>{distributionDate || "-"}</Text>
             </View>
             <View style={styles.infoCol}>
               <Text style={styles.infoLabel}>DIVIDEND YEAR</Text>
               <Text style={styles.infoValue}>{dividendAnnounced || "-"}</Text>
             </View>
           </View>
-          
+
           <View style={styles.divider} />
 
           <View style={styles.infoGrid}>
+            <View style={styles.infoCol}>
+              <Text style={styles.infoLabel}>DIVIDEND POLICY</Text>
+              <Text style={styles.infoValue}>{dividendPolicy || "-"}</Text>
+            </View>
             <View style={styles.infoCol}>
               <Text style={styles.infoLabel}>DIVIDEND RATE (%)</Text>
               <Text style={styles.infoValue}>{dividendRate || "-"}</Text>
             </View>
-            <View style={styles.infoCol}>
-              <Text style={styles.infoLabel}>TOTAL DIVIDEND PAID</Text>
-              <Text style={styles.infoValue}>{dividendAmount ? `₹${dividendAmount}` : "-"}</Text>
-            </View>
           </View>
-          
+
           <View style={styles.divider} />
 
           <View style={styles.infoGrid}>
             <View style={styles.infoCol}>
-              <Text style={styles.infoLabel}>DISTRIBUTION DATE</Text>
-              <Text style={styles.infoValue}>{distributionDate || "-"}</Text>
+              <Text style={styles.infoLabel}>TOTAL DIVIDEND PAID</Text>
+              <Text style={styles.infoValue}>{dividendAmount ? `₹${dividendAmount}` : "-"}</Text>
             </View>
           </View>
         </View>
@@ -210,13 +269,35 @@ export default function MpcsDividendDetailsScreen({
             <ScrollView style={styles.modalFormScroll} showsVerticalScrollIndicator={false}>
               
               <View style={styles.modalFormGroup}>
-                <Text style={styles.modalLabel}>Dividend Policy</Text>
-                <TextInput style={styles.modalInput} value={dividendPolicy} onChangeText={setDividendPolicy} placeholder="e.g. 10% of Net Surplus" placeholderTextColor={COLORS.slate400} />
+                <Text style={styles.modalLabel}>Distribution Date</Text>
+                {Platform.OS === 'web' ? (
+                  <View style={styles.datePickerWrapper}>
+                    <input
+                      type="date"
+                      value={formatToIsoDate(distributionDate)}
+                      onChange={(e) => handleDistributionDateSelect(e.target.value)}
+                      style={{
+                        width: '100%', height: '100%', border: 'none', outline: 'none',
+                        background: 'transparent', fontFamily: FONT_FAMILY, fontSize: '13px',
+                        color: '#1e293b', fontWeight: '500', cursor: 'pointer',
+                      }}
+                    />
+                  </View>
+                ) : (
+                  <TextInput style={styles.modalInput} value={distributionDate} onChangeText={(val) => { setDistributionDate(val); setDividendAnnounced(deriveFinancialYear(val)); }} placeholder="DD Mon YYYY" placeholderTextColor={COLORS.slate400} />
+                )}
               </View>
 
               <View style={styles.modalFormGroup}>
-                <Text style={styles.modalLabel}>Dividend Year</Text>
-                <TextInput style={styles.modalInput} value={dividendAnnounced} onChangeText={setDividendAnnounced} placeholder="e.g. 2024 - 2025" placeholderTextColor={COLORS.slate400} />
+                <Text style={styles.modalLabel}>Dividend Year <Text style={styles.modalLabelHint}>(auto-derived)</Text></Text>
+                <View style={[styles.modalInput, styles.modalInputReadOnly]}>
+                  <Text style={styles.modalReadOnlyText}>{dividendAnnounced || 'Select a Distribution Date first'}</Text>
+                </View>
+              </View>
+
+              <View style={styles.modalFormGroup}>
+                <Text style={styles.modalLabel}>Dividend Policy</Text>
+                <TextInput style={styles.modalInput} value={dividendPolicy} onChangeText={setDividendPolicy} placeholder="e.g. 10% of Net Surplus" placeholderTextColor={COLORS.slate400} />
               </View>
 
               <View style={styles.modalFormGroup}>
@@ -227,11 +308,6 @@ export default function MpcsDividendDetailsScreen({
               <View style={styles.modalFormGroup}>
                 <Text style={styles.modalLabel}>Total Dividend Paid (₹)</Text>
                 <TextInput style={styles.modalInput} keyboardType="numeric" value={dividendAmount} onChangeText={setDividendAmount} placeholder="0" placeholderTextColor={COLORS.slate400} />
-              </View>
-
-              <View style={styles.modalFormGroup}>
-                <Text style={styles.modalLabel}>Distribution Date</Text>
-                <TextInput style={styles.modalInput} value={distributionDate} onChangeText={setDistributionDate} placeholder="e.g. 20 Jun 2025" placeholderTextColor={COLORS.slate400} />
               </View>
 
               <View style={[styles.btnWrapper, { marginTop: 16, marginBottom: 20 }]}>
@@ -541,7 +617,33 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.slate50,
     ...(Platform.OS === 'web' && { outlineStyle: 'none' }),
   },
-  saveModalBtn: { 
+  datePickerWrapper: {
+    borderWidth: 1,
+    borderColor: COLORS.slate200,
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    height: 42,
+    backgroundColor: COLORS.slate50,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  modalLabelHint: {
+    fontWeight: '600',
+    textTransform: 'none',
+    letterSpacing: 0,
+    color: COLORS.slate400,
+  },
+  modalInputReadOnly: {
+    justifyContent: 'center',
+    backgroundColor: COLORS.slate100,
+  },
+  modalReadOnlyText: {
+    fontFamily: FONT_FAMILY,
+    fontSize: 13,
+    fontWeight: '600',
+    color: COLORS.slate600,
+  },
+  saveModalBtn: {
     alignItems: 'center', 
     justifyContent: 'center',
     paddingVertical: 12, 

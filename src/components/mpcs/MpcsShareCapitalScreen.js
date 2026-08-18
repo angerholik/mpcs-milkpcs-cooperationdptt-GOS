@@ -25,6 +25,35 @@ const COLORS = {
 
 const FONT_FAMILY = 'Manrope';
 
+const monthMap = { Jan: '01', Feb: '02', Mar: '03', Apr: '04', May: '05', Jun: '06', Jul: '07', Aug: '08', Sep: '09', Oct: '10', Nov: '11', Dec: '12' };
+const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+function formatToIsoDate(displayStr) {
+  if (!displayStr) return '';
+  if (displayStr.includes('-') && displayStr.length === 10 && /^\d{4}/.test(displayStr)) return displayStr;
+  const parts = displayStr.trim().split(' ');
+  if (parts.length === 3) {
+    const day = parts[0].padStart(2, '0');
+    const month = monthMap[parts[1]] || '01';
+    const year = parts[2];
+    return `${year}-${month}-${day}`;
+  }
+  return '';
+}
+
+function formatFromIsoDate(isoStr) {
+  if (!isoStr) return '';
+  const parts = isoStr.split('-');
+  if (parts.length === 3) {
+    const year = parts[0];
+    const monthIdx = parseInt(parts[1], 10) - 1;
+    const day = parseInt(parts[2], 10);
+    const monthName = monthNames[monthIdx] || 'Jan';
+    return `${day} ${monthName} ${year}`;
+  }
+  return isoStr;
+}
+
 export default function MpcsShareCapitalScreen({
   lastVerified = "Not verified",
   initialAuthorized = "",
@@ -175,7 +204,7 @@ export default function MpcsShareCapitalScreen({
               <Text style={styles.infoValue}>{totalDeposits ? `₹${totalDeposits}` : "-"}</Text>
             </View>
             <View style={styles.infoCol}>
-              <Text style={styles.infoLabel}>AS OF DATE</Text>
+              <Text style={styles.infoLabel}>AS ON DATE</Text>
               <Text style={styles.infoValue}>{asOfDate || "-"}</Text>
             </View>
           </View>
@@ -213,8 +242,23 @@ export default function MpcsShareCapitalScreen({
               </View>
 
               <View style={styles.modalFormGroup}>
-                <Text style={styles.modalLabel}>As Of Date</Text>
-                <TextInput style={styles.modalInput} value={asOfDate} onChangeText={setAsOfDate} placeholder="e.g. 31 Mar 2026" placeholderTextColor={COLORS.slate400} />
+                <Text style={styles.modalLabel}>As On Date</Text>
+                {Platform.OS === 'web' ? (
+                  <View style={styles.datePickerWrapper}>
+                    <input
+                      type="date"
+                      value={formatToIsoDate(asOfDate)}
+                      onChange={(e) => setAsOfDate(formatFromIsoDate(e.target.value))}
+                      style={{
+                        width: '100%', height: '100%', border: 'none', outline: 'none',
+                        background: 'transparent', fontFamily: FONT_FAMILY, fontSize: '13px',
+                        color: '#1e293b', fontWeight: '500', cursor: 'pointer',
+                      }}
+                    />
+                  </View>
+                ) : (
+                  <TextInput style={styles.modalInput} value={asOfDate} onChangeText={setAsOfDate} placeholder="DD Mon YYYY" placeholderTextColor={COLORS.slate400} />
+                )}
               </View>
 
               <View style={[styles.btnWrapper, { marginTop: 16, marginBottom: 20 }]}>
@@ -524,7 +568,17 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.slate50,
     ...(Platform.OS === 'web' && { outlineStyle: 'none' }),
   },
-  saveModalBtn: { 
+  datePickerWrapper: {
+    borderWidth: 1,
+    borderColor: COLORS.slate200,
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    height: 42,
+    backgroundColor: COLORS.slate50,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  saveModalBtn: {
     alignItems: 'center', 
     justifyContent: 'center',
     paddingVertical: 12, 
