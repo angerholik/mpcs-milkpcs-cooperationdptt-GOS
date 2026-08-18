@@ -52,6 +52,7 @@ export default function MemberDataScreen({
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState(emptyForm);
+  const [showReview, setShowReview] = useState(false);
 
   const loadMembers = useCallback(async () => {
     setLoading(true);
@@ -66,7 +67,7 @@ export default function MemberDataScreen({
 
   const canSave = form.memberName.trim().length > 0 && form.aadhaarNumber.replace(/\s+/g, '').length === 12;
 
-  const handleSave = async () => {
+  const handleConfirmSave = async () => {
     if (!canSave || saving) return;
     setSaving(true);
     const { error } = await saveMember({
@@ -86,6 +87,7 @@ export default function MemberDataScreen({
       return;
     }
     setForm(emptyForm);
+    setShowReview(false);
     loadMembers();
     if (onMemberDataChanged) onMemberDataChanged();
   };
@@ -188,7 +190,6 @@ export default function MemberDataScreen({
                 placeholder="XXXX XXXX XXXX"
                 placeholderTextColor={COLORS.slate300}
                 keyboardType="numeric"
-                secureTextEntry
                 maxLength={12}
               />
             </View>
@@ -247,8 +248,8 @@ export default function MemberDataScreen({
                 !canSave && styles.addBtnDisabled,
                 pressed && canSave && { transform: [{ scale: 0.98 }] },
               ]}
-              onPress={handleSave}
-              disabled={!canSave || saving}
+              onPress={() => setShowReview(true)}
+              disabled={!canSave}
             >
               {canSave && (
                 <LinearGradient
@@ -258,13 +259,9 @@ export default function MemberDataScreen({
                   style={StyleSheet.absoluteFillObject}
                 />
               )}
-              {saving ? (
-                <ActivityIndicator size="small" color={canSave ? '#ffffff' : COLORS.slate400} />
-              ) : (
-                <MaterialCommunityIcons name="content-save-outline" size={17} color={canSave ? '#ffffff' : COLORS.slate400} />
-              )}
+              <MaterialCommunityIcons name="clipboard-text-outline" size={17} color={canSave ? '#ffffff' : COLORS.slate400} />
               <Text style={[styles.addBtnText, !canSave && { color: COLORS.slate400 }]}>
-                {saving ? 'SAVING...' : 'SAVE TO REGISTRY'}
+                REVIEW & SAVE TO DATABASE
               </Text>
             </Pressable>
           </View>
@@ -291,37 +288,129 @@ export default function MemberDataScreen({
             </Text>
           </View>
         ) : (
-          members.map((m) => (
+          members.map((m, idx) => (
             <View key={m.id} style={styles.memberCard}>
-              <View style={styles.memberAvatar}>
-                <Text style={styles.memberAvatarText}>
-                  {(m.member_name || '?').trim().split(/\s+/).slice(0, 2).map(w => w[0]).join('').toUpperCase()}
-                </Text>
+              <View style={styles.memberCardTop}>
+                <View style={styles.memberAvatar}>
+                  <Text style={styles.memberAvatarText}>
+                    {(m.member_name || '?').trim().split(/\s+/).slice(0, 2).map(w => w[0]).join('').toUpperCase()}
+                  </Text>
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.memberName}>{m.member_name}</Text>
+                  <Text style={styles.memberIndex}>Member #{members.length - idx}</Text>
+                </View>
+                <TouchableOpacity
+                  onPress={() => handleDelete(m)}
+                  style={styles.deleteBtn}
+                  activeOpacity={0.7}
+                >
+                  <MaterialCommunityIcons name="trash-can-outline" size={16} color="#DC2626" />
+                </TouchableOpacity>
               </View>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.memberName}>{m.member_name}</Text>
-                <Text style={styles.memberMeta}>
-                  {[m.ward_name, m.mobile_number].filter(Boolean).join(' · ') || 'No additional details'}
-                </Text>
-                {m.address ? <Text style={styles.memberAddress}>{m.address}</Text> : null}
-              </View>
-              <TouchableOpacity
-                onPress={() => handleDelete(m)}
-                style={styles.deleteBtn}
-                activeOpacity={0.7}
-              >
-                <MaterialCommunityIcons name="trash-can-outline" size={16} color="#DC2626" />
-              </TouchableOpacity>
+
+              {(m.ward_name || m.mobile_number || m.address) && (
+                <View style={styles.memberDetailRows}>
+                  {m.ward_name ? (
+                    <View style={styles.memberDetailRow}>
+                      <MaterialCommunityIcons name="map-marker-outline" size={13} color={COLORS.slate400} />
+                      <Text style={styles.memberDetailText}>{m.ward_name}</Text>
+                    </View>
+                  ) : null}
+                  {m.mobile_number ? (
+                    <View style={styles.memberDetailRow}>
+                      <MaterialCommunityIcons name="phone-outline" size={13} color={COLORS.slate400} />
+                      <Text style={styles.memberDetailText}>{m.mobile_number}</Text>
+                    </View>
+                  ) : null}
+                  {m.address ? (
+                    <View style={styles.memberDetailRow}>
+                      <MaterialCommunityIcons name="home-outline" size={13} color={COLORS.slate400} />
+                      <Text style={styles.memberDetailText}>{m.address}</Text>
+                    </View>
+                  ) : null}
+                </View>
+              )}
             </View>
           ))
         )}
       </ScrollView>
+
+      {/* ── Review & Confirm Sheet ── */}
+      {showReview && (
+        <View style={styles.reviewOverlay}>
+          <TouchableOpacity style={StyleSheet.absoluteFillObject} activeOpacity={1} onPress={() => !saving && setShowReview(false)} />
+          <View style={styles.reviewSheet}>
+            <View style={styles.reviewHeaderRow}>
+              <View style={styles.cardIconBox}>
+                <MaterialCommunityIcons name="clipboard-check-outline" size={18} color={COLORS.primary} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.cardHeaderTitle}>Review Before Saving</Text>
+                <Text style={styles.cardHeaderSub}>Confirm these details are correct — Aadhaar will be hashed and cannot be edited afterward.</Text>
+              </View>
+            </View>
+
+            <View style={styles.reviewList}>
+              <View style={styles.reviewRow}>
+                <Text style={styles.reviewLabel}>Member Name</Text>
+                <Text style={styles.reviewValue}>{form.memberName.trim() || '—'}</Text>
+              </View>
+              <View style={styles.reviewRow}>
+                <Text style={styles.reviewLabel}>Aadhaar Number</Text>
+                <Text style={styles.reviewValue}>{form.aadhaarNumber || '—'}</Text>
+              </View>
+              <View style={styles.reviewRow}>
+                <Text style={styles.reviewLabel}>Mobile Number</Text>
+                <Text style={styles.reviewValue}>{form.mobileNumber.trim() || '—'}</Text>
+              </View>
+              <View style={styles.reviewRow}>
+                <Text style={styles.reviewLabel}>Ward Name</Text>
+                <Text style={styles.reviewValue}>{form.wardName.trim() || '—'}</Text>
+              </View>
+              <View style={[styles.reviewRow, { borderBottomWidth: 0 }]}>
+                <Text style={styles.reviewLabel}>Address</Text>
+                <Text style={styles.reviewValue}>{form.address.trim() || '—'}</Text>
+              </View>
+            </View>
+
+            <View style={{ flexDirection: 'row', gap: 10 }}>
+              <TouchableOpacity
+                style={styles.reviewBackBtn}
+                onPress={() => setShowReview(false)}
+                disabled={saving}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.reviewBackBtnText}>BACK TO EDIT</Text>
+              </TouchableOpacity>
+              <Pressable
+                style={({ pressed }) => [styles.reviewConfirmBtn, pressed && { transform: [{ scale: 0.98 }] }]}
+                onPress={handleConfirmSave}
+                disabled={saving}
+              >
+                <LinearGradient
+                  colors={['#7a1a1f', '#4a1017']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                  style={StyleSheet.absoluteFillObject}
+                />
+                {saving ? (
+                  <ActivityIndicator size="small" color="#ffffff" />
+                ) : (
+                  <MaterialCommunityIcons name="database-check-outline" size={16} color="#ffffff" />
+                )}
+                <Text style={styles.addBtnText}>{saving ? 'SAVING...' : 'CONFIRM & SAVE'}</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      )}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.bg },
+  container: { flex: 1, backgroundColor: COLORS.bg, position: 'relative' },
 
   topBar: {
     flexDirection: 'row',
@@ -528,13 +617,18 @@ const styles = StyleSheet.create({
   },
 
   memberCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
     backgroundColor: COLORS.surface,
     borderRadius: 14,
     borderWidth: 1,
     borderColor: COLORS.slate200,
-    padding: 12,
+    borderLeftWidth: 3,
+    borderLeftColor: COLORS.primary,
+    padding: 14,
+    gap: 10,
+  },
+  memberCardTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: 12,
   },
   memberAvatar: {
@@ -557,17 +651,31 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: COLORS.slate800,
   },
-  memberMeta: {
+  memberIndex: {
     fontFamily: FONT_FAMILY,
-    fontSize: 11,
-    color: COLORS.slate500,
+    fontSize: 10,
+    fontWeight: '700',
+    color: COLORS.slate400,
+    textTransform: 'uppercase',
+    letterSpacing: 0.4,
     marginTop: 2,
   },
-  memberAddress: {
+  memberDetailRows: {
+    borderTopWidth: 1,
+    borderTopColor: COLORS.slate100,
+    paddingTop: 10,
+    gap: 6,
+  },
+  memberDetailRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  memberDetailText: {
     fontFamily: FONT_FAMILY,
-    fontSize: 11,
-    color: COLORS.slate400,
-    marginTop: 2,
+    fontSize: 12,
+    color: COLORS.slate600,
+    flex: 1,
   },
   deleteBtn: {
     width: 30,
@@ -576,5 +684,78 @@ const styles = StyleSheet.create({
     backgroundColor: '#FEF2F2',
     alignItems: 'center',
     justifyContent: 'center',
+  },
+
+  // Review Sheet
+  reviewOverlay: {
+    position: 'absolute',
+    top: 0, left: 0, right: 0, bottom: 0,
+    backgroundColor: 'rgba(15,23,42,0.45)',
+    justifyContent: 'flex-end',
+  },
+  reviewSheet: {
+    backgroundColor: COLORS.surface,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    padding: 20,
+    gap: 16,
+    maxHeight: '85%',
+  },
+  reviewHeaderRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  reviewList: {
+    backgroundColor: COLORS.slate50,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: COLORS.slate200,
+    paddingHorizontal: 14,
+  },
+  reviewRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 11,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.slate200,
+    gap: 12,
+  },
+  reviewLabel: {
+    fontFamily: FONT_FAMILY,
+    fontSize: 11,
+    fontWeight: '600',
+    color: COLORS.slate500,
+  },
+  reviewValue: {
+    fontFamily: FONT_FAMILY,
+    fontSize: 13,
+    fontWeight: '700',
+    color: COLORS.slate800,
+    textAlign: 'right',
+    flexShrink: 1,
+  },
+  reviewBackBtn: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 13,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    borderColor: COLORS.slate200,
+  },
+  reviewBackBtnText: {
+    fontFamily: FONT_FAMILY,
+    fontSize: 12,
+    fontWeight: '800',
+    color: COLORS.slate600,
+    letterSpacing: 0.5,
+  },
+  reviewConfirmBtn: {
+    flex: 1.4,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 13,
+    borderRadius: 12,
+    overflow: 'hidden',
   },
 });
