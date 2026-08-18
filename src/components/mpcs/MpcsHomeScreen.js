@@ -62,6 +62,7 @@ export default function HomeScreen({
   activitiesStatus = "0 ENTRIES",
   loanIsActive = false,
   loanStatus = "NOT APPLICABLE",
+  cscIsActive = false,
   lastUpdated = "",
   activeAlert,
   onDismissAlert,
@@ -381,6 +382,40 @@ export default function HomeScreen({
                     <Text style={[styles.moduleCardTitle, Platform.OS === 'web' && { transition: 'all 0.3s' }, hovered && { color: '#7a1a1f' }]}>Loan Status</Text>
                     <Text style={styles.moduleCardDesc}>
                       {loanIsActive ? 'Report this month\'s loan recovery.' : 'No active loan on record for this society.'}
+                    </Text>
+                  </>
+                )}
+              </Pressable>
+
+              {/* CSC Transactions */}
+              <Pressable
+                style={({ hovered }) => [
+                  styles.moduleCard,
+                  Platform.OS === 'web' && { transition: 'all 0.3s' },
+                  hovered && { borderColor: '#cbd5e1', shadowOpacity: 0.08, elevation: 4 }
+                ]}
+                onPress={() => onNavigateScreen && onNavigateScreen('MPCS_CSC_TRANS')}
+              >
+                {({ hovered }) => (
+                  <>
+                    <View style={styles.moduleCardHeader}>
+                      <View style={[
+                        styles.moduleIconBox,
+                        {backgroundColor: !cscIsActive ? COLORS.slate50 : cscTransStatus?.startsWith('COMPLETED') ? COLORS.emerald50 : COLORS.amber50, borderColor: !cscIsActive ? COLORS.slate100 : cscTransStatus?.startsWith('COMPLETED') ? '#a7f3d0' : 'rgba(254,243,199,0.5)'},
+                        Platform.OS === 'web' && { transition: 'all 0.3s' },
+                        hovered && { backgroundColor: '#fef2f2', borderColor: '#fee2e2' }
+                      ]}>
+                        <MaterialCommunityIcons name="laptop" size={24} color={!cscIsActive ? COLORS.slate400 : cscTransStatus?.startsWith('COMPLETED') ? COLORS.emerald700 : COLORS.amber600} />
+                      </View>
+                      <View style={[styles.statusPill, {backgroundColor: !cscIsActive ? COLORS.slate100 : cscTransStatus?.startsWith('COMPLETED') ? COLORS.emerald50 : COLORS.amber50, borderColor: !cscIsActive ? 'rgba(226,232,240,0.5)' : cscTransStatus?.startsWith('COMPLETED') ? 'rgba(16,185,129,0.3)' : 'rgba(254,243,199,0.5)'}]}>
+                        <Text style={[styles.statusPillText, {color: !cscIsActive ? COLORS.slate500 : cscTransStatus?.startsWith('COMPLETED') ? COLORS.emerald700 : COLORS.amber700}]}>
+                          {cscIsActive ? cscTransStatus : 'NOT APPLICABLE'}
+                        </Text>
+                      </View>
+                    </View>
+                    <Text style={[styles.moduleCardTitle, Platform.OS === 'web' && { transition: 'all 0.3s' }, hovered && { color: '#7a1a1f' }]}>CSC Transactions</Text>
+                    <Text style={styles.moduleCardDesc}>
+                      {cscIsActive ? 'Log this month\'s CSC service transactions.' : 'No active CSC on record for this society.'}
                     </Text>
                   </>
                 )}

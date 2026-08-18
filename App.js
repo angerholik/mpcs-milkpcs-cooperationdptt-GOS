@@ -2429,6 +2429,7 @@ export default function App() {
                         activitiesStatus={`${activityItems.length} ENTRIES`}
                         loanIsActive={!!(loanData?.hasLoan && !loanData?.loanCleared)}
                         loanStatus={sectionStates?.loan?.status || 'NOT COMPLETED'}
+                        cscIsActive={!!cscDetailsData?.isCscActive}
                         lastUpdated=""
                         activeAlert={activeAlert}
                         onDismissAlert={dismissAlert}
@@ -2745,7 +2746,7 @@ export default function App() {
                         }}
                         onSaveNext={() => {
                           updateSectionState('loan', { status: 'COMPLETED ✓' });
-                          setCurrentMobileScreen('HOME');
+                          setCurrentMobileScreen('MPCS_ACTIVITIES');
                         }}
                         onBack={() => setCurrentMobileScreen('HOME')}
                       />
