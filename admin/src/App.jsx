@@ -1101,14 +1101,42 @@ function MPCSDetailModal({ row, onClose }) {
           </Sec>
 
           {/* M. Activities / Events Log */}
+          {/* MPCS submissions have no `activities` column (unlike Milk PCS
+              submissions, which do) — entries logged via MpcsActivitiesLogScreen
+              land in form_data.activityItems as an array of
+              {id, type, title, count, participants, desc} objects instead. */}
           <Sec title="M. Activities / Events Log">
-            <div style={{
-              fontSize: '13px', color: '#1E293B', lineHeight: '1.6', 
-              background: '#F8FAFC', borderRadius: '12px', padding: '16px', 
-              whiteSpace: 'pre-wrap', border: '1px solid #E2E8F0', fontStyle: row.activities ? 'normal' : 'italic'
-            }}>
-              {row.activities || "No activities logged for this period."}
-            </div>
+            {Array.isArray(fd.activityItems) && fd.activityItems.length > 0 ? (
+              <div style={{display:'flex', flexDirection:'column', gap:'10px'}}>
+                {fd.activityItems.map((item, i) => (
+                  <div key={item.id || i} style={{
+                    fontSize: '13px', color: '#1E293B', lineHeight: '1.6',
+                    background: '#F8FAFC', borderRadius: '12px', padding: '14px 16px',
+                    border: '1px solid #E2E8F0'
+                  }}>
+                    <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'4px'}}>
+                      <span style={{fontWeight:800, color:'var(--emerald-deep)'}}>{item.title || item.type || 'Activity'}</span>
+                      {item.type && <span className="badge badge-green" style={{fontSize:'10px'}}>{item.type}</span>}
+                    </div>
+                    {item.desc && <div style={{color:'#334155'}}>{item.desc}</div>}
+                    {(item.count || item.participants) && (
+                      <div style={{fontSize:'11px', color:'#64748B', marginTop:'6px'}}>
+                        {item.count && <>Count: {item.count} </>}
+                        {item.participants && <>· Participants: {item.participants}</>}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div style={{
+                fontSize: '13px', color: '#1E293B', lineHeight: '1.6',
+                background: '#F8FAFC', borderRadius: '12px', padding: '16px',
+                whiteSpace: 'pre-wrap', border: '1px solid #E2E8F0', fontStyle: row.activities ? 'normal' : 'italic'
+              }}>
+                {row.activities || "No activities logged for this period."}
+              </div>
+            )}
           </Sec>
 
           <div style={{marginTop:'32px', textAlign:'center', paddingTop: '20px', borderTop: '1px solid #E2E8F0'}}>
