@@ -2662,11 +2662,12 @@ export default function App() {
                     {currentMobileScreen === 'MPCS_CSC_DETAILS' && (
                       <MpcsCscDetailsScreen
                         initialOperator={cscDetailsData?.cscOperatorName || ''}
-                        initialMobile={cscDetailsData?.cscMobileNumber || ''}
-                        initialDistrict={cscDetailsData?.cscDistrict || ''}
-                        initialState={cscDetailsData?.cscState || ''}
-                        initialVleId={cscDetailsData?.vleId || ''}
-                        initialActive={cscDetailsData?.activeServices || []}
+                        initialCscId={cscDetailsData?.cscId || ''}
+                        initialCenterName={cscDetailsData?.cscCenterName || ''}
+                        initialMobile={cscDetailsData?.mobileNumber || ''}
+                        initialEmail={cscDetailsData?.emailId || ''}
+                        initialActiveServices={cscDetailsData?.activeServicesCount || ''}
+                        initialIsCscActive={cscDetailsData?.isCscActive ?? true}
                         onSaveCscDetails={(data) => {
                           setCscDetailsData(data);
                           saveMasterStateToStorage({ cscDetailsData: data });

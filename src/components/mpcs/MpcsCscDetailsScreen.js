@@ -32,13 +32,14 @@ export default function MpcsCscDetailsScreen({
   initialMobile = "",
   initialEmail = "",
   initialActiveServices = "",
+  initialIsCscActive = true,
   onSaveCscDetails,
   onNext,
   onBack
 }) {
   const [modalVisible, setModalVisible] = useState(false);
 
-  const [isCscActive, setIsCscActive] = useState(true);
+  const [isCscActive, setIsCscActive] = useState(initialIsCscActive);
   const [cscOperatorName, setCscOperatorName] = useState(initialOperator);
   const [cscId, setCscId] = useState(initialCscId);
   const [cscCenterName, setCscCenterName] = useState(initialCenterName);
@@ -53,7 +54,8 @@ export default function MpcsCscDetailsScreen({
     if (initialMobile) setMobileNumber(initialMobile);
     if (initialEmail) setEmailId(initialEmail);
     if (initialActiveServices) setActiveServicesCount(initialActiveServices);
-  }, [initialOperator, initialCscId, initialCenterName, initialMobile, initialEmail, initialActiveServices]);
+    setIsCscActive(initialIsCscActive);
+  }, [initialOperator, initialCscId, initialCenterName, initialMobile, initialEmail, initialActiveServices, initialIsCscActive]);
 
   const handleSave = () => {
     if (onSaveCscDetails) {
@@ -145,6 +147,63 @@ export default function MpcsCscDetailsScreen({
               Status: {isCscActive ? "Active CSC Services" : "Inactive / CSC Not Available"}
             </Text>
           </View>
+        </View>
+
+        {/* Active / Inactive Selector — settable up front, without opening Edit */}
+        <View style={{ flexDirection: 'row', gap: 10, marginBottom: 14 }}>
+          <TouchableOpacity
+            style={{
+              flex: 1,
+              paddingVertical: 10,
+              borderRadius: 10,
+              alignItems: 'center',
+              borderWidth: 1.5,
+              borderColor: isCscActive ? COLORS.emerald700 : COLORS.slate200,
+              backgroundColor: isCscActive ? COLORS.emerald50 : COLORS.surface
+            }}
+            onPress={() => {
+              setIsCscActive(true);
+              if (onSaveCscDetails) {
+                onSaveCscDetails({ isCscActive: true, cscOperatorName, cscId, cscCenterName, mobileNumber, emailId, activeServicesCount });
+              }
+            }}
+          >
+            <Text style={{
+              fontFamily: FONT_FAMILY,
+              fontSize: 12,
+              fontWeight: '800',
+              color: isCscActive ? COLORS.emerald700 : COLORS.slate500
+            }}>
+              ✓ ACTIVE CSC
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={{
+              flex: 1,
+              paddingVertical: 10,
+              borderRadius: 10,
+              alignItems: 'center',
+              borderWidth: 1.5,
+              borderColor: !isCscActive ? COLORS.amber900 : COLORS.slate200,
+              backgroundColor: !isCscActive ? COLORS.amber100 : COLORS.surface
+            }}
+            onPress={() => {
+              setIsCscActive(false);
+              if (onSaveCscDetails) {
+                onSaveCscDetails({ isCscActive: false, cscOperatorName, cscId, cscCenterName, mobileNumber, emailId, activeServicesCount });
+              }
+            }}
+          >
+            <Text style={{
+              fontFamily: FONT_FAMILY,
+              fontSize: 12,
+              fontWeight: '800',
+              color: !isCscActive ? COLORS.amber900 : COLORS.slate500
+            }}>
+              ⚠ INACTIVE / NONE
+            </Text>
+          </TouchableOpacity>
         </View>
 
         {/* Info Card */}
