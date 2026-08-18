@@ -2254,26 +2254,11 @@ function Dashboard({ onLogout }) {
           {/* 🏠 DASHBOARD MAIN OVERVIEW */}
           {activeTab === 'DASHBOARD' && (
             <div className="fade-in">
-              {/* Welcome Header */}
-              <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'24px'}}>
-                <div>
-                  <h1 style={{fontSize:'24px', fontWeight:900, color:'#0F172A', letterSpacing:'-0.5px'}}>
-                    {userRole==='System Admin' ? 'Gyalshing District Admin Portal 👋' : 'Welcome back, Inspector Mukund 👋'}
-                  </h1>
-                  <p style={{fontSize:'13px', color:'#64748B', marginTop:'2px'}}>
-                    {userRole === 'System Admin' 
-                      ? 'Viewing district-wide overview across all sub-divisions & societies.'
-                      : `Viewing scoped overview for CI Mukund Pradhan (${assignedUnits.length} assigned MPCS & Milk units).`}
-                  </p>
-                </div>
-                <div style={{display:'flex', gap:'10px'}}>
-                  <button className="btn-ghost" onClick={fetchAll}>
-                    <Icon d={I.refresh} size={14} color="#334155"/> Refresh
-                  </button>
-                  <button className="btn-primary" onClick={() => setShowBroadcastModal(true)}>
-                    <Icon d={I.alert} size={14} color="#FFF"/> Emergency Broadcast
-                  </button>
-                </div>
+              {/* Header actions */}
+              <div style={{display:'flex', justifyContent:'flex-end', alignItems:'center', marginBottom:'24px'}}>
+                <button className="btn-ghost" onClick={fetchAll}>
+                  <Icon d={I.refresh} size={14} color="#334155"/> Refresh
+                </button>
               </div>
 
               {/* Module Filter Tab Pill Bar */}
