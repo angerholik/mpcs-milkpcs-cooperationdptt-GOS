@@ -950,9 +950,20 @@ export default function App() {
     setUserProfile(usr);
     setSession({ user: usr });
     if (activeEmail) {
-      await loadInstitutionsForUser(activeEmail);
-      await loadMasterStateFromStorage(null, activeEmail);
-      await fetchCloudSocietyData(selectedSociety?.name || centerName, activeEmail);
+      const institutions = await loadInstitutionsForUser(activeEmail);
+      // Resolve the society to restore from persistent storage rather than
+      // the selectedSociety/centerName React state — those still hold their
+      // pre-login (blank, post-logout) values in this closure, since the
+      // setState calls a few lines below don't retroactively update
+      // variables already captured here. On a device with no local cache
+      // (fresh install, cleared app data), that blank name made the cloud
+      // fallback below silently no-op, so a real submission already in
+      // Supabase never made it back to the screen.
+      const lastSocName = (await AsyncStorage.getItem(getLastSelectedSocietyKey(activeEmail)))
+        || selectedSociety?.name || centerName?.trim();
+      const matchedInstitution = institutions.find(i => i.name === lastSocName);
+      await loadMasterStateFromStorage(lastSocName, activeEmail);
+      await fetchCloudSocietyData(lastSocName, activeEmail, matchedInstitution?.type);
     }
     setCurrentMobileScreen('MY_INSTITUTIONS');
   };
