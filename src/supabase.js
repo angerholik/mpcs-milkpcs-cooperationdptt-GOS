@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import { decode } from 'base64-arraybuffer';
+import * as Crypto from 'expo-crypto';
 
 const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL;
 const SUPABASE_ANON_KEY = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
@@ -324,4 +325,51 @@ export async function saveMpcsSubmission(formData) {
     console.error('[CORE] saveMpcsSubmission exception:', err);
     return { data: null, error: err };
   }
+}
+
+// ─── Member Registry (persistent per-society roster, not a monthly return) ───
+// Aadhaar is never sent to or stored in the database as plaintext — it's
+// hashed with SHA-256 on-device first, and only the hash is written.
+export async function hashAadhaar(aadhaarNumber) {
+  const normalized = (aadhaarNumber || '').replace(/\s+/g, '');
+  return Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.SHA256, normalized);
+}
+
+export async function fetchMembers(societyName, societyType) {
+  if (!societyName || !societyType) return { data: [], error: null };
+  const { data, error } = await supabase
+    .from('member_registry')
+    .select('id, member_name, mobile_number, ward_name, address, created_at')
+    .eq('society_type', societyType)
+    .ilike('society_name', societyName.trim())
+    .order('created_at', { ascending: false });
+  if (error) console.error('[CORE] fetchMembers failed:', error.message);
+  return { data: data || [], error };
+}
+
+export async function saveMember({ societyName, societyType, memberName, aadhaarNumber, mobileNumber, wardName, address, addedBy }) {
+  try {
+    const aadhaarHash = await hashAadhaar(aadhaarNumber);
+    const { data, error } = await supabase.from('member_registry').insert([{
+      society_name: societyName,
+      society_type: societyType,
+      member_name: memberName,
+      aadhaar_hash: aadhaarHash,
+      mobile_number: mobileNumber || null,
+      ward_name: wardName || null,
+      address: address || null,
+      added_by: addedBy || null,
+    }]).select();
+    if (error) console.error('[CORE] saveMember failed:', error.message);
+    return { data, error };
+  } catch (err) {
+    console.error('[CORE] saveMember exception:', err);
+    return { data: null, error: err };
+  }
+}
+
+export async function deleteMember(memberId) {
+  const { error } = await supabase.from('member_registry').delete().eq('id', memberId);
+  if (error) console.error('[CORE] deleteMember failed:', error.message);
+  return { error };
 }

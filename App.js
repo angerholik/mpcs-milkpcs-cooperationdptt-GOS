@@ -37,6 +37,7 @@ import ReviewSubmitScreen from './src/components/ReviewSubmitScreen';
 import RecordsScreen from './src/components/RecordsScreen';
 import MoreScreen from './src/components/MoreScreen';
 import MyInstitutionsScreen from './src/components/MyInstitutionsScreen';
+import MemberDataScreen from './src/components/MemberDataScreen';
 
 // MPCS Module Screen Components
 import MpcsHomeScreen from './src/components/mpcs/MpcsHomeScreen';
@@ -2352,6 +2353,16 @@ export default function App() {
                       />
                     )}
 
+                    {currentMobileScreen === 'MEMBERS' && (
+                      <MemberDataScreen
+                        societyName={selectedSociety?.name || centerName?.trim()}
+                        societyType="MILK"
+                        inspectorEmail={userProfile?.email}
+                        onBack={() => setCurrentMobileScreen('HOME')}
+                        onMemberDataChanged={() => stampMasterDataUpdated('members')}
+                      />
+                    )}
+
                     {currentMobileScreen === 'COMPLIANCE' && (
                       <ComplianceScreen
                         societyName={selectedSociety?.name || centerName?.trim()}
@@ -2828,6 +2839,16 @@ export default function App() {
                           setCurrentMobileScreen('HOME');
                         }}
                         onBack={() => setCurrentMobileScreen('MPCS_CSC_DETAILS')}
+                      />
+                    )}
+
+                    {currentMobileScreen === 'MPCS_MEMBERS' && (
+                      <MemberDataScreen
+                        societyName={selectedSociety?.name || centerName?.trim()}
+                        societyType="MPCS"
+                        inspectorEmail={userProfile?.email}
+                        onBack={() => setCurrentMobileScreen('HOME')}
+                        onMemberDataChanged={() => stampMasterDataUpdated('members')}
                       />
                     )}
 

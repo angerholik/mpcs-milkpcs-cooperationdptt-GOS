@@ -414,7 +414,8 @@ export default function HomeScreen({
             <View style={styles.masterListContainer}>
               {[
                 { id: 'PROFILE', title: 'Institutional Profile', icon: 'office-building-outline', updated: formatLastUpdated(masterDataUpdated.instProfile) },
-                { id: 'DEMOGRAPHICS', title: 'Registered Demographics', icon: 'account-group-outline', updated: formatLastUpdated(masterDataUpdated.demographics) }
+                { id: 'DEMOGRAPHICS', title: 'Registered Demographics', icon: 'account-group-outline', updated: formatLastUpdated(masterDataUpdated.demographics) },
+                { id: 'MEMBERS', title: 'Member Data', icon: 'account-multiple-outline', updated: formatLastUpdated(masterDataUpdated.members) }
               ].map((item, index) => (
                 <Pressable
                   key={item.id}

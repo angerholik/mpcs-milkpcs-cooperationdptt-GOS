@@ -447,7 +447,8 @@ export default function HomeScreen({
                 { id: 'MPCS_DIVIDEND', title: 'Dividend Details', icon: 'cash-multiple', updated: formatLastUpdated(masterDataUpdated.dividend) },
                 { id: 'MPCS_SHARE_CAPITAL', title: 'Share Capital', icon: 'chart-pie', updated: formatLastUpdated(masterDataUpdated.shareCapital) },
                 { id: 'MPCS_CSC_DETAILS', title: 'CSC Details', icon: 'laptop', updated: formatLastUpdated(masterDataUpdated.csc) },
-                { id: 'MPCS_LOAN', title: 'Loan Details', icon: 'bank-outline', updated: formatLastUpdated(masterDataUpdated.loan) }
+                { id: 'MPCS_LOAN', title: 'Loan Details', icon: 'bank-outline', updated: formatLastUpdated(masterDataUpdated.loan) },
+                { id: 'MPCS_MEMBERS', title: 'Member Data', icon: 'account-multiple-outline', updated: formatLastUpdated(masterDataUpdated.members) }
               ].map((item, index) => (
                 <Pressable 
                   key={item.id}
