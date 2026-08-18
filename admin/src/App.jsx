@@ -447,28 +447,90 @@ function StatCard({ icon, label, value, color='#7F1D1D', bg='#FEF2F2', sub, onCl
       <div className="kpi-val" style={{fontSize:'20px', fontWeight:800, color: active ? color : '#0F172A', lineHeight:1.1}}>{value}</div>
       {sub && <div className="kpi-sub" style={{fontSize:'10px', color:'#94A3B8', marginTop:'4px'}}>{sub}</div>}
 
-      {hasBreakdown && hovered && (
-        <div
-          onClick={e => e.stopPropagation()}
-          style={{
-            position: 'absolute', top: 'calc(100% + 8px)',
-            ...(popoverAlign === 'right' ? { right: 0 } : { left: 0 }),
-            minWidth: '260px', maxWidth: '320px',
-            maxHeight: '260px', overflowY: 'auto', background: '#FFFFFF', border: '1px solid #E2E8F0',
-            borderRadius: '8px', boxShadow: '0 12px 24px -8px rgba(15,23,42,0.25)', zIndex: 50, padding: '10px 0'
-          }}
-        >
-          <div style={{fontSize:'10px', fontWeight:800, color:'#64748B', textTransform:'uppercase', letterSpacing:'0.5px', padding:'0 14px 8px', borderBottom:'1px solid #F1F5F9', marginBottom:'4px'}}>
-            {label} — By MPCS ({breakdown.length})
-          </div>
-          {breakdown.map((item, i) => (
-            <div key={i} style={{display:'flex', justifyContent:'space-between', gap:'12px', padding:'6px 14px', fontSize:'12px'}}>
-              <span style={{color:'#334155', fontWeight:600, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap'}}>{item.name}</span>
-              <span style={{color, fontWeight:800, whiteSpace:'nowrap'}}>{item.value}</span>
+      {hasBreakdown && hovered && (() => {
+        const magnitudes = breakdown.map(item => {
+          const n = parseFloat(String(item.value).replace(/[^0-9.]/g, ''));
+          return isNaN(n) ? 0 : n;
+        });
+        const maxMag = Math.max(...magnitudes, 0);
+        const rankColors = ['#B45309', '#94A3B8', '#B45309'];
+        const initialsOf = (name) => (name || '?').trim().split(/\s+/).slice(0,2).map(w=>w[0]).join('').toUpperCase();
+
+        return (
+          <div
+            className="fade-in"
+            onClick={e => e.stopPropagation()}
+            style={{
+              position: 'absolute', top: 'calc(100% + 10px)',
+              ...(popoverAlign === 'right' ? { right: 0 } : { left: 0 }),
+              width: '360px',
+              maxHeight: '380px', overflowY: 'auto', background: '#FFFFFF', border: '1px solid #E2E8F0',
+              borderRadius: '14px', boxShadow: '0 20px 40px -12px rgba(15,23,42,0.3), 0 0 0 1px rgba(15,23,42,0.02)',
+              zIndex: 50, padding: '0'
+            }}
+          >
+            <div style={{
+              display:'flex', alignItems:'center', gap:'10px', padding:'16px 18px',
+              background: `linear-gradient(135deg, ${bg}, #FFFFFF)`, borderBottom: '1px solid #F1F5F9',
+              borderRadius: '14px 14px 0 0'
+            }}>
+              <div style={{width:'32px', height:'32px', borderRadius:'9px', background:color, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, boxShadow:`0 4px 10px -2px ${color}66`}}>
+                <Icon d={icon} size={16} color="#fff"/>
+              </div>
+              <div style={{minWidth:0}}>
+                <div style={{fontSize:'13px', fontWeight:800, color:'#0F172A', lineHeight:1.2}}>{label}</div>
+                <div style={{fontSize:'10.5px', fontWeight:700, color:'#94A3B8', textTransform:'uppercase', letterSpacing:'0.5px'}}>
+                  Breakdown by MPCS · {breakdown.length} {breakdown.length===1?'society':'societies'}
+                </div>
+              </div>
             </div>
-          ))}
-        </div>
-      )}
+
+            <div style={{padding:'8px 10px'}}>
+              {breakdown.map((item, i) => {
+                const pct = maxMag > 0 ? Math.max(4, (magnitudes[i] / maxMag) * 100) : 0;
+                return (
+                  <div key={i} style={{
+                    display:'flex', alignItems:'center', gap:'12px', padding:'10px 8px',
+                    borderRadius:'10px', transition:'background 0.12s ease'
+                  }}
+                  onMouseEnter={e => e.currentTarget.style.background = '#F8FAFC'}
+                  onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                  >
+                    <div style={{
+                      width:'26px', height:'26px', borderRadius:'8px', flexShrink:0,
+                      background: i < 3 ? `${rankColors[i]}1A` : '#F1F5F9',
+                      color: i < 3 ? rankColors[i] : '#94A3B8',
+                      display:'flex', alignItems:'center', justifyContent:'center',
+                      fontSize:'10px', fontWeight:900
+                    }}>
+                      {i+1}
+                    </div>
+                    <div style={{
+                      width:'30px', height:'30px', borderRadius:'50%', flexShrink:0,
+                      background: `${color}14`, color, border:`1.5px solid ${color}33`,
+                      display:'flex', alignItems:'center', justifyContent:'center',
+                      fontSize:'10.5px', fontWeight:800
+                    }}>
+                      {initialsOf(item.name)}
+                    </div>
+                    <div style={{flex:1, minWidth:0}}>
+                      <div style={{display:'flex', justifyContent:'space-between', alignItems:'baseline', gap:'8px'}}>
+                        <span style={{color:'#1E293B', fontWeight:700, fontSize:'12.5px', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap'}}>{item.name}</span>
+                        <span style={{color, fontWeight:800, fontSize:'13px', whiteSpace:'nowrap'}}>{item.value}</span>
+                      </div>
+                      {maxMag > 0 && (
+                        <div style={{marginTop:'6px', height:'4px', borderRadius:'3px', background:'#F1F5F9', overflow:'hidden'}}>
+                          <div style={{height:'100%', width:`${pct}%`, borderRadius:'3px', background:`linear-gradient(90deg, ${color}, ${color}99)`, transition:'width 0.4s ease'}}/>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }
