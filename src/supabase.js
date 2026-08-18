@@ -153,10 +153,15 @@ export async function saveMilkPcsSubmission(params) {
 
     let existingId = null;
     if (cleanCenter && cleanCenter !== 'Cooperative Collection Center') {
+      // Exact (case-insensitive) match, not a substring search — `%name%`
+      // matched ANY row whose center_name merely contained this one as a
+      // substring (e.g. saving "Bermiok" matched the unrelated existing
+      // "Bermiok Milk Pcs" row), silently overwriting a different real
+      // institution's saved data instead of creating/updating its own row.
       let query = supabase
         .from('milk_pcs_submissions')
         .select('id')
-        .ilike('center_name', `%${cleanCenter}%`);
+        .ilike('center_name', cleanCenter);
       
       if (cleanMonth) {
         query = query.eq('reporting_month', cleanMonth);

@@ -824,11 +824,15 @@ export default function App() {
     const isMilk = (societyType || selectedSociety?.type) === 'MILK';
     try {
       let rows = [];
+      // Exact (case-insensitive) match, not a substring search — `%name%`
+      // matched ANY row whose name merely contained this one (e.g. opening
+      // "Bermiok" matched the unrelated existing "Bermiok Milk Pcs" row),
+      // pulling a different institution's data into this one's display.
       if (isMilk) {
         const res = await supabase
           .from('milk_pcs_submissions')
           .select('*')
-          .ilike('center_name', `%${nameStr.trim()}%`)
+          .ilike('center_name', nameStr.trim())
           .order('created_at', { ascending: false })
           .limit(1);
         rows = res.data || [];
@@ -836,7 +840,7 @@ export default function App() {
         const res = await supabase
           .from('mpcs_submissions')
           .select('*')
-          .ilike('society_name', `%${nameStr.trim()}%`)
+          .ilike('society_name', nameStr.trim())
           .order('created_at', { ascending: false })
           .limit(1);
         rows = res.data || [];
@@ -1892,10 +1896,27 @@ export default function App() {
 
                     handleSelectSociety(newInst, true);
                   }}
-                  onRemoveInstitution={(id) => {
+                  onRemoveInstitution={async (id) => {
+                    const removedInst = institutionsList.find(i => i.id === id);
                     const updated = institutionsList.filter(i => i.id !== id);
                     setInstitutionsList(updated);
                     saveInstitutionsForUser(updated, session?.user?.email);
+
+                    // Also remove the submitted data from Supabase — an
+                    // institution deleted from the device shouldn't linger
+                    // in the database as an orphaned record that a later
+                    // exact-name match could still surface.
+                    if (removedInst?.name) {
+                      try {
+                        if (removedInst.type === 'MPCS') {
+                          await supabase.from('mpcs_submissions').delete().ilike('society_name', removedInst.name);
+                        } else {
+                          await supabase.from('milk_pcs_submissions').delete().ilike('center_name', removedInst.name);
+                        }
+                      } catch (e) {
+                        console.warn('Failed to delete institution from database:', e);
+                      }
+                    }
                   }}
                   onSelectSociety={(soc) => handleSelectSociety(soc, false)}
                   onProceedToDashboard={() => {
