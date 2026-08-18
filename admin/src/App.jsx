@@ -416,7 +416,7 @@ function LoginPage() {
 }
 
 // ─── StatCard ─────────────────────────────────────────────────────────────────
-function StatCard({ icon, label, value, color='#7F1D1D', bg='#FEF2F2', sub, onClick, active, breakdown, popoverAlign='left' }) {
+function StatCard({ icon, label, value, color='#7F1D1D', bg='#FEF2F2', sub, onClick, active, breakdown, popoverAlign='left', entityLabel='MPCS', entityNoun='society', entityNounPlural='societies' }) {
   const [hovered, setHovered] = useState(false);
   const hasBreakdown = Array.isArray(breakdown) && breakdown.length > 0;
 
@@ -480,7 +480,7 @@ function StatCard({ icon, label, value, color='#7F1D1D', bg='#FEF2F2', sub, onCl
               <div style={{minWidth:0}}>
                 <div style={{fontSize:'13px', fontWeight:800, color:'#0F172A', lineHeight:1.2}}>{label}</div>
                 <div style={{fontSize:'10.5px', fontWeight:700, color:'#94A3B8', textTransform:'uppercase', letterSpacing:'0.5px'}}>
-                  Breakdown by MPCS · {breakdown.length} {breakdown.length===1?'society':'societies'}
+                  Breakdown by {entityLabel} · {breakdown.length} {breakdown.length===1?entityNoun:entityNounPlural}
                 </div>
               </div>
             </div>
@@ -1874,6 +1874,34 @@ function Dashboard({ onLogout, session }) {
     };
   }, [scopedMpcsRows]);
 
+  // Per-center contributions behind each Milk Units KPI card, for the hover breakdown popover
+  const milkBreakdowns = useMemo(() => {
+    const d = scopedMilkRows;
+    const nameOf = r => r.center_name || r.center_id || 'Unknown Center';
+
+    return {
+      litres: d
+        .filter(r => (parseFloat(r.litres) || 0) > 0)
+        .map(r => ({ name: nameOf(r), value: fmtL(r.litres), _n: parseFloat(r.litres) || 0 }))
+        .sort((a, b) => b._n - a._n),
+      withdrawal: d
+        .filter(r => (parseFloat(r.withdrawal) || 0) > 0)
+        .map(r => ({ name: nameOf(r), value: fmtRs(r.withdrawal), _n: parseFloat(r.withdrawal) || 0 }))
+        .sort((a, b) => b._n - a._n),
+      balance: d
+        .filter(r => (parseFloat(r.balance) || 0) > 0)
+        .map(r => ({ name: nameOf(r), value: fmtRs(r.balance), _n: parseFloat(r.balance) || 0 }))
+        .sort((a, b) => b._n - a._n),
+      members: d
+        .filter(r => (parseInt(r.total_members) || 0) > 0)
+        .map(r => ({ name: nameOf(r), value: fmt(r.total_members), _n: parseInt(r.total_members) || 0 }))
+        .sort((a, b) => b._n - a._n),
+      loans: d
+        .filter(r => r.has_loan)
+        .map(r => ({ name: nameOf(r), value: 'Active' })),
+    };
+  }, [scopedMilkRows]);
+
   // Mutation Handlers
   const handleSaveMilkReport = async (newRecord) => {
     const { error } = await supabase.from('milk_pcs_submissions').insert([newRecord]);
@@ -2921,12 +2949,17 @@ function Dashboard({ onLogout, session }) {
 
               {/* 5-Column Equal KPI Grid */}
               <div className="kpi-grid" style={{marginBottom:'24px'}}>
-                <StatCard icon={I.litres} label="Total Litres" value={fmtL(milkStats.litres)} color="#991B1B" bg="#FEF2F2"/>
-                <StatCard icon={I.money}  label="Total Withdrawal" value={fmtRs(milkStats.withdrawal)} color="#B45309" bg="#FEF3C7"/>
-                <StatCard icon={I.money}  label="Aggregate Balance" value={fmtRs(milkStats.balance)} color="#7F1D1D" bg="#FFFBEB"/>
-                <StatCard icon={I.members} label="Total Members" value={fmt(milkStats.members)} color="#1E3A8A" bg="#EFF6FF"/>
-                <StatCard icon={I.lock}    label="Active Loans" value={milkStats.loans} color="#7C3AED" bg="#F5F3FF" 
-                  onClick={() => setActiveFilter(activeFilter === 'loan' ? null : 'loan')} active={activeFilter === 'loan'}/>
+                <StatCard icon={I.litres} label="Total Litres" value={fmtL(milkStats.litres)} color="#991B1B" bg="#FEF2F2"
+                  breakdown={milkBreakdowns.litres} entityLabel="Center" entityNoun="center" entityNounPlural="centers"/>
+                <StatCard icon={I.money}  label="Total Withdrawal" value={fmtRs(milkStats.withdrawal)} color="#B45309" bg="#FEF3C7"
+                  breakdown={milkBreakdowns.withdrawal} entityLabel="Center" entityNoun="center" entityNounPlural="centers"/>
+                <StatCard icon={I.money}  label="Aggregate Balance" value={fmtRs(milkStats.balance)} color="#7F1D1D" bg="#FFFBEB"
+                  breakdown={milkBreakdowns.balance} entityLabel="Center" entityNoun="center" entityNounPlural="centers"/>
+                <StatCard icon={I.members} label="Total Members" value={fmt(milkStats.members)} color="#1E3A8A" bg="#EFF6FF"
+                  breakdown={milkBreakdowns.members} entityLabel="Center" entityNoun="center" entityNounPlural="centers" popoverAlign="right"/>
+                <StatCard icon={I.lock}    label="Active Loans" value={milkStats.loans} color="#7C3AED" bg="#F5F3FF"
+                  onClick={() => setActiveFilter(activeFilter === 'loan' ? null : 'loan')} active={activeFilter === 'loan'}
+                  breakdown={milkBreakdowns.loans} entityLabel="Center" entityNoun="center" entityNounPlural="centers" popoverAlign="right"/>
               </div>
 
               {/* Structured Filters */}
