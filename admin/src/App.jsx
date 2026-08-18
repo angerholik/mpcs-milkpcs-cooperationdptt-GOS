@@ -535,8 +535,58 @@ function StatCard({ icon, label, value, color='#7F1D1D', bg='#FEF2F2', sub, onCl
   );
 }
 
+// Fetches the persistent member roster for a society from member_registry —
+// a separate table from mpcs_submissions/milk_pcs_submissions, since members
+// aren't part of any monthly return (see MemberDataScreen on the mobile app).
+function useSocietyMembers(societyName, societyType) {
+  const [members, setMembers] = useState([]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (!societyName || !societyType) { setMembers([]); return; }
+    let cancelled = false;
+    setLoading(true);
+    supabase
+      .from('member_registry')
+      .select('id, member_name, mobile_number, ward_name, address, created_at')
+      .eq('society_type', societyType)
+      .ilike('society_name', societyName.trim())
+      .order('created_at', { ascending: false })
+      .then(({ data, error }) => {
+        if (cancelled) return;
+        if (!error) setMembers(data || []);
+        setLoading(false);
+      });
+    return () => { cancelled = true; };
+  }, [societyName, societyType]);
+
+  return { members, loading };
+}
+
+function MemberRosterSection({ members, loading }) {
+  if (loading) return <div style={{fontSize:'12px', color:'#94A3B8'}}>Loading members…</div>;
+  if (!members || members.length === 0) {
+    return <div style={{fontSize:'12px', color:'#94A3B8', fontStyle:'italic'}}>No members registered yet.</div>;
+  }
+  return (
+    <div style={{display:'flex', flexDirection:'column', gap:'8px'}}>
+      {members.map(m => (
+        <div key={m.id} style={{display:'flex', justifyContent:'space-between', alignItems:'flex-start', gap:'12px', padding:'10px 12px', background:'#F8FAFC', borderRadius:'8px', border:'1px solid #E2E8F0'}}>
+          <div style={{minWidth:0}}>
+            <div style={{fontWeight:800, fontSize:'13px', color:'#0F172A'}}>{m.member_name}</div>
+            <div style={{fontSize:'11px', color:'#64748B', marginTop:'2px'}}>{[m.ward_name, m.mobile_number].filter(Boolean).join(' · ') || '—'}</div>
+            {m.address && <div style={{fontSize:'11px', color:'#94A3B8', marginTop:'2px'}}>{m.address}</div>}
+          </div>
+          <div style={{fontSize:'10px', color:'#94A3B8', whiteSpace:'nowrap'}}>{m.created_at ? new Date(m.created_at).toLocaleDateString('en-IN') : ''}</div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 // ─── MilkDetailModal ──────────────────────────────────────────────────────────
 function MilkDetailModal({ row, onClose, submitter }) {
+  const { members, loading: membersLoading } = useSocietyMembers(row?.center_name, 'MILK');
   if (!row) return null;
   const totalMale   = [row.m_sc,row.m_st,row.m_obc,row.m_gen].reduce((s,v)=>s+(parseInt(v)||0),0);
   const totalFemale = [row.f_sc,row.f_st,row.f_obc,row.f_gen].reduce((s,v)=>s+(parseInt(v)||0),0);
@@ -720,6 +770,11 @@ function MilkDetailModal({ row, onClose, submitter }) {
               </div>
             )}
           </Sec>
+          {/* Registered Members — persistent roster from member_registry, not
+              part of this monthly submission (see MemberDataScreen on mobile) */}
+          <Sec title={`VIII. Registered Members (${members.length})`}>
+            <MemberRosterSection members={members} loading={membersLoading} />
+          </Sec>
         </div>
       </div>
     </div>
@@ -728,6 +783,7 @@ function MilkDetailModal({ row, onClose, submitter }) {
 
 // ─── MPCSDetailModal ──────────────────────────────────────────────────────────
 function MPCSDetailModal({ row, onClose }) {
+  const { members, loading: membersLoading } = useSocietyMembers(row?.society_name, 'MPCS');
   if (!row) return null;
   let fd = row.form_data || {};
   if (typeof fd === 'string') {
@@ -1199,6 +1255,12 @@ function MPCSDetailModal({ row, onClose }) {
                 {row.activities || "No activities logged for this period."}
               </div>
             )}
+          </Sec>
+
+          {/* Registered Members — persistent roster from member_registry, not
+              part of this monthly return (see MemberDataScreen on mobile) */}
+          <Sec title={`N. Registered Members (${members.length})`}>
+            <MemberRosterSection members={members} loading={membersLoading} />
           </Sec>
 
           <div style={{marginTop:'32px', textAlign:'center', paddingTop: '20px', borderTop: '1px solid #E2E8F0'}}>
@@ -1711,7 +1773,14 @@ function Dashboard({ onLogout, session }) {
   const [mpcsRows, setMpcsRows]   = useState([]);
   const [mpcsFiltered, setMpcsFiltered] = useState([]);
   const [mpcsSelected, setMpcsSelected] = useState(null);
-  
+
+  // Member Registry state — persistent roster, separate from monthly submissions
+  const [memberRows, setMemberRows] = useState([]);
+  const [memberSearchQ, setMemberSearchQ] = useState('');
+  const [memberTypeFilter, setMemberTypeFilter] = useState('');
+  const [memberSocietyFilter, setMemberSocietyFilter] = useState('');
+  const [memberWardFilter, setMemberWardFilter] = useState('');
+
   // Modal & Interactive states
   const [showAddMilkModal, setShowAddMilkModal] = useState(false);
   const [showAddMpcsModal, setShowAddMpcsModal] = useState(false);
@@ -1814,6 +1883,14 @@ function Dashboard({ onLogout, session }) {
       return assignedUnits.some(u => name.includes(u.toLowerCase()) || u.toLowerCase().includes(name));
     });
   }, [mpcsRows, userRole, assignedUnits]);
+
+  const scopedMemberRows = useMemo(() => {
+    if (userRole === 'System Admin') return memberRows;
+    return memberRows.filter(r => {
+      const name = (r.society_name || '').toLowerCase();
+      return assignedUnits.some(u => name.includes(u.toLowerCase()) || u.toLowerCase().includes(name));
+    });
+  }, [memberRows, userRole, assignedUnits]);
 
   // Derived from the SCOPED rows, not the raw fetch — these used to be
   // computed once in fetchAll from the full district-wide dataset and
@@ -2079,6 +2156,9 @@ function Dashboard({ onLogout, session }) {
     if (!mpcsRes.error) {
       setMpcsRows((mpcsRes.data || []).map(normalizeMpcsAuditFields));
     }
+    const { data: memberRes } = await supabase.from('member_registry').select('*').order('created_at', { ascending: false });
+    if (memberRes) setMemberRows(memberRes);
+
     const { data: offRes } = await supabase.from('officer_registry').select('*').order('created_at', { ascending: false });
     if (offRes) setOfficers(offRes);
 
@@ -2111,6 +2191,9 @@ function Dashboard({ onLogout, session }) {
         fetchAll(false);
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'officer_registry' }, () => {
+        fetchAll(false);
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'member_registry' }, () => {
         fetchAll(false);
       })
       .subscribe();
@@ -2160,6 +2243,41 @@ function Dashboard({ onLogout, session }) {
   const centerOptions = [...new Set(scopedMilkRows.map(r=>r.center_name).filter(Boolean))].sort();
   const districtOptions = [...new Set(scopedMilkRows.map(r=>r.district).filter(Boolean))].sort();
   const mpcsAuthorityOptions = [...new Set(scopedMpcsRows.map(r=>r.registration_authority).filter(Boolean))].sort();
+
+  const memberSocietyOptions = [...new Set(scopedMemberRows.map(r=>r.society_name).filter(Boolean))].sort();
+  const memberWardOptions = [...new Set(scopedMemberRows.map(r=>r.ward_name).filter(Boolean))].sort();
+
+  const memberFiltered = useMemo(() => {
+    let d = [...scopedMemberRows];
+    if (memberTypeFilter) d = d.filter(r => r.society_type === memberTypeFilter);
+    if (memberSocietyFilter) d = d.filter(r => r.society_name === memberSocietyFilter);
+    if (memberWardFilter) d = d.filter(r => r.ward_name === memberWardFilter);
+    const q = memberSearchQ.toLowerCase().trim();
+    if (q) d = d.filter(r =>
+      (r.member_name||'').toLowerCase().includes(q) ||
+      (r.society_name||'').toLowerCase().includes(q) ||
+      (r.mobile_number||'').toLowerCase().includes(q) ||
+      (r.ward_name||'').toLowerCase().includes(q)
+    );
+    return d;
+  }, [scopedMemberRows, memberTypeFilter, memberSocietyFilter, memberWardFilter, memberSearchQ]);
+
+  const memberStats = useMemo(() => ({
+    total: scopedMemberRows.length,
+    mpcs: scopedMemberRows.filter(r => r.society_type === 'MPCS').length,
+    milk: scopedMemberRows.filter(r => r.society_type === 'MILK').length,
+    societies: new Set(scopedMemberRows.map(r => r.society_name).filter(Boolean)).size,
+  }), [scopedMemberRows]);
+
+  const handleDeleteMember = async (member) => {
+    if (!window.confirm(`Remove ${member.member_name} from the member registry? This cannot be undone.`)) return;
+    const { error } = await supabase.from('member_registry').delete().eq('id', member.id);
+    if (error) {
+      alert('Could not delete member: ' + error.message);
+      return;
+    }
+    setMemberRows(prev => prev.filter(r => r.id !== member.id));
+  };
 
   // Chart Calculations — sourced from scoped rows so a CI's district/regional
   // breakdowns don't reveal figures from outside their assigned jurisdiction.
@@ -2498,6 +2616,7 @@ function Dashboard({ onLogout, session }) {
               { id: 'DASHBOARD', label: 'Dashboard', icon: I.dashboard },
               { id: 'MPCS', label: 'MPCS Societies', icon: I.domain },
               { id: 'MILK', label: 'Milk Units', icon: I.litres },
+              { id: 'MEMBERS', label: 'Member Registry', icon: I.user },
               { id: 'STATS', label: 'Benchmarks', icon: I.chart },
               { id: 'OFFICERS', label: 'Official Registry', icon: I.members },
               { id: 'REPORTS', label: 'Reports', icon: I.download },
@@ -3083,6 +3202,151 @@ function Dashboard({ onLogout, session }) {
                             </tr>
                           );
                         })}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* ── MEMBER REGISTRY VIEW ── */}
+          {activeTab === 'MEMBERS' && (
+            <div className="fade-in">
+              {/* Header Banner */}
+              <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom: '20px', paddingBottom:'16px', borderBottom:'1px solid var(--border)'}}>
+                 <div>
+                    <div style={{fontSize:'11px', fontWeight:800, color:'var(--emerald)', textTransform:'uppercase', letterSpacing:'1px', marginBottom:'4px'}}>Persistent Society Rosters</div>
+                    <div style={{display:'flex', alignItems:'center', gap:'12px'}}>
+                       <h2 style={{fontSize:'22px', fontWeight:900, color: '#0F172A', lineHeight:1}}>Member Registry</h2>
+                       <span className="badge badge-green" style={{padding:'4px 10px', fontSize:'11px', fontWeight:800}}>
+                         {memberStats.total} Registered Members
+                       </span>
+                    </div>
+                 </div>
+                 <div style={{display:'flex', gap: '8px'}}>
+                    <button className="btn-primary" onClick={()=>downloadCSV(memberFiltered, 'Gyalshing_Member_Registry')} style={{padding: '8px 14px', fontSize: '12px', height:'38px', display: 'flex', alignItems:'center', gap:'6px'}}>
+                      <Icon d={I.download} size={14} color="#fff"/> Export CSV
+                    </button>
+                 </div>
+              </div>
+
+              {/* KPI Grid */}
+              <div className="kpi-grid" style={{marginBottom:'24px'}}>
+                <StatCard icon={I.user} label="Total Members" value={fmt(memberStats.total)} color="#1E3A8A" bg="#EFF6FF"/>
+                <StatCard icon={I.domain} label="MPCS Members" value={fmt(memberStats.mpcs)} color="#991B1B" bg="#FEF2F2"
+                  onClick={() => setMemberTypeFilter(memberTypeFilter === 'MPCS' ? '' : 'MPCS')} active={memberTypeFilter === 'MPCS'}/>
+                <StatCard icon={I.litres} label="Milk Unit Members" value={fmt(memberStats.milk)} color="#B45309" bg="#FEF3C7"
+                  onClick={() => setMemberTypeFilter(memberTypeFilter === 'MILK' ? '' : 'MILK')} active={memberTypeFilter === 'MILK'}/>
+                <StatCard icon={I.members} label="Societies Covered" value={fmt(memberStats.societies)} color="#047857" bg="#ECFDF5"/>
+              </div>
+
+              {/* Structured Filters */}
+              <div className="card" style={{marginBottom:'20px', padding:'16px 20px', background:'#FFFFFF'}}>
+                <div style={{display:'grid', gridTemplateColumns:'2fr 1fr 1fr 1fr auto', gap:'12px', alignItems:'end'}}>
+                  <div className="field-group" style={{marginBottom:0}}>
+                    <label className="field-label" style={{fontSize:'10px', fontWeight:800, textTransform:'uppercase', color:'#64748B', marginBottom:'4px'}}>Search Members</label>
+                    <div style={{position:'relative'}}>
+                      <span style={{position:'absolute', left:'11px', top:'50%', transform:'translateY(-50%)'}}>
+                        <Icon d={I.search} size={14} color="#9CA3AF"/>
+                      </span>
+                      <input className="field-input" placeholder="Search name, society, mobile, ward..."
+                        value={memberSearchQ} onChange={e=>setMemberSearchQ(e.target.value)} style={{paddingLeft:'34px', height:'38px', borderRadius:'6px', border:'1px solid #CBD5E1'}}/>
+                    </div>
+                  </div>
+
+                  <div className="field-group" style={{marginBottom:0}}>
+                    <label className="field-label" style={{fontSize:'10px', fontWeight:800, textTransform:'uppercase', color:'#64748B', marginBottom:'4px'}}>Type</label>
+                    <select className="field-input" value={memberTypeFilter} onChange={e=>setMemberTypeFilter(e.target.value)} style={{height:'38px', borderRadius:'6px', border:'1px solid #CBD5E1'}}>
+                      <option value="">All Types</option>
+                      <option value="MPCS">MPCS</option>
+                      <option value="MILK">Milk Unit</option>
+                    </select>
+                  </div>
+
+                  <div className="field-group" style={{marginBottom:0}}>
+                    <label className="field-label" style={{fontSize:'10px', fontWeight:800, textTransform:'uppercase', color:'#64748B', marginBottom:'4px'}}>Society</label>
+                    <select className="field-input" value={memberSocietyFilter} onChange={e=>setMemberSocietyFilter(e.target.value)} style={{height:'38px', borderRadius:'6px', border:'1px solid #CBD5E1'}}>
+                      <option value="">All Societies</option>
+                      {memberSocietyOptions.map(s=><option key={s} value={s}>{s}</option>)}
+                    </select>
+                  </div>
+
+                  <div className="field-group" style={{marginBottom:0}}>
+                    <label className="field-label" style={{fontSize:'10px', fontWeight:800, textTransform:'uppercase', color:'#64748B', marginBottom:'4px'}}>Ward</label>
+                    <select className="field-input" value={memberWardFilter} onChange={e=>setMemberWardFilter(e.target.value)} style={{height:'38px', borderRadius:'6px', border:'1px solid #CBD5E1'}}>
+                      <option value="">All Wards</option>
+                      {memberWardOptions.map(w=><option key={w} value={w}>{w}</option>)}
+                    </select>
+                  </div>
+
+                  <button className="btn-ghost" onClick={()=>{setMemberSearchQ('');setMemberTypeFilter('');setMemberSocietyFilter('');setMemberWardFilter('');}} style={{height:'38px', padding:'0 16px', borderRadius:'6px', fontSize:'12px', fontWeight:700}}>
+                    Clear All
+                  </button>
+                </div>
+                {(memberSearchQ||memberTypeFilter||memberSocietyFilter||memberWardFilter) && (
+                  <div style={{marginTop:'12px', paddingTop:'10px', borderTop:'1px solid #F1F5F9', fontSize:'12px', color:'#047857', fontWeight:700, display:'flex', alignItems:'center', gap:'6px'}}>
+                    🔍 Showing <strong>{memberFiltered.length}</strong> of <strong>{scopedMemberRows.length}</strong> registered members
+                  </div>
+                )}
+              </div>
+
+              {/* Table Card */}
+              <div className="card" style={{padding:0, overflow:'hidden', borderRadius:'8px', border:'1px solid #E2E8F0', boxShadow:'var(--shadow-subtle)'}}>
+                <div style={{padding:'16px 20px', borderBottom:'1px solid var(--border)', display:'flex', justifyContent:'space-between', alignItems:'center', background:'#FAFAFA'}}>
+                  <div style={{display:'flex', alignItems:'center', gap:'10px'}}>
+                    <Icon d={I.user} size={18} color="var(--emerald)"/>
+                    <h3 style={{fontSize:'15px', fontWeight:800, color:'#0F172A', margin:0}}>Registered Members</h3>
+                  </div>
+                  <span className="badge badge-green" style={{fontSize:'11px', fontWeight:800}}>{memberFiltered.length} Members</span>
+                </div>
+
+                {loading ? (
+                  <div style={{padding:'60px',display:'flex',flexDirection:'column',alignItems:'center',gap:'16px'}}>
+                    <div className="spinner" style={{width:'40px',height:'40px'}}/>
+                    <div style={{fontSize:'13px',color:'#9CA3AF'}}>Loading...</div>
+                  </div>
+                ) : memberFiltered.length === 0 ? (
+                  <div style={{padding:'60px',textAlign:'center',color:'#9CA3AF'}}>
+                    <div style={{fontSize:'40px',marginBottom:'12px'}}>👤</div>
+                    <div style={{fontWeight:700}}>No members found</div>
+                    <div style={{fontSize:'13px',marginTop:'4px'}}>{scopedMemberRows.length===0?'No members registered yet — add one from the mobile app\'s Master Data → Member Data screen.':'Try adjusting your filters.'}</div>
+                  </div>
+                ) : (
+                  <div style={{overflowX:'auto'}}>
+                    <table className="data-table">
+                      <thead>
+                        <tr>
+                          <th style={{textAlign:'left', width:'110px'}}>Date Added</th>
+                          <th style={{textAlign:'left', minWidth:'160px'}}>Member Name</th>
+                          <th style={{textAlign:'left', minWidth:'180px'}}>Society</th>
+                          <th style={{textAlign:'center', width:'90px'}}>Type</th>
+                          <th style={{textAlign:'left', width:'110px'}}>Ward</th>
+                          <th style={{textAlign:'left', width:'130px'}}>Mobile</th>
+                          <th style={{textAlign:'left', minWidth:'160px'}}>Address</th>
+                          <th style={{textAlign:'center', width:'80px'}}>Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {memberFiltered.map((m,i)=>(
+                          <tr key={m.id||i}>
+                            <td style={{whiteSpace:'nowrap', fontSize:'12px', color:'#64748B', fontWeight:600}}>{m.created_at?new Date(m.created_at).toLocaleDateString('en-IN'):'—'}</td>
+                            <td style={{fontWeight:800, fontSize:'13px', color:'#0F172A'}}>{m.member_name||'—'}</td>
+                            <td style={{fontSize:'13px', color:'#334155', fontWeight:600}}>{m.society_name||'—'}</td>
+                            <td style={{textAlign:'center'}}>
+                              <span className={`badge ${m.society_type==='MPCS'?'badge-green':'badge-gold'}`} style={{fontSize:'10px'}}>{m.society_type||'—'}</span>
+                            </td>
+                            <td style={{fontSize:'12px', color:'#475569'}}>{m.ward_name||'—'}</td>
+                            <td style={{fontSize:'12px', color:'#475569'}}>{m.mobile_number||'—'}</td>
+                            <td style={{fontSize:'12px', color:'#64748B'}}>{m.address||'—'}</td>
+                            <td style={{textAlign:'center'}}>
+                              <button className="btn-ghost" onClick={()=>handleDeleteMember(m)} title="Remove member"
+                                style={{padding:'6px 8px', fontSize:'11px', color:'#DC2626'}}>
+                                <Icon d={I.close} size={13} color="#DC2626"/>
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
                       </tbody>
                     </table>
                   </div>
