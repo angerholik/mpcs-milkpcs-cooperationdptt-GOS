@@ -211,7 +211,13 @@ export default function App() {
   // separately per-society-per-month via getMilkSectionData(..., 'mpcs_loan'),
   // the same split already used for Milk PCS loan tracking.
   const [loanData, setLoanData] = useState({});
-  
+
+  // The MPCS Master Data Directory list ("Last updated: 12 Aug 2024" etc.)
+  // used to show hardcoded placeholder dates that never reflected an actual
+  // save — none of the Master Data sections tracked a timestamp at all.
+  // This records one per section, stamped whenever that section is saved.
+  const [masterDataTimestamps, setMasterDataTimestamps] = useState({});
+
   // CSC Monthly Transactions State
   const [cscTransData, setCscTransData] = useState({
     isCscActive: false,
@@ -381,6 +387,7 @@ export default function App() {
     setShareCapitalData({});
     setCscDetailsData({});
     setLoanData({});
+    setMasterDataTimestamps({});
     setBusinessPerformanceData({});
     setCscTransData({
       isCscActive: false,
@@ -641,6 +648,7 @@ export default function App() {
         shareCapitalData: overrides.shareCapitalData !== undefined ? overrides.shareCapitalData : shareCapitalData,
         cscDetailsData: overrides.cscDetailsData !== undefined ? overrides.cscDetailsData : cscDetailsData,
         loanData: overrides.loanData !== undefined ? overrides.loanData : loanData,
+        masterDataTimestamps: overrides.masterDataTimestamps !== undefined ? overrides.masterDataTimestamps : masterDataTimestamps,
         businessPerformanceData: overrides.businessPerformanceData !== undefined ? overrides.businessPerformanceData : businessPerformanceData,
         sales: overrides.sales !== undefined ? overrides.sales : (withdrawal || ''),
         deposit: overrides.deposit !== undefined ? overrides.deposit : (balance || ''),
@@ -756,6 +764,18 @@ export default function App() {
     }
   };
 
+  // Records when an MPCS Master Data section (Institutional Profile,
+  // Demographics, Compliance, Financials, Dividend, Share Capital, CSC,
+  // Loan) was actually last saved, so the Master Data Directory list can
+  // show a real "Last updated" date instead of a hardcoded placeholder.
+  const stampMasterDataUpdated = (sectionKey) => {
+    setMasterDataTimestamps(prev => {
+      const updated = { ...prev, [sectionKey]: new Date().toISOString() };
+      saveMasterStateToStorage({ masterDataTimestamps: updated });
+      return updated;
+    });
+  };
+
   const loadMasterStateFromStorage = async (targetSocName = null, explicitEmail = null) => {
     try {
       const userEmail = getUserEmail(explicitEmail);
@@ -808,6 +828,7 @@ export default function App() {
         setShareCapitalData(saved.shareCapitalData || {});
         setCscDetailsData(saved.cscDetailsData || {});
         setLoanData(saved.loanData || {});
+        setMasterDataTimestamps(saved.masterDataTimestamps || {});
         setBusinessPerformanceData(saved.businessPerformanceData || {});
         if (saved.selectedSociety) setSelectedSociety(saved.selectedSociety);
 
@@ -928,6 +949,7 @@ export default function App() {
         if (fd.shareCapitalData) setShareCapitalData(fd.shareCapitalData);
         if (fd.cscDetailsData) setCscDetailsData(fd.cscDetailsData);
         if (fd.loanData) setLoanData(fd.loanData);
+        if (fd.masterDataTimestamps) setMasterDataTimestamps(fd.masterDataTimestamps);
         const loadedBizPerf = fd.businessPerformanceData || {
           totalIncome: fd.totalIncome || fd.financialsData?.totalIncome || fd['5.1'] || '',
           totalExpenses: fd.totalExpenses || fd.financialsData?.totalExpenses || '',
@@ -2365,6 +2387,7 @@ export default function App() {
                         managerName: data.secretaryName,
                         managerMobile: data.secretaryMobile
                       });
+                      stampMasterDataUpdated('instProfile');
                     }}
                     onNext={() => {
                       setCurrentMobileScreen('MPCS_DEMOGRAPHICS');
@@ -2432,6 +2455,7 @@ export default function App() {
                         loanIsActive={!!(loanData?.hasLoan && !loanData?.loanCleared)}
                         loanStatus={sectionStates?.loan?.status || 'NOT COMPLETED'}
                         cscIsActive={!!cscDetailsData?.isCscActive}
+                        masterDataUpdated={masterDataTimestamps}
                         lastUpdated=""
                         activeAlert={activeAlert}
                         onDismissAlert={dismissAlert}
@@ -2611,6 +2635,7 @@ export default function App() {
                             managerName: data.secretaryName,
                             managerMobile: data.secretaryMobile
                           });
+                          stampMasterDataUpdated('instProfile');
                         }}
                         onNext={() => setCurrentMobileScreen('MPCS_DEMOGRAPHICS')}
                         onBack={() => setCurrentMobileScreen('HOME')}
@@ -2623,6 +2648,7 @@ export default function App() {
                         onSaveDemographics={(data) => {
                           setDemographicsData(data);
                           saveMasterStateToStorage({ demographicsData: data });
+                          stampMasterDataUpdated('demographics');
                         }}
                         onNext={() => setCurrentMobileScreen('MPCS_COMPLIANCE')}
                         onBack={() => setCurrentMobileScreen('MPCS_INST_PROFILE')}
@@ -2640,6 +2666,7 @@ export default function App() {
                         onSaveCompliance={(data) => {
                           setComplianceData(data);
                           saveMasterStateToStorage({ complianceData: data });
+                          stampMasterDataUpdated('compliance');
                         }}
                         onNext={() => setCurrentMobileScreen('MPCS_FINANCIALS')}
                         onBack={() => setCurrentMobileScreen('MPCS_DEMOGRAPHICS')}
@@ -2657,6 +2684,7 @@ export default function App() {
                         onSaveFinancials={(data) => {
                           setFinancialsData(data);
                           saveMasterStateToStorage({ financialsData: data });
+                          stampMasterDataUpdated('financials');
                         }}
                         onNext={() => setCurrentMobileScreen('MPCS_DIVIDEND')}
                         onBack={() => setCurrentMobileScreen('MPCS_COMPLIANCE')}
@@ -2673,6 +2701,7 @@ export default function App() {
                         onSaveDividend={(data) => {
                           setDividendData(data);
                           saveMasterStateToStorage({ dividendData: data });
+                          stampMasterDataUpdated('dividend');
                         }}
                         onNext={() => setCurrentMobileScreen('MPCS_SHARE_CAPITAL')}
                         onBack={() => setCurrentMobileScreen('MPCS_FINANCIALS')}
@@ -2688,6 +2717,7 @@ export default function App() {
                         onSaveShareCapital={(data) => {
                           setShareCapitalData(data);
                           saveMasterStateToStorage({ shareCapitalData: data });
+                          stampMasterDataUpdated('shareCapital');
                         }}
                         onNext={() => setCurrentMobileScreen('MPCS_CSC_DETAILS')}
                         onBack={() => setCurrentMobileScreen('MPCS_DIVIDEND')}
@@ -2706,6 +2736,7 @@ export default function App() {
                         onSaveCscDetails={(data) => {
                           setCscDetailsData(data);
                           saveMasterStateToStorage({ cscDetailsData: data });
+                          stampMasterDataUpdated('csc');
                         }}
                         onNext={() => setCurrentMobileScreen('MPCS_LOAN')}
                         onBack={() => setCurrentMobileScreen('MPCS_SHARE_CAPITAL')}
@@ -2723,6 +2754,7 @@ export default function App() {
                         onSaveLoan={(data) => {
                           setLoanData(data);
                           saveMasterStateToStorage({ loanData: data });
+                          stampMasterDataUpdated('loan');
                         }}
                         onNext={() => {
                           showToast('✅ Master Data Saved Successfully!');
