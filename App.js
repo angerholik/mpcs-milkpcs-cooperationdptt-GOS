@@ -940,7 +940,15 @@ export default function App() {
         if (row.president_name || fd['2.1']) setPresidentName(row.president_name || fd['2.1']);
         if (row.president_mobile) setPresidentMobile(row.president_mobile);
         if (row.manager_mobile) setManagerMobile(row.manager_mobile);
-        if (row.manager_name) setManagerName(row.manager_name);
+        // mpcs_submissions has no manager_name column (unlike milk_pcs_submissions,
+        // which does) — it only ever lands in form_data.managerName/secretaryName.
+        // Every other field here falls back to its form_data equivalent when the
+        // top-level column is empty; this one didn't, so a transient local blank
+        // (e.g. mid-reload, before AsyncStorage restore resolves) had nothing to
+        // self-heal from and could stick permanently.
+        if (row.manager_name || fd.managerName || fd.secretaryName) {
+          setManagerName(row.manager_name || fd.managerName || fd.secretaryName);
+        }
 
         // Milk PCS stores demographics as flat columns (not inside a
         // form_data JSON blob like MPCS), and audit/AGM inside the
