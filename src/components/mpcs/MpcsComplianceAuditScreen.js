@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, Platform, Pressable } from 'react-native';
 import { MaterialIcons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useAutosave } from '../../hooks/useAutosave';
 
 const COLORS = {
   surface: '#ffffff',
@@ -124,10 +125,18 @@ export default function MpcsComplianceAuditScreen({
     setAgmYear(calculatedFy);
   };
 
-  const handleSave = () => {
+  const persistCompliance = () => {
     if (onSaveCompliance) {
       onSaveCompliance({ auditYear, auditDate, auditStatus, agmYear, agmDate, agmStatus });
     }
+  };
+
+  // Persists edits shortly after they change, so a value entered here
+  // survives even if the tab reloads before "Save" is tapped.
+  useAutosave(persistCompliance, [auditYear, auditDate, auditStatus, agmYear, agmDate, agmStatus]);
+
+  const handleSave = () => {
+    persistCompliance();
     setModalVisible(false);
   };
 

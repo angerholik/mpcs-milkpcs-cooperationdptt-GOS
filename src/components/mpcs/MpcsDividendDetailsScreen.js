@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, Platform, Pressable } from 'react-native';
 import { MaterialIcons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useAutosave } from '../../hooks/useAutosave';
 
 const COLORS = {
   surface: '#ffffff',
@@ -51,10 +52,18 @@ export default function MpcsDividendDetailsScreen({
     if (initialDate) setDistributionDate(initialDate);
   }, [initialPolicy, initialAnnounced, initialRate, initialAmount, initialDate]);
 
-  const handleSave = () => {
+  const persistDividend = () => {
     if (onSaveDividend) {
       onSaveDividend({ dividendPolicy, dividendAnnounced, dividendRate, dividendAmount, distributionDate });
     }
+  };
+
+  // Persists edits shortly after typing stops, so a value entered here
+  // survives even if the tab reloads before "Save" is tapped.
+  useAutosave(persistDividend, [dividendPolicy, dividendAnnounced, dividendRate, dividendAmount, distributionDate]);
+
+  const handleSave = () => {
+    persistDividend();
     setModalVisible(false);
   };
 

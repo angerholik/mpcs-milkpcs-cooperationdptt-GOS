@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, Platform, Pressable } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useAutosave } from '../../hooks/useAutosave';
 
 const COLORS = {
   surface: '#ffffff',
@@ -88,9 +89,17 @@ export default function MpcsLoanSetupScreen({
     setLoanCleared(initialLoanCleared);
   }, [initialHasLoan, initialLoanType, initialSanctionDate, initialBeneficiaries, initialLoanExtended, initialLoanCleared]);
 
-  const handleSave = (overrides = {}) => {
+  const persistLoan = (overrides = {}) => {
     const data = { hasLoan, loanType, sanctionDate, beneficiaries, loanExtended, loanCleared, ...overrides };
     if (onSaveLoan) onSaveLoan(data);
+  };
+
+  // Persists edits shortly after they change, so a value entered here
+  // survives even if the tab reloads before "Save" is tapped.
+  useAutosave(() => persistLoan(), [hasLoan, loanType, sanctionDate, beneficiaries, loanExtended, loanCleared]);
+
+  const handleSave = (overrides = {}) => {
+    persistLoan(overrides);
     setModalVisible(false);
   };
 

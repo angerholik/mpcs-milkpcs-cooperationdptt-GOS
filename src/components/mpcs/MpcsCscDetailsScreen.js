@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, Platform, Pressable } from 'react-native';
 import { MaterialIcons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useAutosave } from '../../hooks/useAutosave';
 
 const COLORS = {
   surface: '#ffffff',
@@ -57,10 +58,18 @@ export default function MpcsCscDetailsScreen({
     setIsCscActive(initialIsCscActive);
   }, [initialOperator, initialCscId, initialCenterName, initialMobile, initialEmail, initialActiveServices, initialIsCscActive]);
 
-  const handleSave = () => {
+  const persistCscDetails = () => {
     if (onSaveCscDetails) {
       onSaveCscDetails({ isCscActive, cscOperatorName, cscId, cscCenterName, mobileNumber, emailId, activeServicesCount });
     }
+  };
+
+  // Persists edits shortly after typing stops, so a value entered here
+  // survives even if the tab reloads before "Save" is tapped.
+  useAutosave(persistCscDetails, [isCscActive, cscOperatorName, cscId, cscCenterName, mobileNumber, emailId, activeServicesCount]);
+
+  const handleSave = () => {
+    persistCscDetails();
     setModalVisible(false);
   };
 

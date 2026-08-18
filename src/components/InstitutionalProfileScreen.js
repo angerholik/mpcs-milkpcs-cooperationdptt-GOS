@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, Platform, Pressable, Switch } from 'react-native';
 import { MaterialIcons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useAutosave } from '../hooks/useAutosave';
 
 const COLORS = {
   surface: '#ffffff',
@@ -171,7 +172,7 @@ export default function InstitutionalProfileScreen({
     setEditLoanSanctionDate(formatFromIsoDate(isoValue));
   };
 
-  const handleSaveProfile = () => {
+  const persistProfile = () => {
     if (setCenterName) setCenterName(editCenter);
     if (setRegNo) setRegNo(editRegNo);
     if (setPresidentName) setPresidentName(editPresName);
@@ -192,9 +193,6 @@ export default function InstitutionalProfileScreen({
     if (setLoanBeneficiaries) setLoanBeneficiaries(editLoanBeneficiaries);
     if (setLoanExtended) setLoanExtended(editLoanExtended);
 
-    setModalVisible(false);
-    setIsSaved(true);
-    setTimeout(() => setIsSaved(false), 2500);
     if (onSave) {
       onSave({
         centerName: editCenter,
@@ -216,6 +214,22 @@ export default function InstitutionalProfileScreen({
         masterLoanExtended: editLoanExtended
       });
     }
+  };
+
+  // Persists edits to AsyncStorage shortly after typing stops, so a value
+  // typed here survives even if the tab reloads before "Save Changes" is
+  // tapped (see src/hooks/useAutosave.js).
+  useAutosave(persistProfile, [
+    editCenter, editRegNo, editPresName, editPresMob, editMgrName, editMgrMob,
+    editAuditDate, editAuditYear, editAuditStatus, editAgmDate, editAgmYear, editAgmStatus,
+    editHasLoan, editLoanType, editLoanSanctionDate, editLoanBeneficiaries, editLoanExtended
+  ]);
+
+  const handleSaveProfile = () => {
+    persistProfile();
+    setModalVisible(false);
+    setIsSaved(true);
+    setTimeout(() => setIsSaved(false), 2500);
   };
 
   const handleSaveAndNext = () => {

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, Platform, Pressable } from 'react-native';
 import { MaterialIcons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useAutosave } from '../../hooks/useAutosave';
 
 const COLORS = {
   surface: '#ffffff',
@@ -62,7 +63,7 @@ export default function MpcsInstitutionalProfileScreen({
     setEditSecMobile(secretaryMobile || '');
   }, [societyName, panCard, regNumber, regDate, presidentName, presidentMobile, secretaryName, secretaryMobile]);
 
-  const handleSave = () => {
+  const persistProfile = () => {
     if (onSaveProfile) {
       onSaveProfile({
         societyName: editSocietyName,
@@ -77,6 +78,15 @@ export default function MpcsInstitutionalProfileScreen({
         managerMobile: editSecMobile,
       });
     }
+  };
+
+  // Persists edits to AsyncStorage shortly after typing stops, so a value
+  // typed here survives even if the tab reloads before "Save Changes" is
+  // tapped (see src/hooks/useAutosave.js).
+  useAutosave(persistProfile, [editSocietyName, editPanCard, editRegNumber, editRegDate, editPresName, editPresMobile, editSecName, editSecMobile]);
+
+  const handleSave = () => {
+    persistProfile();
     setModalVisible(false);
   };
 

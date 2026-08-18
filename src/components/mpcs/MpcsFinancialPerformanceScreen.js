@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, Platform, Pressable } from 'react-native';
 import { MaterialIcons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useAutosave } from '../../hooks/useAutosave';
 
 const COLORS = {
   surface: '#ffffff',
@@ -54,10 +55,18 @@ export default function MpcsFinancialPerformanceScreen({
     if (initialProfitOrLoss) setProfitOrLoss(initialProfitOrLoss);
   }, [initialTurnover, initialIncome, initialExpenses, initialNetProfit, initialProfitability, initialProfitOrLoss]);
 
-  const handleSave = () => {
+  const persistFinancials = () => {
     if (onSaveFinancials) {
       onSaveFinancials({ annualTurnover, totalIncome, totalExpenses, netProfit, profitOrLoss, profitability });
     }
+  };
+
+  // Persists edits shortly after typing stops, so a value entered here
+  // survives even if the tab reloads before "Save" is tapped.
+  useAutosave(persistFinancials, [annualTurnover, totalIncome, totalExpenses, netProfit, profitOrLoss, profitability]);
+
+  const handleSave = () => {
+    persistFinancials();
     setModalVisible(false);
   };
 

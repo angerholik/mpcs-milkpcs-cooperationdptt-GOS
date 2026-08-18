@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, Platform, Pressable } from 'react-native';
 import { MaterialIcons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useAutosave } from '../../hooks/useAutosave';
 
 const COLORS = {
   surface: '#ffffff',
@@ -48,10 +49,18 @@ export default function MpcsShareCapitalScreen({
     if (initialDate) setAsOfDate(initialDate);
   }, [initialAuthorized, initialPaidUp, initialDeposits, initialDate]);
 
-  const handleSave = () => {
+  const persistShareCapital = () => {
     if (onSaveShareCapital) {
       onSaveShareCapital({ authorizedCapital, paidUpCapital, totalDeposits, asOfDate });
     }
+  };
+
+  // Persists edits shortly after typing stops, so a value entered here
+  // survives even if the tab reloads before "Save" is tapped.
+  useAutosave(persistShareCapital, [authorizedCapital, paidUpCapital, totalDeposits, asOfDate]);
+
+  const handleSave = () => {
+    persistShareCapital();
     setModalVisible(false);
   };
 
