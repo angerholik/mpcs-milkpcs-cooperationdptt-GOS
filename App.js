@@ -503,6 +503,19 @@ export default function App() {
     return `@mpcs_last_selected_society_${emailSafe}`;
   };
 
+  // The last-selected-society pointer is stored as {name, type} JSON so an
+  // MPCS and a Milk PCS society with the same name can be told apart —
+  // older stored values are a bare name string, handled here for backward
+  // compatibility with whatever's already sitting in an inspector's device.
+  const parseLastSelectedSociety = (rawStored) => {
+    if (!rawStored) return { name: '', type: null };
+    try {
+      const parsed = JSON.parse(rawStored);
+      if (parsed && typeof parsed === 'object') return { name: parsed.name || '', type: parsed.type || null };
+    } catch (e) {}
+    return { name: rawStored, type: null };
+  };
+
   // ─── Per-user institutions list storage ───────────────────────────────────
   const getUserInstitutionsKey = (email = null) => {
     const activeEmail = getUserEmail(email);
@@ -568,6 +581,20 @@ export default function App() {
     setActiveView(soc?.type === 'MPCS' ? 'MPCS' : 'MAIN');
     setCurrentMobileScreen('HOME');
     setActiveBottomTab('home');
+
+    // This is the one place "the inspector is now working on this society"
+    // gets recorded — deliberately NOT inside saveMasterStateToStorage (see
+    // its comment). A slow autosave from whichever society was open before
+    // this selection can still resolve after this point; if it also wrote
+    // this pointer, it could silently overwrite it back, and reopening the
+    // app (e.g. after a browser tab was backgrounded and reloaded) would
+    // restore the wrong one — confirmed happening with two same-inspector
+    // societies named "Bermiok" (MPCS and Milk PCS).
+    if (soc?.name) {
+      try {
+        await AsyncStorage.setItem(getLastSelectedSocietyKey(getUserEmail()), JSON.stringify({ name: soc.name, type: soc.type || null }));
+      } catch (e) {}
+    }
 
     if (isNewRegistration) {
       // NEW REGISTRATION: Wipe all fields & 9 sections so new society starts 100% BLANK
@@ -664,9 +691,16 @@ export default function App() {
         type: overrides.type !== undefined ? overrides.type : selectedSociety?.type
       };
       await AsyncStorage.setItem(key, JSON.stringify(stateObj));
-      await AsyncStorage.setItem(getLastSelectedSocietyKey(userEmail), activeSocName);
+      // The "last selected society" pointer is deliberately NOT written here.
+      // This function runs on every field save from every screen, including
+      // ones that can resolve late (after the inspector has already switched
+      // to a different society) — writing the pointer on every call let a
+      // slow save from the PREVIOUS society silently overwrite which one is
+      // "active" after the switch. It's written once, explicitly, in
+      // handleSelectSociety instead — the one place that actually reflects
+      // the inspector's deliberate choice.
 
-      // ── Cloud Sync to Supabase Backend on Every Master Data Save ──
+      // ── Cloud Sync to Backend on Every Master Data Save ──
       // Queued so concurrent saves from different screens can't race each
       // other's Supabase find-existing-then-insert/update calls and let an
       // earlier-triggered-but-slower-to-resolve sync clobber a later, more
@@ -780,8 +814,12 @@ export default function App() {
     try {
       const userEmail = getUserEmail(explicitEmail);
       const lastSocKey = getLastSelectedSocietyKey(userEmail);
-      const rawSocName = targetSocName || (await AsyncStorage.getItem(lastSocKey)) || selectedSociety?.name || centerName?.trim();
-      const activeSocName = typeof rawSocName === 'string' ? rawSocName : (rawSocName?.name || '');
+      const rawTargetSocName = targetSocName
+        ? (typeof targetSocName === 'string' ? targetSocName : (targetSocName?.name || ''))
+        : '';
+      const activeSocName = rawTargetSocName
+        || parseLastSelectedSociety(await AsyncStorage.getItem(lastSocKey)).name
+        || selectedSociety?.name || centerName?.trim() || '';
       if (!activeSocName || !activeSocName.trim()) {
         resetAllFormFields();
         return false;
@@ -997,9 +1035,14 @@ export default function App() {
       // (fresh install, cleared app data), that blank name made the cloud
       // fallback below silently no-op, so a real submission already in
       // Supabase never made it back to the screen.
-      const lastSocName = (await AsyncStorage.getItem(getLastSelectedSocietyKey(activeEmail)))
-        || selectedSociety?.name || centerName?.trim();
-      const matchedInstitution = institutions.find(i => i.name === lastSocName);
+      const storedLastSelected = parseLastSelectedSociety(await AsyncStorage.getItem(getLastSelectedSocietyKey(activeEmail)));
+      const lastSocName = storedLastSelected.name || selectedSociety?.name || centerName?.trim();
+      const lastSocType = storedLastSelected.name ? storedLastSelected.type : selectedSociety?.type;
+      // Match on type too, not just name — an inspector can register an
+      // MPCS and a Milk PCS society with the same name (e.g. "Bermiok"),
+      // and a name-only match could restore the wrong one's dashboard.
+      const matchedInstitution = institutions.find(i => i.name === lastSocName && (!lastSocType || i.type === lastSocType))
+        || institutions.find(i => i.name === lastSocName);
       if (matchedInstitution) {
         // This whole function re-runs from scratch on every mount of the
         // effect that calls supabase.auth.getSession() — which includes a
