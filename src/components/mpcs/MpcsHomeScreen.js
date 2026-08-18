@@ -60,6 +60,8 @@ export default function HomeScreen({
   businessStatus = "NOT COMPLETED",
   cscTransStatus = "NOT COMPLETED",
   activitiesStatus = "0 ENTRIES",
+  loanIsActive = false,
+  loanStatus = "NOT APPLICABLE",
   lastUpdated = "",
   activeAlert,
   onDismissAlert,
@@ -349,6 +351,40 @@ export default function HomeScreen({
                   </>
                 )}
               </Pressable>
+
+              {/* Loan Status */}
+              <Pressable
+                style={({ hovered }) => [
+                  styles.moduleCard,
+                  Platform.OS === 'web' && { transition: 'all 0.3s' },
+                  hovered && { borderColor: '#cbd5e1', shadowOpacity: 0.08, elevation: 4 }
+                ]}
+                onPress={() => onNavigateScreen && onNavigateScreen('MPCS_LOAN_STATUS')}
+              >
+                {({ hovered }) => (
+                  <>
+                    <View style={styles.moduleCardHeader}>
+                      <View style={[
+                        styles.moduleIconBox,
+                        {backgroundColor: !loanIsActive ? COLORS.slate50 : loanStatus?.startsWith('COMPLETED') ? COLORS.emerald50 : COLORS.amber50, borderColor: !loanIsActive ? COLORS.slate100 : loanStatus?.startsWith('COMPLETED') ? '#a7f3d0' : 'rgba(254,243,199,0.5)'},
+                        Platform.OS === 'web' && { transition: 'all 0.3s' },
+                        hovered && { backgroundColor: '#fef2f2', borderColor: '#fee2e2' }
+                      ]}>
+                        <MaterialCommunityIcons name="bank-outline" size={24} color={!loanIsActive ? COLORS.slate400 : loanStatus?.startsWith('COMPLETED') ? COLORS.emerald700 : COLORS.amber600} />
+                      </View>
+                      <View style={[styles.statusPill, {backgroundColor: !loanIsActive ? COLORS.slate100 : loanStatus?.startsWith('COMPLETED') ? COLORS.emerald50 : COLORS.amber50, borderColor: !loanIsActive ? 'rgba(226,232,240,0.5)' : loanStatus?.startsWith('COMPLETED') ? 'rgba(16,185,129,0.3)' : 'rgba(254,243,199,0.5)'}]}>
+                        <Text style={[styles.statusPillText, {color: !loanIsActive ? COLORS.slate500 : loanStatus?.startsWith('COMPLETED') ? COLORS.emerald700 : COLORS.amber700}]}>
+                          {loanIsActive ? loanStatus : 'NOT APPLICABLE'}
+                        </Text>
+                      </View>
+                    </View>
+                    <Text style={[styles.moduleCardTitle, Platform.OS === 'web' && { transition: 'all 0.3s' }, hovered && { color: '#7a1a1f' }]}>Loan Status</Text>
+                    <Text style={styles.moduleCardDesc}>
+                      {loanIsActive ? 'Report this month\'s loan recovery.' : 'No active loan on record for this society.'}
+                    </Text>
+                  </>
+                )}
+              </Pressable>
             </View>
           </View>
         )}
@@ -365,7 +401,8 @@ export default function HomeScreen({
                 { id: 'MPCS_FINANCIALS', title: 'Financial Performance', icon: 'chart-line', updated: 'Needs update' },
                 { id: 'MPCS_DIVIDEND', title: 'Dividend Details', icon: 'cash-multiple', updated: 'Needs update' },
                 { id: 'MPCS_SHARE_CAPITAL', title: 'Share Capital', icon: 'chart-pie', updated: 'Needs update' },
-                { id: 'MPCS_CSC_DETAILS', title: 'CSC Details', icon: 'laptop', updated: 'Needs update' }
+                { id: 'MPCS_CSC_DETAILS', title: 'CSC Details', icon: 'laptop', updated: 'Needs update' },
+                { id: 'MPCS_LOAN', title: 'Loan Details', icon: 'bank-outline', updated: 'Needs update' }
               ].map((item, index) => (
                 <Pressable 
                   key={item.id}

@@ -210,6 +210,7 @@ function normalizeMpcsAuditFields(row) {
   }
   const compliance = fd.complianceData || {};
   const financials = fd.financialsData || {};
+  const loan = fd.loanData || {};
   let audit_done = row.audit_done;
   if (compliance.auditStatus) {
     audit_done = compliance.auditStatus === 'Completed'
@@ -222,7 +223,8 @@ function normalizeMpcsAuditFields(row) {
   const net_profit_loss = financials.profitOrLoss === 'NO_PROFIT_NO_LOSS'
     ? null
     : (financials.netProfit || row.net_profit_loss);
-  return { ...row, audit_done, audit_year, audit_category, is_profit, net_profit_loss };
+  const has_loan = loan.hasLoan !== undefined ? !!(loan.hasLoan && !loan.loanCleared) : !!row.has_loan;
+  return { ...row, audit_done, audit_year, audit_category, is_profit, net_profit_loss, has_loan };
 }
 
 // Helper to parse MPCS Audit & AGM details
@@ -832,21 +834,27 @@ function MPCSDetailModal({ row, onClose }) {
             })()}
           </Sec>
 
-          {/* F. Active Loan Status (Supplemental) */}
+          {/* F. Active Loan Status */}
           <Sec title="F. Active Loan Status">
-            <div className="detail-grid">
-              <D l="Active Loan?" v={fd['8.0'] || (fd.supplementalData?.societyType ? 'Yes' : (row.has_loan ? 'Yes' : 'No'))} />
-              {(fd['8.0'] === 'Yes' || row.has_loan || fd.supplementalData) && (
-                <>
-                  <D l="Society / Business Type" v={fd['8.1'] || fd.supplementalData?.societyType || fd.supplementalData?.natureOfBusiness} />
-                  <D l="Sanction / Formation Date" v={fd['8.2'] || fd.supplementalData?.dateOfFormation} />
-                  <D l="Area of Operation" v={fd['8.3'] || fd.supplementalData?.areaOfOperation} />
-                  <D l="Loan Extended" v={fd['8.4'] || row.loan_amount} money />
-                  <D l="Loan Recovered" v={fd['8.5']} money />
-                  <D l="Loan Outstanding" v={fd['8.6']} money />
-                </>
-              )}
-            </div>
+            {(() => {
+              const loan = fd.loanData || {};
+              const isActive = loan.hasLoan !== undefined ? (loan.hasLoan && !loan.loanCleared) : !!row.has_loan;
+              return (
+                <div className="detail-grid">
+                  <D l="Active Loan?" v={isActive ? 'Yes' : (loan.hasLoan && loan.loanCleared ? 'Cleared' : 'No')} />
+                  {(loan.hasLoan || row.has_loan) && (
+                    <>
+                      <D l="Loan Type" v={loan.loanType || row.loan_name} />
+                      <D l="Sanction Date" v={loan.sanctionDate} />
+                      <D l="No. of Beneficiaries" v={loan.beneficiaries} />
+                      <D l="Loan Extended" v={loan.loanExtended || row.loan_amount || fd['8.4']} money />
+                      <D l="Loan Recovered" v={fd['8.5']} money />
+                      <D l="Loan Outstanding" v={fd['8.6']} money />
+                    </>
+                  )}
+                </div>
+              );
+            })()}
           </Sec>
 
           {/* G. Dividend Details */}

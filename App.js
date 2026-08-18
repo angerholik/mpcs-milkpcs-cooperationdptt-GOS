@@ -52,6 +52,8 @@ import MpcsFinancialPerformanceScreen from './src/components/mpcs/MpcsFinancialP
 import MpcsDividendDetailsScreen from './src/components/mpcs/MpcsDividendDetailsScreen';
 import MpcsShareCapitalScreen from './src/components/mpcs/MpcsShareCapitalScreen';
 import MpcsCscDetailsScreen from './src/components/mpcs/MpcsCscDetailsScreen';
+import MpcsLoanSetupScreen from './src/components/mpcs/MpcsLoanSetupScreen';
+import MpcsLoanStatusScreen from './src/components/mpcs/MpcsLoanStatusScreen';
 import MpcsReviewSubmitScreen from './src/components/mpcs/MpcsReviewSubmitScreen';
 
 import { supabase, saveMilkPcsSubmission, saveMpcsSubmission, uploadPhoto } from './src/supabase';
@@ -204,6 +206,11 @@ export default function App() {
   const [shareCapitalData, setShareCapitalData] = useState({});
   const [cscDetailsData, setCscDetailsData] = useState({});
   const [businessPerformanceData, setBusinessPerformanceData] = useState({});
+  // Master Data: does this MPCS society have a loan on record, and its
+  // type/sanction date/amount extended. Monthly recovery status is tracked
+  // separately per-society-per-month via getMilkSectionData(..., 'mpcs_loan'),
+  // the same split already used for Milk PCS loan tracking.
+  const [loanData, setLoanData] = useState({});
   
   // CSC Monthly Transactions State
   const [cscTransData, setCscTransData] = useState({
@@ -373,6 +380,7 @@ export default function App() {
     setBankData({});
     setShareCapitalData({});
     setCscDetailsData({});
+    setLoanData({});
     setBusinessPerformanceData({});
     setCscTransData({
       isCscActive: false,
@@ -572,7 +580,8 @@ export default function App() {
         dividendData: {},
         bankData: {},
         shareCapitalData: {},
-        cscDetailsData: {}
+        cscDetailsData: {},
+        loanData: {}
       }, soc?.name || '');
       await refreshMilkSectionStatuses();
     } else {
@@ -631,6 +640,7 @@ export default function App() {
         bankData: overrides.bankData !== undefined ? overrides.bankData : bankData,
         shareCapitalData: overrides.shareCapitalData !== undefined ? overrides.shareCapitalData : shareCapitalData,
         cscDetailsData: overrides.cscDetailsData !== undefined ? overrides.cscDetailsData : cscDetailsData,
+        loanData: overrides.loanData !== undefined ? overrides.loanData : loanData,
         businessPerformanceData: overrides.businessPerformanceData !== undefined ? overrides.businessPerformanceData : businessPerformanceData,
         sales: overrides.sales !== undefined ? overrides.sales : (withdrawal || ''),
         deposit: overrides.deposit !== undefined ? overrides.deposit : (balance || ''),
@@ -727,6 +737,10 @@ export default function App() {
             annualTurnover: stateObj.financialsData?.annualTurnover,
             profitOrLoss: stateObj.financialsData?.profitOrLoss || 'PROFIT',
             netProfit: stateObj.financialsData?.netProfit,
+            // Same reasoning as auditDone above: without this, has_loan would
+            // silently flip back to false on every autosave after the loan was
+            // actually set up, since formData.hasLoan is otherwise never set here.
+            hasLoan: !!(stateObj.loanData?.hasLoan && !stateObj.loanData?.loanCleared),
             totalMembers: calcMembers,
             reportedBy: userProfile?.name || 'Cooperative Inspector',
             inspectorEmail: userEmail,
@@ -793,6 +807,7 @@ export default function App() {
         setBankData(saved.bankData || {});
         setShareCapitalData(saved.shareCapitalData || {});
         setCscDetailsData(saved.cscDetailsData || {});
+        setLoanData(saved.loanData || {});
         setBusinessPerformanceData(saved.businessPerformanceData || {});
         if (saved.selectedSociety) setSelectedSociety(saved.selectedSociety);
 
@@ -912,6 +927,7 @@ export default function App() {
         if (fd.bankData) setBankData(fd.bankData);
         if (fd.shareCapitalData) setShareCapitalData(fd.shareCapitalData);
         if (fd.cscDetailsData) setCscDetailsData(fd.cscDetailsData);
+        if (fd.loanData) setLoanData(fd.loanData);
         const loadedBizPerf = fd.businessPerformanceData || {
           totalIncome: fd.totalIncome || fd.financialsData?.totalIncome || fd['5.1'] || '',
           totalExpenses: fd.totalExpenses || fd.financialsData?.totalExpenses || '',
@@ -1181,6 +1197,10 @@ export default function App() {
     let evData = null;
     let actsData = null;
     let compData = null;
+    let mpcsLoanMonthlyData = null;
+    if (!recordOverride && selectedSociety?.type === 'MPCS') {
+      mpcsLoanMonthlyData = await getMilkSectionData(activeCenterName, activeReportingMonth, 'mpcs_loan');
+    }
     if (!recordOverride && selectedSociety?.type === 'MILK') {
        console.log('[CORE DEBUG] getMilkSectionData keys:', { activeCenterName, activeReportingMonth });
        opsData = await getMilkSectionData(activeCenterName, activeReportingMonth, 'operations');
@@ -1609,11 +1629,21 @@ export default function App() {
       netSurplusDeficit: businessPerformanceData?.netSurplusDeficit || '',
       mSc, fSc, mSt, fSt, mObc, fObc, mGen, fGen,
       totalMale: String(totalMaleCalc), totalFemale: String(totalFemaleCalc), totalMembers: String(totalMembersCalc),
-      hasLoan: isMilk ? (masterHasLoan && !masterLoanCleared) : (compData?.hasLoan ?? hasLoan), 
-      loanName: isMilk ? masterLoanType : (compData?.loanType ?? loanName), 
-      loanAmount: isMilk ? masterLoanExtended : (compData?.loanAmount ?? loanAmount), 
-      paidAmount: isMilk ? ((masterHasLoan && !masterLoanCleared) ? (compData?.loanRecovered || '0') : '') : (compData?.loanRepaid ?? paidAmount), 
-      remainingDue: isMilk ? ((masterHasLoan && !masterLoanCleared) ? (compData?.loanOutstanding || masterLoanExtended || '0') : '') : (compData?.loanDue ?? remainingDue),
+      // Same dead-state bug as audit/agm/profit below: compData is only ever
+      // populated for Milk PCS, and the local hasLoan/loanName/loanAmount/
+      // paidAmount/remainingDue state is never set by any MPCS screen. Read
+      // the actual Loan Details Master Data (loanData) and its monthly
+      // recovery record (mpcsLoanMonthlyData) instead.
+      hasLoan: isMilk ? (masterHasLoan && !masterLoanCleared) : (loanData?.hasLoan && !loanData?.loanCleared),
+      loanName: isMilk ? masterLoanType : (loanData?.loanType || ''),
+      loanAmount: isMilk ? masterLoanExtended : (loanData?.loanExtended || ''),
+      paidAmount: isMilk
+        ? ((masterHasLoan && !masterLoanCleared) ? (compData?.loanRecovered || '0') : '')
+        : ((loanData?.hasLoan && !loanData?.loanCleared) ? (mpcsLoanMonthlyData?.loanRecovered || '0') : ''),
+      remainingDue: isMilk
+        ? ((masterHasLoan && !masterLoanCleared) ? (compData?.loanOutstanding || masterLoanExtended || '0') : '')
+        : ((loanData?.hasLoan && !loanData?.loanCleared) ? (mpcsLoanMonthlyData?.loanOutstanding || loanData?.loanExtended || '0') : ''),
+      loanData,
       activities: activitiesForSubmission,
       // compData comes from getMilkSectionData(..., 'compliance'), which only the
       // Milk PCS ComplianceScreen ever writes (via saveMilkSectionData) — for MPCS
@@ -2397,6 +2427,8 @@ export default function App() {
                         businessStatus={sectionStates?.business?.status || 'NOT COMPLETED'}
                         cscTransStatus={sectionStates?.csc?.status || 'NOT COMPLETED'}
                         activitiesStatus={`${activityItems.length} ENTRIES`}
+                        loanIsActive={!!(loanData?.hasLoan && !loanData?.loanCleared)}
+                        loanStatus={sectionStates?.loan?.status || 'NOT COMPLETED'}
                         lastUpdated=""
                         activeAlert={activeAlert}
                         onDismissAlert={dismissAlert}
@@ -2672,11 +2704,50 @@ export default function App() {
                           setCscDetailsData(data);
                           saveMasterStateToStorage({ cscDetailsData: data });
                         }}
+                        onNext={() => setCurrentMobileScreen('MPCS_LOAN')}
+                        onBack={() => setCurrentMobileScreen('MPCS_SHARE_CAPITAL')}
+                      />
+                    )}
+
+                    {currentMobileScreen === 'MPCS_LOAN' && (
+                      <MpcsLoanSetupScreen
+                        initialHasLoan={loanData?.hasLoan || false}
+                        initialLoanType={loanData?.loanType || ''}
+                        initialSanctionDate={loanData?.sanctionDate || ''}
+                        initialBeneficiaries={loanData?.beneficiaries || ''}
+                        initialLoanExtended={loanData?.loanExtended || ''}
+                        initialLoanCleared={loanData?.loanCleared || false}
+                        onSaveLoan={(data) => {
+                          setLoanData(data);
+                          saveMasterStateToStorage({ loanData: data });
+                        }}
                         onNext={() => {
                           showToast('✅ Master Data Saved Successfully!');
                           setCurrentMobileScreen('HOME');
                         }}
-                        onBack={() => setCurrentMobileScreen('MPCS_SHARE_CAPITAL')}
+                        onBack={() => setCurrentMobileScreen('MPCS_CSC_DETAILS')}
+                      />
+                    )}
+
+                    {currentMobileScreen === 'MPCS_LOAN_STATUS' && (
+                      <MpcsLoanStatusScreen
+                        societyName={selectedSociety?.name || centerName?.trim() || ''}
+                        reportingMonth={reportingMonth || ''}
+                        masterHasLoan={loanData?.hasLoan || false}
+                        masterLoanCleared={loanData?.loanCleared || false}
+                        masterLoanType={loanData?.loanType || ''}
+                        masterLoanExtended={loanData?.loanExtended || ''}
+                        onLoanCleared={() => {
+                          const updated = { ...loanData, loanCleared: true };
+                          setLoanData(updated);
+                          saveMasterStateToStorage({ loanData: updated });
+                          updateSectionState('loan', { status: 'COMPLETED ✓' });
+                        }}
+                        onSaveNext={() => {
+                          updateSectionState('loan', { status: 'COMPLETED ✓' });
+                          setCurrentMobileScreen('HOME');
+                        }}
+                        onBack={() => setCurrentMobileScreen('HOME')}
                       />
                     )}
 
