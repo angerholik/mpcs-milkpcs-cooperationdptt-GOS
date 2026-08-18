@@ -31,6 +31,7 @@ export default function MpcsFinancialPerformanceScreen({
   initialExpenses = "",
   initialNetProfit = "",
   initialProfitability = "",
+  initialProfitOrLoss = "PROFIT",
   onSaveFinancials,
   onNext,
   onBack
@@ -41,7 +42,7 @@ export default function MpcsFinancialPerformanceScreen({
   const [totalIncome, setTotalIncome] = useState(initialIncome);
   const [totalExpenses, setTotalExpenses] = useState(initialExpenses);
   const [netProfit, setNetProfit] = useState(initialNetProfit);
-  const [profitOrLoss, setProfitOrLoss] = useState('PROFIT');
+  const [profitOrLoss, setProfitOrLoss] = useState(initialProfitOrLoss);
   const [profitability, setProfitability] = useState(initialProfitability);
 
   React.useEffect(() => {
@@ -50,7 +51,8 @@ export default function MpcsFinancialPerformanceScreen({
     if (initialExpenses) setTotalExpenses(initialExpenses);
     if (initialNetProfit) setNetProfit(initialNetProfit);
     if (initialProfitability) setProfitability(initialProfitability);
-  }, [initialTurnover, initialIncome, initialExpenses, initialNetProfit, initialProfitability]);
+    if (initialProfitOrLoss) setProfitOrLoss(initialProfitOrLoss);
+  }, [initialTurnover, initialIncome, initialExpenses, initialNetProfit, initialProfitability, initialProfitOrLoss]);
 
   const handleSave = () => {
     if (onSaveFinancials) {

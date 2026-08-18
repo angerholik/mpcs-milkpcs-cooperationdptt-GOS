@@ -2604,6 +2604,7 @@ export default function App() {
                         initialExpenses={financialsData?.totalExpenses || ''}
                         initialNetProfit={financialsData?.netProfit || ''}
                         initialProfitability={financialsData?.profitability || ''}
+                        initialProfitOrLoss={financialsData?.profitOrLoss || 'PROFIT'}
                         onSaveFinancials={(data) => {
                           setFinancialsData(data);
                           saveMasterStateToStorage({ financialsData: data });
