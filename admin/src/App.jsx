@@ -316,6 +316,7 @@ const I = {
   user:    'M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2M12 11a4 4 0 100-8 4 4 0 000 8z',
   key:     'M21 2l-2 2m-7.61 7.61a5.5 5.5 0 11-7.778 7.778 5.5 5.5 0 017.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3L15.5 7.5z',
   map:     'M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0zM12 11a4 4 0 100-8 4 4 0 000 8z',
+  chevronsLeft: 'M11 17l-5-5 5-5M18 17l-5-5 5-5',
 };
 
 // ─── LoginPage ────────────────────────────────────────────────────────────────
@@ -1592,6 +1593,15 @@ function AuditOverview({ mpcsRows, onSelectSociety }) {
 function Dashboard({ onLogout }) {
   const [activeTab, setActiveTab] = useState('DASHBOARD'); // 'DASHBOARD' | 'MILK' | 'MPCS' | 'AUDIT' | 'STATS' | 'OFFICERS'
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => localStorage.getItem('mpcs_admin_sidebar_collapsed') === 'true');
+
+  const toggleSidebarCollapsed = () => {
+    setSidebarCollapsed(prev => {
+      const next = !prev;
+      localStorage.setItem('mpcs_admin_sidebar_collapsed', String(next));
+      return next;
+    });
+  };
 
   // MILK PCS state
   const [milkRows, setMilkRows]   = useState([]);
@@ -2201,11 +2211,19 @@ function Dashboard({ onLogout }) {
         />
 
         {/* 🗂️ Left Sidebar */}
-        <aside className={`app-sidebar ${mobileNavOpen ? 'mobile-open' : ''}`}>
+        {(() => {
+          // A collapsed state persisted from a desktop session shouldn't hide
+          // labels when the sidebar is opened as the mobile hamburger overlay
+          // (which is always full-width) — only actually collapse on desktop.
+          const showCollapsedUI = sidebarCollapsed && !mobileNavOpen;
+          return (
+        <aside className={`app-sidebar ${mobileNavOpen ? 'mobile-open' : ''} ${sidebarCollapsed ? 'collapsed' : ''}`}>
           <div>
-            <div style={{fontSize:'10px', fontWeight:800, color:'#94A3B8', textTransform:'uppercase', letterSpacing:'1px', marginBottom:'12px', paddingLeft:'12px'}}>
-              Main Operations
-            </div>
+            {!showCollapsedUI && (
+              <div style={{fontSize:'10px', fontWeight:800, color:'#94A3B8', textTransform:'uppercase', letterSpacing:'1px', marginBottom:'12px', paddingLeft:'12px'}}>
+                Main Operations
+              </div>
+            )}
             {[
               { id: 'DASHBOARD', label: 'Dashboard', icon: I.dashboard },
               { id: 'MPCS', label: 'MPCS Societies', icon: I.domain },
@@ -2219,29 +2237,46 @@ function Dashboard({ onLogout }) {
               <div
                 key={item.id}
                 className={`sidebar-nav-item ${activeTab === item.id ? 'active' : ''}`}
-                onClick={() => { 
-                  setActiveTab(item.id); 
-                  if (item.id === 'MPCS') setActiveFilter(null); 
+                onClick={() => {
+                  setActiveTab(item.id);
+                  if (item.id === 'MPCS') setActiveFilter(null);
                   setMobileNavOpen(false);
                 }}
+                title={showCollapsedUI ? item.label : undefined}
               >
                 <Icon d={item.icon} size={18} color={activeTab === item.id ? '#FFFFFF' : '#64748B'} sw={2}/>
-                <span>{item.label}</span>
+                {!showCollapsedUI && <span>{item.label}</span>}
               </div>
             ))}
           </div>
 
-          <div className="support-card" style={{cursor:'pointer'}} onClick={() => { setShowSupportModal(true); setMobileNavOpen(false); }}>
-            <Icon d={I.info} size={20} color="#7F1D1D"/>
-            <div>
-              <div style={{fontSize:'12px', fontWeight:700, color:'#0F172A'}}>Need Help?</div>
-              <div style={{fontSize:'10px', color:'#64748B'}}>Contact Support</div>
+          <div>
+            {!showCollapsedUI && (
+              <div className="support-card" style={{cursor:'pointer', marginBottom:'10px'}} onClick={() => { setShowSupportModal(true); setMobileNavOpen(false); }}>
+                <Icon d={I.info} size={20} color="#7F1D1D"/>
+                <div>
+                  <div style={{fontSize:'12px', fontWeight:700, color:'#0F172A'}}>Need Help?</div>
+                  <div style={{fontSize:'10px', color:'#64748B'}}>Contact Support</div>
+                </div>
+              </div>
+            )}
+            <div
+              className="sidebar-collapse-toggle hide-mobile"
+              onClick={toggleSidebarCollapsed}
+              title={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            >
+              <span style={{display:'inline-flex', transform: sidebarCollapsed ? 'rotate(180deg)' : 'none'}}>
+                <Icon d={I.chevronsLeft} size={16} color="#64748B" sw={2}/>
+              </span>
+              {!sidebarCollapsed && <span>Collapse</span>}
             </div>
           </div>
         </aside>
+          );
+        })()}
 
         {/* 🖥️ Main Workspace Canvas */}
-        <main className="app-workspace">
+        <main className={`app-workspace ${sidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
           {error && (
             <div style={{background:'#FEF2F2', border:'1px solid #FECACA', borderRadius:'8px', padding:'12px 16px', marginBottom:'20px', color:'#991B1B', fontSize:'13px', display:'flex', gap:'8px', alignItems:'center'}}>
               ⚠️ <strong>Error:</strong> {error}

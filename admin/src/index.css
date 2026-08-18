@@ -111,6 +111,13 @@ button { cursor: pointer; font-family: inherit; border: none; outline: none; tra
   display: flex; flex-direction: column; justify-content: space-between;
   padding: 20px 12px;
   position: fixed; top: 64px; bottom: 0; left: 0; z-index: 90;
+  transition: width 0.2s ease;
+  overflow: hidden;
+}
+
+.app-sidebar.collapsed {
+  width: 64px;
+  padding: 20px 8px;
 }
 
 .app-workspace {
@@ -118,6 +125,12 @@ button { cursor: pointer; font-family: inherit; border: none; outline: none; tra
   flex: 1;
   padding: 24px;
   width: calc(100% - 240px);
+  transition: margin-left 0.2s ease, width 0.2s ease;
+}
+
+.app-workspace.sidebar-collapsed {
+  margin-left: 64px;
+  width: calc(100% - 64px);
 }
 
 /* Sidebar Links */
@@ -130,6 +143,7 @@ button { cursor: pointer; font-family: inherit; border: none; outline: none; tra
   margin-bottom: 2px;
   transition: all 0.15s ease;
   cursor: pointer;
+  white-space: nowrap;
 }
 .sidebar-nav-item:hover {
   background: #F1F5F9;
@@ -140,6 +154,10 @@ button { cursor: pointer; font-family: inherit; border: none; outline: none; tra
   color: #FFFFFF;
   font-weight: 700;
 }
+.app-sidebar.collapsed .sidebar-nav-item {
+  justify-content: center;
+  padding: 10px;
+}
 
 /* Help Card */
 .support-card {
@@ -148,6 +166,27 @@ button { cursor: pointer; font-family: inherit; border: none; outline: none; tra
   border-radius: 4px;
   padding: 12px 14px;
   display: flex; align-items: center; gap: 12px;
+}
+
+/* Sidebar collapse toggle */
+.sidebar-collapse-toggle {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 14px;
+  font-size: 12px; font-weight: 700;
+  color: #64748B;
+  border-radius: var(--radius-sm);
+  border-top: 1px solid var(--border);
+  margin-top: 8px;
+  padding-top: 14px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: color 0.15s ease;
+}
+.sidebar-collapse-toggle:hover { color: #0F172A; }
+.app-sidebar.collapsed .sidebar-collapse-toggle {
+  justify-content: center;
+  padding: 10px;
+  padding-top: 14px;
 }
 
 /* Structural Card - Sharp Enterprise Corners */
@@ -385,12 +424,13 @@ button { cursor: pointer; font-family: inherit; border: none; outline: none; tra
   .hide-mobile { display: none !important; }
   .hide-desktop { display: block !important; }
 
-  .app-sidebar {
+  .app-sidebar, .app-sidebar.collapsed {
     position: fixed;
     top: 64px;
     bottom: 0;
     left: 0;
     width: 260px;
+    padding: 20px 12px;
     z-index: 90;
     transform: translateX(-100%);
     transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
@@ -399,12 +439,14 @@ button { cursor: pointer; font-family: inherit; border: none; outline: none; tra
   .app-sidebar.mobile-open {
     transform: translateX(0);
   }
+  .app-sidebar.collapsed .sidebar-nav-item span,
+  .app-sidebar.collapsed .sidebar-nav-item { justify-content: flex-start; padding: 10px 14px; }
 
   .sidebar-backdrop.active {
     display: block;
   }
 
-  .app-workspace {
+  .app-workspace, .app-workspace.sidebar-collapsed {
     margin-left: 0;
     width: 100%;
     padding: 16px;
