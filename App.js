@@ -852,6 +852,7 @@ export default function App() {
         if (row.president_name || fd['2.1']) setPresidentName(row.president_name || fd['2.1']);
         if (row.president_mobile) setPresidentMobile(row.president_mobile);
         if (row.manager_mobile) setManagerMobile(row.manager_mobile);
+        if (row.manager_name) setManagerName(row.manager_name);
 
         if (fd.demographicsData) setDemographicsData(fd.demographicsData);
         if (fd.complianceData) setComplianceData(fd.complianceData);
@@ -870,25 +871,22 @@ export default function App() {
         };
         setBusinessPerformanceData(loadedBizPerf);
 
-        // Sync to AsyncStorage under THIS society's key
-        saveMasterStateToStorage({
-          centerName: soc_name,
-          registrationNumber: reg_number,
-          panCard: fd['1.8'] || fd.panCard,
-          regDate: fd['1.6'] || fd.regDate,
-          presidentName: row.president_name || fd['2.1'],
-          presidentMobile: row.president_mobile,
-          managerMobile: row.manager_mobile,
-          demographicsData: fd.demographicsData,
-          complianceData: fd.complianceData,
-          financialsData: fd.financialsData,
-          supplementalData: fd.supplementalData,
-          dividendData: fd.dividendData,
-          bankData: fd.bankData,
-          shareCapitalData: fd.shareCapitalData,
-          cscDetailsData: fd.cscDetailsData,
-          businessPerformanceData: loadedBizPerf
-        }, soc_name);
+        // No write-back to saveMasterStateToStorage here. This function's
+        // job is to pull cloud data into local React state as a fallback
+        // display (e.g. a fresh device with no local cache yet) — the data
+        // just came FROM Supabase, so re-pushing it is redundant. Worse: it
+        // used to build an overrides object missing managerName, the Milk
+        // PCS demographics fields (mSc/fSc/mSt/fSt/mObc/fObc/mGen/fGen —
+        // this function was written for MPCS's form_data shape and never
+        // adapted for Milk PCS's flat columns), and audit/AGM entirely.
+        // Since this runs inside the same handleUserAuthSuccess call chain
+        // that just triggered loadMasterStateFromStorage's setState calls,
+        // any field missing from the overrides fell back to those React
+        // state variables' STALE pre-load closure values (empty, since the
+        // setState calls from moments earlier in the same synchronous
+        // chain hadn't been applied to this closure yet) — and pushed that
+        // blank data back to Supabase on every login/refresh/reconnect,
+        // silently wiping out exactly those three field groups.
       }
     } catch (e) {
       console.warn('Cloud fetch error:', e);
