@@ -1212,6 +1212,7 @@ function DistrictPerformance({ milkRows = [], mpcsRows = [] }) {
   const mpcsTotal = mpcsRows.length || 1;
   const mpcsCscCount = useMemo(() => mpcsRows.filter(r => r.form_data?.['9.1'] === 'Yes' || r.form_data?.['9.7z'] === 'Yes').length, [mpcsRows]);
   const mpcsMonthlyDeposit = useMemo(() => mpcsRows.reduce((s, r) => s + (parseFloat(r.form_data?.['7.71'] || r.bank_balance) || 0), 0), [mpcsRows]);
+  const mpcsTotalTurnover = useMemo(() => mpcsRows.reduce((s, r) => s + (parseFloat(r.annual_turnover) || 0), 0), [mpcsRows]);
   const mpcsAgmCompletedCount = useMemo(() => mpcsAuditAgmList.filter(x => isYes(x.agm_done)).length, [mpcsAuditAgmList]);
   const mpcsAuditedCount = useMemo(() => mpcsAuditAgmList.filter(x => isYes(x.audit_done)).length, [mpcsAuditAgmList]);
 
@@ -1219,21 +1220,6 @@ function DistrictPerformance({ milkRows = [], mpcsRows = [] }) {
   const milkTotalLitres = useMemo(() => milkRows.reduce((s, r) => s + (parseFloat(r.litres) || 0), 0), [milkRows]);
   const milkAgmCompletedCount = useMemo(() => milkAuditAgmList.filter(x => isYes(x.agm_done)).length, [milkAuditAgmList]);
   const milkAuditedCount = useMemo(() => milkAuditAgmList.filter(x => isYes(x.audit_done)).length, [milkAuditAgmList]);
-
-  const chartData = useMemo(() => {
-    const subdivisions = ['Gyalshing HQ', 'Dentam', 'Yuksom', 'Tashiding', 'Yangthang', 'Pelling', 'Legship'];
-    return subdivisions.map(d => {
-       const mSub = milkRows.filter(r => (r.district || '').toLowerCase().includes(d.toLowerCase()) || r.district === 'Gyalshing' || r.district === 'Geyzing');
-       const mpSub = mpcsRows.filter(r => (r.registration_authority || '').toLowerCase().includes(d.toLowerCase()) || (r.registration_authority || '').includes('Geyzing') || (r.registration_authority || '').includes('Gyalshing'));
-       return {
-         name: d,
-         milk_vol: mSub.reduce((s,r) => s + (parseFloat(r.litres)||0), 0),
-         mpcs_count: mpSub.length,
-         profits: mpSub.filter(r => r.is_profit === 'Yes').length,
-         audits: mpSub.filter(r => isYes(r.audit_done)).length
-       };
-    });
-  }, [milkRows, mpcsRows]);
 
   return (
     <div className="fade-in">
@@ -1272,6 +1258,11 @@ function DistrictPerformance({ milkRows = [], mpcsRows = [] }) {
             <div className="kpi-val" style={{color:'#B45309'}}>{mpcsAuditedCount} / {mpcsRows.length}</div>
             <div className="kpi-sub">{Math.round((mpcsAuditedCount / mpcsTotal) * 100)}% audit compliance</div>
           </div>
+          <div className="kpi-card">
+            <div className="kpi-title">TOTAL TURNOVER</div>
+            <div className="kpi-val" style={{color:'#065F46'}}>{fmtRs(mpcsTotalTurnover)}</div>
+            <div className="kpi-sub">Aggregate annual turnover</div>
+          </div>
         </div>
       </div>
 
@@ -1299,20 +1290,6 @@ function DistrictPerformance({ milkRows = [], mpcsRows = [] }) {
         </div>
       </div>
 
-      {/* Subdivision Chart */}
-      <div style={{height:'350px', background:'#fff', padding:'20px', borderRadius:'16px', border:'1px solid #E2E8F0', marginBottom:'32px', boxShadow:'var(--shadow)'}}>
-        <ResponsiveContainer>
-          <BarChart data={chartData}>
-            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F1F5F9" />
-            <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fontSize:11, fontWeight:700}} dy={10} />
-            <YAxis axisLine={false} tickLine={false} tick={{fontSize:11}} />
-            <Tooltip contentStyle={{borderRadius:'12px', border:'none', boxShadow:'0 10px 15px -3px rgba(0,0,0,0.1)'}} />
-            <Legend />
-            <Bar dataKey="milk_vol" name="Milk Volume (L)" fill="#3B82F6" radius={[4, 4, 0, 0]} barSize={20} />
-            <Bar dataKey="mpcs_count" name="Total MPCS Registered" fill="#92400E" radius={[4, 4, 0, 0]} barSize={20} />
-          </BarChart>
-        </ResponsiveContainer>
-      </div>
     </div>
   );
 }
