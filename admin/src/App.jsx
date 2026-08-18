@@ -1924,13 +1924,30 @@ function Dashboard({ onLogout, session }) {
   }, [officerByEmail]);
 
   const recentActivities = useMemo(() => {
+    // saveMpcsSubmission/saveMilkPcsSubmission UPDATE an existing row on every
+    // resubmission rather than inserting a new one — created_at never moves,
+    // so a society autosaved or resubmitted an hour ago can rank below one
+    // that was merely created later and never touched since. Prefer each
+    // row's actual last-write timestamp (stamped into form_data.updated_at
+    // for MPCS, or into the activities JSON blob for Milk) over created_at.
+    const latestMpcsTime = (r) => r.form_data?.updated_at || r.created_at;
+    const latestMilkTime = (r) => {
+      if (typeof r.activities === 'string' && r.activities.trim().startsWith('{')) {
+        try {
+          const parsed = JSON.parse(r.activities);
+          if (parsed.updated_at) return parsed.updated_at;
+        } catch (e) {}
+      }
+      return r.captured_at || r.created_at;
+    };
+
     const items = [];
     (scopedMpcsRows || []).forEach(r => {
       items.push({
         id: `mpcs-${r.id || Math.random()}`,
         title: `Official MPCS Return: ${r.society_name || 'Cooperative Society'}`,
         sub: `Reported by ${resolveSubmitter(r)} • ${r.district || 'Sikkim'}`,
-        timeStr: r.created_at,
+        timeStr: latestMpcsTime(r),
         badgeText: 'MPCS',
         badgeBg: '#ECFDF5',
         badgeColor: '#065F46',
@@ -1945,7 +1962,7 @@ function Dashboard({ onLogout, session }) {
         id: `milk-${r.id || Math.random()}`,
         title: `Milk Collection: ${r.center_name || 'Collection Center'} (${r.litres || 0} L)`,
         sub: `Reported by ${resolveSubmitter(r, 'Inspector')} • Balance ₹${parseFloat(r.balance || 0).toLocaleString('en-IN')}`,
-        timeStr: r.captured_at || r.created_at,
+        timeStr: latestMilkTime(r),
         badgeText: 'MILK',
         badgeBg: '#FEF3C7',
         badgeColor: '#92400E',
