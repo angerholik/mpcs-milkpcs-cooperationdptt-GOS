@@ -1095,11 +1095,13 @@ function MPCSDetailModal({ row, onClose }) {
 }
 
 
-function GlobalBroadcast({ activeTab }) {
+function GlobalBroadcast({ activeTab, userRole }) {
   const [msg, setMsg] = useState('');
   const [sending, setSending] = useState(false);
 
-  if (activeTab !== 'DASHBOARD') return null;
+  // District-wide broadcast is a System Admin action — a scoped CI login
+  // shouldn't be able to message every field officer in the district.
+  if (activeTab !== 'DASHBOARD' || userRole !== 'System Admin') return null;
   
   const handleSend = async () => {
     if (!msg.trim()) return;
@@ -1659,14 +1661,18 @@ function Dashboard({ onLogout, session }) {
     setShowAssignAciModal(true);
   };
 
-  // 🛡️ Role-Based Access Control (RBAC) & Entity Assignment Scoping State
-  const [userRole, setUserRole] = useState('System Admin'); // 'System Admin' | 'Inspector'
-  const [assignedUnits, setAssignedUnits] = useState([
-    'Sardong Lungzik MPCS',
-    'Gitan Karmatara MPCS',
-    'Dentam Dairy MPCS',
-    'Banthen MPCS'
-  ]);
+  // 🛡️ Role-Based Access Control (RBAC) & Entity Assignment Scoping State —
+  // derived from who is actually logged in (session), not a manual toggle.
+  // A real CI account only ever sees the MPCS/Milk units an admin has
+  // explicitly assigned them via "Assign Scope"; System Admin sees
+  // everything. myOfficerRecord is looked up once officer_registry has
+  // loaded, matching this session's email against a real registered officer.
+  const myOfficerRecord = useMemo(
+    () => officers.find(o => (o.email || '').toLowerCase() === (session?.user?.email || '').toLowerCase()),
+    [officers, session]
+  );
+  const userRole = isSystemAdmin(session) ? 'System Admin' : 'Inspector'; // 'System Admin' | 'Inspector'
+  const assignedUnits = userRole === 'System Admin' ? [] : (myOfficerRecord?.assigned_units || []);
 
   // 🔍 Scoped Data Calculation based on User Role & Entity Assignments
   const scopedMilkRows = useMemo(() => {
@@ -1726,6 +1732,18 @@ function Dashboard({ onLogout, session }) {
   const [officers, setOfficers] = useState([]);
   const [officerSelected, setOfficerSelected] = useState(null);
   const [showAddOfficer, setShowAddOfficer] = useState(false);
+  const [scopeOfficer, setScopeOfficer] = useState(null); // officer row being scoped, or null
+
+  const handleUpdateOfficerScope = async (officerId, unitNames) => {
+    const { error } = await supabase.from('officer_registry').update({ assigned_units: unitNames }).eq('id', officerId);
+    if (error) {
+      alert('Failed to update scope: ' + error.message);
+      return;
+    }
+    setOfficers(prev => prev.map(o => o.id === officerId ? { ...o, assigned_units: unitNames } : o));
+    setScopeOfficer(null);
+    setTimeout(() => alert('Jurisdiction scope updated.'), 0);
+  };
 
   // Interaction State
   const [activeFilter, setActiveFilter] = useState(null); // 'loan' | 'profit' | etc
@@ -2210,10 +2228,10 @@ function Dashboard({ onLogout, session }) {
 
           <div style={{display:'flex', alignItems:'center', gap:'10px', borderLeft:'1px solid rgba(255,255,255,0.2)', paddingLeft:'12px', cursor:'pointer'}} onClick={()=>setShowProfileModal(true)}>
             <div style={{width:'34px', height:'34px', borderRadius:'50%', background:'#FFFFFF', color:'#7F1D1D', fontWeight:800, fontSize:'13px', display:'flex', alignItems:'center', justifyContent:'center', border:'2px solid rgba(255,255,255,0.3)', flexShrink:0}}>
-              MP
+              {(session?.user?.user_metadata?.fullName || session?.user?.email || '?').split(' ').filter(Boolean).slice(0, 2).map(w => w[0]).join('').toUpperCase()}
             </div>
             <div className="hide-mobile">
-              <div style={{fontSize:'12px', fontWeight:700, color:'#FFFFFF'}}>CI Mukund Pradhan</div>
+              <div style={{fontSize:'12px', fontWeight:700, color:'#FFFFFF'}}>{session?.user?.user_metadata?.fullName || session?.user?.email}</div>
               <div style={{fontSize:'10px', color:'rgba(255,255,255,0.7)'}}>{userRole==='System Admin' ? 'System Administrator' : 'Cooperative Inspector'}</div>
             </div>
           </div>
@@ -2252,8 +2270,14 @@ function Dashboard({ onLogout, session }) {
               { id: 'STATS', label: 'Benchmarks', icon: I.chart },
               { id: 'OFFICERS', label: 'Official Registry', icon: I.members },
               { id: 'REPORTS', label: 'Reports', icon: I.download },
-              { id: 'USERS', label: 'Users & Roles', icon: I.user },
-              { id: 'SETTINGS', label: 'Settings', icon: I.search },
+              // Users & Roles (provisioning, ACI/scope assignment) and Settings
+              // are district-wide administrative actions — a scoped CI login
+              // shouldn't see or reach them, even though the tab list itself
+              // doesn't otherwise restrict what activeTab can be set to.
+              ...(userRole === 'System Admin' ? [
+                { id: 'USERS', label: 'Users & Roles', icon: I.user },
+                { id: 'SETTINGS', label: 'Settings', icon: I.search },
+              ] : []),
             ].map(item => (
               <div
                 key={item.id}
@@ -2305,7 +2329,7 @@ function Dashboard({ onLogout, session }) {
           )}
 
           {/* New Global Broadcast System */}
-          <GlobalBroadcast activeTab={activeTab} />
+          <GlobalBroadcast activeTab={activeTab} userRole={userRole} />
 
           {/* 🏠 DASHBOARD MAIN OVERVIEW */}
           {activeTab === 'DASHBOARD' && (
@@ -2626,14 +2650,22 @@ function Dashboard({ onLogout, session }) {
                             <td>{assignment ? <span style={{fontSize:'12px', color:'#334155'}}>{assignment[0]}</span> : <span style={{color:'#94A3B8', fontStyle:'italic'}}>Not yet assigned</span>}</td>
                             <td><span className="badge badge-green">ACTIVE</span></td>
                             <td>
-                              {assignment ? (
-                                <div style={{display:'flex', gap:'6px'}}>
-                                  <button type="button" className="btn-ghost" style={{padding:'4px 8px', fontSize:'11px'}} onClick={() => openReassignAci(assignment[0])}>✎ Update</button>
-                                  <button type="button" className="btn-ghost" style={{padding:'4px 8px', fontSize:'11px', color:'#B91C1C'}} onClick={() => handleRevokeAci(assignment[0])}>✕ Revoke</button>
-                                </div>
-                              ) : (
-                                <span style={{color:'#CBD5E1', fontSize:'11px'}}>—</span>
-                              )}
+                              <div style={{display:'flex', gap:'6px', flexWrap:'wrap'}}>
+                                {role.includes('Cooperative Inspector') && (
+                                  <button type="button" className="btn-ghost" style={{padding:'4px 8px', fontSize:'11px'}} onClick={() => setScopeOfficer(off)}>
+                                    🗺️ Assign Scope{off.assigned_units?.length ? ` (${off.assigned_units.length})` : ''}
+                                  </button>
+                                )}
+                                {assignment && (
+                                  <>
+                                    <button type="button" className="btn-ghost" style={{padding:'4px 8px', fontSize:'11px'}} onClick={() => openReassignAci(assignment[0])}>✎ Update</button>
+                                    <button type="button" className="btn-ghost" style={{padding:'4px 8px', fontSize:'11px', color:'#B91C1C'}} onClick={() => handleRevokeAci(assignment[0])}>✕ Revoke</button>
+                                  </>
+                                )}
+                                {!role.includes('Cooperative Inspector') && !assignment && (
+                                  <span style={{color:'#CBD5E1', fontSize:'11px'}}>—</span>
+                                )}
+                              </div>
                             </td>
                           </tr>
                         );
@@ -3046,12 +3078,10 @@ function Dashboard({ onLogout, session }) {
       {showScheduleAuditModal && <ScheduleAuditModal mpcsRows={mpcsRows} onClose={()=>setShowScheduleAuditModal(false)} onSave={handleScheduleAudit} />}
       {showNotificationsDrawer && <NotificationsDrawerModal onClose={()=>setShowNotificationsDrawer(false)} />}
       {showProfileModal && (
-        <InspectorProfileModal 
-          userRole={userRole} 
-          setUserRole={setUserRole} 
-          assignedUnits={assignedUnits} 
-          setAssignedUnits={setAssignedUnits} 
-          mpcsRows={mpcsRows} 
+        <InspectorProfileModal
+          session={session}
+          userRole={userRole}
+          assignedUnits={assignedUnits}
           onClose={()=>setShowProfileModal(false)}
         />
       )}
@@ -3064,6 +3094,14 @@ function Dashboard({ onLogout, session }) {
           initialUnit={assignAciPrefillUnit}
           onClose={()=>{ setShowAssignAciModal(false); setAssignAciPrefillUnit(null); }}
           onSave={handleAssignAci}
+        />
+      )}
+      {scopeOfficer && (
+        <AssignScopeModal
+          officer={scopeOfficer}
+          mpcsRows={mpcsRows}
+          onClose={()=>setScopeOfficer(null)}
+          onSave={handleUpdateOfficerScope}
         />
       )}
       {showAddOfficer && (
@@ -3362,16 +3400,14 @@ function NotificationsDrawerModal({ onClose }) {
 }
 
 // ─── InspectorProfileModal ─────────────────────────────────────────────────────
-function InspectorProfileModal({ userRole, setUserRole, assignedUnits, setAssignedUnits, mpcsRows, onClose }) {
-  const toggleUnit = (unitName) => {
-    if (assignedUnits.includes(unitName)) {
-      setAssignedUnits(assignedUnits.filter(u => u !== unitName));
-    } else {
-      setAssignedUnits([...assignedUnits, unitName]);
-    }
-  };
-
-  const allAvailableUnits = Array.from(new Set(mpcsRows.map(s => s.society_name).filter(Boolean)));
+// Read-only profile of whoever is actually logged in — real name/email from
+// the session, real role, and (for a CI) the real units an admin has
+// assigned them. Scope is admin-managed only (via "Assign Scope" on the
+// Registered District Officers table), so there's nothing to edit here.
+function InspectorProfileModal({ session, userRole, assignedUnits, onClose }) {
+  const displayName = session?.user?.user_metadata?.fullName || session?.user?.email || 'Unknown Officer';
+  const roleTitle = session?.user?.user_metadata?.roleTitle || userRole;
+  const initials = displayName.split(' ').filter(Boolean).slice(0, 2).map(w => w[0]).join('').toUpperCase() || '?';
 
   return (
     <div className="modal-overlay" onClick={e=>e.target===e.currentTarget&&onClose()}>
@@ -3379,58 +3415,53 @@ function InspectorProfileModal({ userRole, setUserRole, assignedUnits, setAssign
         <div className="modal-header">
           <div>
             <div style={{fontSize:'11px', color:'#7F1D1D', fontWeight:800, textTransform:'uppercase', letterSpacing:'1.5px'}}>Authorization & Access Scope</div>
-            <h2 style={{fontSize:'18px', fontWeight:900}}>Inspector Credentials & Permissions</h2>
+            <h2 style={{fontSize:'18px', fontWeight:900}}>My Profile & Permissions</h2>
           </div>
           <button className="modal-close" onClick={onClose}><Icon d={I.close} size={18}/></button>
         </div>
         <div className="modal-body" style={{padding:'24px'}}>
           <div style={{textAlign:'center', marginBottom:'20px'}}>
             <div style={{width:'56px', height:'56px', borderRadius:'50%', background:'#7F1D1D', color:'#FFF', fontWeight:900, fontSize:'20px', display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto 10px auto'}}>
-              MP
+              {initials}
             </div>
-            <h3 style={{fontSize:'18px', fontWeight:900, color:'#0F172A'}}>CI Mukund Pradhan</h3>
-            <span className="badge badge-gold" style={{marginTop:'4px'}}>Cooperative Inspector • Gyalshing HQ</span>
+            <h3 style={{fontSize:'18px', fontWeight:900, color:'#0F172A'}}>{displayName}</h3>
+            <span className="badge badge-gold" style={{marginTop:'4px'}}>{roleTitle}</span>
           </div>
 
-          {/* Role Switcher */}
-          <div className="field-group" style={{marginBottom:'20px'}}>
-            <label className="field-label">Active System Role</label>
-            <select className="field-input" value={userRole} onChange={e => setUserRole(e.target.value)} style={{fontWeight:700}}>
-              <option value="System Admin">👑 System Admin (Full Access - All Gyalshing District)</option>
-              <option value="Inspector">🛡️ Cooperative Inspector (CI Mukund Pradhan Scope)</option>
-            </select>
+          <div style={{background:'#F8FAFC', padding:'12px 16px', borderRadius:'6px', border:'1px solid #E2E8F0', marginBottom:'16px', fontSize:'12px'}}>
+            <span style={{color:'#64748B'}}>Access Level:</span>{' '}
+            <strong>{userRole === 'System Admin' ? 'Full District Access (all MPCS & Milk units)' : 'Scoped Cooperative Inspector Access'}</strong>
           </div>
 
-          {/* Scoped Entity Assignment Manager */}
+          {/* Scoped units — read-only; only an admin can change this via
+              "Assign Scope" on the Registered District Officers table. */}
           {userRole === 'Inspector' && (
             <div style={{background:'#F8FAFC', padding:'16px', borderRadius:'6px', border:'1px solid #E2E8F0', marginBottom:'16px'}}>
               <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'10px'}}>
                 <span style={{fontSize:'12px', fontWeight:800, color:'#0F172A', textTransform:'uppercase', letterSpacing:'0.5px'}}>
                   Assigned MPCS & Milk Units ({assignedUnits.length})
                 </span>
-                <span style={{fontSize:'11px', color:'#64748B'}}>Scoped Inspector View</span>
+                <span style={{fontSize:'11px', color:'#64748B'}}>Set by System Admin</span>
               </div>
-              <p style={{fontSize:'11px', color:'#64748B', marginBottom:'12px'}}>
-                CI Mukund Pradhan will ONLY see records, reports, and statistics belonging to these checked units:
-              </p>
-              <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:'8px', maxHeight:'180px', overflowY:'auto'}}>
-                {allAvailableUnits.map(unit => {
-                  const isAssigned = assignedUnits.includes(unit);
-                  return (
-                    <label key={unit} style={{display:'flex', alignItems:'center', gap:'8px', fontSize:'12px', padding:'6px 10px', background: isAssigned?'#EFF6FF':'#FFF', border: isAssigned?'1px solid #93C5FD':'1px solid #CBD5E1', borderRadius:'4px', cursor:'pointer'}}>
-                      <input type="checkbox" checked={isAssigned} onChange={() => toggleUnit(unit)}/>
-                      <span style={{fontWeight: isAssigned?700:500, color: isAssigned?'#1E40AF':'#334155'}}>{unit}</span>
-                    </label>
-                  );
-                })}
-              </div>
+              {assignedUnits.length === 0 ? (
+                <p style={{fontSize:'12px', color:'#94A3B8', fontStyle:'italic'}}>
+                  No units assigned yet. Contact a System Admin to have your jurisdiction set up.
+                </p>
+              ) : (
+                <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:'8px'}}>
+                  {assignedUnits.map(unit => (
+                    <div key={unit} style={{fontSize:'12px', padding:'6px 10px', background:'#EFF6FF', border:'1px solid #93C5FD', borderRadius:'4px', fontWeight:700, color:'#1E40AF'}}>
+                      {unit}
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
 
           <div style={{fontSize:'12px', display:'flex', flexDirection:'column', gap:'8px', background:'#F8FAFC', padding:'14px', borderRadius:'6px', border:'1px solid #E2E8F0'}}>
-            <div><span style={{color:'#64748B'}}>Officer ID:</span> <strong>OFF-GYZ-2026-088</strong></div>
+            <div><span style={{color:'#64748B'}}>Email:</span> <strong>{session?.user?.email || '—'}</strong></div>
             <div><span style={{color:'#64748B'}}>Department:</span> <strong>Department of Cooperation, Govt. of Sikkim</strong></div>
-            <div><span style={{color:'#64748B'}}>Assigned Registrar:</span> <strong>Geyzing ARCS Office</strong></div>
           </div>
         </div>
       </div>
@@ -3517,6 +3548,68 @@ function AssignAciModal({ mpcsRows, officers, hierarchyMapping, initialUnit, onC
           </div>
           <button type="submit" className="btn-primary" disabled={loading} style={{width:'100%', padding:'12px', borderRadius:'4px', fontSize:'13px', fontWeight:800}}>
             {loading ? 'Updating Delegation...' : 'CONFIRM ACI FIELD DELEGATION'}
+          </button>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+// ─── AssignScopeModal ─────────────────────────────────────────────────────────
+// Admin-only: sets which real MPCS societies a CI's dashboard login is
+// scoped to. This is what actually drives their view when they log in —
+// see the userRole/assignedUnits derivation in Dashboard.
+function AssignScopeModal({ officer, mpcsRows, onClose, onSave }) {
+  const [selected, setSelected] = useState(officer?.assigned_units || []);
+  const [loading, setLoading] = useState(false);
+
+  const availableUnits = Array.from(new Set(mpcsRows.map(s => s.society_name).filter(Boolean)));
+
+  const toggleUnit = (unitName) => {
+    setSelected(prev => prev.includes(unitName) ? prev.filter(u => u !== unitName) : [...prev, unitName]);
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    await onSave(officer.id, selected);
+    setLoading(false);
+  };
+
+  return (
+    <div className="modal-overlay" onClick={e=>e.target===e.currentTarget&&onClose()}>
+      <div className="modal-box fade-in" style={{maxWidth:'540px'}}>
+        <div className="modal-header">
+          <div>
+            <div style={{fontSize:'11px', color:'#7F1D1D', fontWeight:800, textTransform:'uppercase', letterSpacing:'1.5px'}}>Jurisdiction Scope</div>
+            <h2 style={{fontSize:'18px', fontWeight:900}}>Assign Scope: {officer?.name}</h2>
+          </div>
+          <button className="modal-close" onClick={onClose}><Icon d={I.close} size={18}/></button>
+        </div>
+        <form onSubmit={handleSubmit} className="modal-body" style={{padding:'24px'}}>
+          <p style={{fontSize:'12px', color:'#64748B', marginBottom:'14px'}}>
+            When {officer?.name} logs into this dashboard with their own account, they will ONLY see records, reports, and statistics belonging to the checked units below.
+          </p>
+          <div className="field-group" style={{marginBottom:'20px'}}>
+            <label className="field-label">Assigned MPCS Societies ({selected.length})</label>
+            {availableUnits.length === 0 ? (
+              <p style={{fontSize:'12px', color:'#94A3B8', fontStyle:'italic'}}>No MPCS societies registered yet.</p>
+            ) : (
+              <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:'8px', maxHeight:'260px', overflowY:'auto'}}>
+                {availableUnits.map(unit => {
+                  const isChecked = selected.includes(unit);
+                  return (
+                    <label key={unit} style={{display:'flex', alignItems:'center', gap:'8px', fontSize:'12px', padding:'6px 10px', background: isChecked?'#EFF6FF':'#FFF', border: isChecked?'1px solid #93C5FD':'1px solid #CBD5E1', borderRadius:'4px', cursor:'pointer'}}>
+                      <input type="checkbox" checked={isChecked} onChange={() => toggleUnit(unit)}/>
+                      <span style={{fontWeight: isChecked?700:500, color: isChecked?'#1E40AF':'#334155'}}>{unit}</span>
+                    </label>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+          <button type="submit" className="btn-primary" disabled={loading} style={{width:'100%', padding:'12px', borderRadius:'4px', fontSize:'13px', fontWeight:800}}>
+            {loading ? 'Saving...' : 'SAVE JURISDICTION SCOPE'}
           </button>
         </form>
       </div>
@@ -3682,10 +3775,17 @@ function AddOfficerModal({ onClose, onSave }) {
 // This portal is district-wide oversight (broadcasts, all societies' data,
 // user management) — being logged in isn't enough to get in, the account
 // must specifically carry the System Admin role. Any inspector can log in
-// via Supabase Auth (the mobile app registers CI/ACI accounts the same
+// via Supabase Auth (the mobile app registers CI/ACI/PA accounts the same
 // way), so without this check every field inspector could open the admin
 // dashboard too.
 const isSystemAdmin = (session) => session?.user?.user_metadata?.role === 'System Admin';
+// A real CI account (registered via the mobile app's Register Inspector
+// screen, which stores the short code 'CI' in user_metadata.role) also gets
+// in, but scoped to only the MPCS/Milk units an admin has assigned them —
+// see the RBAC state derivation in Dashboard. ACI/PA accounts are not
+// granted dashboard access.
+const isCiUser = (session) => session?.user?.user_metadata?.role === 'CI';
+const canAccessDashboard = (session) => isSystemAdmin(session) || isCiUser(session);
 
 // ─── AccessDenied ─────────────────────────────────────────────────────────────
 function AccessDenied({ email, onLogout }) {
@@ -3697,7 +3797,7 @@ function AccessDenied({ email, onLogout }) {
         </div>
         <h2 style={{fontSize:'18px', fontWeight:800, color:'#1E293B', margin:'0 0 8px'}}>Access Denied</h2>
         <p style={{fontSize:'13px', color:'#64748B', margin:'0 0 24px', lineHeight:1.5}}>
-          {email} is signed in but isn't provisioned for admin access. This portal is restricted to System Admins.
+          {email} is signed in but isn't provisioned for portal access. This is restricted to System Admins and Cooperative Inspectors (CI) — ACI and PA accounts use the mobile field app instead.
         </p>
         <button onClick={onLogout} className="btn-primary" style={{width:'100%', padding:'13px', fontSize:'14px'}}>
           Sign Out
@@ -3736,6 +3836,6 @@ export default function App() {
   }
 
   if (!session) return <LoginPage />;
-  if (!isSystemAdmin(session)) return <AccessDenied email={session.user.email} onLogout={handleLogout}/>;
+  if (!canAccessDashboard(session)) return <AccessDenied email={session.user.email} onLogout={handleLogout}/>;
   return <Dashboard onLogout={handleLogout} session={session}/>;
 }
