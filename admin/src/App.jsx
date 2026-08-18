@@ -2479,16 +2479,16 @@ function Dashboard({ onLogout }) {
                       </tr>
                     </thead>
                     <tbody>
-                      {milkRows.slice(0, 5).map((row, idx) => (
-                        <tr key={row.id || idx}>
+                      {recentActivities.slice(0, 5).map((act, idx) => (
+                        <tr key={act.id || idx}>
                           <td>{idx + 1}</td>
-                          <td><strong>{row.center_name || row.society_name || 'Society Unit'}</strong></td>
-                          <td><span className="badge badge-gold">Milk Report</span></td>
-                          <td>{row.reported_by || 'Deepesh Pradhan (ACI)'}</td>
-                          <td>{row.captured_at ? new Date(row.captured_at).toLocaleString() : 'Recent'}</td>
+                          <td><strong>{act.row.center_name || act.row.society_name || 'Society Unit'}</strong></td>
+                          <td><span className={`badge ${act.isMpcs ? 'badge-green' : 'badge-gold'}`}>{act.isMpcs ? 'MPCS Report' : 'Milk Report'}</span></td>
+                          <td>{act.row.reported_by || 'Field Inspector'}</td>
+                          <td>{act.timeStr ? new Date(act.timeStr).toLocaleString() : 'Recent'}</td>
                           <td><span className="badge badge-green">Verified</span></td>
                           <td>
-                            <button className="btn-ghost" style={{padding:'4px 10px', fontSize:'11px'}} onClick={() => setMilkSelected(row)}>
+                            <button className="btn-ghost" style={{padding:'4px 10px', fontSize:'11px'}} onClick={() => act.isMpcs ? setMpcsSelected(act.row) : setMilkSelected(act.row)}>
                               👁 View
                             </button>
                           </td>
