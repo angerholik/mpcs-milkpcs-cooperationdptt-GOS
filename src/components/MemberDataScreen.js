@@ -31,6 +31,16 @@ const FONT_FAMILY = 'Manrope';
 
 const emptyForm = { memberName: '', aadhaarNumber: '', mobileNumber: '', wardName: '', address: '' };
 
+// Stacked up/down carets — a lightweight sortable-column indicator, matching
+// the header glyph used next to sortable columns without pulling in an icon
+// font that doesn't have a matching double-caret glyph at this size.
+const SortGlyph = () => (
+  <View style={styles.sortGlyph}>
+    <Text style={styles.sortGlyphArrow}>▲</Text>
+    <Text style={[styles.sortGlyphArrow, { marginTop: 1 }]}>▼</Text>
+  </View>
+);
+
 // RN's Alert.alert is a silent no-op on web — without this, a failed save
 // or delete looked like nothing happened at all, with no visible feedback.
 const notify = (title, message) => {
@@ -288,51 +298,69 @@ export default function MemberDataScreen({
             </Text>
           </View>
         ) : (
-          members.map((m, idx) => (
-            <View key={m.id} style={styles.memberCard}>
-              <View style={styles.memberCardTop}>
-                <View style={styles.memberAvatar}>
-                  <Text style={styles.memberAvatarText}>
-                    {(m.member_name || '?').trim().split(/\s+/).slice(0, 2).map(w => w[0]).join('').toUpperCase()}
-                  </Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+            <View style={styles.table}>
+              <View style={styles.tableHeaderRow}>
+                <View style={[styles.th, styles.colMember]}>
+                  <Text style={styles.thText}>MEMBER</Text>
+                  <SortGlyph />
                 </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.memberName}>{m.member_name}</Text>
-                  <Text style={styles.memberIndex}>Member #{members.length - idx}</Text>
+                <View style={[styles.th, styles.colMobile]}>
+                  <Text style={styles.thText}>MOBILE NUMBER</Text>
                 </View>
-                <TouchableOpacity
-                  onPress={() => handleDelete(m)}
-                  style={styles.deleteBtn}
-                  activeOpacity={0.7}
-                >
-                  <MaterialCommunityIcons name="trash-can-outline" size={16} color="#DC2626" />
-                </TouchableOpacity>
+                <View style={[styles.th, styles.colWard]}>
+                  <Text style={styles.thText}>WARD</Text>
+                  <SortGlyph />
+                </View>
+                <View style={[styles.th, styles.colAddress]}>
+                  <Text style={styles.thText}>ADDRESS</Text>
+                </View>
+                <View style={[styles.th, styles.colId, { alignItems: 'flex-end' }]}>
+                  <Text style={styles.thText}>MEMBER ID</Text>
+                </View>
+                <View style={[styles.th, styles.colAction]} />
               </View>
 
-              {(m.ward_name || m.mobile_number || m.address) && (
-                <View style={styles.memberDetailRows}>
-                  {m.ward_name ? (
-                    <View style={styles.memberDetailRow}>
-                      <MaterialCommunityIcons name="map-marker-outline" size={13} color={COLORS.slate400} />
-                      <Text style={styles.memberDetailText}>{m.ward_name}</Text>
-                    </View>
-                  ) : null}
-                  {m.mobile_number ? (
-                    <View style={styles.memberDetailRow}>
-                      <MaterialCommunityIcons name="phone-outline" size={13} color={COLORS.slate400} />
-                      <Text style={styles.memberDetailText}>{m.mobile_number}</Text>
-                    </View>
-                  ) : null}
-                  {m.address ? (
-                    <View style={styles.memberDetailRow}>
-                      <MaterialCommunityIcons name="home-outline" size={13} color={COLORS.slate400} />
-                      <Text style={styles.memberDetailText}>{m.address}</Text>
-                    </View>
-                  ) : null}
+              {members.map((m, idx) => (
+                <View
+                  key={m.id}
+                  style={[styles.tr, idx % 2 === 1 && styles.trAlt]}
+                >
+                  <View style={[styles.td, styles.colMember]}>
+                    <Text style={styles.tdMemberName} numberOfLines={1}>{m.member_name}</Text>
+                  </View>
+                  <View style={[styles.td, styles.colMobile]}>
+                    <Text style={styles.tdText}>{m.mobile_number || '—'}</Text>
+                  </View>
+                  <View style={[styles.td, styles.colWard]}>
+                    {m.ward_name ? (
+                      <View style={styles.wardPill}>
+                        <Text style={styles.wardPillText} numberOfLines={1}>{m.ward_name}</Text>
+                      </View>
+                    ) : (
+                      <Text style={styles.tdText}>—</Text>
+                    )}
+                  </View>
+                  <View style={[styles.td, styles.colAddress]}>
+                    <Text style={styles.tdText} numberOfLines={1}>{m.address || '—'}</Text>
+                  </View>
+                  <View style={[styles.td, styles.colId, { alignItems: 'flex-end' }]}>
+                    <Text style={styles.tdIdNumber}>#{members.length - idx}</Text>
+                    <Text style={styles.tdIdSub}>VERIFIED</Text>
+                  </View>
+                  <View style={[styles.td, styles.colAction]}>
+                    <TouchableOpacity
+                      onPress={() => handleDelete(m)}
+                      style={styles.deleteBtn}
+                      activeOpacity={0.7}
+                    >
+                      <MaterialCommunityIcons name="trash-can-outline" size={16} color="#DC2626" />
+                    </TouchableOpacity>
+                  </View>
                 </View>
-              )}
+              ))}
             </View>
-          ))
+          </ScrollView>
         )}
       </ScrollView>
 
@@ -616,66 +644,104 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
   },
 
-  memberCard: {
+  table: {
     backgroundColor: COLORS.surface,
-    borderRadius: 14,
+    borderRadius: 16,
+    overflow: 'hidden',
     borderWidth: 1,
     borderColor: COLORS.slate200,
-    borderLeftWidth: 3,
-    borderLeftColor: COLORS.primary,
-    padding: 14,
-    gap: 10,
+    minWidth: 640,
+    shadowColor: '#1e293b',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.06,
+    shadowRadius: 16,
+    elevation: 2,
   },
-  memberCardTop: {
+  tableHeaderRow: {
+    flexDirection: 'row',
+    backgroundColor: '#8891B5',
+    paddingVertical: 14,
+  },
+  th: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: 4,
+    paddingHorizontal: 16,
   },
-  memberAvatar: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    backgroundColor: COLORS.primaryLight,
+  thText: {
+    fontFamily: FONT_FAMILY,
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#ffffff',
+    textTransform: 'uppercase',
+    letterSpacing: 0.6,
+  },
+  sortGlyph: {
+    marginLeft: 2,
+  },
+  sortGlyphArrow: {
+    fontSize: 6,
+    lineHeight: 7,
+    color: 'rgba(255,255,255,0.85)',
+  },
+  tr: {
+    flexDirection: 'row',
     alignItems: 'center',
+    backgroundColor: COLORS.surface,
+    paddingVertical: 16,
+  },
+  trAlt: {
+    backgroundColor: COLORS.slate50,
+  },
+  td: {
+    paddingHorizontal: 16,
     justifyContent: 'center',
   },
-  memberAvatarText: {
-    fontFamily: FONT_FAMILY,
-    fontSize: 12,
-    fontWeight: '800',
-    color: COLORS.primary,
-  },
-  memberName: {
+  colMember: { width: 170 },
+  colMobile: { width: 150 },
+  colWard: { width: 110 },
+  colAddress: { width: 130 },
+  colId: { width: 90 },
+  colAction: { width: 44, alignItems: 'center' },
+  tdMemberName: {
     fontFamily: FONT_FAMILY,
     fontSize: 14,
     fontWeight: '700',
     color: COLORS.slate800,
   },
-  memberIndex: {
+  tdText: {
+    fontFamily: FONT_FAMILY,
+    fontSize: 13,
+    fontWeight: '500',
+    color: COLORS.slate600,
+  },
+  wardPill: {
+    alignSelf: 'flex-start',
+    backgroundColor: '#E7E8F2',
+    borderRadius: 20,
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    maxWidth: '100%',
+  },
+  wardPillText: {
+    fontFamily: FONT_FAMILY,
+    fontSize: 12,
+    fontWeight: '700',
+    color: COLORS.slate700,
+  },
+  tdIdNumber: {
+    fontFamily: FONT_FAMILY,
+    fontSize: 14,
+    fontWeight: '800',
+    color: COLORS.slate800,
+  },
+  tdIdSub: {
     fontFamily: FONT_FAMILY,
     fontSize: 10,
     fontWeight: '700',
-    color: COLORS.slate400,
-    textTransform: 'uppercase',
+    color: COLORS.emerald700,
     letterSpacing: 0.4,
     marginTop: 2,
-  },
-  memberDetailRows: {
-    borderTopWidth: 1,
-    borderTopColor: COLORS.slate100,
-    paddingTop: 10,
-    gap: 6,
-  },
-  memberDetailRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  memberDetailText: {
-    fontFamily: FONT_FAMILY,
-    fontSize: 12,
-    color: COLORS.slate600,
-    flex: 1,
   },
   deleteBtn: {
     width: 30,
