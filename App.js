@@ -561,7 +561,77 @@ export default function App() {
 
 
 
-  const loadInstitutionsForUser = async (email = null) => {
+  // AsyncStorage (localStorage on web) is device-local — an inspector who
+  // logs in from a different browser, a different device, or after their
+  // cache/site data was cleared finds "Registered Institutions" completely
+  // empty, as if everything was deleted, even though every real submission
+  // they made is still safely in Supabase. Rebuild the institutions list
+  // from their own mpcs_submissions/milk_pcs_submissions rows (every
+  // registered institution has at least the zero-value placeholder row
+  // written when it was first added — see onAddInstitution) using the same
+  // officer-isolation match RecordsScreen uses, so this can't leak another
+  // officer's institutions.
+  const reconstructInstitutionsFromCloud = async (email, name) => {
+    const userEmail = (email || '').trim().toLowerCase();
+    const userName = (name || '').trim().toLowerCase();
+    if (!userEmail && !userName) return [];
+
+    try {
+      const [resMpcs, resMilk] = await Promise.all([
+        supabase.from('mpcs_submissions').select('society_name, registration_number, form_data, created_at').order('created_at', { ascending: false }),
+        supabase.from('milk_pcs_submissions').select('center_name, registration_number, district, reported_by, created_at').order('created_at', { ascending: false }),
+      ]);
+
+      const found = new Map();
+
+      (resMpcs.data || []).forEach(r => {
+        let fd = r.form_data;
+        if (typeof fd === 'string') {
+          try { fd = JSON.parse(fd); } catch (e) { fd = null; }
+        }
+        const officerEmail = (fd?.inspectorEmail || '').trim().toLowerCase();
+        const officerName = (fd?.reportedBy || '').trim().toLowerCase();
+        const matchEmail = userEmail && officerEmail && officerEmail === userEmail;
+        const matchName = userName && officerName && officerName.includes(userName);
+        if (!matchEmail && !matchName) return;
+        const key = `MPCS_${(r.society_name || '').trim().toLowerCase()}`;
+        if (!r.society_name || found.has(key)) return;
+        found.set(key, {
+          id: key,
+          name: r.society_name,
+          type: 'MPCS',
+          regNo: r.registration_number || '',
+          gpu: fd?.district || fd?.gpu || '',
+          district: fd?.district || fd?.gpu || '',
+        });
+      });
+
+      (resMilk.data || []).forEach(r => {
+        // milk_pcs_submissions has no inspector email column, so this table
+        // can only ever be matched by officer name.
+        const officerName = (r.reported_by || '').trim().toLowerCase();
+        const matchName = userName && officerName && officerName.includes(userName);
+        if (!matchName) return;
+        const key = `MILK_${(r.center_name || '').trim().toLowerCase()}`;
+        if (!r.center_name || found.has(key)) return;
+        found.set(key, {
+          id: key,
+          name: r.center_name,
+          type: 'MILK',
+          regNo: r.registration_number || '',
+          gpu: r.district || '',
+          district: r.district || '',
+        });
+      });
+
+      return Array.from(found.values());
+    } catch (e) {
+      console.warn('reconstructInstitutionsFromCloud error:', e);
+      return [];
+    }
+  };
+
+  const loadInstitutionsForUser = async (email = null, userObj = null) => {
     // No fallback demo institutions here: a fresh inspector account starts
     // with zero registered institutions, and adds real ones via "Add New
     // Institution". This used to silently seed and persist two fake
@@ -573,7 +643,24 @@ export default function App() {
       const key = getUserInstitutionsKey(activeEmail);
       if (!key) { setInstitutionsList([]); return []; }
       const raw = await AsyncStorage.getItem(key);
-      const list = raw ? JSON.parse(raw) : [];
+      let list = raw ? JSON.parse(raw) : [];
+
+      if (list.length === 0) {
+        // Read the officer's display name straight off the auth user object
+        // passed in by the caller rather than the userProfile state variable
+        // — right after login, userProfile's setState hasn't been applied
+        // to this closure yet (same stale-closure trap documented above for
+        // the cloud master-state fallback), so it would always read as
+        // blank here and this recovery path could never actually match.
+        const u = userObj || userProfile;
+        const fullName = u?.user_metadata?.fullName || u?.user_metadata?.inspectorName || u?.fullName || '';
+        const cloudList = await reconstructInstitutionsFromCloud(activeEmail, fullName);
+        if (cloudList.length > 0) {
+          list = cloudList;
+          await AsyncStorage.setItem(key, JSON.stringify(list));
+        }
+      }
+
       setInstitutionsList(list);
       return list;
     } catch (e) {
@@ -1043,7 +1130,7 @@ export default function App() {
     setUserProfile(usr);
     setSession({ user: usr });
     if (activeEmail) {
-      const institutions = await loadInstitutionsForUser(activeEmail);
+      const institutions = await loadInstitutionsForUser(activeEmail, usr);
       // Resolve the society to restore from persistent storage rather than
       // the selectedSociety/centerName React state — those still hold their
       // pre-login (blank, post-logout) values in this closure, since the
