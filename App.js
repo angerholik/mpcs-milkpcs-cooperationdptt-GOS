@@ -24,6 +24,7 @@ import NetInfo from '@react-native-community/netinfo';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { MaterialIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import { SIKKIM_SEAL_PNG_BASE64 } from './src/assets/sikkimSealBase64';
 import Login from './src/components/Login';
 import ErrorBoundary from './src/components/ErrorBoundary';
 import HomeScreen from './src/components/HomeScreen';
@@ -1320,10 +1321,27 @@ export default function App() {
           : '');
 
     if (!recordOverride) setIsSealing(true);
-    
+
+    // Certificate evidence (photo/timestamp/coordinates) must come from the
+    // record actually being viewed, not from whatever live capture session
+    // happens to be in component state — otherwise viewing an old sealed
+    // return from Records shows this session's (usually empty) evidence,
+    // producing broken images and blank timestamps on someone else's record.
     let activeLocation = evData?.location ? evData.location : location;
-    const locText = activeLocation ? `${activeLocation.latitude?.toFixed(6) || ''}° N, ${activeLocation.longitude?.toFixed(6) || ''}° E` : 'Gyalshing District GPS';
-    
+    const locText = recordOverride
+      ? (recordItem?.gps_lat != null && recordItem?.gps_lng != null
+          ? `${Number(recordItem.gps_lat).toFixed(6)}° N, ${Number(recordItem.gps_lng).toFixed(6)}° E`
+          : (recordItem?.district ? `${recordItem.district} District` : 'N/A'))
+      : (activeLocation ? `${activeLocation.latitude?.toFixed(6) || ''}° N, ${activeLocation.longitude?.toFixed(6) || ''}° E` : 'Gyalshing District GPS');
+
+    const pdfTimestamp = recordOverride
+      ? (recordItem?.captured_at || (recordItem?.created_at ? new Date(recordItem.created_at).toLocaleString('en-IN') : 'N/A'))
+      : timestamp;
+
+    const pdfImageSrc = recordOverride
+      ? (recordItem?.photo_url || null)
+      : (imageBase64 ? `data:image/jpeg;base64,${imageBase64}` : null);
+
     // Robust internal calculation for totals
     const pdfMSc = parseInt(mSc) || 0;
     const pdfFSc = parseInt(fSc) || 0;
@@ -1545,11 +1563,11 @@ export default function App() {
             <div class="content-layer">
               <div class="doc-ref-bar">
                 <span>VERIFIED AUTO-RECORD</span>
-                <span>SYSTEM TIMESTAMP: ${timestamp}</span>
+                <span>SYSTEM TIMESTAMP: ${pdfTimestamp}</span>
               </div>
 
               <div class="gov-header">
-                <img src="https://upload.wikimedia.org/wikipedia/commons/1/1a/Seal_of_Sikkim_color.png" class="emblem" />
+                <img src="data:image/png;base64,${SIKKIM_SEAL_PNG_BASE64}" class="emblem" />
                 <h1 class="gov-name">Government of Sikkim</h1>
                 <span class="dept-name">Department of Cooperation</span>
                 <div style="background: #7C1C1C; color: #B45309; padding: 4px 15px; border-radius: 20px; font-size: 9px; font-weight: 900; margin-top: 10px; text-transform: uppercase; letter-spacing: 1px;">Official Return Certificate</div>
@@ -1560,9 +1578,12 @@ export default function App() {
                   <div class="premium-card">
                     <div class="card-header"><span class="card-title">I. Physical Verification Evidence</span></div>
                     <div class="card-body">
-                      <img src="data:image/jpeg;base64,${imageBase64}" class="telemetry-img" />
+                      ${pdfImageSrc
+                        ? `<img src="${pdfImageSrc}" class="telemetry-img" />`
+                        : `<div class="telemetry-img" style="display:flex;align-items:center;justify-content:center;background:#F8F5F2;color:#9CA3AF;font-size:10px;">No evidence photo on record</div>`
+                      }
                       <div class="telemetry-data">
-                        <div class="tel-row"><span>CAPTURED AT:</span> <span class="tel-val">${timestamp}</span></div>
+                        <div class="tel-row"><span>CAPTURED AT:</span> <span class="tel-val">${pdfTimestamp}</span></div>
                         <div class="tel-row"><span>COORDINATES:</span> <span class="tel-val">${locText}</span></div>
                       </div>
                     </div>
@@ -1572,7 +1593,7 @@ export default function App() {
                     <div class="card-header"><span class="card-title">II. Institutional Profile</span></div>
                     <div class="card-body">
                       <table class="data-table">
-                        <tr class="data-row"><td class="data-label">Center Name</td><td class="data-value">${centerName || 'N/A'}</td></tr>
+                        <tr class="data-row"><td class="data-label">Center Name</td><td class="data-value">${activeCenterName || 'N/A'}</td></tr>
                       </table>
                     </div>
                   </div>
