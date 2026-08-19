@@ -34,7 +34,8 @@ export default function RecordsScreen({
   onViewPdf,
   onNavigateHome,
   userProfile = null,
-  records = []
+  records = [],
+  reportType = null
 }) {
   const [searchQ, setSearchQ] = useState('');
   const [dbRecords, setDbRecords] = useState([]);
@@ -60,9 +61,18 @@ export default function RecordsScreen({
             ''
           ).trim().toLowerCase();
 
+          // Records is rendered separately for the Milk PCS and MPCS sections of the
+          // app (two call sites in App.js) — each must only ever show that section's
+          // own submissions. Only query the table that matches, instead of always
+          // fetching both and merging, so a Milk PCS return can never show up while
+          // browsing MPCS records (and vice versa).
           const [resMilk, resMpcs] = await Promise.all([
-            supabase.from('milk_pcs_submissions').select('*').order('created_at', { ascending: false }),
-            supabase.from('mpcs_submissions').select('*').order('created_at', { ascending: false })
+            reportType === 'MPCS'
+              ? Promise.resolve({ data: [] })
+              : supabase.from('milk_pcs_submissions').select('*').order('created_at', { ascending: false }),
+            reportType === 'MILK'
+              ? Promise.resolve({ data: [] })
+              : supabase.from('mpcs_submissions').select('*').order('created_at', { ascending: false })
           ]);
 
           const list = [];
@@ -141,7 +151,7 @@ export default function RecordsScreen({
         }
       })();
     }
-  }, [records, userProfile]);
+  }, [records, userProfile, reportType]);
 
   const activeRecords = (records && records.length > 0) ? records : dbRecords;
 

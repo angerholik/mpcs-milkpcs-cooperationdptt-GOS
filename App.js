@@ -2169,6 +2169,7 @@ export default function App() {
                   <RecordsScreen
                     activeTab="records"
                     userProfile={userProfile}
+                    reportType="MILK"
                     onTabPress={(tab) => {
                       setActiveBottomTab(tab);
                       if (tab === 'home') setCurrentMobileScreen('HOME');
@@ -2492,6 +2493,7 @@ export default function App() {
                   <RecordsScreen
                     activeTab="records"
                     userProfile={userProfile}
+                    reportType="MPCS"
                     onTabPress={(tab) => {
                       setActiveBottomTab(tab);
                       if (tab === 'home') setCurrentMobileScreen('HOME');
