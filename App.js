@@ -24,7 +24,6 @@ import NetInfo from '@react-native-community/netinfo';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { MaterialIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { SIKKIM_SEAL_PNG_BASE64 } from './src/assets/sikkimSealBase64';
 import Login from './src/components/Login';
 import ErrorBoundary from './src/components/ErrorBoundary';
 import HomeScreen from './src/components/HomeScreen';
@@ -65,6 +64,14 @@ import { isMonthlyParamsCompleted, saveMonthlyParams, getMonthlyParams, saveSect
 import { useFonts, Manrope_400Regular, Manrope_500Medium, Manrope_600SemiBold, Manrope_700Bold, Manrope_800ExtraBold } from '@expo-google-fonts/manrope';
 
 const { width } = Dimensions.get('window');
+
+// The sealed-return certificate interpolates officer/center names straight into
+// HTML — escape them so a name containing `<`/`&` can't break the markup.
+function escapeHtml(value) {
+  return String(value ?? '').replace(/[&<>"']/g, (c) => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  }[c]));
+}
 
 const SyncBanner = ({ count, syncing }) => (
   <View style={styles.syncBanner}>
@@ -1291,8 +1298,31 @@ export default function App() {
     const activeBalance = opsData?.balance ? String(opsData.balance) : (recordItem?.bank_balance || recordItem?.balance ? String(recordItem.bank_balance || recordItem.balance) : (balance && !isNaN(parseFloat(balance)) ? balance : '0'));
     const activeWithdrawal = opsData?.withdrawal ? String(opsData.withdrawal) : (recordItem?.annual_turnover || recordItem?.withdrawal ? String(recordItem.annual_turnover || recordItem.withdrawal) : (withdrawal || '0'));
     const activeReportedBy = evData?.reportedBy ? evData.reportedBy : (recordItem?.reported_by || recordItem?.officer || userProfile?.fullName || reportedBy?.trim() || 'Cooperative Inspector');
-    const activeDistrict = selectedSociety?.district || userProfile?.district || district?.trim() || 'Sikkim';
-    
+
+    // form_data is only populated for MPCS rows, and Supabase can return it
+    // either as a parsed object or (depending on the query path) a raw JSON
+    // string — mirror the safe-parse RecordsScreen already does before reading it.
+    let recordFormData = recordItem?.form_data;
+    if (typeof recordFormData === 'string') {
+      try { recordFormData = JSON.parse(recordFormData); } catch (e) { recordFormData = null; }
+    }
+
+    const activeDistrict = recordOverride
+      ? (recordItem?.district || recordFormData?.district || recordFormData?.gpu || 'Sikkim')
+      : (selectedSociety?.district || userProfile?.district || district?.trim() || 'Sikkim');
+    const activeRegistrationNumber = recordOverride
+      ? (recordItem?.registration_number || recordItem?.center_id || 'N/A')
+      : (registrationNumber?.trim() || 'N/A');
+    const activePresidentName = recordOverride ? (recordItem?.president_name || '') : (presidentName?.trim() || '');
+    const activePresidentMobile = recordOverride ? (recordItem?.president_mobile || '') : (presidentMobile?.trim() || '');
+    const activeManagerName = recordOverride
+      ? (recordItem?.manager_name || recordFormData?.managerName || '')
+      : (managerName?.trim() || '');
+    const activeManagerMobile = recordOverride
+      ? (recordItem?.manager_mobile || recordFormData?.managerMobile || '')
+      : (managerMobile?.trim() || '');
+    const pdfDateOfReport = new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+
     // Derive activities text (printed on the PDF only — human-readable, flattened)
     let activities = '';
     if (actsData && actsData.activityList) {
@@ -1362,310 +1392,338 @@ export default function App() {
     // now Master Data (set once on Institutional Profile) rather than monthly entries,
     // so pull them from master state here — same source used for the Supabase submission
     // above — instead of the legacy top-level auditDate/agmDate/hasLoan variables (which
-    // are only ever populated for the MPCS flow).
-    const pdfLoanIsActive = isMilk ? (masterHasLoan && !masterLoanCleared) : hasLoan;
-    const pdfLoanName = isMilk ? masterLoanType : loanName;
-    const pdfLoanAmount = isMilk ? masterLoanExtended : loanAmount;
-    const pdfRemainingDue = isMilk ? (compData?.loanOutstanding || '') : remainingDue;
-    const pdfAuditDate = isMilk ? masterAuditDate : auditDate;
-    const pdfAuditYear = isMilk ? masterAuditYear : auditYear;
-    const pdfAgmDate = isMilk ? masterAgmDate : agmDate;
+    // are only ever populated for the MPCS flow). When viewing a historical record instead,
+    // none of that live state belongs to the record being viewed — read the submission's
+    // own stored columns (falling back to form_data for the MPCS fields that only ever
+    // got persisted there) so the certificate reflects what was true for that submission.
+    const pdfLoanIsActive = recordOverride
+      ? !!recordItem?.has_loan
+      : (isMilk ? (masterHasLoan && !masterLoanCleared) : hasLoan);
+    const pdfLoanName = recordOverride
+      ? (recordItem?.loan_name || recordFormData?.loanName || '')
+      : (isMilk ? masterLoanType : loanName);
+    const pdfLoanAmount = recordOverride
+      ? (recordItem?.loan_amount || recordFormData?.loanAmount || 0)
+      : (isMilk ? masterLoanExtended : loanAmount);
+    const pdfRemainingDue = recordOverride
+      ? (recordItem?.remaining_due || recordFormData?.remainingDue || 0)
+      : (isMilk ? (compData?.loanOutstanding || '') : remainingDue);
+    const pdfAuditDate = recordOverride
+      ? (isMilk ? 'N/A' : (recordItem?.audit_done || 'N/A'))
+      : (isMilk ? masterAuditDate : auditDate);
+    const pdfAuditYear = recordOverride
+      ? (isMilk ? '' : (recordItem?.audit_year || ''))
+      : (isMilk ? masterAuditYear : auditYear);
+    const pdfAgmDate = recordOverride
+      ? (isMilk ? 'N/A' : (recordFormData?.agmDate || recordFormData?.agmDone || 'N/A'))
+      : (isMilk ? masterAgmDate : agmDate);
+
+    // ─── Row data for the report tables (built once, rendered via .map below) ───
+    const generalInfoRows = [
+      { label: isMilk ? 'Name of Milk PCS' : 'Name of MPCS', value: activeCenterName || 'N/A' },
+      { label: isMilk ? 'Milk PCS Code' : 'MPCS Code', value: activeRegistrationNumber },
+      { label: 'District / GPU', value: activeDistrict },
+      activePresidentName ? { label: 'President Name', value: activePresidentName } : null,
+      activePresidentMobile ? { label: 'President Mobile', value: activePresidentMobile } : null,
+      activeManagerName ? { label: isMilk ? 'Manager Name' : 'Secretary / Manager Name', value: activeManagerName } : null,
+      activeManagerMobile ? { label: 'Manager Mobile', value: activeManagerMobile } : null,
+      { label: 'Reporting Month', value: activeReportingMonth || 'N/A' },
+    ].filter(Boolean);
+
+    const financialRows = isMilk
+      ? [
+          { label: 'Litres Collected', value: `${activeLitres} L` },
+          { label: 'Total Withdrawal', value: `₹ ${parseFloat(activeWithdrawal || 0).toLocaleString('en-IN')}` },
+          { label: 'Closing Balance', value: `₹ ${parseFloat(activeBalance || 0).toLocaleString('en-IN')}` },
+        ]
+      : [
+          { label: 'Annual Turnover', value: `₹ ${parseFloat(activeWithdrawal || 0).toLocaleString('en-IN')}` },
+          { label: 'Bank Balance', value: `₹ ${parseFloat(activeBalance || 0).toLocaleString('en-IN')}` },
+        ];
+    financialRows.push({ label: 'Audit Conducted', value: `${pdfAuditDate || 'N/A'}${pdfAuditYear ? ` (Year: ${pdfAuditYear})` : ''}` });
+    financialRows.push({ label: 'AGM Conducted', value: pdfAgmDate || 'N/A' });
+    if (pdfLoanIsActive) {
+      financialRows.push({ label: 'Loan Scheme', value: pdfLoanName || 'N/A' });
+      financialRows.push({ label: 'Loan Disbursed', value: `₹ ${parseFloat(pdfLoanAmount || 0).toLocaleString('en-IN')}` });
+      financialRows.push({ label: 'Outstanding Loan', value: `₹ ${parseFloat(pdfRemainingDue || 0).toLocaleString('en-IN')}` });
+    }
+
+    const renderInfoRows = (rows) => rows.map(r => `<tr class="data-row"><td class="data-label">${escapeHtml(r.label)}</td><td class="data-value">${escapeHtml(r.value)}</td></tr>`).join('');
+
+    const reportTypeLabel = isMilk ? 'MILK PCS' : 'MPCS';
+    const evidenceCaption = [activeDistrict, 'Sikkim, India'].filter(Boolean).join(', ');
 
     const htmlContent = `
       <html>
         <head>
+          <meta charset="utf-8" />
           <style>
-            @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;900&family=Inter:wght@400;500;600;700;800&display=swap');
-            
             @page {
               size: A4;
-              margin: 20mm;
+              margin: 12mm;
             }
 
             * { box-sizing: border-box; }
-            
-            body { 
-              font-family: 'Inter', sans-serif; 
-              padding: 0; 
+
+            body {
+              font-family: 'Helvetica Neue', Arial, sans-serif;
+              padding: 0;
               margin: 0;
               background-color: #FFFFFF;
-              color: #450A0A;
-              line-height: 1.4;
-              font-size: 11px;
+              color: #1F2937;
+              line-height: 1.3;
+              font-size: 10px;
             }
-            
+
             .page-container {
               width: 100%;
               position: relative;
+              border: 1px solid #CBD5E1;
+              padding: 10px 14px;
             }
-
-            .page-border {
-              position: absolute;
-              top: -10mm; left: -10mm; right: -10mm; bottom: -10mm;
-              border: 1px solid #B45309;
-              outline: 0.5px solid #7C1C1C;
-              outline-offset: -6px;
-              z-index: 1;
-              pointer-events: none;
-            }
-
-            .content-layer { position: relative; z-index: 10; }
 
             .gov-header {
-              display: flex;
-              flex-direction: column;
-              align-items: center;
               text-align: center;
-              margin-bottom: 30px;
-              padding-bottom: 20px;
-              border-bottom: 2px solid #B45309;
-            }
-            .emblem {
-              width: 75px;
-              height: 75px;
-              margin-bottom: 10px;
+              margin-bottom: 8px;
             }
             .gov-name {
-              font-family: 'Cinzel', serif;
-              font-size: 24px;
-              font-weight: 900;
-              color: #7C1C1C;
-              letter-spacing: 1.5px;
+              font-size: 19px;
+              font-weight: 800;
+              color: #14235C;
+              letter-spacing: 0.5px;
               margin: 0;
               text-transform: uppercase;
             }
             .dept-name {
-              font-family: 'Cinzel', serif;
-              font-size: 12px;
-              font-weight: 700;
-              color: #4B5563;
-              letter-spacing: 3px;
-              margin-top: 5px;
+              font-size: 10.5px;
+              font-weight: 600;
+              color: #374151;
+              letter-spacing: 1.2px;
+              margin-top: 2px;
               text-transform: uppercase;
             }
-
-            .doc-ref-bar {
-              display: flex;
-              justify-content: space-between;
-              font-family: 'Courier New', monospace;
-              font-size: 9px;
-              color: #9CA3AF;
-              margin-bottom: 20px;
-              font-weight: bold;
-              padding-top: 5px;
-            }
-
-            .grid { display: flex; gap: 25px; }
-            .col-left { flex: 1.1; }
-            .col-right { flex: 1; }
-
-            .premium-card {
-              background: #FFFFFF;
-              border-radius: 8px;
-              border: 1px solid #E5E7EB;
-              margin-bottom: 20px;
-              overflow: hidden;
-            }
-            .card-header {
-              background: #F8F5F2;
-              padding: 10px 15px;
-              border-bottom: 1px solid #7C1C1C;
-            }
-            .card-title {
-              font-family: 'Cinzel', serif;
-              font-size: 11px;
+            .doc-title {
+              font-size: 16px;
               font-weight: 900;
-              color: #7C1C1C;
+              color: #111827;
               letter-spacing: 0.8px;
+              margin-top: 6px;
+              text-transform: uppercase;
             }
-            .card-body { padding: 15px; }
-
-            .telemetry-img {
-              width: 100%;
-              height: 200px;
-              object-fit: cover;
-              border-radius: 6px;
-              border: 1px solid #E5E7EB;
-            }
-            .telemetry-data {
-              margin-top: -25px;
-              background: rgba(124, 28, 28, 0.95);
-              padding: 10px 15px;
-              border-radius: 8px;
-              color: #B45309;
-              position: relative;
-              font-size: 9px;
-              border: 1px solid #B45309;
-            }
-            .tel-row { display: flex; justify-content: space-between; margin: 2px 0; }
-            .tel-val { font-family: 'Courier New', monospace; font-weight: bold; }
-
-            .data-table { width: 100%; border-collapse: collapse; }
-            .data-row { border-bottom: 1px solid #F1F5F9; }
-            .data-row:last-child { border-bottom: none; }
-            .data-label { padding: 8px 0; font-size: 9px; font-weight: 700; color: #7F1D1D; text-transform: uppercase; }
-            .data-value { padding: 8px 0; font-size: 11px; font-weight: 800; color: #111827; text-align: right; }
-            .financial-val { color: #7C1C1C; font-size: 12px; }
-
-            .census-table { width: 100%; border-collapse: collapse; margin-top: 5px; }
-            .census-header th { font-size: 8px; color: #64748B; text-align: left; padding-bottom: 5px; border-bottom: 1px solid #E2E8F0; text-transform: uppercase; }
-            .census-row td { padding: 8px 0; border-bottom: 0.5px solid #F1F5F9; font-size: 10px; font-weight: 700; color: #334155; }
-            .census-val { font-family: 'Courier New', monospace; font-weight: 800; text-align: center; }
-            .census-total-row td { background: #FEE2E2; padding: 10px 5px; font-weight: 900; color: #7C1C1C; border-bottom: 1.5px solid #7C1C1C; }
-
-            .footer-authority {
-              margin-top: 40px;
-              display: flex;
-              justify-content: space-between;
-              padding: 0 30px;
-            }
-            .sign-col { text-align: center; width: 200px; }
-            .sign-line { border-top: 1.5px solid #111827; margin-bottom: 6px; }
-            .sign-name { font-size: 11px; font-weight: 800; text-transform: uppercase; color: #111827; }
-            .sign-title { font-size: 9px; color: #7F1D1D; margin-top: 2px; font-weight: 600; }
-
-            .qr-seal-box {
+            .title-divider {
               display: flex;
               align-items: center;
-              gap: 15px;
-              background: #F8F5F2;
-              padding: 10px;
-              border-radius: 6px;
-              border: 1px dashed #D1D5DB;
+              gap: 8px;
+              margin-top: 6px;
             }
-            .qr-placeholder {
-              width: 50px; height: 50px;
-              border: 1px solid #E5E7EB;
-              background: #FFFFFF;
-              display: flex; align-items: center; justify-content: center;
-              font-size: 5px; text-align: center; font-weight: 900; color: #94A3B8;
+            .title-divider .line { flex: 1; height: 2px; background: #14235C; }
+            .title-divider .dot { width: 5px; height: 5px; border-radius: 50%; background: #14235C; }
+
+            .info-bar {
+              display: flex;
+              background: #14235C;
+              color: #FFFFFF;
+              margin-top: 8px;
+              border-radius: 2px;
+              overflow: hidden;
+            }
+            .info-bar + .info-bar { margin-top: 1px; }
+            .info-bar > div {
+              flex: 1;
+              padding: 5px 12px;
+              font-size: 9.5px;
+              border-right: 1px solid rgba(255,255,255,0.25);
+            }
+            .info-bar > div:last-child { border-right: none; }
+            .info-bar b { font-weight: 700; }
+
+            .section-title {
+              font-size: 11px;
+              font-weight: 800;
+              color: #14235C;
+              text-transform: uppercase;
+              letter-spacing: 0.4px;
+              margin: 10px 0 5px;
+              padding-bottom: 3px;
+              border-bottom: 2px solid #14235C;
             }
 
-            .watermark {
-              position: absolute;
-              top: 50%; left: 50%;
-              transform: translate(-50%, -50%) rotate(-30deg);
-              font-family: 'Cinzel', serif;
-              font-size: 100px;
-              color: rgba(124, 28, 28, 0.02);
-              white-space: nowrap;
-              z-index: 0;
-              pointer-events: none;
-              text-transform: uppercase;
+            .grid-2 { display: flex; gap: 14px; }
+            .grid-2 > div { flex: 1; }
+
+            .evidence-photo {
+              position: relative;
+              width: 100%;
+              height: 130px;
+              border-radius: 4px;
+              border: 1px solid #CBD5E1;
+              overflow: hidden;
+              background: #F1F5F9;
             }
+            .evidence-photo img {
+              width: 100%; height: 100%; object-fit: cover; display: block;
+            }
+            .evidence-photo .no-photo {
+              width: 100%; height: 100%;
+              display: flex; align-items: center; justify-content: center;
+              color: #94A3B8; font-size: 9px;
+            }
+            .evidence-stamp {
+              position: absolute;
+              left: 0; right: 0; bottom: 0;
+              background: linear-gradient(0deg, rgba(11,23,57,0.92) 0%, rgba(11,23,57,0.72) 70%, transparent 100%);
+              color: #FFFFFF;
+              padding: 16px 8px 6px;
+              font-size: 8px;
+            }
+            .evidence-stamp .place { font-size: 10px; font-weight: 700; margin-bottom: 1px; }
+            .evidence-stamp .meta { opacity: 0.9; }
+            .evidence-badge {
+              position: absolute;
+              top: 6px; left: 6px;
+              background: rgba(255,255,255,0.92);
+              color: #14235C;
+              font-size: 7.5px;
+              font-weight: 800;
+              padding: 2px 7px;
+              border-radius: 3px;
+              letter-spacing: 0.3px;
+            }
+
+            .data-table { width: 100%; border-collapse: collapse; }
+            .data-row { border-bottom: 1px solid #E5E7EB; }
+            .data-row:last-child { border-bottom: none; }
+            .data-label { padding: 4px 4px; font-size: 9px; font-weight: 600; color: #4B5563; }
+            .data-value { padding: 4px 4px; font-size: 9.5px; font-weight: 700; color: #111827; text-align: right; }
+
+            .stat-row { display: flex; gap: 8px; margin-bottom: 6px; }
+            .stat-box {
+              flex: 1;
+              background: #F1F5FB;
+              border: 1px solid #DCE4F5;
+              border-radius: 4px;
+              padding: 6px 8px;
+              text-align: center;
+            }
+            .stat-box .num { font-size: 15px; font-weight: 800; color: #14235C; }
+            .stat-box .lbl { font-size: 7.5px; color: #4B5563; text-transform: uppercase; margin-top: 1px; letter-spacing: 0.3px; }
+
+            .census-table { width: 100%; border-collapse: collapse; }
+            .census-table th { background: #14235C; color: #FFFFFF; font-size: 8px; text-align: center; padding: 4px 4px; text-transform: uppercase; }
+            .census-table th:first-child { text-align: left; padding-left: 8px; }
+            .census-row td { padding: 3.5px 4px; border-bottom: 0.5px solid #E5E7EB; font-size: 9px; font-weight: 600; color: #334155; text-align: center; }
+            .census-row td:first-child { text-align: left; padding-left: 8px; }
+            .census-total-row td { background: #EEF2FB; padding: 4.5px 4px; font-weight: 800; color: #14235C; border-top: 1.5px solid #14235C; text-align: center; }
+            .census-total-row td:first-child { text-align: left; padding-left: 8px; }
+
+            .remarks-box {
+              border: 1px solid #E5E7EB;
+              border-radius: 4px;
+              padding: 6px 10px;
+              font-size: 9px;
+              color: #374151;
+              white-space: pre-line;
+              min-height: 20px;
+            }
+
+            .footer-authority {
+              margin-top: 12px;
+              display: flex;
+              justify-content: space-between;
+              gap: 20px;
+            }
+            .sign-col { flex: 1; font-size: 9px; }
+            .sign-col .row { display: flex; margin-bottom: 2px; }
+            .sign-col .k { width: 64px; color: #6B7280; }
+            .sign-col .v { font-weight: 700; color: #111827; }
+            .sign-col .heading { font-size: 8.5px; font-weight: 800; color: #14235C; text-transform: uppercase; letter-spacing: 0.4px; margin-bottom: 4px; }
+
+            .closing-divider { border-top: 2px solid #14235C; margin-top: 10px; padding-top: 5px; display: flex; justify-content: space-between; }
+            .closing-divider .stamp { text-align: center; font-size: 8px; color: #4B5563; }
+            .closing-divider .stamp b { display: block; font-size: 9px; color: #14235C; }
           </style>
         </head>
         <body>
           <div class="page-container">
-            <div class="page-border"></div>
-            <div class="watermark">Official Compliance Return</div>
-            
-            <div class="content-layer">
-              <div class="doc-ref-bar">
-                <span>VERIFIED AUTO-RECORD</span>
-                <span>SYSTEM TIMESTAMP: ${pdfTimestamp}</span>
-              </div>
+            <div class="gov-header">
+              <h1 class="gov-name">Government of Sikkim</h1>
+              <div class="dept-name">Department of Cooperation</div>
+              <div class="doc-title">${reportTypeLabel} Monthly Data Report</div>
+              <div class="title-divider"><span class="line"></span><span class="dot"></span><span class="line"></span></div>
+            </div>
 
-              <div class="gov-header">
-                <img src="data:image/png;base64,${SIKKIM_SEAL_PNG_BASE64}" class="emblem" />
-                <h1 class="gov-name">Government of Sikkim</h1>
-                <span class="dept-name">Department of Cooperation</span>
-                <div style="background: #7C1C1C; color: #B45309; padding: 4px 15px; border-radius: 20px; font-size: 9px; font-weight: 900; margin-top: 10px; text-transform: uppercase; letter-spacing: 1px;">Official Return Certificate</div>
-              </div>
+            <div class="info-bar">
+              <div><b>Reporting Month</b> &nbsp;:&nbsp; ${escapeHtml(activeReportingMonth || 'N/A')}</div>
+              <div><b>Date of Report</b> &nbsp;:&nbsp; ${escapeHtml(pdfDateOfReport)}</div>
+            </div>
+            <div class="info-bar">
+              <div><b>Name of ${reportTypeLabel}</b> &nbsp;:&nbsp; ${escapeHtml(activeCenterName || 'N/A')}</div>
+              <div><b>${reportTypeLabel} Code</b> &nbsp;:&nbsp; ${escapeHtml(activeRegistrationNumber)}</div>
+            </div>
 
-              <div class="grid">
-                <div class="col-left">
-                  <div class="premium-card">
-                    <div class="card-header"><span class="card-title">I. Physical Verification Evidence</span></div>
-                    <div class="card-body">
-                      ${pdfImageSrc
-                        ? `<img src="${pdfImageSrc}" class="telemetry-img" />`
-                        : `<div class="telemetry-img" style="display:flex;align-items:center;justify-content:center;background:#F8F5F2;color:#9CA3AF;font-size:10px;">No evidence photo on record</div>`
-                      }
-                      <div class="telemetry-data">
-                        <div class="tel-row"><span>CAPTURED AT:</span> <span class="tel-val">${pdfTimestamp}</span></div>
-                        <div class="tel-row"><span>COORDINATES:</span> <span class="tel-val">${locText}</span></div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div class="premium-card">
-                    <div class="card-header"><span class="card-title">II. Institutional Profile</span></div>
-                    <div class="card-body">
-                      <table class="data-table">
-                        <tr class="data-row"><td class="data-label">Center Name</td><td class="data-value">${activeCenterName || 'N/A'}</td></tr>
-                      </table>
-                    </div>
-                  </div>
-
-                  ${pdfLoanIsActive ? `
-                  <div class="premium-card">
-                    <div class="card-header"><span class="card-title" style="color: #B45309;">VI. Financial Liability Details</span></div>
-                    <div class="card-body">
-                      <table class="data-table">
-                        <tr class="data-row"><td class="data-label">Scheme Name</td><td class="data-value">${pdfLoanName || 'N/A'}</td></tr>
-                        <tr class="data-row"><td class="data-label">Total Disbursed</td><td class="data-value">₹ ${parseFloat(pdfLoanAmount || 0).toLocaleString('en-IN')}</td></tr>
-                        <tr class="data-row"><td class="data-label">Current Liability</td><td class="data-value" style="color: #EF4444; font-weight: 900;">₹ ${parseFloat(pdfRemainingDue || 0).toLocaleString('en-IN')}</td></tr>
-                      </table>
-                    </div>
-                  </div>
-                  ` : ''}
-                </div>
-
-                <div class="col-right">
-                  <div class="premium-card">
-                    <div class="card-header"><span class="card-title">III. Audit & AGM Declaration</span></div>
-                    <div class="card-body">
-                      <table class="data-table">
-                        <tr class="data-row"><td class="data-label">Reporting Month</td><td class="data-value">${reportingMonth || 'N/A'}</td></tr>
-                        <tr class="data-row"><td class="data-label">Litres Collected</td><td class="data-value">${isMilk ? activeLitres : litres} L</td></tr>
-                        <tr class="data-row"><td class="data-label">Withdrawal</td><td class="data-value financial-val">₹ ${parseFloat((isMilk ? activeWithdrawal : withdrawal) || 0).toLocaleString('en-IN')}</td></tr>
-                        <tr class="data-row"><td class="data-label">Bank Balance</td><td class="data-value financial-val">₹ ${parseFloat((isMilk ? activeBalance : balance) || 0).toLocaleString('en-IN')}</td></tr>
-                        <tr class="data-row"><td class="data-label">Audit Conducted Date</td><td class="data-value">${pdfAuditDate || 'N/A'} (Year: ${pdfAuditYear || 'N/A'})</td></tr>
-                        <tr class="data-row"><td class="data-label">AGM Conducted Date</td><td class="data-value">${pdfAgmDate || 'N/A'}</td></tr>
-                      </table>
-                    </div>
-                  </div>
-
-                  ${isMilk ? '' : `
-                  <div class="premium-card">
-                    <div class="card-header"><span class="card-title">IV. Registered Member Category</span></div>
-                    <div class="card-body" style="padding: 10px 15px;">
-                      <table class="census-table">
-                        <tr class="census-header">
-                          <th style="width: 40%;">Category</th>
-                          <th class="census-val">Male</th>
-                          <th class="census-val">Female</th>
-                          <th class="census-val">Total</th>
-                        </tr>
-                        <tr class="census-row"><td>SC Members</td><td class="census-val">${pdfMSc}</td><td class="census-val">${pdfFSc}</td><td class="census-val">${pdfMSc + pdfFSc}</td></tr>
-                        <tr class="census-row"><td>ST Members</td><td class="census-val">${pdfMSt}</td><td class="census-val">${pdfFSt}</td><td class="census-val">${pdfMSt + pdfFSt}</td></tr>
-                        <tr class="census-row"><td>OBC Members</td><td class="census-val">${pdfMObc}</td><td class="census-val">${pdfFObc}</td><td class="census-val">${pdfMObc + pdfFObc}</td></tr>
-                        <tr class="census-row"><td>GEN Members</td><td class="census-val">${pdfMGen}</td><td class="census-val">${pdfFGen}</td><td class="census-val">${pdfMGen + pdfFGen}</td></tr>
-                        <tr class="census-total-row">
-                          <td>Grand Total</td>
-                          <td class="census-val">${pdfTotalMale}</td>
-                          <td class="census-val">${pdfTotalFemale}</td>
-                          <td class="census-val">${pdfGrandTotal}</td>
-                        </tr>
-                      </table>
-                    </div>
-                  </div>
-                  `}
-
-                  <div class="premium-card">
-                    <div class="card-header"><span class="card-title">V. Operations & Events Log</span></div>
-                    <div class="card-body" style="font-size: 10px; color: #4B5563; min-height: 50px;">
-                      ${activities || 'No special activities for this period.'}
-                    </div>
+            <div class="section-title">1. Digital Evidence (Geotagged Photo)</div>
+            <div class="grid-2">
+              <div>
+                <div class="evidence-photo">
+                  ${pdfImageSrc
+                    ? `<img src="${pdfImageSrc}" />`
+                    : `<div class="no-photo">No evidence photo on record</div>`
+                  }
+                  <div class="evidence-badge">GPS VERIFIED</div>
+                  <div class="evidence-stamp">
+                    <div class="place">${escapeHtml(evidenceCaption || 'Location not recorded')}</div>
+                    <div class="meta">${escapeHtml(locText)}</div>
+                    <div class="meta">${escapeHtml(pdfTimestamp)}</div>
                   </div>
                 </div>
               </div>
-
-              <div class="footer-authority">
-                <div class="sign-col"><div class="sign-line"></div><div class="sign-name">${activeReportedBy}</div><div class="sign-title">Officer Authorized Signatory</div></div>
-                <div class="sign-col"><div class="sign-line"></div><div class="sign-name">Digitally Verified</div><div class="sign-title">ARCS / CI Authority</div></div>
+              <div>
+                <div class="section-title" style="margin-top:0;">2. General Information</div>
+                <table class="data-table">${renderInfoRows(generalInfoRows)}</table>
               </div>
+            </div>
+
+            ${isMilk ? '' : `
+            <div class="section-title">3. Membership &amp; Governance</div>
+            <div class="stat-row">
+              <div class="stat-box"><div class="num">${pdfGrandTotal}</div><div class="lbl">Total Members</div></div>
+              <div class="stat-box"><div class="num">${pdfTotalMale}</div><div class="lbl">Male</div></div>
+              <div class="stat-box"><div class="num">${pdfTotalFemale}</div><div class="lbl">Female</div></div>
+            </div>
+            <table class="census-table">
+              <tr><th style="width: 40%;">Category</th><th>Male</th><th>Female</th><th>Total</th></tr>
+              <tr class="census-row"><td>SC Members</td><td>${pdfMSc}</td><td>${pdfFSc}</td><td>${pdfMSc + pdfFSc}</td></tr>
+              <tr class="census-row"><td>ST Members</td><td>${pdfMSt}</td><td>${pdfFSt}</td><td>${pdfMSt + pdfFSt}</td></tr>
+              <tr class="census-row"><td>OBC Members</td><td>${pdfMObc}</td><td>${pdfFObc}</td><td>${pdfMObc + pdfFObc}</td></tr>
+              <tr class="census-row"><td>GEN Members</td><td>${pdfMGen}</td><td>${pdfFGen}</td><td>${pdfMGen + pdfFGen}</td></tr>
+              <tr class="census-total-row"><td>Grand Total</td><td>${pdfTotalMale}</td><td>${pdfTotalFemale}</td><td>${pdfGrandTotal}</td></tr>
+            </table>
+            `}
+
+            <div class="section-title">${isMilk ? '3' : '4'}. Financial Summary (This Month)</div>
+            <table class="data-table">${renderInfoRows(financialRows)}</table>
+
+            <div class="section-title">${isMilk ? '4' : '5'}. Activities &amp; Remarks</div>
+            <div class="remarks-box">${escapeHtml(activities) || 'No special activities recorded for this period.'}</div>
+
+            <div class="footer-authority">
+              <div class="sign-col">
+                <div class="heading">Reported By</div>
+                <div class="row"><div class="k">Name</div><div class="v">:&nbsp; ${escapeHtml(activeReportedBy)}</div></div>
+                <div class="row"><div class="k">Designation</div><div class="v">:&nbsp; Cooperative Inspector (CI)</div></div>
+                <div class="row"><div class="k">Date &amp; Time</div><div class="v">:&nbsp; ${escapeHtml(pdfTimestamp)}</div></div>
+              </div>
+              <div class="sign-col">
+                <div class="heading">Verified By</div>
+                <div class="row"><div class="k">Name</div><div class="v">:&nbsp; ARCS Official</div></div>
+                <div class="row"><div class="k">Designation</div><div class="v">:&nbsp; Assistant Registrar, Coop. Societies</div></div>
+                <div class="row"><div class="k">Date &amp; Time</div><div class="v">:&nbsp; &nbsp;</div></div>
+              </div>
+            </div>
+
+            <div class="closing-divider">
+              <div class="stamp"><b>Signed by ARCS</b>Department of Cooperation<br/>Government of Sikkim</div>
+              <div class="stamp"><b>Signed by CI</b>Department of Cooperation<br/>Government of Sikkim</div>
             </div>
           </div>
         </body>
