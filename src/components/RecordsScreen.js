@@ -44,8 +44,21 @@ export default function RecordsScreen({
     if (!records || records.length === 0) {
       (async () => {
         try {
+          // userProfile is the raw Supabase auth User object — fullName lives
+          // under user_metadata (set at signUp), not as a top-level property.
+          // Reading userProfile?.fullName directly always produced '', which
+          // combined with milk_pcs_submissions/mpcs_submissions having no
+          // inspector_email column (see officerEmail below) meant neither
+          // match path could ever succeed — every officer saw "No Records
+          // Found" regardless of what they'd actually submitted.
           const userEmail = (userProfile?.email || '').trim().toLowerCase();
-          const userName = (userProfile?.fullName || userProfile?.inspectorName || '').trim().toLowerCase();
+          const userName = (
+            userProfile?.user_metadata?.fullName ||
+            userProfile?.user_metadata?.inspectorName ||
+            userProfile?.fullName ||
+            userProfile?.inspectorName ||
+            ''
+          ).trim().toLowerCase();
 
           const [resMilk, resMpcs] = await Promise.all([
             supabase.from('milk_pcs_submissions').select('*').order('created_at', { ascending: false }),
@@ -59,6 +72,9 @@ export default function RecordsScreen({
               try { actObj = JSON.parse(actObj); } catch(e) {}
             }
             const isRev = !!(actObj?.is_updated || actObj?.updated_at || r.is_updated || r.isUpdated);
+            // milk_pcs_submissions doesn't capture the submitting officer's
+            // email anywhere — only reported_by (a display name) — so this
+            // table can only ever be isolated by name match.
             const officerEmail = (r.inspector_email || '').trim().toLowerCase();
             const officerName = (r.reported_by || '').trim().toLowerCase();
 
@@ -91,7 +107,9 @@ export default function RecordsScreen({
               try { fdObj = JSON.parse(fdObj); } catch(e) {}
             }
             const isRev = !!(fdObj?.is_updated || fdObj?.updated_at || r.is_updated || r.isUpdated);
-            const officerEmail = (r.inspector_email || '').trim().toLowerCase();
+            // mpcs_submissions has no inspector_email column — the app writes
+            // it into form_data.inspectorEmail instead (see saveMpcsSubmission).
+            const officerEmail = (fdObj?.inspectorEmail || r.inspector_email || '').trim().toLowerCase();
             const officerName = (r.reported_by || r.president_name || '').trim().toLowerCase();
 
             // Strict user isolation filter
