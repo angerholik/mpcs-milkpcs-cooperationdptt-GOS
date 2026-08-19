@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, Platform } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, Platform, ActivityIndicator } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
+import * as Print from 'expo-print';
+import * as Sharing from 'expo-sharing';
 import HeaderNav from './HeaderNav';
 import BottomNav from './BottomNav';
 import { supabase } from '../supabase';
@@ -17,6 +19,15 @@ const COLORS = {
   amber: '#D97706',
 };
 
+// The all-records PDF is assembled from field-entered strings (officer/center
+// names) interpolated straight into HTML — escape them so a name containing
+// `<`/`&` can't break the markup or inject content into the exported report.
+function escapeHtml(value) {
+  return String(value ?? '').replace(/[&<>"']/g, (c) => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  }[c]));
+}
+
 export default function RecordsScreen({
   activeTab = 'records',
   onTabPress,
@@ -27,6 +38,7 @@ export default function RecordsScreen({
 }) {
   const [searchQ, setSearchQ] = useState('');
   const [dbRecords, setDbRecords] = useState([]);
+  const [exporting, setExporting] = useState(false);
 
   useEffect(() => {
     if (!records || records.length === 0) {
@@ -132,11 +144,99 @@ export default function RecordsScreen({
   });
   const uniqueRecords = Array.from(uniqueRecordsMap.values());
 
-  const filtered = uniqueRecords.filter(r => 
+  const filtered = uniqueRecords.filter(r =>
     r.month?.toLowerCase().includes(searchQ.toLowerCase()) ||
     r.center?.toLowerCase().includes(searchQ.toLowerCase()) ||
     r.officer?.toLowerCase().includes(searchQ.toLowerCase())
   );
+
+  // Consolidated PDF of every record currently listed (respects the active
+  // search filter) — a tabular archive export, distinct from the single-
+  // submission "sealed" certificate generated elsewhere (App.js generatePDF).
+  const handleExportAllPdf = async () => {
+    if (exporting || filtered.length === 0) return;
+    setExporting(true);
+    try {
+      const rows = filtered.map(r => `
+        <tr>
+          <td>${escapeHtml(r.date || '—')}</td>
+          <td>${escapeHtml(r.month || '—')}</td>
+          <td>${escapeHtml(r.center || '—')}<br/><span class="code">${escapeHtml(r.code || '')}</span></td>
+          <td>${escapeHtml(r.officer || '—')}</td>
+          <td>${escapeHtml(r.litres || '—')}</td>
+          <td>${escapeHtml(r.withdrawal || '—')}</td>
+          <td>${escapeHtml(r.balance || '—')}</td>
+        </tr>`).join('');
+
+      const generatedAt = new Date().toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' });
+
+      const htmlContent = `
+        <html>
+          <head>
+            <meta charset="utf-8" />
+            <style>
+              @page { size: A4 landscape; margin: 14mm; }
+              * { box-sizing: border-box; }
+              body { font-family: Arial, Helvetica, sans-serif; color: #1E293B; margin: 0; }
+              .hdr { text-align: center; border-bottom: 2px solid #7C1C1C; padding-bottom: 10px; margin-bottom: 14px; }
+              .hdr h1 { font-size: 16px; color: #7C1C1C; margin: 0 0 2px; letter-spacing: 1px; }
+              .hdr p { font-size: 10px; color: #64748B; margin: 0; }
+              .meta { display: flex; justify-content: space-between; font-size: 10px; color: #475569; margin-bottom: 10px; }
+              table { width: 100%; border-collapse: collapse; font-size: 9.5px; }
+              th { background: #7C1C1C; color: #fff; text-align: left; padding: 6px 8px; }
+              td { padding: 6px 8px; border-bottom: 1px solid #E2E8F0; vertical-align: top; }
+              tr:nth-child(even) { background: #F8FAFC; }
+              .code { color: #94A3B8; font-size: 8.5px; }
+              .ftr { margin-top: 14px; font-size: 8.5px; color: #94A3B8; text-align: center; }
+            </style>
+          </head>
+          <body>
+            <div class="hdr">
+              <h1>DEPARTMENT OF COOPERATION — GOVERNMENT OF SIKKIM</h1>
+              <p>Consolidated Monthly Submission Records</p>
+            </div>
+            <div class="meta">
+              <span>Officer: ${escapeHtml(userProfile?.fullName || userProfile?.inspectorName || 'Cooperative Inspector')}</span>
+              <span>Total Records: ${filtered.length}</span>
+              <span>Generated: ${generatedAt}</span>
+            </div>
+            <table>
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Month</th>
+                  <th>Center / Society</th>
+                  <th>Officer</th>
+                  <th>Litres / Members</th>
+                  <th>Withdrawal / Turnover</th>
+                  <th>Balance</th>
+                </tr>
+              </thead>
+              <tbody>${rows}</tbody>
+            </table>
+            <div class="ftr">Generated from the Milk PCS / MPCS Cooperative Reporting App — for official record-keeping only.</div>
+          </body>
+        </html>`;
+
+      if (Platform.OS === 'web') {
+        const printWin = window.open('', '_blank');
+        if (printWin) {
+          printWin.document.write(htmlContent);
+          printWin.document.close();
+          setTimeout(() => { printWin.focus(); printWin.print(); }, 300);
+        }
+      } else {
+        const printResult = await Print.printToFileAsync({ html: htmlContent });
+        if (printResult?.uri && await Sharing.isAvailableAsync()) {
+          await Sharing.shareAsync(printResult.uri, { UTI: '.pdf', mimeType: 'application/pdf' });
+        }
+      }
+    } catch (e) {
+      console.warn('Export all records PDF failed:', e);
+    } finally {
+      setExporting(false);
+    }
+  };
 
   return (
     <View style={styles.container}>
@@ -153,6 +253,23 @@ export default function RecordsScreen({
             <Text style={styles.countText}>{uniqueRecords.length} Archived</Text>
           </View>
         </View>
+
+        {/* Export All to PDF */}
+        <TouchableOpacity
+          style={[styles.exportAllBtn, (exporting || filtered.length === 0) && styles.exportAllBtnDisabled]}
+          onPress={handleExportAllPdf}
+          disabled={exporting || filtered.length === 0}
+          activeOpacity={0.85}
+        >
+          {exporting ? (
+            <ActivityIndicator size="small" color={COLORS.primary} />
+          ) : (
+            <MaterialIcons name="picture-as-pdf" size={16} color={filtered.length === 0 ? '#94A3B8' : COLORS.primary} />
+          )}
+          <Text style={[styles.exportAllBtnText, filtered.length === 0 && { color: '#94A3B8' }]}>
+            {exporting ? 'Preparing PDF...' : `Export ${filtered.length !== uniqueRecords.length ? 'Filtered' : 'All'} Records to PDF`}
+          </Text>
+        </TouchableOpacity>
 
         {/* Search Input */}
         <View style={styles.searchBox}>
@@ -259,6 +376,20 @@ const styles = StyleSheet.create({
     borderColor: '#FCA5A5',
   },
   countText: { fontSize: 11, fontWeight: '800', color: COLORS.primary },
+  exportAllBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1.5,
+    borderColor: COLORS.primary,
+    borderRadius: 10,
+    paddingVertical: 11,
+    marginBottom: 14,
+  },
+  exportAllBtnDisabled: { borderColor: '#E2E8F0' },
+  exportAllBtnText: { fontSize: 12.5, fontWeight: '800', color: COLORS.primary, letterSpacing: 0.3 },
   searchBox: {
     flexDirection: 'row',
     alignItems: 'center',
