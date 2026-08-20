@@ -761,8 +761,8 @@ const styles = StyleSheet.create({
   colMobile: { width: 150 },
   colAadhaar: { width: 150 },
   colWard: { width: 110 },
-  colAddress: { flex: 1, minWidth: 130 },
-  colAction: { width: 76, flexDirection: 'row', alignItems: 'center', gap: 8 },
+  colAddress: { flex: 1, minWidth: 130, maxWidth: 260 },
+  colAction: { width: 76, flexDirection: 'row', alignItems: 'center', gap: 8, marginLeft: 'auto' },
   tdMemberName: {
     fontFamily: FONT_FAMILY,
     fontSize: 14,
