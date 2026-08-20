@@ -83,6 +83,7 @@ export default function MemberDataScreen({
   const setField = (key) => (value) => setForm(prev => ({ ...prev, [key]: value }));
 
   const canSave = form.memberName.trim().length > 0 && form.aadhaarNumber.replace(/\s+/g, '').length === 12;
+  const flaggedCount = members.filter(m => m.flagged).length;
 
   const handleConfirmSave = async () => {
     if (!canSave || saving) return;
@@ -315,6 +316,15 @@ export default function MemberDataScreen({
           </View>
         </View>
 
+        {flaggedCount > 0 ? (
+          <View style={styles.flaggedBanner}>
+            <MaterialCommunityIcons name="flag-outline" size={16} color={COLORS.amber900} />
+            <Text style={styles.flaggedBannerText}>
+              {flaggedCount} member{flaggedCount > 1 ? 's' : ''} flagged by district admin for review — check below and remove if not a valid registration.
+            </Text>
+          </View>
+        ) : null}
+
         {loading ? (
           <View style={styles.emptyCard}>
             <ActivityIndicator size="small" color={COLORS.primary} />
@@ -357,13 +367,18 @@ export default function MemberDataScreen({
               {members.map((m, idx) => (
                 <View
                   key={m.id}
-                  style={[styles.tr, idx % 2 === 1 && styles.trAlt]}
+                  style={[styles.tr, idx % 2 === 1 && styles.trAlt, m.flagged && styles.trFlagged]}
                 >
                   <View style={[styles.td, styles.colSrNo]}>
                     <Text style={styles.tdText}>{idx + 1}</Text>
                   </View>
                   <View style={[styles.td, styles.colMember]}>
                     <Text style={styles.tdMemberName} numberOfLines={1}>{m.member_name}</Text>
+                    {m.flagged ? (
+                      <Text style={styles.flaggedBadge} numberOfLines={1}>
+                        🚩 Flagged{m.flag_reason ? `: ${m.flag_reason}` : ''}
+                      </Text>
+                    ) : null}
                   </View>
                   <View style={[styles.td, styles.colMobile]}>
                     <Text style={styles.tdText}>{m.mobile_number || '—'}</Text>
@@ -651,6 +666,26 @@ const styles = StyleSheet.create({
     gap: 8,
     marginTop: 4,
   },
+  flaggedBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: COLORS.amber50,
+    borderWidth: 1,
+    borderColor: '#FDE68A',
+    borderRadius: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    marginTop: 10,
+  },
+  flaggedBannerText: {
+    flex: 1,
+    fontFamily: FONT_FAMILY,
+    fontSize: 12,
+    fontWeight: '600',
+    color: COLORS.amber900,
+    lineHeight: 16,
+  },
   sectionTitle: {
     fontFamily: FONT_FAMILY,
     fontSize: 13,
@@ -751,6 +786,16 @@ const styles = StyleSheet.create({
   },
   trAlt: {
     backgroundColor: COLORS.surface,
+  },
+  trFlagged: {
+    backgroundColor: COLORS.amber50,
+  },
+  flaggedBadge: {
+    fontFamily: FONT_FAMILY,
+    fontSize: 9,
+    fontWeight: '700',
+    color: COLORS.amber900,
+    marginTop: 2,
   },
   td: {
     paddingHorizontal: 20,

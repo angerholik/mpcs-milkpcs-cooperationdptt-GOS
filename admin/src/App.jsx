@@ -2274,14 +2274,41 @@ function Dashboard({ onLogout, session }) {
     societies: new Set(scopedMemberRows.map(r => r.society_name).filter(Boolean)).size,
   }), [scopedMemberRows]);
 
-  const handleDeleteMember = async (member) => {
-    if (!window.confirm(`Remove ${member.member_name} from the member registry? This cannot be undone.`)) return;
-    const { error } = await supabase.from('member_registry').delete().eq('id', member.id);
+  // Admin doesn't have first-hand knowledge of whether a member record is a
+  // duplicate, fraudulent, or genuinely registered — only the CI who
+  // verified that person in the field does. So admin can flag a record for
+  // that CI to review instead of deleting it outright; actual removal stays
+  // in the mobile app's Member Data screen.
+  const handleFlagMember = async (member) => {
+    const reason = window.prompt(`Flag ${member.member_name} for review by the responsible CI. Add a reason (optional):`, '');
+    if (reason === null) return; // cancelled
+    const flaggedBy = session?.user?.user_metadata?.fullName || session?.user?.email || 'Admin';
+    const { error } = await supabase.from('member_registry').update({
+      flagged: true,
+      flag_reason: reason.trim() || null,
+      flagged_by: flaggedBy,
+      flagged_at: new Date().toISOString(),
+    }).eq('id', member.id).select();
     if (error) {
-      alert('Could not delete member: ' + error.message);
+      alert('Could not flag member: ' + error.message);
       return;
     }
-    setMemberRows(prev => prev.filter(r => r.id !== member.id));
+    setMemberRows(prev => prev.map(r => r.id === member.id
+      ? { ...r, flagged: true, flag_reason: reason.trim() || null, flagged_by: flaggedBy, flagged_at: new Date().toISOString() }
+      : r));
+  };
+
+  const handleUnflagMember = async (member) => {
+    const { error } = await supabase.from('member_registry').update({
+      flagged: false, flag_reason: null, flagged_by: null, flagged_at: null,
+    }).eq('id', member.id).select();
+    if (error) {
+      alert('Could not unflag member: ' + error.message);
+      return;
+    }
+    setMemberRows(prev => prev.map(r => r.id === member.id
+      ? { ...r, flagged: false, flag_reason: null, flagged_by: null, flagged_at: null }
+      : r));
   };
 
   // Chart Calculations — sourced from scoped rows so a CI's district/regional
@@ -3330,14 +3357,22 @@ function Dashboard({ onLogout, session }) {
                           <th style={{textAlign:'left', width:'130px'}}>Mobile</th>
                           <th style={{textAlign:'left', width:'150px'}}>Aadhaar No</th>
                           <th style={{textAlign:'left', minWidth:'160px'}}>Address</th>
-                          <th style={{textAlign:'center', width:'80px'}}>Actions</th>
+                          <th style={{textAlign:'center', width:'110px'}}>Actions</th>
                         </tr>
                       </thead>
                       <tbody>
                         {memberFiltered.map((m,i)=>(
-                          <tr key={m.id||i}>
+                          <tr key={m.id||i} style={m.flagged ? {background:'#FFFBEB'} : undefined}>
                             <td style={{whiteSpace:'nowrap', fontSize:'12px', color:'#64748B', fontWeight:600}}>{m.created_at?new Date(m.created_at).toLocaleDateString('en-IN'):'—'}</td>
-                            <td style={{fontWeight:800, fontSize:'13px', color:'#0F172A'}}>{m.member_name||'—'}</td>
+                            <td style={{fontWeight:800, fontSize:'13px', color:'#0F172A'}}>
+                              {m.member_name||'—'}
+                              {m.flagged && (
+                                <div title={[m.flag_reason, m.flagged_by ? `Flagged by ${m.flagged_by}` : null].filter(Boolean).join(' — ')}
+                                  style={{marginTop:'3px', display:'inline-flex', alignItems:'center', gap:'4px', background:'#FEF3C7', color:'#92400E', fontSize:'9px', fontWeight:800, padding:'2px 6px', borderRadius:'10px', letterSpacing:'0.3px'}}>
+                                  🚩 FLAGGED FOR REVIEW
+                                </div>
+                              )}
+                            </td>
                             <td style={{fontSize:'13px', color:'#334155', fontWeight:600}}>{m.society_name||'—'}</td>
                             <td style={{textAlign:'center'}}>
                               <span className={`badge ${m.society_type==='MPCS'?'badge-green':'badge-gold'}`} style={{fontSize:'10px'}}>{m.society_type||'—'}</span>
@@ -3347,10 +3382,17 @@ function Dashboard({ onLogout, session }) {
                             <td style={{fontSize:'12px', color:'#475569', fontFamily:'monospace'}}>{m.aadhaar_number ? fmtAadhaar(m.aadhaar_number) : '—'}</td>
                             <td style={{fontSize:'12px', color:'#64748B'}}>{m.address||'—'}</td>
                             <td style={{textAlign:'center'}}>
-                              <button className="btn-ghost" onClick={()=>handleDeleteMember(m)} title="Remove member"
-                                style={{padding:'6px 8px', fontSize:'11px', color:'#DC2626'}}>
-                                <Icon d={I.close} size={13} color="#DC2626"/>
-                              </button>
+                              {m.flagged ? (
+                                <button className="btn-ghost" onClick={()=>handleUnflagMember(m)} title="Unflag — clears the review flag"
+                                  style={{padding:'6px 10px', fontSize:'11px', fontWeight:700, color:'#92400E'}}>
+                                  Unflag
+                                </button>
+                              ) : (
+                                <button className="btn-ghost" onClick={()=>handleFlagMember(m)} title="Flag for review by the responsible CI"
+                                  style={{padding:'6px 10px', fontSize:'11px', fontWeight:700, color:'#B45309'}}>
+                                  🚩 Flag
+                                </button>
+                              )}
                             </td>
                           </tr>
                         ))}

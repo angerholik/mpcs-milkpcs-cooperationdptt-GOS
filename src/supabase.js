@@ -339,7 +339,7 @@ export async function fetchMembers(societyName, societyType) {
   if (!societyName || !societyType) return { data: [], error: null };
   const { data, error } = await supabase
     .from('member_registry')
-    .select('id, member_name, mobile_number, ward_name, address, aadhaar_hash, aadhaar_number, created_at')
+    .select('id, member_name, mobile_number, ward_name, address, aadhaar_hash, aadhaar_number, flagged, flag_reason, flagged_by, created_at')
     .eq('society_type', societyType)
     .ilike('society_name', societyName.trim())
     .order('created_at', { ascending: false });
