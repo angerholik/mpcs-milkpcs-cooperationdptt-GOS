@@ -46,6 +46,11 @@ const fmtRs = (n) => {
   const num = Number(n.toString().replace(/,/g, '').trim());
   return isNaN(num) ? '—' : `₹ ${num.toLocaleString('en-IN')}`;
 };
+const fmtAadhaar = (n) => {
+  const digits = (n || '').toString().replace(/\D/g, '');
+  if (digits.length !== 12) return digits || '—';
+  return `${digits.slice(0, 4)} ${digits.slice(4, 8)} ${digits.slice(8, 12)}`;
+};
 
 const EXPORT_LABELS = {
   // Common & Top-level
@@ -3323,6 +3328,7 @@ function Dashboard({ onLogout, session }) {
                           <th style={{textAlign:'center', width:'90px'}}>Type</th>
                           <th style={{textAlign:'left', width:'110px'}}>Ward</th>
                           <th style={{textAlign:'left', width:'130px'}}>Mobile</th>
+                          <th style={{textAlign:'left', width:'150px'}}>Aadhaar No</th>
                           <th style={{textAlign:'left', minWidth:'160px'}}>Address</th>
                           <th style={{textAlign:'center', width:'80px'}}>Actions</th>
                         </tr>
@@ -3338,6 +3344,7 @@ function Dashboard({ onLogout, session }) {
                             </td>
                             <td style={{fontSize:'12px', color:'#475569'}}>{m.ward_name||'—'}</td>
                             <td style={{fontSize:'12px', color:'#475569'}}>{m.mobile_number||'—'}</td>
+                            <td style={{fontSize:'12px', color:'#475569', fontFamily:'monospace'}}>{m.aadhaar_number ? fmtAadhaar(m.aadhaar_number) : '—'}</td>
                             <td style={{fontSize:'12px', color:'#64748B'}}>{m.address||'—'}</td>
                             <td style={{textAlign:'center'}}>
                               <button className="btn-ghost" onClick={()=>handleDeleteMember(m)} title="Remove member"
