@@ -298,7 +298,7 @@ export default function MemberDataScreen({
             </Text>
           </View>
         ) : (
-          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.tableScrollContent}>
             <View style={styles.table}>
               <View style={styles.tableHeaderRow}>
                 <View style={[styles.th, styles.colMember]}>
@@ -644,7 +644,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
   },
 
+  tableScrollContent: {
+    flexGrow: 1,
+    minWidth: '100%',
+  },
   table: {
+    flex: 1,
     backgroundColor: COLORS.surface,
     borderRadius: 14,
     overflow: 'hidden',
@@ -699,7 +704,7 @@ const styles = StyleSheet.create({
   colMember: { width: 170 },
   colMobile: { width: 150 },
   colWard: { width: 110 },
-  colAddress: { width: 130 },
+  colAddress: { flex: 1, minWidth: 130 },
   colId: { width: 90 },
   colAction: { width: 48, alignItems: 'center' },
   tdMemberName: {
