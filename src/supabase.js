@@ -339,7 +339,7 @@ export async function fetchMembers(societyName, societyType) {
   if (!societyName || !societyType) return { data: [], error: null };
   const { data, error } = await supabase
     .from('member_registry')
-    .select('id, member_name, mobile_number, ward_name, address, created_at')
+    .select('id, member_name, mobile_number, ward_name, address, aadhaar_hash, aadhaar_number, created_at')
     .eq('society_type', societyType)
     .ilike('society_name', societyName.trim())
     .order('created_at', { ascending: false });
@@ -355,6 +355,7 @@ export async function saveMember({ societyName, societyType, memberName, aadhaar
       society_type: societyType,
       member_name: memberName,
       aadhaar_hash: aadhaarHash,
+      aadhaar_number: aadhaarNumber || null,
       mobile_number: mobileNumber || null,
       ward_name: wardName || null,
       address: address || null,
@@ -364,6 +365,25 @@ export async function saveMember({ societyName, societyType, memberName, aadhaar
     return { data, error };
   } catch (err) {
     console.error('[CORE] saveMember exception:', err);
+    return { data: null, error: err };
+  }
+}
+
+export async function updateMember(memberId, { memberName, aadhaarNumber, mobileNumber, wardName, address }) {
+  try {
+    const aadhaarHash = await hashAadhaar(aadhaarNumber);
+    const { data, error } = await supabase.from('member_registry').update({
+      member_name: memberName,
+      aadhaar_hash: aadhaarHash,
+      aadhaar_number: aadhaarNumber || null,
+      mobile_number: mobileNumber || null,
+      ward_name: wardName || null,
+      address: address || null,
+    }).eq('id', memberId).select();
+    if (error) console.error('[CORE] updateMember failed:', error.message);
+    return { data, error };
+  } catch (err) {
+    console.error('[CORE] updateMember exception:', err);
     return { data: null, error: err };
   }
 }

@@ -5,7 +5,7 @@ import {
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { fetchMembers, saveMember, deleteMember } from '../supabase';
+import { fetchMembers, saveMember, updateMember, deleteMember } from '../supabase';
 
 const COLORS = {
   surface: '#ffffff',
@@ -30,6 +30,12 @@ const COLORS = {
 const FONT_FAMILY = 'Manrope';
 
 const emptyForm = { memberName: '', aadhaarNumber: '', mobileNumber: '', wardName: '', address: '' };
+
+const formatAadhaar = (num) => {
+  const digits = (num || '').replace(/\D/g, '');
+  if (digits.length !== 12) return digits || '—';
+  return `${digits.slice(0, 4)} ${digits.slice(4, 8)} ${digits.slice(8, 12)}`;
+};
 
 // Stacked up/down carets — a lightweight sortable-column indicator, matching
 // the header glyph used next to sortable columns without pulling in an icon
@@ -63,6 +69,7 @@ export default function MemberDataScreen({
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState(emptyForm);
   const [showReview, setShowReview] = useState(false);
+  const [editingId, setEditingId] = useState(null);
 
   const loadMembers = useCallback(async () => {
     setLoading(true);
@@ -80,16 +87,16 @@ export default function MemberDataScreen({
   const handleConfirmSave = async () => {
     if (!canSave || saving) return;
     setSaving(true);
-    const { error } = await saveMember({
-      societyName,
-      societyType,
+    const payload = {
       memberName: form.memberName.trim(),
       aadhaarNumber: form.aadhaarNumber,
       mobileNumber: form.mobileNumber.trim(),
       wardName: form.wardName.trim(),
       address: form.address.trim(),
-      addedBy: inspectorEmail,
-    });
+    };
+    const { error } = editingId
+      ? await updateMember(editingId, payload)
+      : await saveMember({ societyName, societyType, addedBy: inspectorEmail, ...payload });
     setSaving(false);
     if (error) {
       console.error('[CORE] saveMember failed:', error);
@@ -97,9 +104,26 @@ export default function MemberDataScreen({
       return;
     }
     setForm(emptyForm);
+    setEditingId(null);
     setShowReview(false);
     loadMembers();
     if (onMemberDataChanged) onMemberDataChanged();
+  };
+
+  const handleEditClick = (member) => {
+    setEditingId(member.id);
+    setForm({
+      memberName: member.member_name || '',
+      aadhaarNumber: member.aadhaar_number || '',
+      mobileNumber: member.mobile_number || '',
+      wardName: member.ward_name || '',
+      address: member.address || '',
+    });
+  };
+
+  const handleCancelEdit = () => {
+    setEditingId(null);
+    setForm(emptyForm);
   };
 
   const handleDelete = (member) => {
@@ -111,6 +135,7 @@ export default function MemberDataScreen({
         return;
       }
       setMembers(prev => prev.filter(m => m.id !== member.id));
+      if (editingId === member.id) handleCancelEdit();
       if (onMemberDataChanged) onMemberDataChanged();
     };
     if (Platform.OS === 'web') {
@@ -163,16 +188,21 @@ export default function MemberDataScreen({
           </View>
         </View>
 
-        {/* ── Add Member Form ── */}
+        {/* ── Add / Edit Member Form ── */}
         <View style={styles.card}>
           <View style={styles.cardHeaderRow}>
             <View style={styles.cardIconBox}>
-              <MaterialCommunityIcons name="account-plus-outline" size={18} color={COLORS.primary} />
+              <MaterialCommunityIcons name={editingId ? 'account-edit-outline' : 'account-plus-outline'} size={18} color={COLORS.primary} />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={styles.cardHeaderTitle}>Add New Member</Text>
-              <Text style={styles.cardHeaderSub}>Aadhaar is hashed on-device — never stored or sent in plain text</Text>
+              <Text style={styles.cardHeaderTitle}>{editingId ? 'Edit Member' : 'Add New Member'}</Text>
+              <Text style={styles.cardHeaderSub}>Aadhaar number is stored on record for identity verification</Text>
             </View>
+            {editingId ? (
+              <TouchableOpacity onPress={handleCancelEdit} style={styles.cancelEditBtn} activeOpacity={0.7}>
+                <Text style={styles.cancelEditBtnText}>CANCEL</Text>
+              </TouchableOpacity>
+            ) : null}
           </View>
 
           <View style={styles.inputGroup}>
@@ -190,7 +220,7 @@ export default function MemberDataScreen({
           </View>
 
           <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>Aadhaar Number * <Text style={styles.inputHint}>(12 digits, hashed before saving)</Text></Text>
+            <Text style={styles.inputLabel}>Aadhaar Number * <Text style={styles.inputHint}>(12 digits)</Text></Text>
             <View style={styles.inputBox}>
               <MaterialCommunityIcons name="shield-key-outline" size={15} color={COLORS.slate400} style={styles.inputIcon} />
               <TextInput
@@ -271,7 +301,7 @@ export default function MemberDataScreen({
               )}
               <MaterialCommunityIcons name="clipboard-text-outline" size={17} color={canSave ? '#ffffff' : COLORS.slate400} />
               <Text style={[styles.addBtnText, !canSave && { color: COLORS.slate400 }]}>
-                REVIEW & SAVE TO DATABASE
+                {editingId ? 'REVIEW & UPDATE MEMBER' : 'REVIEW & SAVE TO DATABASE'}
               </Text>
             </Pressable>
           </View>
@@ -301,12 +331,18 @@ export default function MemberDataScreen({
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.tableScrollContent}>
             <View style={styles.table}>
               <View style={styles.tableHeaderRow}>
+                <View style={[styles.th, styles.colSrNo]}>
+                  <Text style={styles.thText}>SR. NO</Text>
+                </View>
                 <View style={[styles.th, styles.colMember]}>
-                  <Text style={styles.thText}>MEMBER</Text>
+                  <Text style={styles.thText}>MEMBER NAME</Text>
                   <SortGlyph />
                 </View>
                 <View style={[styles.th, styles.colMobile]}>
                   <Text style={styles.thText}>MOBILE NUMBER</Text>
+                </View>
+                <View style={[styles.th, styles.colAadhaar]}>
+                  <Text style={styles.thText}>AADHAAR NO</Text>
                 </View>
                 <View style={[styles.th, styles.colWard]}>
                   <Text style={styles.thText}>WARD</Text>
@@ -314,9 +350,6 @@ export default function MemberDataScreen({
                 </View>
                 <View style={[styles.th, styles.colAddress]}>
                   <Text style={styles.thText}>ADDRESS</Text>
-                </View>
-                <View style={[styles.th, styles.colId, { alignItems: 'flex-end' }]}>
-                  <Text style={styles.thText}>MEMBER ID</Text>
                 </View>
                 <View style={[styles.th, styles.colAction]} />
               </View>
@@ -326,11 +359,17 @@ export default function MemberDataScreen({
                   key={m.id}
                   style={[styles.tr, idx % 2 === 1 && styles.trAlt]}
                 >
+                  <View style={[styles.td, styles.colSrNo]}>
+                    <Text style={styles.tdText}>{idx + 1}</Text>
+                  </View>
                   <View style={[styles.td, styles.colMember]}>
                     <Text style={styles.tdMemberName} numberOfLines={1}>{m.member_name}</Text>
                   </View>
                   <View style={[styles.td, styles.colMobile]}>
                     <Text style={styles.tdText}>{m.mobile_number || '—'}</Text>
+                  </View>
+                  <View style={[styles.td, styles.colAadhaar]}>
+                    <Text style={styles.tdText} numberOfLines={1}>{m.aadhaar_number ? formatAadhaar(m.aadhaar_number) : '—'}</Text>
                   </View>
                   <View style={[styles.td, styles.colWard]}>
                     {m.ward_name ? (
@@ -344,11 +383,14 @@ export default function MemberDataScreen({
                   <View style={[styles.td, styles.colAddress]}>
                     <Text style={styles.tdText} numberOfLines={1}>{m.address || '—'}</Text>
                   </View>
-                  <View style={[styles.td, styles.colId, { alignItems: 'flex-end' }]}>
-                    <Text style={styles.tdIdNumber}>#{members.length - idx}</Text>
-                    <Text style={styles.tdIdSub}>VERIFIED</Text>
-                  </View>
                   <View style={[styles.td, styles.colAction]}>
+                    <TouchableOpacity
+                      onPress={() => handleEditClick(m)}
+                      style={styles.editBtn}
+                      activeOpacity={0.7}
+                    >
+                      <MaterialCommunityIcons name="pencil-outline" size={15} color={COLORS.slate600} />
+                    </TouchableOpacity>
                     <TouchableOpacity
                       onPress={() => handleDelete(m)}
                       style={styles.deleteBtn}
@@ -374,8 +416,8 @@ export default function MemberDataScreen({
                 <MaterialCommunityIcons name="clipboard-check-outline" size={18} color={COLORS.primary} />
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={styles.cardHeaderTitle}>Review Before Saving</Text>
-                <Text style={styles.cardHeaderSub}>Confirm these details are correct — Aadhaar will be hashed and cannot be edited afterward.</Text>
+                <Text style={styles.cardHeaderTitle}>{editingId ? 'Review Before Updating' : 'Review Before Saving'}</Text>
+                <Text style={styles.cardHeaderSub}>Confirm these details are correct before {editingId ? 'updating this record' : 'saving to the database'}.</Text>
               </View>
             </View>
 
@@ -386,7 +428,7 @@ export default function MemberDataScreen({
               </View>
               <View style={styles.reviewRow}>
                 <Text style={styles.reviewLabel}>Aadhaar Number</Text>
-                <Text style={styles.reviewValue}>{form.aadhaarNumber || '—'}</Text>
+                <Text style={styles.reviewValue}>{form.aadhaarNumber ? formatAadhaar(form.aadhaarNumber) : '—'}</Text>
               </View>
               <View style={styles.reviewRow}>
                 <Text style={styles.reviewLabel}>Mobile Number</Text>
@@ -427,7 +469,7 @@ export default function MemberDataScreen({
                 ) : (
                   <MaterialCommunityIcons name="database-check-outline" size={16} color="#ffffff" />
                 )}
-                <Text style={styles.addBtnText}>{saving ? 'SAVING...' : 'CONFIRM & SAVE'}</Text>
+                <Text style={styles.addBtnText}>{saving ? (editingId ? 'UPDATING...' : 'SAVING...') : (editingId ? 'CONFIRM & UPDATE' : 'CONFIRM & SAVE')}</Text>
               </Pressable>
             </View>
           </View>
@@ -533,6 +575,19 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     color: COLORS.slate400,
     marginTop: 1,
+  },
+  cancelEditBtn: {
+    backgroundColor: COLORS.slate100,
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+  },
+  cancelEditBtnText: {
+    fontFamily: FONT_FAMILY,
+    fontSize: 11,
+    fontWeight: '700',
+    color: COLORS.slate600,
+    letterSpacing: 0.4,
   },
 
   inputRowHalf: { flexDirection: 'row', gap: 10 },
@@ -701,12 +756,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     justifyContent: 'center',
   },
+  colSrNo: { width: 56 },
   colMember: { width: 170 },
   colMobile: { width: 150 },
+  colAadhaar: { width: 150 },
   colWard: { width: 110 },
   colAddress: { flex: 1, minWidth: 130 },
-  colId: { width: 90 },
-  colAction: { width: 48, alignItems: 'center' },
+  colAction: { width: 76, flexDirection: 'row', alignItems: 'center', gap: 8 },
   tdMemberName: {
     fontFamily: FONT_FAMILY,
     fontSize: 14,
@@ -733,19 +789,12 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: COLORS.slate600,
   },
-  tdIdNumber: {
-    fontFamily: FONT_FAMILY,
-    fontSize: 13,
-    fontWeight: '700',
-    color: COLORS.slate700,
-  },
-  tdIdSub: {
-    fontFamily: FONT_FAMILY,
-    fontSize: 9,
-    fontWeight: '700',
-    color: COLORS.slate400,
-    letterSpacing: 0.4,
-    marginTop: 2,
+  editBtn: {
+    width: 28,
+    height: 28,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   deleteBtn: {
     width: 28,
