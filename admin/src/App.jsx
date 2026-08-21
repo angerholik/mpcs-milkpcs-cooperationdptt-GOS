@@ -1714,16 +1714,15 @@ function DistrictPerformance({ milkRows = [], mpcsRows = [], onViewMpcs, onViewM
         </div>
       </div>
 
-      {/* MPCS at a glance */}
+      {/* MPCS at a glance — fixed grid tracks (not flex-wrap) so the health
+          card and the four KPI cards always sit in one row at desktop
+          width, instead of the last card falling onto its own near-empty
+          row when the flex-basis math doesn't divide evenly. */}
       <div style={{marginBottom:'16px'}}>
-        <div style={{display:'flex', flexWrap:'wrap', gap:'16px'}}>
-          <div style={{flex:'1.6 1 300px'}}>
-            <CompositeHealthCard title="MPCS SECTOR HEALTH" score={mpcsHealthScore} subs={mpcsHealthSubs} accent="#7F1D1D" columns={2} />
-          </div>
+        <div className="kpi-grid-fixed" style={{display:'grid', gridTemplateColumns:'1.6fr repeat(5, 1fr)', gap:'16px'}}>
+          <CompositeHealthCard title="MPCS SECTOR HEALTH" score={mpcsHealthScore} subs={mpcsHealthSubs} accent="#7F1D1D" columns={2} />
           {mpcsCards.map(c => (
-            <div key={c.key} style={{flex:'1 1 170px'}}>
-              <BenchmarkCard title={c.title} value={c.value} sub={c.sub} color={c.color} bg={c.bg} icon={c.icon} rate={c.rate} />
-            </div>
+            <BenchmarkCard key={c.key} title={c.title} value={c.value} sub={c.sub} color={c.color} bg={c.bg} icon={c.icon} rate={c.rate} />
           ))}
         </div>
       </div>
@@ -1731,14 +1730,10 @@ function DistrictPerformance({ milkRows = [], mpcsRows = [], onViewMpcs, onViewM
       {/* Milk at a glance — same row treatment as MPCS above, so neither
           sector is buried below the fold. */}
       <div style={{marginBottom:'20px'}}>
-        <div style={{display:'flex', flexWrap:'wrap', gap:'16px'}}>
-          <div style={{flex:'1.3 1 260px'}}>
-            <CompositeHealthCard title="MILK SECTOR HEALTH" score={milkHealthScore} subs={milkHealthSubs} accent="#0891B2" columns={1} />
-          </div>
+        <div className="kpi-grid-fixed" style={{display:'grid', gridTemplateColumns:'1.3fr repeat(3, 1fr)', gap:'16px'}}>
+          <CompositeHealthCard title="MILK SECTOR HEALTH" score={milkHealthScore} subs={milkHealthSubs} accent="#0891B2" columns={1} />
           {milkCards.map(c => (
-            <div key={c.key} style={{flex:'1 1 170px'}}>
-              <BenchmarkCard title={c.title} value={c.value} sub={c.sub} color={c.color} bg={c.bg} icon={c.icon} rate={c.rate} />
-            </div>
+            <BenchmarkCard key={c.key} title={c.title} value={c.value} sub={c.sub} color={c.color} bg={c.bg} icon={c.icon} rate={c.rate} />
           ))}
         </div>
       </div>
@@ -1764,8 +1759,6 @@ function DistrictPerformance({ milkRows = [], mpcsRows = [], onViewMpcs, onViewM
             { key: 'turnover', label: 'Turnover', align: 'right', render: r => <span style={{fontWeight:700, color:'#065F46'}}>{fmtRs(r.annual_turnover)}</span> },
             { key: 'agm', label: 'AGM', align: 'center', render: r => <StatusPill status={r.agm_status} /> },
             { key: 'audit', label: 'Audit', align: 'center', render: r => <StatusPill status={r.audit_status} /> },
-            { key: 'financial', label: 'Financial', render: r => <PerformanceDots signals={mpcsFinancial(r)} /> },
-            { key: 'operational', label: 'Operational', render: r => <PerformanceDots signals={mpcsOperational(r)} /> },
           ]}
         />
         <ParamTable
