@@ -323,6 +323,11 @@ const I = {
   map:     'M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0zM12 11a4 4 0 100-8 4 4 0 000 8z',
   chevronsLeft: 'M11 17l-5-5 5-5M18 17l-5-5 5-5',
   alert:   'M18 8a6 6 0 00-12 0c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 01-3.46 0',
+  shield:  'M12 2l8 4v6c0 5-3.5 9-8 10-4.5-1-8-5-8-10V6l8-4z',
+  hourglass: 'M6 2h12M6 22h12M8 2c0 5 4 6 4 10s-4 5-4 10M16 2c0 5-4 6-4 10s4 5 4 10',
+  clipboard: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2M9 12h6m-6 4h4',
+  cloudUpload: 'M7 17a4 4 0 01-1-7.87A5 5 0 0116 8a4.5 4.5 0 011 8.87M12 12v7m0-7l-3 3m3-3l3 3',
+  info:    'M12 22a10 10 0 100-20 10 10 0 000 20zM12 16v-4M12 8h.01',
 };
 
 // ─── LoginPage ────────────────────────────────────────────────────────────────
@@ -1472,7 +1477,12 @@ function CompositeHealthCard({ title, score, subs, accent = '#7F1D1D', columns =
   return (
     <div className="kpi-card" style={{height:'100%', borderLeft:`4px solid ${accent}`}}>
       <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', gap:'8px'}}>
-        <span className="kpi-title">{title}</span>
+        <div style={{display:'flex', alignItems:'center', gap:'6px'}}>
+          <span className="kpi-title">{title}</span>
+          <span title="Average of the sub-metrics below, each an independently computed real rate — not a weighted formula." style={{display:'inline-flex', cursor:'help', opacity:0.45}}>
+            <Icon d={I.info} size={13} color="#64748B" />
+          </span>
+        </div>
         <span style={{fontSize:'10px', fontWeight:800, color:labelColor, background:labelBg, padding:'3px 10px', borderRadius:'99px', whiteSpace:'nowrap', flexShrink:0}}>{label}</span>
       </div>
       <div style={{display:'flex', alignItems:'center', gap:'12px', marginTop:'2px'}}>
@@ -1481,17 +1491,21 @@ function CompositeHealthCard({ title, score, subs, accent = '#7F1D1D', columns =
           <div className="kpi-progress-fill" style={{width:`${score}%`, background:accent}} />
         </div>
       </div>
-      <div style={{display:'grid', gridTemplateColumns: columns === 2 ? '1fr 1fr' : '1fr', columnGap:'20px', rowGap:'8px', marginTop:'8px'}}>
+      <div style={{display:'grid', gridTemplateColumns: columns === 2 ? '1fr 1fr' : '1fr', columnGap:'24px', rowGap:'14px', marginTop:'14px'}}>
         {subs.map(s => (
-          <div key={s.label} style={{display:'flex', alignItems:'center', gap:'8px'}}>
-            <span style={{width:'6px', height:'6px', borderRadius:'50%', background:s.color, flexShrink:0}} />
-            <span style={{fontSize:'11px', fontWeight:700, color:'#475569', flex:1, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap'}}>{s.label}</span>
-            <div style={{width:'44px', height:'4px', borderRadius:'99px', background:'#F1F5F9', overflow:'hidden', flexShrink:0}}>
-              <div style={{width:`${s.value}%`, height:'100%', background:s.color}} />
+          <div key={s.label}>
+            <div style={{display:'flex', alignItems:'center', gap:'6px', marginBottom:'5px'}}>
+              {s.icon && (
+                <div style={{width:'20px', height:'20px', borderRadius:'6px', background:`${s.color}18`, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0}}>
+                  <Icon d={s.icon} size={11} color={s.color} />
+                </div>
+              )}
+              <span style={{fontSize:'11px', fontWeight:600, color:'#64748B', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap'}}>{s.label}</span>
             </div>
-            <span style={{fontSize:'11px', fontWeight:800, color:'#0F172A', width: s.count ? '76px' : '34px', textAlign:'right', flexShrink:0}}>
-              {s.count ? `${s.count} · ${s.value}%` : `${s.value}%`}
-            </span>
+            <div style={{display:'flex', alignItems:'baseline', gap:'7px'}}>
+              <span style={{fontSize:'15px', fontWeight:800, color:'#0F172A'}}>{s.count}</span>
+              <span style={{fontSize:'11px', fontWeight:700, color:s.color}}>{s.value}%</span>
+            </div>
           </div>
         ))}
       </div>
@@ -1508,7 +1522,7 @@ function CompositeHealthCard({ title, score, subs, accent = '#7F1D1D', columns =
 // plain clickable row list, not a <table>. Turnover/Litres and AGM/Audit
 // aren't spreadsheets; they're a ranked leaderboard and a status
 // checklist, respectively, so they get list rows instead of table chrome.
-function ListCard({ title, icon, accent, totalLabel, count, emptyLabel, children }) {
+function ListCard({ title, icon, accent, totalLabel, count, emptyLabel, children, footerLabel, onFooterClick }) {
   return (
     <div className="card" style={{marginTop:'10px', padding:0, overflow:'hidden', borderRadius:'8px', border:'1px solid #E2E8F0', borderLeft:`4px solid ${accent}`}}>
       <div style={{padding:'12px 16px', borderBottom:'1px solid var(--border)', background:'#FAFAFA', display:'flex', justifyContent:'space-between', alignItems:'center'}}>
@@ -1529,6 +1543,15 @@ function ListCard({ title, icon, accent, totalLabel, count, emptyLabel, children
       {count === 0 ? (
         <div style={{padding:'20px', textAlign:'center', color:'#9CA3AF', fontSize:'12px'}}>{emptyLabel || 'No data on record.'}</div>
       ) : children}
+      {count > 0 && footerLabel && onFooterClick && (
+        <button
+          onClick={onFooterClick}
+          className="btn-ghost"
+          style={{width:'100%', padding:'10px', fontSize:'12px', fontWeight:700, color:accent, borderTop:'1px solid #F1F5F9', borderRadius:0}}
+        >
+          {footerLabel} →
+        </button>
+      )}
     </div>
   );
 }
@@ -1537,10 +1560,10 @@ function ListCard({ title, icon, accent, totalLabel, count, emptyLabel, children
 // left, a bar scaled against the highest value in the set, value on the
 // right. The whole row opens the detail modal; there's no separate
 // "Actions" column because the row itself is the action.
-function RankingListCard({ title, icon, accent, totalLabel, rows, nameOf, valueOf, labelOf, onView, emptyLabel }) {
+function RankingListCard({ title, icon, accent, totalLabel, rows, nameOf, valueOf, labelOf, onView, emptyLabel, footerLabel, onFooterClick }) {
   const max = rows.length ? Math.max(...rows.map(valueOf)) : 0;
   return (
-    <ListCard title={title} icon={icon} accent={accent} totalLabel={totalLabel} count={rows.length} emptyLabel={emptyLabel}>
+    <ListCard title={title} icon={icon} accent={accent} totalLabel={totalLabel} count={rows.length} emptyLabel={emptyLabel} footerLabel={footerLabel} onFooterClick={onFooterClick}>
       {rows.map((r, i) => {
         const value = valueOf(r);
         const pct = max > 0 ? Math.max(3, (value / max) * 100) : 0;
@@ -1566,9 +1589,9 @@ function RankingListCard({ title, icon, accent, totalLabel, rows, nameOf, valueO
 // A compliance checklist across both sectors — sector badge, name, and the
 // two status pills, one row per entity. Same list-row pattern as the
 // ranking card above, for visual consistency between the two.
-function ComplianceListCard({ title, icon, accent, totalLabel, rows, onView, emptyLabel }) {
+function ComplianceListCard({ title, icon, accent, totalLabel, rows, onView, emptyLabel, footerLabel, onFooterClick }) {
   return (
-    <ListCard title={title} icon={icon} accent={accent} totalLabel={totalLabel} count={rows.length} emptyLabel={emptyLabel}>
+    <ListCard title={title} icon={icon} accent={accent} totalLabel={totalLabel} count={rows.length} emptyLabel={emptyLabel} footerLabel={footerLabel} onFooterClick={onFooterClick}>
       {rows.map((r, i) => (
         <div
           key={r.id || i}
@@ -1590,7 +1613,7 @@ function ComplianceListCard({ title, icon, accent, totalLabel, rows, onView, emp
   );
 }
 
-function DistrictPerformance({ milkRows = [], mpcsRows = [], onViewMpcs, onViewMilk }) {
+function DistrictPerformance({ milkRows = [], mpcsRows = [], onViewMpcs, onViewMilk, onNavigate }) {
   const mpcsWithStatus = useMemo(
     () => mpcsRows.map(r => ({ ...r, ...getMpcsAuditAgm(r) })),
     [mpcsRows]
@@ -1641,10 +1664,10 @@ function DistrictPerformance({ milkRows = [], mpcsRows = [], onViewMpcs, onViewM
   // above. See CompositeHealthCard for why this isn't a fabricated number.
   const mpcsHealthScore = Math.round((mpcsAgmRate + mpcsAuditRate + mpcsFinancialRate + mpcsOperationalRate) / 4);
   const mpcsHealthSubs = [
-    { label: 'AGM Compliance', value: mpcsAgmRate, color: '#1D4ED8', count: `${mpcsAgmCompletedCount}/${mpcsRows.length}` },
-    { label: 'Audit Compliance', value: mpcsAuditRate, color: '#B45309', count: `${mpcsAuditedCount}/${mpcsRows.length}` },
-    { label: 'Financial Performance', value: mpcsFinancialRate, color: '#0369A1', count: `${mpcsFinancialCompleted}/${mpcsRows.length}` },
-    { label: 'Operational Activity', value: mpcsOperationalRate, color: '#7C2D12', count: `${mpcsOperationalCompleted}/${mpcsRows.length}` },
+    { label: 'AGM Compliance', value: mpcsAgmRate, color: '#1D4ED8', count: `${mpcsAgmCompletedCount}/${mpcsRows.length}`, icon: I.members },
+    { label: 'Audit Compliance', value: mpcsAuditRate, color: '#B45309', count: `${mpcsAuditedCount}/${mpcsRows.length}`, icon: I.shield },
+    { label: 'Financial Performance', value: mpcsFinancialRate, color: '#0369A1', count: `${mpcsFinancialCompleted}/${mpcsRows.length}`, icon: I.money },
+    { label: 'Operational Activity', value: mpcsOperationalRate, color: '#7C2D12', count: `${mpcsOperationalCompleted}/${mpcsRows.length}`, icon: I.chart },
   ];
 
   // Milk forms only capture AGM and Audit status — no financial/CSC detail
@@ -1652,8 +1675,8 @@ function DistrictPerformance({ milkRows = [], mpcsRows = [], onViewMpcs, onViewM
   // of just those two rates, not padded out to match MPCS's four.
   const milkHealthScore = Math.round((milkAgmRate + milkAuditRate) / 2);
   const milkHealthSubs = [
-    { label: 'AGM Compliance', value: milkAgmRate, color: '#047857', count: `${milkAgmCompletedCount}/${milkRows.length}` },
-    { label: 'Audit Compliance', value: milkAuditRate, color: '#7C3AED', count: `${milkAuditedCount}/${milkRows.length}` },
+    { label: 'AGM Compliance', value: milkAgmRate, color: '#047857', count: `${milkAgmCompletedCount}/${milkRows.length}`, icon: I.members },
+    { label: 'Audit Compliance', value: milkAuditRate, color: '#7C3AED', count: `${milkAuditedCount}/${milkRows.length}`, icon: I.shield },
   ];
 
   // KPI cards cover only what the Sector Health card doesn't already show —
@@ -1761,6 +1784,8 @@ function DistrictPerformance({ milkRows = [], mpcsRows = [], onViewMpcs, onViewM
             valueOf={r => parseFloat(r.annual_turnover) || 0}
             labelOf={r => fmtRs(r.annual_turnover)}
             onView={onViewMpcs}
+            footerLabel="View all societies"
+            onFooterClick={onNavigate ? () => onNavigate('MPCS') : undefined}
           />
           <RankingListCard
             title="Liters Collected — by Unit"
@@ -1773,6 +1798,8 @@ function DistrictPerformance({ milkRows = [], mpcsRows = [], onViewMpcs, onViewM
             valueOf={r => parseFloat(r.litres) || 0}
             labelOf={r => fmtL(r.litres)}
             onView={onViewMilk}
+            footerLabel="View all milk units"
+            onFooterClick={onNavigate ? () => onNavigate('MILK') : undefined}
           />
         </div>
 
@@ -1789,25 +1816,38 @@ function DistrictPerformance({ milkRows = [], mpcsRows = [], onViewMpcs, onViewM
           emptyLabel="No societies or units on record."
           rows={combinedCompliance}
           onView={r => (r._sector === 'MPCS' ? onViewMpcs(r) : onViewMilk(r))}
+          footerLabel="View all compliance details"
+          onFooterClick={onNavigate ? () => onNavigate('MPCS') : undefined}
         />
       </div>
 
-      {/* Footer stat strip — only figures we can compute directly from real
+      {/* Footer stat cards — only figures computed directly from real
           submission records; no invented "next sync" countdown. */}
-      <div style={{display:'flex', flexWrap:'wrap', gap:'0', border:'1px solid #E2E8F0', borderRadius:'8px', overflow:'hidden', background:'#fff'}}>
+      <div style={{display:'grid', gridTemplateColumns:'repeat(4, 1fr)', gap:'16px'}}>
         {[
-          { label: 'Total Societies', value: mpcsRows.length + milkRows.length },
-          { label: 'Submitted This Month', value: mpcsSubmittedThisMonth + milkSubmittedThisMonth },
-          { label: 'Pending Compliance', value: mpcsPendingCompliance + milkPendingCompliance },
-        ].map((s, i) => (
-          <div key={s.label} style={{flex:'1 1 160px', padding:'14px 18px', textAlign:'center', borderLeft: i > 0 ? '1px solid #E2E8F0' : 'none'}}>
-            <div style={{fontSize:'20px', fontWeight:900, color:'#0F172A'}}>{s.value}</div>
-            <div style={{fontSize:'10px', fontWeight:700, color:'#64748B', textTransform:'uppercase', letterSpacing:'0.5px', marginTop:'2px'}}>{s.label}</div>
+          { icon: I.members, color: '#7C3AED', bg: '#F5F3FF', value: mpcsRows.length + milkRows.length, label: 'Total Societies', sub: 'All registered' },
+          { icon: I.clipboard, color: '#1D4ED8', bg: '#EFF6FF', value: mpcsSubmittedThisMonth + milkSubmittedThisMonth, label: 'Submitted This Month', sub: 'User app submissions' },
+          { icon: I.hourglass, color: '#B45309', bg: '#FFFBEB', value: mpcsPendingCompliance + milkPendingCompliance, label: 'Pending Compliance', sub: 'Requires attention' },
+        ].map(s => (
+          <div key={s.label} className="kpi-card">
+            <div className="kpi-icon-box" style={{background:s.bg}}>
+              <Icon d={s.icon} size={16} color={s.color} />
+            </div>
+            <div className="kpi-val" style={{color:'#0F172A'}}>{s.value}</div>
+            <div className="kpi-title">{s.label}</div>
+            <div style={{fontSize:'11px', color:'#94A3B8', fontWeight:600, marginTop:'-4px'}}>{s.sub}</div>
           </div>
         ))}
-        <div style={{flex:'1 1 160px', padding:'14px 18px', textAlign:'center', borderLeft:'1px solid #E2E8F0'}}>
-          <div style={{fontSize:'12px', fontWeight:800, color:'#334155'}}>User App Submissions</div>
-          <div style={{fontSize:'10px', fontWeight:700, color:'#64748B', textTransform:'uppercase', letterSpacing:'0.5px', marginTop:'2px'}}>Data Source</div>
+        <div className="kpi-card">
+          <div className="kpi-icon-box" style={{background:'#ECFDF5'}}>
+            <Icon d={I.cloudUpload} size={16} color="#047857" />
+          </div>
+          <div style={{fontSize:'14px', fontWeight:800, color:'#0F172A'}}>User App Submissions</div>
+          <div className="kpi-title">Data Source</div>
+          <div style={{fontSize:'11px', color:'#047857', fontWeight:700, display:'flex', alignItems:'center', gap:'5px', marginTop:'-4px'}}>
+            <span style={{width:'6px', height:'6px', borderRadius:'50%', background:'#10B981', display:'inline-block'}} />
+            Live
+          </div>
         </div>
       </div>
 
@@ -3261,7 +3301,7 @@ function Dashboard({ onLogout, session }) {
           )}
 
           {/* Module Views */}
-          {activeTab === 'STATS' && <DistrictPerformance milkRows={scopedMilkRows} mpcsRows={scopedMpcsRows} onViewMpcs={setMpcsSelected} onViewMilk={setMilkSelected} />}
+          {activeTab === 'STATS' && <DistrictPerformance milkRows={scopedMilkRows} mpcsRows={scopedMpcsRows} onViewMpcs={setMpcsSelected} onViewMilk={setMilkSelected} onNavigate={setActiveTab} />}
 
           {/* 📄 REPORTS & EXPORT CENTER */}
           {activeTab === 'REPORTS' && (
