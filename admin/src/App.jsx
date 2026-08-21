@@ -1722,61 +1722,63 @@ function DistrictPerformance({ milkRows = [], mpcsRows = [], onViewMpcs, onViewM
         <CompositeHealthCard title="MILK SECTOR HEALTH" score={milkHealthScore} subs={milkHealthSubs} accent="#0891B2" columns={1} />
       </div>
 
-      {/* Full record tables — MPCS and Milk side by side, both always visible
-          so nothing sector-specific requires scrolling to a separate section.
-          Sorted highest-first so the ranking is visible in the table itself,
-          rather than duplicated in a separate bar-chart panel above it. */}
-      <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:'14px', marginBottom:'28px', alignItems:'start'}}>
-        <ParamTable
-          title="Total Turnover — by Society"
-          totalLabel={fmtRs(mpcsTotalTurnover)}
-          emptyLabel="No MPCS societies on record."
-          rows={mpcsWithStatusSorted}
-          onView={onViewMpcs}
-          columns={[
-            { key: 'society', label: 'Society', render: r => <span style={{fontWeight:700, color:'#0F172A'}}>{r.society_name || '—'}</span> },
-            { key: 'turnover', label: 'Turnover', align: 'right', render: r => <InlineBar value={parseFloat(r.annual_turnover) || 0} max={maxMpcsTurnover} color="#7F1D1D" label={fmtRs(r.annual_turnover)} /> },
-          ]}
-        />
-        <ParamTable
-          title="Liters Collected — by Unit"
-          totalLabel={fmtL(milkTotalLitres)}
-          emptyLabel="No Milk PCS units on record."
-          rows={milkWithStatusSorted}
-          onView={onViewMilk}
-          columns={[
-            { key: 'center', label: 'Center', render: r => <span style={{fontWeight:700, color:'#0F172A'}}>{r.center_name || '—'}</span> },
-            { key: 'litres', label: 'Litres', align: 'right', render: r => <InlineBar value={parseFloat(r.litres) || 0} max={maxMilkLitres} color="#0891B2" label={fmtL(r.litres)} /> },
-          ]}
-        />
-      </div>
+      {/* Full record tables, stacked full-width rather than side by side —
+          MPCS and Milk have very different record counts (5 vs 3), and a
+          two-column row forces both columns to the height of the taller
+          one, leaving a large dead gap under the shorter table before the
+          next section. Stacking avoids that mismatch regardless of how
+          many rows either sector has. */}
+      <ParamTable
+        title="Total Turnover — by Society"
+        totalLabel={fmtRs(mpcsTotalTurnover)}
+        emptyLabel="No MPCS societies on record."
+        rows={mpcsWithStatusSorted}
+        onView={onViewMpcs}
+        columns={[
+          { key: 'society', label: 'Society', render: r => <span style={{fontWeight:700, color:'#0F172A'}}>{r.society_name || '—'}</span> },
+          { key: 'turnover', label: 'Turnover', align: 'right', render: r => <InlineBar value={parseFloat(r.annual_turnover) || 0} max={maxMpcsTurnover} color="#7F1D1D" label={fmtRs(r.annual_turnover)} /> },
+        ]}
+      />
+      <ParamTable
+        title="Liters Collected — by Unit"
+        totalLabel={fmtL(milkTotalLitres)}
+        emptyLabel="No Milk PCS units on record."
+        rows={milkWithStatusSorted}
+        onView={onViewMilk}
+        columns={[
+          { key: 'center', label: 'Center', render: r => <span style={{fontWeight:700, color:'#0F172A'}}>{r.center_name || '—'}</span> },
+          { key: 'litres', label: 'Litres', align: 'right', render: r => <InlineBar value={parseFloat(r.litres) || 0} max={maxMilkLitres} color="#0891B2" label={fmtL(r.litres)} /> },
+        ]}
+      />
 
       {/* One combined AGM/Audit compliance table across both sectors — an
           admin checking who still needs to hold an AGM or get audited
           shouldn't have to cross-reference two separate tables to see the
           full picture. Sorted so entities with the most still pending
           surface first. */}
-      <ParamTable
-        title="AGM & Audit Compliance — All Entities"
-        totalLabel={`${combinedPendingCount} pending`}
-        emptyLabel="No societies or units on record."
-        rows={combinedCompliance}
-        onView={r => (r._sector === 'MPCS' ? onViewMpcs(r) : onViewMilk(r))}
-        columns={[
-          { key: 'name', label: 'Entity', render: r => (
-            <div style={{display:'flex', alignItems:'center', gap:'8px'}}>
-              <span style={{
-                fontSize:'9px', fontWeight:800, padding:'2px 7px', borderRadius:'99px', flexShrink:0,
-                color: r._sector === 'MPCS' ? '#92400E' : '#0369A1',
-                background: r._sector === 'MPCS' ? '#FFFBEB' : '#F0F9FF',
-              }}>{r._sector}</span>
-              <span style={{fontWeight:700, color:'#0F172A'}}>{r._name}</span>
-            </div>
-          ) },
-          { key: 'agm', label: 'AGM', align: 'center', render: r => <StatusPill status={r.agm_status} /> },
-          { key: 'audit', label: 'Audit', align: 'center', render: r => <StatusPill status={r.audit_status} /> },
-        ]}
-      />
+      <div style={{marginBottom:'20px'}}>
+        <ParamTable
+          title="AGM & Audit Compliance — All Entities"
+          totalLabel={`${combinedPendingCount} pending`}
+          emptyLabel="No societies or units on record."
+          rows={combinedCompliance}
+          onView={r => (r._sector === 'MPCS' ? onViewMpcs(r) : onViewMilk(r))}
+          columns={[
+            { key: 'name', label: 'Entity', render: r => (
+              <div style={{display:'flex', alignItems:'center', gap:'8px'}}>
+                <span style={{
+                  fontSize:'9px', fontWeight:800, padding:'2px 7px', borderRadius:'99px', flexShrink:0,
+                  color: r._sector === 'MPCS' ? '#92400E' : '#0369A1',
+                  background: r._sector === 'MPCS' ? '#FFFBEB' : '#F0F9FF',
+                }}>{r._sector}</span>
+                <span style={{fontWeight:700, color:'#0F172A'}}>{r._name}</span>
+              </div>
+            ) },
+            { key: 'agm', label: 'AGM', align: 'center', render: r => <StatusPill status={r.agm_status} /> },
+            { key: 'audit', label: 'Audit', align: 'center', render: r => <StatusPill status={r.audit_status} /> },
+          ]}
+        />
+      </div>
 
       {/* Footer stat strip — only figures we can compute directly from real
           submission records; no invented "next sync" countdown. */}
