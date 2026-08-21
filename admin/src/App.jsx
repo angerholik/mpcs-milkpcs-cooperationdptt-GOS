@@ -1509,23 +1509,23 @@ function RankedBarList({ title, items, color = '#7F1D1D', valueFmt, max: fixedMa
 // Operational — the same rates used elsewhere on this page), not a
 // black-box weighted formula. The sub-metric list underneath shows exactly
 // what went into the number so nobody has to take the score on faith.
-function CompositeHealthCard({ score, subs }) {
+function CompositeHealthCard({ title, score, subs, accent = '#7F1D1D', columns = 2 }) {
   const label = score >= 75 ? 'Excellent' : score >= 55 ? 'Good' : score >= 35 ? 'Fair' : 'Needs Attention';
   const labelColor = score >= 55 ? '#047857' : score >= 35 ? '#B45309' : '#B91C1C';
   const labelBg = score >= 55 ? '#ECFDF5' : score >= 35 ? '#FFFBEB' : '#FEF2F2';
   return (
-    <div className="kpi-card" style={{gridColumn:'span 2', borderLeft:'4px solid #7F1D1D'}}>
-      <div style={{display:'flex', alignItems:'center', justifyContent:'space-between'}}>
-        <span className="kpi-title">COOPERATIVE SECTOR HEALTH</span>
-        <span style={{fontSize:'10px', fontWeight:800, color:labelColor, background:labelBg, padding:'3px 10px', borderRadius:'99px', whiteSpace:'nowrap'}}>{label}</span>
+    <div className="kpi-card" style={{height:'100%', borderLeft:`4px solid ${accent}`}}>
+      <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', gap:'8px'}}>
+        <span className="kpi-title">{title}</span>
+        <span style={{fontSize:'10px', fontWeight:800, color:labelColor, background:labelBg, padding:'3px 10px', borderRadius:'99px', whiteSpace:'nowrap', flexShrink:0}}>{label}</span>
       </div>
-      <div style={{display:'flex', alignItems:'center', gap:'16px', marginTop:'2px'}}>
-        <span key={score} className="kpi-val kpi-pop" style={{color:'#7F1D1D', whiteSpace:'nowrap'}}>{score} / 100</span>
+      <div style={{display:'flex', alignItems:'center', gap:'12px', marginTop:'2px'}}>
+        <span key={score} className="kpi-val kpi-pop" style={{color:accent, whiteSpace:'nowrap'}}>{score}/100</span>
         <div className="kpi-progress-track" style={{flex:1}}>
-          <div className="kpi-progress-fill" style={{width:`${score}%`, background:'#7F1D1D'}} />
+          <div className="kpi-progress-fill" style={{width:`${score}%`, background:accent}} />
         </div>
       </div>
-      <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', columnGap:'20px', rowGap:'8px', marginTop:'8px'}}>
+      <div style={{display:'grid', gridTemplateColumns: columns === 2 ? '1fr 1fr' : '1fr', columnGap:'20px', rowGap:'8px', marginTop:'8px'}}>
         {subs.map(s => (
           <div key={s.label} style={{display:'flex', alignItems:'center', gap:'8px'}}>
             <span style={{width:'6px', height:'6px', borderRadius:'50%', background:s.color, flexShrink:0}} />
@@ -1610,11 +1610,10 @@ function DistrictPerformance({ milkRows = [], mpcsRows = [], onViewMpcs, onViewM
   const milkAgmRate = Math.round((milkAgmCompletedCount / milkTotal) * 100);
   const milkAuditRate = Math.round((milkAuditedCount / milkTotal) * 100);
 
-  // Financial Performance and Operational Activity, same honest-dot treatment
-  // as mpcsPerformance below — each signal is a real reported fact (is the
-  // society profitable, was a dividend paid, is the CSC active, etc.), not a
-  // weighted score. Only MPCS forms capture this level of financial/CSC
-  // detail, so these two groups apply to the MPCS sector only.
+  // Financial Performance and Operational Activity — each signal is a real
+  // reported fact (is the society profitable, was a dividend paid, is the
+  // CSC active, etc.), not a weighted score. Only MPCS forms capture this
+  // level of financial/CSC detail, so these two groups apply to MPCS only.
   const mpcsFinancial = r => [
     isYes(r.is_profit),
     isYes(r.form_data?.['6.1']),
@@ -1642,6 +1641,15 @@ function DistrictPerformance({ milkRows = [], mpcsRows = [], onViewMpcs, onViewM
     { label: 'Operational Activity', value: mpcsOperationalRate, color: '#7C2D12' },
   ];
 
+  // Milk forms only capture AGM and Audit status — no financial/CSC detail
+  // exists for milk units — so the Milk health score is honestly an average
+  // of just those two rates, not padded out to match MPCS's four.
+  const milkHealthScore = Math.round((milkAgmRate + milkAuditRate) / 2);
+  const milkHealthSubs = [
+    { label: 'AGM Compliance', value: milkAgmRate, color: '#047857' },
+    { label: 'Audit Compliance', value: milkAuditRate, color: '#7C3AED' },
+  ];
+
   // One card config per KPI — the grid renders these as clickable tiles, and
   // the single table below always shows whichever one is selected, instead
   // of stacking a separate table under every card (which made the page very
@@ -1660,33 +1668,17 @@ function DistrictPerformance({ milkRows = [], mpcsRows = [], onViewMpcs, onViewM
     { key: 'audit', title: 'MILK AGM AUDITED', value: `${milkAuditedCount} / ${milkRows.length}`, sub: `${milkAuditRate}% audit compliance`, color: '#7C3AED', bg: '#F5F3FF', icon: I.chart, rate: milkAuditRate },
   ];
 
-  // A lightweight, honest per-row completion signal — not a fabricated
-  // composite "health score". Each dot is a real fact about that row (AGM
-  // done, Audit done, turnover/litres actually reported), so it only ever
-  // shows what's genuinely on record.
-  const mpcsPerformance = r => [
-    r.agm_status === 'Completed',
-    r.audit_status === 'Completed',
-    parseFloat(r.annual_turnover) > 0,
-  ];
-  const milkPerformance = r => [
-    r.agm_status === 'Completed',
-    r.audit_status === 'Completed',
-    parseFloat(r.litres) > 0,
-  ];
-
-  const mpcsComplianceOverview = [
-    { name: 'AGM Compliance', value: mpcsAgmRate, color: '#1D4ED8' },
-    { name: 'Audit Compliance', value: mpcsAuditRate, color: '#B45309' },
-    { name: 'Financial Performance', value: mpcsFinancialRate, color: '#0369A1' },
-    { name: 'Operational Activity', value: mpcsOperationalRate, color: '#7C2D12' },
-  ];
-
   const mpcsTurnoverRanking = useMemo(
     () => mpcsWithStatus
       .filter(r => parseFloat(r.annual_turnover) > 0)
       .map(r => ({ name: r.society_name || 'Unnamed Society', value: parseFloat(r.annual_turnover) || 0 })),
     [mpcsWithStatus]
+  );
+  const milkLitresRanking = useMemo(
+    () => milkWithStatus
+      .filter(r => parseFloat(r.litres) > 0)
+      .map(r => ({ name: r.center_name || 'Unnamed Center', value: parseFloat(r.litres) || 0 })),
+    [milkWithStatus]
   );
 
   const isThisMonth = d => {
@@ -1706,6 +1698,10 @@ function DistrictPerformance({ milkRows = [], mpcsRows = [], onViewMpcs, onViewM
     () => mpcsWithStatus.filter(r => r.agm_status !== 'Completed' || r.audit_status !== 'Completed').length,
     [mpcsWithStatus]
   );
+  const milkPendingCompliance = useMemo(
+    () => milkWithStatus.filter(r => r.agm_status !== 'Completed' || r.audit_status !== 'Completed').length,
+    [milkWithStatus]
+  );
 
   return (
     <div className="fade-in">
@@ -1718,79 +1714,60 @@ function DistrictPerformance({ milkRows = [], mpcsRows = [], onViewMpcs, onViewM
         </div>
       </div>
 
-      {/* MPCS Sector Benchmarks */}
-      <div style={{marginBottom:'28px'}}>
-        <div className="kpi-grid" style={{gridTemplateColumns:'repeat(auto-fit, minmax(200px, 1fr))'}}>
-          <CompositeHealthCard score={mpcsHealthScore} subs={mpcsHealthSubs} />
-          {mpcsCards.map(c => (
-            <BenchmarkCard key={c.key} title={c.title} value={c.value} sub={c.sub} color={c.color} bg={c.bg} icon={c.icon} rate={c.rate} />
-          ))}
-        </div>
-
-        <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:'14px', marginTop:'10px', alignItems:'start'}}>
-          <RankedBarList
-            title="MPCS Compliance Overview"
-            items={mpcsComplianceOverview}
-            color="#7F1D1D"
-            valueFmt={v => `${v}%`}
-            max={100}
-          />
-          <RankedBarList
-            title="Annual Turnover — by Society"
-            items={mpcsTurnoverRanking}
-            color="#7F1D1D"
-            valueFmt={fmtRs}
-          />
-        </div>
-
-        <div style={{display:'grid', gridTemplateColumns:'2fr 1fr', gap:'14px', marginTop:'10px', alignItems:'start'}}>
-          <ParamTable
-            title="Total Turnover — by Society"
-            emptyLabel="No MPCS societies on record."
-            rows={mpcsWithStatus}
-            onView={onViewMpcs}
-            columns={[
-              { key: 'society', label: 'Society', render: r => <span style={{fontWeight:700, color:'#0F172A'}}>{r.society_name || '—'}</span> },
-              { key: 'turnover', label: 'Annual Turnover', align: 'right', render: r => <span style={{fontWeight:700, color:'#065F46'}}>{fmtRs(r.annual_turnover)}</span> },
-              { key: 'agm', label: 'AGM Status', align: 'center', render: r => <StatusPill status={r.agm_status} /> },
-              { key: 'audit', label: 'Audit Status', align: 'center', render: r => <StatusPill status={r.audit_status} /> },
-              { key: 'perf', label: 'Performance', render: r => <PerformanceDots signals={mpcsPerformance(r)} /> },
-              { key: 'financial', label: 'Financial', render: r => <PerformanceDots signals={mpcsFinancial(r)} /> },
-              { key: 'operational', label: 'Operational', render: r => <PerformanceDots signals={mpcsOperational(r)} /> },
-            ]}
-          />
-
-          <div className="card" style={{padding:'14px', borderRadius:'8px', border:'1px solid #E2E8F0'}}>
-            <span style={{fontSize:'12px', fontWeight:800, color:'#0891B2', textTransform:'uppercase', letterSpacing:'0.5px'}}>🥛 Milk PCS Performance</span>
-            <div style={{display:'flex', flexDirection:'column', gap:'10px', marginTop:'12px'}}>
-              {milkCards.map(c => (
-                <BenchmarkCard key={c.key} title={c.title} value={c.value} sub={c.sub} color={c.color} bg={c.bg} icon={c.icon} rate={c.rate} />
-              ))}
-            </div>
-            <a
-              href="#milk-benchmarks"
-              style={{display:'flex', alignItems:'center', gap:'6px', marginTop:'12px', fontSize:'11px', fontWeight:700, color:'#0369A1', textDecoration:'none'}}
-              onClick={e => {
-                e.preventDefault();
-                document.getElementById('milk-benchmarks')?.scrollIntoView({ behavior:'smooth', block:'start' });
-              }}
-            >
-              View detailed Milk PCS benchmarks →
-            </a>
+      {/* MPCS at a glance */}
+      <div style={{marginBottom:'16px'}}>
+        <div style={{display:'flex', flexWrap:'wrap', gap:'16px'}}>
+          <div style={{flex:'1.6 1 300px'}}>
+            <CompositeHealthCard title="MPCS SECTOR HEALTH" score={mpcsHealthScore} subs={mpcsHealthSubs} accent="#7F1D1D" columns={2} />
           </div>
+          {mpcsCards.map(c => (
+            <div key={c.key} style={{flex:'1 1 170px'}}>
+              <BenchmarkCard title={c.title} value={c.value} sub={c.sub} color={c.color} bg={c.bg} icon={c.icon} rate={c.rate} />
+            </div>
+          ))}
         </div>
       </div>
 
-      {/* Milk Sector Benchmarks */}
-      <div id="milk-benchmarks" style={{marginBottom:'28px', scrollMarginTop:'20px'}}>
-        <div style={{fontSize:'12px', fontWeight:800, color:'#991B1B', textTransform:'uppercase', letterSpacing:'1px', marginBottom:'12px', background:'#FEF2F2', padding:'6px 12px', borderRadius:'6px', display:'inline-block', border:'1px solid #FECACA'}}>
-          🥛 Milk PCS Benchmarks
-        </div>
-        <div className="kpi-grid" style={{gridTemplateColumns:'repeat(auto-fit, minmax(200px, 1fr))'}}>
+      {/* Milk at a glance — same row treatment as MPCS above, so neither
+          sector is buried below the fold. */}
+      <div style={{marginBottom:'20px'}}>
+        <div style={{display:'flex', flexWrap:'wrap', gap:'16px'}}>
+          <div style={{flex:'1.3 1 260px'}}>
+            <CompositeHealthCard title="MILK SECTOR HEALTH" score={milkHealthScore} subs={milkHealthSubs} accent="#0891B2" columns={1} />
+          </div>
           {milkCards.map(c => (
-            <BenchmarkCard key={c.key} title={c.title} value={c.value} sub={c.sub} color={c.color} bg={c.bg} icon={c.icon} rate={c.rate} />
+            <div key={c.key} style={{flex:'1 1 170px'}}>
+              <BenchmarkCard title={c.title} value={c.value} sub={c.sub} color={c.color} bg={c.bg} icon={c.icon} rate={c.rate} />
+            </div>
           ))}
         </div>
+      </div>
+
+      {/* Ranked breakdowns — MPCS and Milk side by side. This replaces what
+          used to be a bar chart that just re-plotted the same four percentages
+          already itemized in the Sector Health card above it. */}
+      <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:'14px', marginBottom:'10px', alignItems:'start'}}>
+        <RankedBarList title="Annual Turnover — by Society" items={mpcsTurnoverRanking} color="#7F1D1D" valueFmt={fmtRs} />
+        <RankedBarList title="Litres Collected — by Unit" items={milkLitresRanking} color="#0891B2" valueFmt={fmtL} />
+      </div>
+
+      {/* Full record tables — MPCS and Milk side by side, both always visible
+          so nothing sector-specific requires scrolling to a separate section. */}
+      <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:'14px', marginBottom:'28px', alignItems:'start'}}>
+        <ParamTable
+          title="Total Turnover — by Society"
+          emptyLabel="No MPCS societies on record."
+          rows={mpcsWithStatus}
+          onView={onViewMpcs}
+          columns={[
+            { key: 'society', label: 'Society', render: r => <span style={{fontWeight:700, color:'#0F172A'}}>{r.society_name || '—'}</span> },
+            { key: 'turnover', label: 'Turnover', align: 'right', render: r => <span style={{fontWeight:700, color:'#065F46'}}>{fmtRs(r.annual_turnover)}</span> },
+            { key: 'agm', label: 'AGM', align: 'center', render: r => <StatusPill status={r.agm_status} /> },
+            { key: 'audit', label: 'Audit', align: 'center', render: r => <StatusPill status={r.audit_status} /> },
+            { key: 'financial', label: 'Financial', render: r => <PerformanceDots signals={mpcsFinancial(r)} /> },
+            { key: 'operational', label: 'Operational', render: r => <PerformanceDots signals={mpcsOperational(r)} /> },
+          ]}
+        />
         <ParamTable
           title="Liters Collected — by Unit"
           emptyLabel="No Milk PCS units on record."
@@ -1799,9 +1776,8 @@ function DistrictPerformance({ milkRows = [], mpcsRows = [], onViewMpcs, onViewM
           columns={[
             { key: 'center', label: 'Center', render: r => <span style={{fontWeight:700, color:'#0F172A'}}>{r.center_name || '—'}</span> },
             { key: 'litres', label: 'Litres', align: 'right', render: r => <span style={{fontWeight:700, color:'#0F172A'}}>{fmtL(r.litres)}</span> },
-            { key: 'agm', label: 'AGM Status', align: 'center', render: r => <StatusPill status={r.agm_status} /> },
-            { key: 'audit', label: 'Audit Status', align: 'center', render: r => <StatusPill status={r.audit_status} /> },
-            { key: 'perf', label: 'Performance', render: r => <PerformanceDots signals={milkPerformance(r)} /> },
+            { key: 'agm', label: 'AGM', align: 'center', render: r => <StatusPill status={r.agm_status} /> },
+            { key: 'audit', label: 'Audit', align: 'center', render: r => <StatusPill status={r.audit_status} /> },
           ]}
         />
       </div>
@@ -1812,7 +1788,7 @@ function DistrictPerformance({ milkRows = [], mpcsRows = [], onViewMpcs, onViewM
         {[
           { label: 'Total Societies', value: mpcsRows.length + milkRows.length },
           { label: 'Submitted This Month', value: mpcsSubmittedThisMonth + milkSubmittedThisMonth },
-          { label: 'Pending Compliance', value: mpcsPendingCompliance },
+          { label: 'Pending Compliance', value: mpcsPendingCompliance + milkPendingCompliance },
         ].map((s, i) => (
           <div key={s.label} style={{flex:'1 1 160px', padding:'14px 18px', textAlign:'center', borderLeft: i > 0 ? '1px solid #E2E8F0' : 'none'}}>
             <div style={{fontSize:'20px', fontWeight:900, color:'#0F172A'}}>{s.value}</div>
