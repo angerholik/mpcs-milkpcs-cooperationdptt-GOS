@@ -1394,21 +1394,94 @@ function GlobalBroadcast({ activeTab, userRole }) {
   );
 }
 
-function DistrictPerformance({ milkRows = [], mpcsRows = [] }) {
-  const mpcsAuditAgmList = useMemo(() => mpcsRows.map(r => getMpcsAuditAgm(r)), [mpcsRows]);
-  const milkAuditAgmList = useMemo(() => milkRows.map(r => getMilkAuditAgm(r)), [milkRows]);
+// A KPI card that can drive the compliance table below it. Non-compliance
+// cards (CSC/Deposit/Turnover/Litres) have no natural "pending" state, so
+// they stay static info tiles — only AGM/Audit cards are clickable.
+function BenchmarkCard({ title, value, sub, color, filterKey, activeFilter, onToggle, complianceRate }) {
+  const clickable = !!filterKey;
+  const isActive = clickable && activeFilter === filterKey;
+  return (
+    <div
+      className="kpi-card"
+      onClick={clickable ? () => onToggle(isActive ? '' : filterKey) : undefined}
+      style={{
+        cursor: clickable ? 'pointer' : 'default',
+        border: isActive ? '2px solid #7F1D1D' : '1px solid var(--border)',
+        boxShadow: isActive ? '0 0 0 3px rgba(127,29,29,0.08)' : undefined,
+        position: 'relative',
+      }}
+      title={clickable ? 'Click to see which societies are pending' : undefined}
+    >
+      {typeof complianceRate === 'number' && (
+        <div style={{
+          position: 'absolute', top: '10px', right: '10px',
+          fontSize: '9px', fontWeight: 800, padding: '2px 7px', borderRadius: '10px',
+          background: complianceRate >= 80 ? '#ECFDF5' : complianceRate >= 50 ? '#FFFBEB' : '#FEF2F2',
+          color: complianceRate >= 80 ? '#047857' : complianceRate >= 50 ? '#92400E' : '#B91C1C',
+        }}>
+          {complianceRate >= 80 ? 'ON TRACK' : complianceRate >= 50 ? 'WATCH' : 'AT RISK'}
+        </div>
+      )}
+      <div className="kpi-title">{title}</div>
+      <div className="kpi-val" style={{color}}>{value}</div>
+      <div className="kpi-sub">{sub}{clickable ? (isActive ? ' • showing pending ↓' : ' • click to see who') : ''}</div>
+    </div>
+  );
+}
+
+function StatusPill({ status }) {
+  const done = status === 'Completed';
+  return (
+    <span style={{
+      fontSize: '10px', fontWeight: 800, padding: '3px 9px', borderRadius: '10px',
+      background: done ? '#ECFDF5' : '#FEF2F2', color: done ? '#047857' : '#B91C1C',
+      border: `1px solid ${done ? '#A7F3D0' : '#FECACA'}`,
+    }}>
+      {done ? '✓ COMPLETED' : '✗ PENDING'}
+    </span>
+  );
+}
+
+function DistrictPerformance({ milkRows = [], mpcsRows = [], onViewMpcs, onViewMilk }) {
+  const [mpcsFilter, setMpcsFilter] = useState('');
+  const [milkFilter, setMilkFilter] = useState('');
+
+  const mpcsWithStatus = useMemo(
+    () => mpcsRows.map(r => ({ ...r, ...getMpcsAuditAgm(r) })),
+    [mpcsRows]
+  );
+  const milkWithStatus = useMemo(
+    () => milkRows.map(r => ({ ...r, ...getMilkAuditAgm(r) })),
+    [milkRows]
+  );
 
   const mpcsTotal = mpcsRows.length || 1;
   const mpcsCscCount = useMemo(() => mpcsRows.filter(r => r.form_data?.['9.1'] === 'Yes' || r.form_data?.['9.7z'] === 'Yes').length, [mpcsRows]);
   const mpcsMonthlyDeposit = useMemo(() => mpcsRows.reduce((s, r) => s + (parseFloat(r.form_data?.['7.71'] || r.bank_balance) || 0), 0), [mpcsRows]);
   const mpcsTotalTurnover = useMemo(() => mpcsRows.reduce((s, r) => s + (parseFloat(r.annual_turnover) || 0), 0), [mpcsRows]);
-  const mpcsAgmCompletedCount = useMemo(() => mpcsAuditAgmList.filter(x => isYes(x.agm_done)).length, [mpcsAuditAgmList]);
-  const mpcsAuditedCount = useMemo(() => mpcsAuditAgmList.filter(x => isYes(x.audit_done)).length, [mpcsAuditAgmList]);
+  const mpcsAgmCompletedCount = useMemo(() => mpcsWithStatus.filter(x => x.agm_status === 'Completed').length, [mpcsWithStatus]);
+  const mpcsAuditedCount = useMemo(() => mpcsWithStatus.filter(x => x.audit_status === 'Completed').length, [mpcsWithStatus]);
+  const mpcsAgmRate = Math.round((mpcsAgmCompletedCount / mpcsTotal) * 100);
+  const mpcsAuditRate = Math.round((mpcsAuditedCount / mpcsTotal) * 100);
 
   const milkTotal = milkRows.length || 1;
   const milkTotalLitres = useMemo(() => milkRows.reduce((s, r) => s + (parseFloat(r.litres) || 0), 0), [milkRows]);
-  const milkAgmCompletedCount = useMemo(() => milkAuditAgmList.filter(x => isYes(x.agm_done)).length, [milkAuditAgmList]);
-  const milkAuditedCount = useMemo(() => milkAuditAgmList.filter(x => isYes(x.audit_done)).length, [milkAuditAgmList]);
+  const milkAgmCompletedCount = useMemo(() => milkWithStatus.filter(x => x.agm_status === 'Completed').length, [milkWithStatus]);
+  const milkAuditedCount = useMemo(() => milkWithStatus.filter(x => x.audit_status === 'Completed').length, [milkWithStatus]);
+  const milkAgmRate = Math.round((milkAgmCompletedCount / milkTotal) * 100);
+  const milkAuditRate = Math.round((milkAuditedCount / milkTotal) * 100);
+
+  const mpcsTableRows = useMemo(() => {
+    if (mpcsFilter === 'agm_pending') return mpcsWithStatus.filter(r => r.agm_status !== 'Completed');
+    if (mpcsFilter === 'audit_pending') return mpcsWithStatus.filter(r => r.audit_status !== 'Completed');
+    return mpcsWithStatus;
+  }, [mpcsWithStatus, mpcsFilter]);
+
+  const milkTableRows = useMemo(() => {
+    if (milkFilter === 'agm_pending') return milkWithStatus.filter(r => r.agm_status !== 'Completed');
+    if (milkFilter === 'audit_pending') return milkWithStatus.filter(r => r.audit_status !== 'Completed');
+    return milkWithStatus;
+  }, [milkWithStatus, milkFilter]);
 
   return (
     <div className="fade-in">
@@ -1427,31 +1500,64 @@ function DistrictPerformance({ milkRows = [], mpcsRows = [] }) {
           🏛️ MPCS Societies Benchmarks
         </div>
         <div className="kpi-grid" style={{gridTemplateColumns:'repeat(auto-fit, minmax(200px, 1fr))'}}>
-          <div className="kpi-card">
-            <div className="kpi-title">CSC TRANSACTIONS</div>
-            <div className="kpi-val" style={{color:'#047857'}}>{mpcsCscCount}</div>
-            <div className="kpi-sub">Active CSC centers</div>
+          <BenchmarkCard title="CSC TRANSACTIONS" value={mpcsCscCount} sub="Active CSC centers" color="#047857" />
+          <BenchmarkCard title="MONTHLY DEPOSIT" value={fmtRs(mpcsMonthlyDeposit)} sub="Aggregate sales deposit" color="#7F1D1D" />
+          <BenchmarkCard
+            title="MPCS AGM COMPLETED" value={`${mpcsAgmCompletedCount} / ${mpcsRows.length}`}
+            sub={`${mpcsAgmRate}% AGM compliance`} color="#1D4ED8"
+            filterKey="agm_pending" activeFilter={mpcsFilter} onToggle={setMpcsFilter} complianceRate={mpcsAgmRate}
+          />
+          <BenchmarkCard
+            title="MPCS AGM AUDITED" value={`${mpcsAuditedCount} / ${mpcsRows.length}`}
+            sub={`${mpcsAuditRate}% audit compliance`} color="#B45309"
+            filterKey="audit_pending" activeFilter={mpcsFilter} onToggle={setMpcsFilter} complianceRate={mpcsAuditRate}
+          />
+          <BenchmarkCard title="TOTAL TURNOVER" value={fmtRs(mpcsTotalTurnover)} sub="Aggregate annual turnover" color="#065F46" />
+        </div>
+
+        {/* Per-society breakdown — always visible, filtered by the KPI cards above */}
+        <div className="card" style={{marginTop:'16px', padding:0, overflow:'hidden', borderRadius:'8px', border:'1px solid #E2E8F0'}}>
+          <div style={{padding:'12px 16px', borderBottom:'1px solid var(--border)', display:'flex', justifyContent:'space-between', alignItems:'center', background:'#FAFAFA'}}>
+            <span style={{fontSize:'13px', fontWeight:800, color:'#0F172A'}}>MPCS Society Breakdown</span>
+            <div style={{display:'flex', alignItems:'center', gap:'8px'}}>
+              <span style={{fontSize:'11px', color:'var(--text-muted)', fontWeight:600}}>{mpcsTableRows.length} of {mpcsRows.length} shown</span>
+              {mpcsFilter && (
+                <button className="btn-ghost" onClick={()=>setMpcsFilter('')} style={{fontSize:'11px', padding:'4px 10px', fontWeight:700}}>Clear filter ×</button>
+              )}
+            </div>
           </div>
-          <div className="kpi-card">
-            <div className="kpi-title">MONTHLY DEPOSIT</div>
-            <div className="kpi-val" style={{color:'#7F1D1D'}}>{fmtRs(mpcsMonthlyDeposit)}</div>
-            <div className="kpi-sub">Aggregate sales deposit</div>
-          </div>
-          <div className="kpi-card">
-            <div className="kpi-title">MPCS AGM COMPLETED</div>
-            <div className="kpi-val" style={{color:'#1D4ED8'}}>{mpcsAgmCompletedCount} / {mpcsRows.length}</div>
-            <div className="kpi-sub">{Math.round((mpcsAgmCompletedCount / mpcsTotal) * 100)}% AGM compliance</div>
-          </div>
-          <div className="kpi-card">
-            <div className="kpi-title">MPCS AGM AUDITED</div>
-            <div className="kpi-val" style={{color:'#B45309'}}>{mpcsAuditedCount} / {mpcsRows.length}</div>
-            <div className="kpi-sub">{Math.round((mpcsAuditedCount / mpcsTotal) * 100)}% audit compliance</div>
-          </div>
-          <div className="kpi-card">
-            <div className="kpi-title">TOTAL TURNOVER</div>
-            <div className="kpi-val" style={{color:'#065F46'}}>{fmtRs(mpcsTotalTurnover)}</div>
-            <div className="kpi-sub">Aggregate annual turnover</div>
-          </div>
+          {mpcsTableRows.length === 0 ? (
+            <div style={{padding:'32px', textAlign:'center', color:'#9CA3AF', fontSize:'13px'}}>No societies match this filter.</div>
+          ) : (
+            <div className="table-responsive">
+              <table className="data-table">
+                <thead>
+                  <tr>
+                    <th>Society</th>
+                    <th>Registration No.</th>
+                    <th style={{textAlign:'center'}}>AGM</th>
+                    <th style={{textAlign:'center'}}>Audit</th>
+                    <th style={{textAlign:'right'}}>Turnover</th>
+                    <th style={{textAlign:'center'}}>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {mpcsTableRows.map((r, i) => (
+                    <tr key={r.id || i}>
+                      <td style={{fontWeight:700, color:'#0F172A'}}>{r.society_name || '—'}</td>
+                      <td style={{fontSize:'12px', color:'#64748B'}}>{r.registration_number || '—'}</td>
+                      <td style={{textAlign:'center'}}><StatusPill status={r.agm_status} /></td>
+                      <td style={{textAlign:'center'}}><StatusPill status={r.audit_status} /></td>
+                      <td style={{textAlign:'right', fontSize:'12px', fontWeight:700, color:'#065F46'}}>{fmtRs(r.annual_turnover)}</td>
+                      <td style={{textAlign:'center'}}>
+                        <button className="btn-ghost" style={{padding:'4px 10px', fontSize:'11px'}} onClick={()=>onViewMpcs && onViewMpcs(r)}>👁 View</button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       </div>
 
@@ -1461,21 +1567,61 @@ function DistrictPerformance({ milkRows = [], mpcsRows = [] }) {
           🥛 Milk PCS Benchmarks
         </div>
         <div className="kpi-grid" style={{gridTemplateColumns:'repeat(auto-fit, minmax(200px, 1fr))'}}>
-          <div className="kpi-card">
-            <div className="kpi-title">LITERS COLLECTED</div>
-            <div className="kpi-val" style={{color:'#0F172A'}}>{fmtL(milkTotalLitres)}</div>
-            <div className="kpi-sub">Total milk volume</div>
+          <BenchmarkCard title="LITERS COLLECTED" value={fmtL(milkTotalLitres)} sub="Total milk volume" color="#0F172A" />
+          <BenchmarkCard
+            title="MILK AGM COMPLETED" value={`${milkAgmCompletedCount} / ${milkRows.length}`}
+            sub={`${milkAgmRate}% AGM compliance`} color="#047857"
+            filterKey="agm_pending" activeFilter={milkFilter} onToggle={setMilkFilter} complianceRate={milkAgmRate}
+          />
+          <BenchmarkCard
+            title="MILK AGM AUDITED" value={`${milkAuditedCount} / ${milkRows.length}`}
+            sub={`${milkAuditRate}% audit compliance`} color="#7C3AED"
+            filterKey="audit_pending" activeFilter={milkFilter} onToggle={setMilkFilter} complianceRate={milkAuditRate}
+          />
+        </div>
+
+        <div className="card" style={{marginTop:'16px', padding:0, overflow:'hidden', borderRadius:'8px', border:'1px solid #E2E8F0'}}>
+          <div style={{padding:'12px 16px', borderBottom:'1px solid var(--border)', display:'flex', justifyContent:'space-between', alignItems:'center', background:'#FAFAFA'}}>
+            <span style={{fontSize:'13px', fontWeight:800, color:'#0F172A'}}>Milk Unit Breakdown</span>
+            <div style={{display:'flex', alignItems:'center', gap:'8px'}}>
+              <span style={{fontSize:'11px', color:'var(--text-muted)', fontWeight:600}}>{milkTableRows.length} of {milkRows.length} shown</span>
+              {milkFilter && (
+                <button className="btn-ghost" onClick={()=>setMilkFilter('')} style={{fontSize:'11px', padding:'4px 10px', fontWeight:700}}>Clear filter ×</button>
+              )}
+            </div>
           </div>
-          <div className="kpi-card">
-            <div className="kpi-title">MILK AGM COMPLETED</div>
-            <div className="kpi-val" style={{color:'#047857'}}>{milkAgmCompletedCount} / {milkRows.length}</div>
-            <div className="kpi-sub">{Math.round((milkAgmCompletedCount / milkTotal) * 100)}% AGM compliance</div>
-          </div>
-          <div className="kpi-card">
-            <div className="kpi-title">MILK AGM AUDITED</div>
-            <div className="kpi-val" style={{color:'#7C3AED'}}>{milkAuditedCount} / {milkRows.length}</div>
-            <div className="kpi-sub">{Math.round((milkAuditedCount / milkTotal) * 100)}% audit compliance</div>
-          </div>
+          {milkTableRows.length === 0 ? (
+            <div style={{padding:'32px', textAlign:'center', color:'#9CA3AF', fontSize:'13px'}}>No units match this filter.</div>
+          ) : (
+            <div className="table-responsive">
+              <table className="data-table">
+                <thead>
+                  <tr>
+                    <th>Center</th>
+                    <th>Registration No.</th>
+                    <th style={{textAlign:'center'}}>AGM</th>
+                    <th style={{textAlign:'center'}}>Audit</th>
+                    <th style={{textAlign:'right'}}>Litres</th>
+                    <th style={{textAlign:'center'}}>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {milkTableRows.map((r, i) => (
+                    <tr key={r.id || i}>
+                      <td style={{fontWeight:700, color:'#0F172A'}}>{r.center_name || '—'}</td>
+                      <td style={{fontSize:'12px', color:'#64748B'}}>{r.registration_number || '—'}</td>
+                      <td style={{textAlign:'center'}}><StatusPill status={r.agm_status} /></td>
+                      <td style={{textAlign:'center'}}><StatusPill status={r.audit_status} /></td>
+                      <td style={{textAlign:'right', fontSize:'12px', fontWeight:700, color:'#0F172A'}}>{fmtL(r.litres)}</td>
+                      <td style={{textAlign:'center'}}>
+                        <button className="btn-ghost" style={{padding:'4px 10px', fontSize:'11px'}} onClick={()=>onViewMilk && onViewMilk(r)}>👁 View</button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       </div>
 
@@ -2929,7 +3075,7 @@ function Dashboard({ onLogout, session }) {
           )}
 
           {/* Module Views */}
-          {activeTab === 'STATS' && <DistrictPerformance milkRows={scopedMilkRows} mpcsRows={scopedMpcsRows} />}
+          {activeTab === 'STATS' && <DistrictPerformance milkRows={scopedMilkRows} mpcsRows={scopedMpcsRows} onViewMpcs={setMpcsSelected} onViewMilk={setMilkSelected} />}
 
           {/* 📄 REPORTS & EXPORT CENTER */}
           {activeTab === 'REPORTS' && (
