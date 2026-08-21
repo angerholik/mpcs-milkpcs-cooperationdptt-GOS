@@ -1519,13 +1519,21 @@ function CompositeHealthCard({ title, score, subs, accent = '#7F1D1D', columns =
 // these sits directly under each card so "MPCS AGM Audited" only ever shows
 // AGM-audit columns, "CSC Transactions" only shows CSC transaction columns,
 // etc., instead of every parameter crammed into one wide table.
-function ParamTable({ title, columns, rows, emptyLabel, onView, totalLabel }) {
+function ParamTable({ title, columns, rows, emptyLabel, onView, totalLabel, accent = '#7F1D1D', icon }) {
   return (
-    <div className="card" style={{marginTop:'10px', padding:0, overflow:'hidden', borderRadius:'8px', border:'1px solid #E2E8F0'}}>
-      <div style={{padding:'10px 14px', borderBottom:'1px solid var(--border)', background:'#FAFAFA', display:'flex', justifyContent:'space-between', alignItems:'center'}}>
-        <span style={{fontSize:'12px', fontWeight:800, color:'#0F172A'}}>{title}</span>
+    <div className="card" style={{marginTop:'10px', padding:0, overflow:'hidden', borderRadius:'8px', border:'1px solid #E2E8F0', borderLeft:`4px solid ${accent}`}}>
+      <div style={{padding:'12px 16px', borderBottom:'1px solid var(--border)', background:'#FAFAFA', display:'flex', justifyContent:'space-between', alignItems:'center'}}>
+        <div style={{display:'flex', alignItems:'center', gap:'10px'}}>
+          {icon && (
+            <div className="kpi-icon-box" style={{background:`${accent}14`}}>
+              <Icon d={icon} size={14} color={accent} />
+            </div>
+          )}
+          <span style={{fontSize:'12px', fontWeight:800, color:'#0F172A'}}>{title}</span>
+        </div>
         <span style={{fontSize:'10px', color:'var(--text-muted)', fontWeight:600}}>
-          {totalLabel && <span style={{color:'#0F172A', fontWeight:800}}>{totalLabel} · </span>}
+          {totalLabel && <span style={{color:accent, fontWeight:800, fontSize:'12px'}}>{totalLabel}</span>}
+          {totalLabel && ' · '}
           {rows.length} record{rows.length === 1 ? '' : 's'}
         </span>
       </div>
@@ -1730,6 +1738,8 @@ function DistrictPerformance({ milkRows = [], mpcsRows = [], onViewMpcs, onViewM
           many rows either sector has. */}
       <ParamTable
         title="Total Turnover — by Society"
+        accent="#7F1D1D"
+        icon={I.money}
         totalLabel={fmtRs(mpcsTotalTurnover)}
         emptyLabel="No MPCS societies on record."
         rows={mpcsWithStatusSorted}
@@ -1741,6 +1751,8 @@ function DistrictPerformance({ milkRows = [], mpcsRows = [], onViewMpcs, onViewM
       />
       <ParamTable
         title="Liters Collected — by Unit"
+        accent="#0891B2"
+        icon={I.litres}
         totalLabel={fmtL(milkTotalLitres)}
         emptyLabel="No Milk PCS units on record."
         rows={milkWithStatusSorted}
@@ -1759,6 +1771,8 @@ function DistrictPerformance({ milkRows = [], mpcsRows = [], onViewMpcs, onViewM
       <div style={{marginBottom:'20px'}}>
         <ParamTable
           title="AGM & Audit Compliance — All Entities"
+          accent="#1D4ED8"
+          icon={I.members}
           totalLabel={`${combinedPendingCount} pending`}
           emptyLabel="No societies or units on record."
           rows={combinedCompliance}
