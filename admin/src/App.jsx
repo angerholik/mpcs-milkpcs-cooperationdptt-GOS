@@ -1529,6 +1529,26 @@ function DistrictPerformance({ milkRows = [], mpcsRows = [], onViewMpcs, onViewM
   const milkAgmRate = Math.round((milkAgmCompletedCount / milkTotal) * 100);
   const milkAuditRate = Math.round((milkAuditedCount / milkTotal) * 100);
 
+  // Financial Performance and Operational Activity, same honest-dot treatment
+  // as mpcsPerformance below — each signal is a real reported fact (is the
+  // society profitable, was a dividend paid, is the CSC active, etc.), not a
+  // weighted score. Only MPCS forms capture this level of financial/CSC
+  // detail, so these two groups apply to the MPCS sector only.
+  const mpcsFinancial = r => [
+    isYes(r.is_profit),
+    isYes(r.form_data?.['6.1']),
+    parseFloat(r.form_data?.['8.9']) > 0,
+    parseFloat(r.bank_balance) > 0,
+  ];
+  const mpcsOperational = r => [
+    isYes(r.form_data?.['9.1']),
+    parseFloat(r.form_data?.['9.9']) > 0,
+    parseFloat(r.form_data?.['8.11']) > 0,
+  ];
+
+  const mpcsFinancialCompleted = useMemo(() => mpcsWithStatus.filter(r => mpcsFinancial(r).every(Boolean)).length, [mpcsWithStatus]);
+  const mpcsOperationalCompleted = useMemo(() => mpcsWithStatus.filter(r => mpcsOperational(r).every(Boolean)).length, [mpcsWithStatus]);
+
   // One card config per KPI — the grid renders these as clickable tiles, and
   // the single table below always shows whichever one is selected, instead
   // of stacking a separate table under every card (which made the page very
@@ -1539,6 +1559,8 @@ function DistrictPerformance({ milkRows = [], mpcsRows = [], onViewMpcs, onViewM
     { key: 'agm', title: 'MPCS AGM COMPLETED', value: `${mpcsAgmCompletedCount} / ${mpcsRows.length}`, sub: `${mpcsAgmRate}% AGM compliance`, color: '#1D4ED8', bg: '#EFF6FF', icon: I.members, rate: mpcsAgmRate },
     { key: 'audit', title: 'MPCS AGM AUDITED', value: `${mpcsAuditedCount} / ${mpcsRows.length}`, sub: `${mpcsAuditRate}% audit compliance`, color: '#B45309', bg: '#FFFBEB', icon: I.chart, rate: mpcsAuditRate },
     { key: 'turnover', title: 'TOTAL TURNOVER', value: fmtRs(mpcsTotalTurnover), sub: 'Aggregate annual turnover', color: '#065F46', bg: '#ECFDF5', icon: I.money },
+    { key: 'financial', title: 'FINANCIAL PERFORMANCE', value: `${mpcsFinancialCompleted} / ${mpcsRows.length}`, sub: 'Profit, dividend, capital & balance on record', color: '#0369A1', bg: '#F0F9FF', icon: I.money, rate: Math.round((mpcsFinancialCompleted / mpcsTotal) * 100) },
+    { key: 'operational', title: 'OPERATIONAL ACTIVITY', value: `${mpcsOperationalCompleted} / ${mpcsRows.length}`, sub: 'CSC active, transacting & depositing', color: '#7C2D12', bg: '#FFF7ED', icon: I.domain, rate: Math.round((mpcsOperationalCompleted / mpcsTotal) * 100) },
   ];
 
   const milkCards = [
@@ -1594,6 +1616,8 @@ function DistrictPerformance({ milkRows = [], mpcsRows = [], onViewMpcs, onViewM
             { key: 'agm', label: 'AGM Status', align: 'center', render: r => <StatusPill status={r.agm_status} /> },
             { key: 'audit', label: 'Audit Status', align: 'center', render: r => <StatusPill status={r.audit_status} /> },
             { key: 'perf', label: 'Performance', render: r => <PerformanceDots signals={mpcsPerformance(r)} /> },
+            { key: 'financial', label: 'Financial', render: r => <PerformanceDots signals={mpcsFinancial(r)} /> },
+            { key: 'operational', label: 'Operational', render: r => <PerformanceDots signals={mpcsOperational(r)} /> },
           ]}
         />
       </div>
