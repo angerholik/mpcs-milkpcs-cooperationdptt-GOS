@@ -1727,25 +1727,20 @@ function DistrictPerformance({ milkRows = [], mpcsRows = [], onViewMpcs, onViewM
         </div>
       </div>
 
-      {/* MPCS at a glance — fixed grid tracks (not flex-wrap) so the health
-          card and the four KPI cards always sit in one row at desktop
-          width, instead of the last card falling onto its own near-empty
-          row when the flex-basis math doesn't divide evenly. */}
-      <div style={{marginBottom:'16px'}}>
-        <div className="kpi-grid-fixed" style={{display:'grid', gridTemplateColumns:'2.4fr repeat(2, 1fr)', gap:'16px'}}>
+      {/* Both sector health cards plus MPCS's two extra KPIs, all in one
+          row. Milk's health card only has two sub-metrics (no financial/CSC
+          data exists for milk units), so on its own it stretched full-width
+          for content using a fraction of that space — putting it next to
+          MPCS's card instead means every card's width roughly matches what
+          it actually needs, and both sectors' health read side by side. */}
+      <div style={{marginBottom:'20px'}}>
+        <div className="kpi-grid-fixed" style={{display:'grid', gridTemplateColumns:'1.7fr 1.1fr 1fr 1fr', gap:'16px'}}>
           <CompositeHealthCard title="MPCS SECTOR HEALTH" score={mpcsHealthScore} subs={mpcsHealthSubs} accent="#7F1D1D" columns={2} />
+          <CompositeHealthCard title="MILK SECTOR HEALTH" score={milkHealthScore} subs={milkHealthSubs} accent="#0891B2" columns={1} />
           {mpcsCards.map(c => (
             <BenchmarkCard key={c.key} title={c.title} value={c.value} sub={c.sub} color={c.color} bg={c.bg} icon={c.icon} rate={c.rate} />
           ))}
         </div>
-      </div>
-
-      {/* Milk at a glance — same row treatment as MPCS above, so neither
-          sector is buried below the fold. No KPI cards here: litres already
-          shows in the table below with its own total, and AGM/Audit are in
-          the health card, so there's nothing left that isn't a duplicate. */}
-      <div style={{marginBottom:'20px'}}>
-        <CompositeHealthCard title="MILK SECTOR HEALTH" score={milkHealthScore} subs={milkHealthSubs} accent="#0891B2" columns={1} />
       </div>
 
       {/* Turnover + Litres stacked in one column, AGM/Audit compliance in
