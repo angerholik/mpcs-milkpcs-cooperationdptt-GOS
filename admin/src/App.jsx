@@ -1460,50 +1460,6 @@ function PerformanceDots({ signals }) {
   );
 }
 
-// A ranked horizontal bar list — real per-entity values sorted descending,
-// bar length scaled to the largest value in the full set (not just the
-// visible slice, so "Top 5" bars stay proportionally correct when toggled
-// to "All"). No trend line or period-over-period comparison is shown here
-// since we only have one figure per entity, not a real time series.
-function RankedBarList({ title, items, color = '#7F1D1D', valueFmt, max: fixedMax }) {
-  const [showAll, setShowAll] = useState(false);
-  const sorted = useMemo(() => [...items].sort((a, b) => b.value - a.value), [items]);
-  const max = fixedMax != null ? fixedMax : (sorted.length ? sorted[0].value : 0);
-  const visible = showAll ? sorted : sorted.slice(0, 5);
-
-  return (
-    <div className="card" style={{marginTop:'10px', padding:0, overflow:'hidden', borderRadius:'8px', border:'1px solid #E2E8F0'}}>
-      <div style={{padding:'10px 14px', borderBottom:'1px solid var(--border)', background:'#FAFAFA', display:'flex', justifyContent:'space-between', alignItems:'center'}}>
-        <span style={{fontSize:'12px', fontWeight:800, color:'#0F172A'}}>{title}</span>
-        {sorted.length > 5 && (
-          <button
-            className="btn-ghost"
-            style={{padding:'3px 10px', fontSize:'10px', fontWeight:700}}
-            onClick={() => setShowAll(v => !v)}
-          >
-            {showAll ? 'Top 5' : `All (${sorted.length})`}
-          </button>
-        )}
-      </div>
-      {visible.length === 0 ? (
-        <div style={{padding:'20px', textAlign:'center', color:'#9CA3AF', fontSize:'12px'}}>No data on record.</div>
-      ) : (
-        <div style={{padding:'16px', display:'flex', flexDirection:'column', gap:'14px'}}>
-          {visible.map((item, i) => (
-            <div key={item.name + i} style={{display:'flex', alignItems:'center', gap:'12px'}}>
-              <span title={item.name} style={{width:'160px', flexShrink:0, fontSize:'12px', fontWeight:700, color:'#334155', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap'}}>{item.name}</span>
-              <div style={{flex:1, height:'8px', borderRadius:'99px', background:'#F1F5F9', overflow:'hidden'}}>
-                <div style={{width: `${max > 0 ? Math.max(2, (item.value / max) * 100) : 0}%`, height:'100%', borderRadius:'99px', background: item.color || color}} />
-              </div>
-              <span style={{width:'80px', flexShrink:0, textAlign:'right', fontSize:'12px', fontWeight:800, color:'#0F172A'}}>{valueFmt ? valueFmt(item.value) : item.value}</span>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
 // A composite score, but an honest one: it's a plain average of four real,
 // independently-computed compliance percentages (AGM, Audit, Financial,
 // Operational — the same rates used elsewhere on this page), not a
@@ -1668,16 +1624,15 @@ function DistrictPerformance({ milkRows = [], mpcsRows = [], onViewMpcs, onViewM
     { key: 'audit', title: 'MILK AGM AUDITED', value: `${milkAuditedCount} / ${milkRows.length}`, sub: `${milkAuditRate}% audit compliance`, color: '#7C3AED', bg: '#F5F3FF', icon: I.chart, rate: milkAuditRate },
   ];
 
-  const mpcsTurnoverRanking = useMemo(
-    () => mpcsWithStatus
-      .filter(r => parseFloat(r.annual_turnover) > 0)
-      .map(r => ({ name: r.society_name || 'Unnamed Society', value: parseFloat(r.annual_turnover) || 0 })),
+  // Tables are sorted highest-first so the ranking is visible directly in
+  // the one place this data lives, instead of a separate bar-chart panel
+  // repeating the same names and values right above the table.
+  const mpcsWithStatusSorted = useMemo(
+    () => [...mpcsWithStatus].sort((a, b) => (parseFloat(b.annual_turnover) || 0) - (parseFloat(a.annual_turnover) || 0)),
     [mpcsWithStatus]
   );
-  const milkLitresRanking = useMemo(
-    () => milkWithStatus
-      .filter(r => parseFloat(r.litres) > 0)
-      .map(r => ({ name: r.center_name || 'Unnamed Center', value: parseFloat(r.litres) || 0 })),
+  const milkWithStatusSorted = useMemo(
+    () => [...milkWithStatus].sort((a, b) => (parseFloat(b.litres) || 0) - (parseFloat(a.litres) || 0)),
     [milkWithStatus]
   );
 
@@ -1738,21 +1693,15 @@ function DistrictPerformance({ milkRows = [], mpcsRows = [], onViewMpcs, onViewM
         </div>
       </div>
 
-      {/* Ranked breakdowns — MPCS and Milk side by side. This replaces what
-          used to be a bar chart that just re-plotted the same four percentages
-          already itemized in the Sector Health card above it. */}
-      <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:'14px', marginBottom:'10px', alignItems:'start'}}>
-        <RankedBarList title="Annual Turnover — by Society" items={mpcsTurnoverRanking} color="#7F1D1D" valueFmt={fmtRs} />
-        <RankedBarList title="Litres Collected — by Unit" items={milkLitresRanking} color="#0891B2" valueFmt={fmtL} />
-      </div>
-
       {/* Full record tables — MPCS and Milk side by side, both always visible
-          so nothing sector-specific requires scrolling to a separate section. */}
+          so nothing sector-specific requires scrolling to a separate section.
+          Sorted highest-first so the ranking is visible in the table itself,
+          rather than duplicated in a separate bar-chart panel above it. */}
       <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:'14px', marginBottom:'28px', alignItems:'start'}}>
         <ParamTable
           title="Total Turnover — by Society"
           emptyLabel="No MPCS societies on record."
-          rows={mpcsWithStatus}
+          rows={mpcsWithStatusSorted}
           onView={onViewMpcs}
           columns={[
             { key: 'society', label: 'Society', render: r => <span style={{fontWeight:700, color:'#0F172A'}}>{r.society_name || '—'}</span> },
@@ -1764,7 +1713,7 @@ function DistrictPerformance({ milkRows = [], mpcsRows = [], onViewMpcs, onViewM
         <ParamTable
           title="Liters Collected — by Unit"
           emptyLabel="No Milk PCS units on record."
-          rows={milkWithStatus}
+          rows={milkWithStatusSorted}
           onView={onViewMilk}
           columns={[
             { key: 'center', label: 'Center', render: r => <span style={{fontWeight:700, color:'#0F172A'}}>{r.center_name || '—'}</span> },
