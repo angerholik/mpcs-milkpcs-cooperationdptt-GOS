@@ -1488,25 +1488,43 @@ function DistrictPerformance({ milkRows = [], mpcsRows = [], onViewMpcs, onViewM
                   <tr>
                     <th>Society</th>
                     <th>Registration No.</th>
-                    <th style={{textAlign:'center'}}>AGM</th>
-                    <th style={{textAlign:'center'}}>Audit</th>
+                    <th style={{textAlign:'center'}}>AGM Status</th>
+                    <th>AGM Date</th>
+                    <th style={{textAlign:'center'}}>Audit Status</th>
+                    <th>Audit Date</th>
+                    <th style={{textAlign:'center'}}>Audit Category</th>
+                    <th style={{textAlign:'center'}}>CSC Active</th>
+                    <th style={{textAlign:'right'}}>Deposit</th>
                     <th style={{textAlign:'right'}}>Turnover</th>
                     <th style={{textAlign:'center'}}>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {mpcsWithStatus.map((r, i) => (
-                    <tr key={r.id || i}>
-                      <td style={{fontWeight:700, color:'#0F172A'}}>{r.society_name || '—'}</td>
-                      <td style={{fontSize:'12px', color:'#64748B'}}>{r.registration_number || '—'}</td>
-                      <td style={{textAlign:'center'}}><StatusPill status={r.agm_status} /></td>
-                      <td style={{textAlign:'center'}}><StatusPill status={r.audit_status} /></td>
-                      <td style={{textAlign:'right', fontSize:'12px', fontWeight:700, color:'#065F46'}}>{fmtRs(r.annual_turnover)}</td>
-                      <td style={{textAlign:'center'}}>
-                        <button className="btn-ghost" style={{padding:'4px 10px', fontSize:'11px'}} onClick={()=>onViewMpcs && onViewMpcs(r)}>👁 View</button>
-                      </td>
-                    </tr>
-                  ))}
+                  {mpcsWithStatus.map((r, i) => {
+                    const cscActive = r.form_data?.['9.1'] === 'Yes' || r.form_data?.['9.7z'] === 'Yes';
+                    const deposit = r.form_data?.['7.71'] || r.bank_balance;
+                    return (
+                      <tr key={r.id || i}>
+                        <td style={{fontWeight:700, color:'#0F172A'}}>{r.society_name || '—'}</td>
+                        <td style={{fontSize:'12px', color:'#64748B'}}>{r.registration_number || '—'}</td>
+                        <td style={{textAlign:'center'}}><StatusPill status={r.agm_status} /></td>
+                        <td style={{fontSize:'12px', color:'#475569'}}>{r.agm_date || '—'}</td>
+                        <td style={{textAlign:'center'}}><StatusPill status={r.audit_status} /></td>
+                        <td style={{fontSize:'12px', color:'#475569'}}>{r.audit_date || '—'}</td>
+                        <td style={{textAlign:'center', fontSize:'12px', fontWeight:700, color:'#475569'}}>{r.audit_category || '—'}</td>
+                        <td style={{textAlign:'center'}}>
+                          <span style={{fontSize:'10px', fontWeight:800, padding:'3px 9px', borderRadius:'10px', background: cscActive ? '#ECFDF5' : '#F1F5F9', color: cscActive ? '#047857' : '#64748B', border: `1px solid ${cscActive ? '#A7F3D0' : '#E2E8F0'}`}}>
+                            {cscActive ? 'YES' : 'NO'}
+                          </span>
+                        </td>
+                        <td style={{textAlign:'right', fontSize:'12px', fontWeight:700, color:'#7F1D1D'}}>{fmtRs(deposit)}</td>
+                        <td style={{textAlign:'right', fontSize:'12px', fontWeight:700, color:'#065F46'}}>{fmtRs(r.annual_turnover)}</td>
+                        <td style={{textAlign:'center'}}>
+                          <button className="btn-ghost" style={{padding:'4px 10px', fontSize:'11px'}} onClick={()=>onViewMpcs && onViewMpcs(r)}>👁 View</button>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -1545,9 +1563,13 @@ function DistrictPerformance({ milkRows = [], mpcsRows = [], onViewMpcs, onViewM
                   <tr>
                     <th>Center</th>
                     <th>Registration No.</th>
-                    <th style={{textAlign:'center'}}>AGM</th>
-                    <th style={{textAlign:'center'}}>Audit</th>
+                    <th style={{textAlign:'center'}}>AGM Status</th>
+                    <th>AGM Date</th>
+                    <th style={{textAlign:'center'}}>Audit Status</th>
+                    <th>Audit Date</th>
                     <th style={{textAlign:'right'}}>Litres</th>
+                    <th style={{textAlign:'right'}}>Withdrawal</th>
+                    <th style={{textAlign:'right'}}>Balance</th>
                     <th style={{textAlign:'center'}}>Actions</th>
                   </tr>
                 </thead>
@@ -1557,8 +1579,12 @@ function DistrictPerformance({ milkRows = [], mpcsRows = [], onViewMpcs, onViewM
                       <td style={{fontWeight:700, color:'#0F172A'}}>{r.center_name || '—'}</td>
                       <td style={{fontSize:'12px', color:'#64748B'}}>{r.registration_number || '—'}</td>
                       <td style={{textAlign:'center'}}><StatusPill status={r.agm_status} /></td>
+                      <td style={{fontSize:'12px', color:'#475569'}}>{r.agm_date || '—'}</td>
                       <td style={{textAlign:'center'}}><StatusPill status={r.audit_status} /></td>
+                      <td style={{fontSize:'12px', color:'#475569'}}>{r.audit_date || '—'}</td>
                       <td style={{textAlign:'right', fontSize:'12px', fontWeight:700, color:'#0F172A'}}>{fmtL(r.litres)}</td>
+                      <td style={{textAlign:'right', fontSize:'12px', fontWeight:700, color:'#7F1D1D'}}>{fmtRs(r.withdrawal)}</td>
+                      <td style={{textAlign:'right', fontSize:'12px', fontWeight:700, color:'#065F46'}}>{fmtRs(r.balance)}</td>
                       <td style={{textAlign:'center'}}>
                         <button className="btn-ghost" style={{padding:'4px 10px', fontSize:'11px'}} onClick={()=>onViewMilk && onViewMilk(r)}>👁 View</button>
                       </td>
