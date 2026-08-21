@@ -1460,6 +1460,50 @@ function PerformanceDots({ signals }) {
   );
 }
 
+// A ranked horizontal bar list — real per-entity values sorted descending,
+// bar length scaled to the largest value in the full set (not just the
+// visible slice, so "Top 5" bars stay proportionally correct when toggled
+// to "All"). No trend line or period-over-period comparison is shown here
+// since we only have one figure per entity, not a real time series.
+function RankedBarList({ title, items, color = '#7F1D1D', valueFmt }) {
+  const [showAll, setShowAll] = useState(false);
+  const sorted = useMemo(() => [...items].sort((a, b) => b.value - a.value), [items]);
+  const max = sorted.length ? sorted[0].value : 0;
+  const visible = showAll ? sorted : sorted.slice(0, 5);
+
+  return (
+    <div className="card" style={{marginTop:'10px', padding:0, overflow:'hidden', borderRadius:'8px', border:'1px solid #E2E8F0'}}>
+      <div style={{padding:'10px 14px', borderBottom:'1px solid var(--border)', background:'#FAFAFA', display:'flex', justifyContent:'space-between', alignItems:'center'}}>
+        <span style={{fontSize:'12px', fontWeight:800, color:'#0F172A'}}>{title}</span>
+        {sorted.length > 5 && (
+          <button
+            className="btn-ghost"
+            style={{padding:'3px 10px', fontSize:'10px', fontWeight:700}}
+            onClick={() => setShowAll(v => !v)}
+          >
+            {showAll ? 'Top 5' : `All (${sorted.length})`}
+          </button>
+        )}
+      </div>
+      {visible.length === 0 ? (
+        <div style={{padding:'20px', textAlign:'center', color:'#9CA3AF', fontSize:'12px'}}>No data on record.</div>
+      ) : (
+        <div style={{padding:'14px', display:'flex', flexDirection:'column', gap:'10px'}}>
+          {visible.map((item, i) => (
+            <div key={item.name + i} style={{display:'flex', alignItems:'center', gap:'10px'}}>
+              <span style={{width:'110px', flexShrink:0, fontSize:'11px', fontWeight:700, color:'#334155', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap'}}>{item.name}</span>
+              <div style={{flex:1, height:'8px', borderRadius:'99px', background:'#F1F5F9', overflow:'hidden'}}>
+                <div style={{width: `${max > 0 ? Math.max(2, (item.value / max) * 100) : 0}%`, height:'100%', borderRadius:'99px', background: color}} />
+              </div>
+              <span style={{width:'80px', flexShrink:0, textAlign:'right', fontSize:'11px', fontWeight:800, color:'#0F172A'}}>{valueFmt ? valueFmt(item.value) : item.value}</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // A small breakdown table dedicated to a single KPI card's dataset — one of
 // these sits directly under each card so "MPCS AGM Audited" only ever shows
 // AGM-audit columns, "CSC Transactions" only shows CSC transaction columns,
@@ -1584,6 +1628,22 @@ function DistrictPerformance({ milkRows = [], mpcsRows = [], onViewMpcs, onViewM
     parseFloat(r.litres) > 0,
   ];
 
+  const mpcsTurnoverRanking = useMemo(
+    () => mpcsWithStatus
+      .filter(r => parseFloat(r.annual_turnover) > 0)
+      .map(r => ({ name: r.society_name || 'Unnamed Society', value: parseFloat(r.annual_turnover) || 0 })),
+    [mpcsWithStatus]
+  );
+
+  const isThisMonth = d => {
+    if (!d) return false;
+    const dt = new Date(d);
+    const now = new Date();
+    return dt.getFullYear() === now.getFullYear() && dt.getMonth() === now.getMonth();
+  };
+  const mpcsSubmittedThisMonth = useMemo(() => mpcsRows.filter(r => isThisMonth(r.created_at)).length, [mpcsRows]);
+  const milkSubmittedThisMonth = useMemo(() => milkRows.filter(r => isThisMonth(r.created_at)).length, [milkRows]);
+
   return (
     <div className="fade-in">
       {/* Benchmark Header */}
@@ -1605,25 +1665,54 @@ function DistrictPerformance({ milkRows = [], mpcsRows = [], onViewMpcs, onViewM
             <BenchmarkCard key={c.key} title={c.title} value={c.value} sub={c.sub} color={c.color} bg={c.bg} icon={c.icon} rate={c.rate} />
           ))}
         </div>
-        <ParamTable
-          title="Total Turnover — by Society"
-          emptyLabel="No MPCS societies on record."
-          rows={mpcsWithStatus}
-          onView={onViewMpcs}
-          columns={[
-            { key: 'society', label: 'Society', render: r => <span style={{fontWeight:700, color:'#0F172A'}}>{r.society_name || '—'}</span> },
-            { key: 'turnover', label: 'Annual Turnover', align: 'right', render: r => <span style={{fontWeight:700, color:'#065F46'}}>{fmtRs(r.annual_turnover)}</span> },
-            { key: 'agm', label: 'AGM Status', align: 'center', render: r => <StatusPill status={r.agm_status} /> },
-            { key: 'audit', label: 'Audit Status', align: 'center', render: r => <StatusPill status={r.audit_status} /> },
-            { key: 'perf', label: 'Performance', render: r => <PerformanceDots signals={mpcsPerformance(r)} /> },
-            { key: 'financial', label: 'Financial', render: r => <PerformanceDots signals={mpcsFinancial(r)} /> },
-            { key: 'operational', label: 'Operational', render: r => <PerformanceDots signals={mpcsOperational(r)} /> },
-          ]}
+
+        <RankedBarList
+          title="Annual Turnover — by Society"
+          items={mpcsTurnoverRanking}
+          color="#7F1D1D"
+          valueFmt={fmtRs}
         />
+
+        <div style={{display:'grid', gridTemplateColumns:'2fr 1fr', gap:'14px', marginTop:'10px', alignItems:'start'}}>
+          <ParamTable
+            title="Total Turnover — by Society"
+            emptyLabel="No MPCS societies on record."
+            rows={mpcsWithStatus}
+            onView={onViewMpcs}
+            columns={[
+              { key: 'society', label: 'Society', render: r => <span style={{fontWeight:700, color:'#0F172A'}}>{r.society_name || '—'}</span> },
+              { key: 'turnover', label: 'Annual Turnover', align: 'right', render: r => <span style={{fontWeight:700, color:'#065F46'}}>{fmtRs(r.annual_turnover)}</span> },
+              { key: 'agm', label: 'AGM Status', align: 'center', render: r => <StatusPill status={r.agm_status} /> },
+              { key: 'audit', label: 'Audit Status', align: 'center', render: r => <StatusPill status={r.audit_status} /> },
+              { key: 'perf', label: 'Performance', render: r => <PerformanceDots signals={mpcsPerformance(r)} /> },
+              { key: 'financial', label: 'Financial', render: r => <PerformanceDots signals={mpcsFinancial(r)} /> },
+              { key: 'operational', label: 'Operational', render: r => <PerformanceDots signals={mpcsOperational(r)} /> },
+            ]}
+          />
+
+          <div className="card" style={{padding:'14px', borderRadius:'8px', border:'1px solid #E2E8F0'}}>
+            <span style={{fontSize:'12px', fontWeight:800, color:'#0891B2', textTransform:'uppercase', letterSpacing:'0.5px'}}>🥛 Milk PCS Performance</span>
+            <div style={{display:'flex', flexDirection:'column', gap:'10px', marginTop:'12px'}}>
+              {milkCards.map(c => (
+                <BenchmarkCard key={c.key} title={c.title} value={c.value} sub={c.sub} color={c.color} bg={c.bg} icon={c.icon} rate={c.rate} />
+              ))}
+            </div>
+            <a
+              href="#milk-benchmarks"
+              style={{display:'flex', alignItems:'center', gap:'6px', marginTop:'12px', fontSize:'11px', fontWeight:700, color:'#0369A1', textDecoration:'none'}}
+              onClick={e => {
+                e.preventDefault();
+                document.getElementById('milk-benchmarks')?.scrollIntoView({ behavior:'smooth', block:'start' });
+              }}
+            >
+              View detailed Milk PCS benchmarks →
+            </a>
+          </div>
+        </div>
       </div>
 
       {/* Milk Sector Benchmarks */}
-      <div style={{marginBottom:'28px'}}>
+      <div id="milk-benchmarks" style={{marginBottom:'28px', scrollMarginTop:'20px'}}>
         <div style={{fontSize:'12px', fontWeight:800, color:'#991B1B', textTransform:'uppercase', letterSpacing:'1px', marginBottom:'12px', background:'#FEF2F2', padding:'6px 12px', borderRadius:'6px', display:'inline-block', border:'1px solid #FECACA'}}>
           🥛 Milk PCS Benchmarks
         </div>
@@ -1645,6 +1734,26 @@ function DistrictPerformance({ milkRows = [], mpcsRows = [], onViewMpcs, onViewM
             { key: 'perf', label: 'Performance', render: r => <PerformanceDots signals={milkPerformance(r)} /> },
           ]}
         />
+      </div>
+
+      {/* Footer stat strip — only figures we can compute directly from real
+          submission records; no invented "pending" or "next sync" counters. */}
+      <div style={{display:'flex', flexWrap:'wrap', gap:'0', border:'1px solid #E2E8F0', borderRadius:'8px', overflow:'hidden', background:'#fff'}}>
+        {[
+          { label: 'Total MPCS Societies', value: mpcsRows.length },
+          { label: 'Total Milk Units', value: milkRows.length },
+          { label: 'MPCS Submitted This Month', value: mpcsSubmittedThisMonth },
+          { label: 'Milk Submitted This Month', value: milkSubmittedThisMonth },
+        ].map((s, i) => (
+          <div key={s.label} style={{flex:'1 1 160px', padding:'14px 18px', textAlign:'center', borderLeft: i > 0 ? '1px solid #E2E8F0' : 'none'}}>
+            <div style={{fontSize:'20px', fontWeight:900, color:'#0F172A'}}>{s.value}</div>
+            <div style={{fontSize:'10px', fontWeight:700, color:'#64748B', textTransform:'uppercase', letterSpacing:'0.5px', marginTop:'2px'}}>{s.label}</div>
+          </div>
+        ))}
+        <div style={{flex:'1 1 160px', padding:'14px 18px', textAlign:'center', borderLeft:'1px solid #E2E8F0'}}>
+          <div style={{fontSize:'12px', fontWeight:800, color:'#334155'}}>User App Submissions</div>
+          <div style={{fontSize:'10px', fontWeight:700, color:'#64748B', textTransform:'uppercase', letterSpacing:'0.5px', marginTop:'2px'}}>Data Source</div>
+        </div>
       </div>
 
     </div>
