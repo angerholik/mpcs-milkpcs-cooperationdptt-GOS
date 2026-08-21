@@ -1465,10 +1465,10 @@ function PerformanceDots({ signals }) {
 // visible slice, so "Top 5" bars stay proportionally correct when toggled
 // to "All"). No trend line or period-over-period comparison is shown here
 // since we only have one figure per entity, not a real time series.
-function RankedBarList({ title, items, color = '#7F1D1D', valueFmt }) {
+function RankedBarList({ title, items, color = '#7F1D1D', valueFmt, max: fixedMax }) {
   const [showAll, setShowAll] = useState(false);
   const sorted = useMemo(() => [...items].sort((a, b) => b.value - a.value), [items]);
-  const max = sorted.length ? sorted[0].value : 0;
+  const max = fixedMax != null ? fixedMax : (sorted.length ? sorted[0].value : 0);
   const visible = showAll ? sorted : sorted.slice(0, 5);
 
   return (
@@ -1500,6 +1500,41 @@ function RankedBarList({ title, items, color = '#7F1D1D', valueFmt }) {
           ))}
         </div>
       )}
+    </div>
+  );
+}
+
+// A composite score, but an honest one: it's a plain average of four real,
+// independently-computed compliance percentages (AGM, Audit, Financial,
+// Operational — the same rates used elsewhere on this page), not a
+// black-box weighted formula. The sub-metric list underneath shows exactly
+// what went into the number so nobody has to take the score on faith.
+function CompositeHealthCard({ score, subs }) {
+  const label = score >= 75 ? 'Excellent' : score >= 55 ? 'Good' : score >= 35 ? 'Fair' : 'Needs Attention';
+  const labelColor = score >= 55 ? '#047857' : score >= 35 ? '#B45309' : '#B91C1C';
+  const labelBg = score >= 55 ? '#ECFDF5' : score >= 35 ? '#FFFBEB' : '#FEF2F2';
+  return (
+    <div className="kpi-card" style={{borderLeft:'4px solid #7F1D1D'}}>
+      <span className="kpi-title">COOPERATIVE SECTOR HEALTH</span>
+      <div style={{display:'flex', alignItems:'baseline', gap:'8px', marginTop:'2px'}}>
+        <span key={score} className="kpi-val kpi-pop" style={{color:'#7F1D1D'}}>{score} / 100</span>
+        <span style={{fontSize:'10px', fontWeight:800, color:labelColor, background:labelBg, padding:'2px 8px', borderRadius:'99px'}}>{label}</span>
+      </div>
+      <div className="kpi-progress-track" style={{marginTop:'6px'}}>
+        <div className="kpi-progress-fill" style={{width:`${score}%`, background:'#7F1D1D'}} />
+      </div>
+      <div style={{display:'flex', flexDirection:'column', gap:'6px', marginTop:'10px'}}>
+        {subs.map(s => (
+          <div key={s.label} style={{display:'flex', alignItems:'center', gap:'6px'}}>
+            <span style={{width:'6px', height:'6px', borderRadius:'50%', background:s.color, flexShrink:0}} />
+            <span style={{fontSize:'10px', fontWeight:700, color:'#475569', flex:1}}>{s.label}</span>
+            <div style={{width:'46px', height:'4px', borderRadius:'99px', background:'#F1F5F9', overflow:'hidden', flexShrink:0}}>
+              <div style={{width:`${s.value}%`, height:'100%', background:s.color}} />
+            </div>
+            <span style={{fontSize:'10px', fontWeight:800, color:'#0F172A', width:'40px', textAlign:'right', flexShrink:0}}>{s.value}/100</span>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
@@ -1592,6 +1627,18 @@ function DistrictPerformance({ milkRows = [], mpcsRows = [], onViewMpcs, onViewM
 
   const mpcsFinancialCompleted = useMemo(() => mpcsWithStatus.filter(r => mpcsFinancial(r).every(Boolean)).length, [mpcsWithStatus]);
   const mpcsOperationalCompleted = useMemo(() => mpcsWithStatus.filter(r => mpcsOperational(r).every(Boolean)).length, [mpcsWithStatus]);
+  const mpcsFinancialRate = Math.round((mpcsFinancialCompleted / mpcsTotal) * 100);
+  const mpcsOperationalRate = Math.round((mpcsOperationalCompleted / mpcsTotal) * 100);
+
+  // Sector Health score — a plain average of the four real compliance rates
+  // above. See CompositeHealthCard for why this isn't a fabricated number.
+  const mpcsHealthScore = Math.round((mpcsAgmRate + mpcsAuditRate + mpcsFinancialRate + mpcsOperationalRate) / 4);
+  const mpcsHealthSubs = [
+    { label: 'AGM Compliance', value: mpcsAgmRate, color: '#1D4ED8' },
+    { label: 'Audit Compliance', value: mpcsAuditRate, color: '#B45309' },
+    { label: 'Financial Performance', value: mpcsFinancialRate, color: '#0369A1' },
+    { label: 'Operational Activity', value: mpcsOperationalRate, color: '#7C2D12' },
+  ];
 
   // One card config per KPI — the grid renders these as clickable tiles, and
   // the single table below always shows whichever one is selected, instead
@@ -1603,8 +1650,6 @@ function DistrictPerformance({ milkRows = [], mpcsRows = [], onViewMpcs, onViewM
     { key: 'agm', title: 'MPCS AGM COMPLETED', value: `${mpcsAgmCompletedCount} / ${mpcsRows.length}`, sub: `${mpcsAgmRate}% AGM compliance`, color: '#1D4ED8', bg: '#EFF6FF', icon: I.members, rate: mpcsAgmRate },
     { key: 'audit', title: 'MPCS AGM AUDITED', value: `${mpcsAuditedCount} / ${mpcsRows.length}`, sub: `${mpcsAuditRate}% audit compliance`, color: '#B45309', bg: '#FFFBEB', icon: I.chart, rate: mpcsAuditRate },
     { key: 'turnover', title: 'TOTAL TURNOVER', value: fmtRs(mpcsTotalTurnover), sub: 'Aggregate annual turnover', color: '#065F46', bg: '#ECFDF5', icon: I.money },
-    { key: 'financial', title: 'FINANCIAL PERFORMANCE', value: `${mpcsFinancialCompleted} / ${mpcsRows.length}`, sub: 'Profit, dividend, capital & balance on record', color: '#0369A1', bg: '#F0F9FF', icon: I.money, rate: Math.round((mpcsFinancialCompleted / mpcsTotal) * 100) },
-    { key: 'operational', title: 'OPERATIONAL ACTIVITY', value: `${mpcsOperationalCompleted} / ${mpcsRows.length}`, sub: 'CSC active, transacting & depositing', color: '#7C2D12', bg: '#FFF7ED', icon: I.domain, rate: Math.round((mpcsOperationalCompleted / mpcsTotal) * 100) },
   ];
 
   const milkCards = [
@@ -1628,6 +1673,13 @@ function DistrictPerformance({ milkRows = [], mpcsRows = [], onViewMpcs, onViewM
     parseFloat(r.litres) > 0,
   ];
 
+  const mpcsComplianceOverview = [
+    { name: 'AGM Compliance', value: mpcsAgmRate },
+    { name: 'Audit Compliance', value: mpcsAuditRate },
+    { name: 'Financial Performance', value: mpcsFinancialRate },
+    { name: 'Operational Activity', value: mpcsOperationalRate },
+  ];
+
   const mpcsTurnoverRanking = useMemo(
     () => mpcsWithStatus
       .filter(r => parseFloat(r.annual_turnover) > 0)
@@ -1644,6 +1696,15 @@ function DistrictPerformance({ milkRows = [], mpcsRows = [], onViewMpcs, onViewM
   const mpcsSubmittedThisMonth = useMemo(() => mpcsRows.filter(r => isThisMonth(r.created_at)).length, [mpcsRows]);
   const milkSubmittedThisMonth = useMemo(() => milkRows.filter(r => isThisMonth(r.created_at)).length, [milkRows]);
 
+  // "Pending Compliance" — societies with AGM or Audit still pending, a real
+  // count from the same status fields used everywhere else on this page
+  // (not a fabricated "expected vs received" figure, which we have no
+  // master registry to compute).
+  const mpcsPendingCompliance = useMemo(
+    () => mpcsWithStatus.filter(r => r.agm_status !== 'Completed' || r.audit_status !== 'Completed').length,
+    [mpcsWithStatus]
+  );
+
   return (
     <div className="fade-in">
       {/* Benchmark Header */}
@@ -1657,21 +1718,28 @@ function DistrictPerformance({ milkRows = [], mpcsRows = [], onViewMpcs, onViewM
 
       {/* MPCS Sector Benchmarks */}
       <div style={{marginBottom:'28px'}}>
-        <div style={{fontSize:'12px', fontWeight:800, color:'#92400E', textTransform:'uppercase', letterSpacing:'1px', marginBottom:'12px', background:'#FFFBEB', padding:'6px 12px', borderRadius:'6px', display:'inline-block', border:'1px solid #FDE68A'}}>
-          🏛️ MPCS Societies Benchmarks
-        </div>
         <div className="kpi-grid" style={{gridTemplateColumns:'repeat(auto-fit, minmax(200px, 1fr))'}}>
+          <CompositeHealthCard score={mpcsHealthScore} subs={mpcsHealthSubs} />
           {mpcsCards.map(c => (
             <BenchmarkCard key={c.key} title={c.title} value={c.value} sub={c.sub} color={c.color} bg={c.bg} icon={c.icon} rate={c.rate} />
           ))}
         </div>
 
-        <RankedBarList
-          title="Annual Turnover — by Society"
-          items={mpcsTurnoverRanking}
-          color="#7F1D1D"
-          valueFmt={fmtRs}
-        />
+        <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:'14px', marginTop:'10px', alignItems:'start'}}>
+          <RankedBarList
+            title="MPCS Compliance Overview"
+            items={mpcsComplianceOverview}
+            color="#7F1D1D"
+            valueFmt={v => `${v}%`}
+            max={100}
+          />
+          <RankedBarList
+            title="Annual Turnover — by Society"
+            items={mpcsTurnoverRanking}
+            color="#7F1D1D"
+            valueFmt={fmtRs}
+          />
+        </div>
 
         <div style={{display:'grid', gridTemplateColumns:'2fr 1fr', gap:'14px', marginTop:'10px', alignItems:'start'}}>
           <ParamTable
@@ -1737,13 +1805,12 @@ function DistrictPerformance({ milkRows = [], mpcsRows = [], onViewMpcs, onViewM
       </div>
 
       {/* Footer stat strip — only figures we can compute directly from real
-          submission records; no invented "pending" or "next sync" counters. */}
+          submission records; no invented "next sync" countdown. */}
       <div style={{display:'flex', flexWrap:'wrap', gap:'0', border:'1px solid #E2E8F0', borderRadius:'8px', overflow:'hidden', background:'#fff'}}>
         {[
-          { label: 'Total MPCS Societies', value: mpcsRows.length },
-          { label: 'Total Milk Units', value: milkRows.length },
-          { label: 'MPCS Submitted This Month', value: mpcsSubmittedThisMonth },
-          { label: 'Milk Submitted This Month', value: milkSubmittedThisMonth },
+          { label: 'Total Societies', value: mpcsRows.length + milkRows.length },
+          { label: 'Submitted This Month', value: mpcsSubmittedThisMonth + milkSubmittedThisMonth },
+          { label: 'Pending Compliance', value: mpcsPendingCompliance },
         ].map((s, i) => (
           <div key={s.label} style={{flex:'1 1 160px', padding:'14px 18px', textAlign:'center', borderLeft: i > 0 ? '1px solid #E2E8F0' : 'none'}}>
             <div style={{fontSize:'20px', fontWeight:900, color:'#0F172A'}}>{s.value}</div>
