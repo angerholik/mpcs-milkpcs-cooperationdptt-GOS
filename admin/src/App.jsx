@@ -1439,22 +1439,6 @@ function StatusPill({ status }) {
   );
 }
 
-// A ranked value cell — the value itself plus a small bar scaled against the
-// highest value in the same table, so the "who's on top" read that used to
-// live in a separate bar-chart panel is now just part of this one cell,
-// instead of a duplicate panel repeating the same names and numbers.
-function InlineBar({ value, max, color, label }) {
-  const pct = max > 0 ? Math.max(3, (value / max) * 100) : 0;
-  return (
-    <div style={{display:'flex', alignItems:'center', gap:'8px', justifyContent:'flex-end'}}>
-      <div style={{width:'52px', height:'6px', borderRadius:'99px', background:'#F1F5F9', overflow:'hidden', flexShrink:0}}>
-        <div style={{width:`${pct}%`, height:'100%', borderRadius:'99px', background:color}} />
-      </div>
-      <span style={{fontWeight:700, color, minWidth:'60px', textAlign:'right'}}>{label}</span>
-    </div>
-  );
-}
-
 // Renders a signals array (booleans) as filled/empty dots — a quick visual
 // read on how many real, on-record checks a row passes, out of however many
 // were actually evaluated (never implies a formula beyond "count of true").
@@ -1519,7 +1503,12 @@ function CompositeHealthCard({ title, score, subs, accent = '#7F1D1D', columns =
 // these sits directly under each card so "MPCS AGM Audited" only ever shows
 // AGM-audit columns, "CSC Transactions" only shows CSC transaction columns,
 // etc., instead of every parameter crammed into one wide table.
-function ParamTable({ title, columns, rows, emptyLabel, onView, totalLabel, accent = '#7F1D1D', icon }) {
+// Shared shell for the two list-cards below — same header language as the
+// KPI cards (accent border, icon badge, colored total) but the body is a
+// plain clickable row list, not a <table>. Turnover/Litres and AGM/Audit
+// aren't spreadsheets; they're a ranked leaderboard and a status
+// checklist, respectively, so they get list rows instead of table chrome.
+function ListCard({ title, icon, accent, totalLabel, count, emptyLabel, children }) {
   return (
     <div className="card" style={{marginTop:'10px', padding:0, overflow:'hidden', borderRadius:'8px', border:'1px solid #E2E8F0', borderLeft:`4px solid ${accent}`}}>
       <div style={{padding:'12px 16px', borderBottom:'1px solid var(--border)', background:'#FAFAFA', display:'flex', justifyContent:'space-between', alignItems:'center'}}>
@@ -1534,38 +1523,70 @@ function ParamTable({ title, columns, rows, emptyLabel, onView, totalLabel, acce
         <span style={{fontSize:'10px', color:'var(--text-muted)', fontWeight:600}}>
           {totalLabel && <span style={{color:accent, fontWeight:800, fontSize:'12px'}}>{totalLabel}</span>}
           {totalLabel && ' · '}
-          {rows.length} record{rows.length === 1 ? '' : 's'}
+          {count} record{count === 1 ? '' : 's'}
         </span>
       </div>
-      {rows.length === 0 ? (
+      {count === 0 ? (
         <div style={{padding:'20px', textAlign:'center', color:'#9CA3AF', fontSize:'12px'}}>{emptyLabel || 'No data on record.'}</div>
-      ) : (
-        <div className="table-responsive">
-          <table className="data-table">
-            <thead>
-              <tr>
-                {columns.map(c => <th key={c.key} style={{textAlign: c.align || 'left'}}>{c.label}</th>)}
-                {onView && <th style={{textAlign:'center'}}>Actions</th>}
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((r, i) => (
-                <tr key={r.id || i}>
-                  {columns.map(c => (
-                    <td key={c.key} style={{textAlign: c.align || 'left', ...(c.cellStyle || {})}}>{c.render(r)}</td>
-                  ))}
-                  {onView && (
-                    <td style={{textAlign:'center'}}>
-                      <button className="btn-ghost" style={{padding:'4px 10px', fontSize:'11px'}} onClick={()=>onView(r)}>👁 View</button>
-                    </td>
-                  )}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+      ) : children}
     </div>
+  );
+}
+
+// A ranked leaderboard, not a table — one row per entity, name on the
+// left, a bar scaled against the highest value in the set, value on the
+// right. The whole row opens the detail modal; there's no separate
+// "Actions" column because the row itself is the action.
+function RankingListCard({ title, icon, accent, totalLabel, rows, nameOf, valueOf, labelOf, onView, emptyLabel }) {
+  const max = rows.length ? Math.max(...rows.map(valueOf)) : 0;
+  return (
+    <ListCard title={title} icon={icon} accent={accent} totalLabel={totalLabel} count={rows.length} emptyLabel={emptyLabel}>
+      {rows.map((r, i) => {
+        const value = valueOf(r);
+        const pct = max > 0 ? Math.max(3, (value / max) * 100) : 0;
+        return (
+          <div
+            key={r.id || i}
+            className="list-row"
+            onClick={() => onView(r)}
+            style={{display:'flex', alignItems:'center', gap:'16px', padding:'12px 16px', borderBottom:'1px solid #F1F5F9'}}
+          >
+            <span style={{width:'150px', flexShrink:0, fontWeight:700, color:'#0F172A', fontSize:'13px', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap'}}>{nameOf(r)}</span>
+            <div style={{flex:1, height:'8px', borderRadius:'99px', background:'#F1F5F9', overflow:'hidden'}}>
+              <div style={{width:`${pct}%`, height:'100%', borderRadius:'99px', background:accent}} />
+            </div>
+            <span style={{width:'90px', flexShrink:0, textAlign:'right', fontWeight:800, color:accent, fontSize:'13px'}}>{labelOf(r)}</span>
+          </div>
+        );
+      })}
+    </ListCard>
+  );
+}
+
+// A compliance checklist across both sectors — sector badge, name, and the
+// two status pills, one row per entity. Same list-row pattern as the
+// ranking card above, for visual consistency between the two.
+function ComplianceListCard({ title, icon, accent, totalLabel, rows, onView, emptyLabel }) {
+  return (
+    <ListCard title={title} icon={icon} accent={accent} totalLabel={totalLabel} count={rows.length} emptyLabel={emptyLabel}>
+      {rows.map((r, i) => (
+        <div
+          key={r.id || i}
+          className="list-row"
+          onClick={() => onView(r)}
+          style={{display:'flex', alignItems:'center', gap:'12px', padding:'10px 16px', borderBottom:'1px solid #F1F5F9'}}
+        >
+          <span style={{
+            fontSize:'9px', fontWeight:800, padding:'2px 7px', borderRadius:'99px', flexShrink:0,
+            color: r._sector === 'MPCS' ? '#92400E' : '#0369A1',
+            background: r._sector === 'MPCS' ? '#FFFBEB' : '#F0F9FF',
+          }}>{r._sector}</span>
+          <span style={{flex:1, fontWeight:700, color:'#0F172A', fontSize:'13px', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap'}}>{r._name}</span>
+          <StatusPill status={r.agm_status} />
+          <StatusPill status={r.audit_status} />
+        </div>
+      ))}
+    </ListCard>
   );
 }
 
@@ -1660,9 +1681,6 @@ function DistrictPerformance({ milkRows = [], mpcsRows = [], onViewMpcs, onViewM
     () => [...milkWithStatus].sort((a, b) => (parseFloat(b.litres) || 0) - (parseFloat(a.litres) || 0)),
     [milkWithStatus]
   );
-  const maxMpcsTurnover = parseFloat(mpcsWithStatusSorted[0]?.annual_turnover) || 0;
-  const maxMilkLitres = parseFloat(milkWithStatusSorted[0]?.litres) || 0;
-
   // AGM/Audit status for both sectors in one list — most-pending-first, so
   // whoever needs the most follow-up surfaces at the top regardless of
   // whether they're an MPCS society or a Milk unit.
@@ -1736,40 +1754,38 @@ function DistrictPerformance({ milkRows = [], mpcsRows = [], onViewMpcs, onViewM
           one, leaving a large dead gap under the shorter table before the
           next section. Stacking avoids that mismatch regardless of how
           many rows either sector has. */}
-      <ParamTable
+      <RankingListCard
         title="Total Turnover — by Society"
         accent="#7F1D1D"
         icon={I.money}
         totalLabel={fmtRs(mpcsTotalTurnover)}
         emptyLabel="No MPCS societies on record."
         rows={mpcsWithStatusSorted}
+        nameOf={r => r.society_name || 'Unnamed Society'}
+        valueOf={r => parseFloat(r.annual_turnover) || 0}
+        labelOf={r => fmtRs(r.annual_turnover)}
         onView={onViewMpcs}
-        columns={[
-          { key: 'society', label: 'Society', render: r => <span style={{fontWeight:700, color:'#0F172A'}}>{r.society_name || '—'}</span> },
-          { key: 'turnover', label: 'Turnover', align: 'right', render: r => <InlineBar value={parseFloat(r.annual_turnover) || 0} max={maxMpcsTurnover} color="#7F1D1D" label={fmtRs(r.annual_turnover)} /> },
-        ]}
       />
-      <ParamTable
+      <RankingListCard
         title="Liters Collected — by Unit"
         accent="#0891B2"
         icon={I.litres}
         totalLabel={fmtL(milkTotalLitres)}
         emptyLabel="No Milk PCS units on record."
         rows={milkWithStatusSorted}
+        nameOf={r => r.center_name || 'Unnamed Center'}
+        valueOf={r => parseFloat(r.litres) || 0}
+        labelOf={r => fmtL(r.litres)}
         onView={onViewMilk}
-        columns={[
-          { key: 'center', label: 'Center', render: r => <span style={{fontWeight:700, color:'#0F172A'}}>{r.center_name || '—'}</span> },
-          { key: 'litres', label: 'Litres', align: 'right', render: r => <InlineBar value={parseFloat(r.litres) || 0} max={maxMilkLitres} color="#0891B2" label={fmtL(r.litres)} /> },
-        ]}
       />
 
-      {/* One combined AGM/Audit compliance table across both sectors — an
-          admin checking who still needs to hold an AGM or get audited
-          shouldn't have to cross-reference two separate tables to see the
+      {/* One combined AGM/Audit compliance checklist across both sectors —
+          an admin checking who still needs to hold an AGM or get audited
+          shouldn't have to cross-reference two separate lists to see the
           full picture. Sorted so entities with the most still pending
           surface first. */}
       <div style={{marginBottom:'20px'}}>
-        <ParamTable
+        <ComplianceListCard
           title="AGM & Audit Compliance — All Entities"
           accent="#1D4ED8"
           icon={I.members}
@@ -1777,20 +1793,6 @@ function DistrictPerformance({ milkRows = [], mpcsRows = [], onViewMpcs, onViewM
           emptyLabel="No societies or units on record."
           rows={combinedCompliance}
           onView={r => (r._sector === 'MPCS' ? onViewMpcs(r) : onViewMilk(r))}
-          columns={[
-            { key: 'name', label: 'Entity', render: r => (
-              <div style={{display:'flex', alignItems:'center', gap:'8px'}}>
-                <span style={{
-                  fontSize:'9px', fontWeight:800, padding:'2px 7px', borderRadius:'99px', flexShrink:0,
-                  color: r._sector === 'MPCS' ? '#92400E' : '#0369A1',
-                  background: r._sector === 'MPCS' ? '#FFFBEB' : '#F0F9FF',
-                }}>{r._sector}</span>
-                <span style={{fontWeight:700, color:'#0F172A'}}>{r._name}</span>
-              </div>
-            ) },
-            { key: 'agm', label: 'AGM', align: 'center', render: r => <StatusPill status={r.agm_status} /> },
-            { key: 'audit', label: 'Audit', align: 'center', render: r => <StatusPill status={r.audit_status} /> },
-          ]}
         />
       </div>
 
