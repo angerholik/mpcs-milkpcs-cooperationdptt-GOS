@@ -1519,12 +1519,15 @@ function CompositeHealthCard({ title, score, subs, accent = '#7F1D1D', columns =
 // these sits directly under each card so "MPCS AGM Audited" only ever shows
 // AGM-audit columns, "CSC Transactions" only shows CSC transaction columns,
 // etc., instead of every parameter crammed into one wide table.
-function ParamTable({ title, columns, rows, emptyLabel, onView }) {
+function ParamTable({ title, columns, rows, emptyLabel, onView, totalLabel }) {
   return (
     <div className="card" style={{marginTop:'10px', padding:0, overflow:'hidden', borderRadius:'8px', border:'1px solid #E2E8F0'}}>
       <div style={{padding:'10px 14px', borderBottom:'1px solid var(--border)', background:'#FAFAFA', display:'flex', justifyContent:'space-between', alignItems:'center'}}>
         <span style={{fontSize:'12px', fontWeight:800, color:'#0F172A'}}>{title}</span>
-        <span style={{fontSize:'10px', color:'var(--text-muted)', fontWeight:600}}>{rows.length} record{rows.length === 1 ? '' : 's'}</span>
+        <span style={{fontSize:'10px', color:'var(--text-muted)', fontWeight:600}}>
+          {totalLabel && <span style={{color:'#0F172A', fontWeight:800}}>{totalLabel} · </span>}
+          {rows.length} record{rows.length === 1 ? '' : 's'}
+        </span>
       </div>
       {rows.length === 0 ? (
         <div style={{padding:'20px', textAlign:'center', color:'#9CA3AF', fontSize:'12px'}}>{emptyLabel || 'No data on record.'}</div>
@@ -1631,12 +1634,12 @@ function DistrictPerformance({ milkRows = [], mpcsRows = [], onViewMpcs, onViewM
   const mpcsCards = [
     { key: 'csc', title: 'CSC TRANSACTIONS', value: mpcsCscCount, sub: 'Active CSC centers', color: '#047857', bg: '#ECFDF5', icon: I.domain },
     { key: 'deposit', title: 'MONTHLY DEPOSIT', value: fmtRs(mpcsMonthlyDeposit), sub: 'Aggregate sales deposit', color: '#7F1D1D', bg: '#FEF2F2', icon: I.money },
-    { key: 'turnover', title: 'TOTAL TURNOVER', value: fmtRs(mpcsTotalTurnover), sub: 'Aggregate annual turnover', color: '#065F46', bg: '#ECFDF5', icon: I.money },
   ];
 
-  const milkCards = [
-    { key: 'litres', title: 'LITERS COLLECTED', value: fmtL(milkTotalLitres), sub: 'Total milk volume', color: '#0891B2', bg: '#ECFEFF', icon: I.litres },
-  ];
+  // No standalone card for total turnover or total litres — those are just
+  // the sum of the column in the table below, so the total is shown in that
+  // table's own header instead of a separate card restating the same figure.
+  // Milk has no other unique KPI, so it gets no card row at all (see below).
 
   // Tables are sorted highest-first so the ranking is visible directly in
   // the one place this data lives, instead of a separate bar-chart panel
@@ -1690,7 +1693,7 @@ function DistrictPerformance({ milkRows = [], mpcsRows = [], onViewMpcs, onViewM
           width, instead of the last card falling onto its own near-empty
           row when the flex-basis math doesn't divide evenly. */}
       <div style={{marginBottom:'16px'}}>
-        <div className="kpi-grid-fixed" style={{display:'grid', gridTemplateColumns:'2.2fr repeat(3, 1fr)', gap:'16px'}}>
+        <div className="kpi-grid-fixed" style={{display:'grid', gridTemplateColumns:'2.4fr repeat(2, 1fr)', gap:'16px'}}>
           <CompositeHealthCard title="MPCS SECTOR HEALTH" score={mpcsHealthScore} subs={mpcsHealthSubs} accent="#7F1D1D" columns={2} />
           {mpcsCards.map(c => (
             <BenchmarkCard key={c.key} title={c.title} value={c.value} sub={c.sub} color={c.color} bg={c.bg} icon={c.icon} rate={c.rate} />
@@ -1699,14 +1702,11 @@ function DistrictPerformance({ milkRows = [], mpcsRows = [], onViewMpcs, onViewM
       </div>
 
       {/* Milk at a glance — same row treatment as MPCS above, so neither
-          sector is buried below the fold. */}
+          sector is buried below the fold. No KPI cards here: litres already
+          shows in the table below with its own total, and AGM/Audit are in
+          the health card, so there's nothing left that isn't a duplicate. */}
       <div style={{marginBottom:'20px'}}>
-        <div className="kpi-grid-fixed" style={{display:'grid', gridTemplateColumns:'2fr 1fr', gap:'16px'}}>
-          <CompositeHealthCard title="MILK SECTOR HEALTH" score={milkHealthScore} subs={milkHealthSubs} accent="#0891B2" columns={1} />
-          {milkCards.map(c => (
-            <BenchmarkCard key={c.key} title={c.title} value={c.value} sub={c.sub} color={c.color} bg={c.bg} icon={c.icon} rate={c.rate} />
-          ))}
-        </div>
+        <CompositeHealthCard title="MILK SECTOR HEALTH" score={milkHealthScore} subs={milkHealthSubs} accent="#0891B2" columns={1} />
       </div>
 
       {/* Full record tables — MPCS and Milk side by side, both always visible
@@ -1716,6 +1716,7 @@ function DistrictPerformance({ milkRows = [], mpcsRows = [], onViewMpcs, onViewM
       <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:'14px', marginBottom:'28px', alignItems:'start'}}>
         <ParamTable
           title="Total Turnover — by Society"
+          totalLabel={fmtRs(mpcsTotalTurnover)}
           emptyLabel="No MPCS societies on record."
           rows={mpcsWithStatusSorted}
           onView={onViewMpcs}
@@ -1728,6 +1729,7 @@ function DistrictPerformance({ milkRows = [], mpcsRows = [], onViewMpcs, onViewM
         />
         <ParamTable
           title="Liters Collected — by Unit"
+          totalLabel={fmtL(milkTotalLitres)}
           emptyLabel="No Milk PCS units on record."
           rows={milkWithStatusSorted}
           onView={onViewMilk}
