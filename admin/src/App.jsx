@@ -1515,6 +1515,31 @@ function CompositeHealthCard({ title, score, subs, accent = '#7F1D1D', columns =
   );
 }
 
+// AGM and Audit compliance, on their own — no averaged score, just the two
+// real rates side by side. These are the two things an admin actually acts
+// on (who hasn't held AGM, who hasn't been audited), so they get their own
+// card instead of being buried as two lines inside a broader health score.
+function CompliancePairCard({ title, subs, accent = '#1D4ED8' }) {
+  return (
+    <div className="kpi-card" style={{height:'100%', borderLeft:`4px solid ${accent}`}}>
+      <span className="kpi-title">{title}</span>
+      <div style={{display:'flex', flexDirection:'column', gap:'12px', marginTop:'10px'}}>
+        {subs.map(s => (
+          <div key={s.label}>
+            <div style={{display:'flex', justifyContent:'space-between', alignItems:'baseline', marginBottom:'4px'}}>
+              <span style={{fontSize:'12px', fontWeight:700, color:'#475569'}}>{s.label}</span>
+              <span style={{fontSize:'13px', fontWeight:800, color:'#0F172A'}}>{s.count} · {s.value}%</span>
+            </div>
+            <div className="kpi-progress-track">
+              <div className="kpi-progress-fill" style={{width:`${s.value}%`, background:s.color}} />
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // A small breakdown table dedicated to a single KPI card's dataset — one of
 // these sits directly under each card so "MPCS AGM Audited" only ever shows
 // AGM-audit columns, "CSC Transactions" only shows CSC transaction columns,
@@ -1608,14 +1633,19 @@ function DistrictPerformance({ milkRows = [], mpcsRows = [], onViewMpcs, onViewM
   const mpcsFinancialRate = Math.round((mpcsFinancialCompleted / mpcsTotal) * 100);
   const mpcsOperationalRate = Math.round((mpcsOperationalCompleted / mpcsTotal) * 100);
 
-  // Sector Health score — a plain average of the four real compliance rates
-  // above. See CompositeHealthCard for why this isn't a fabricated number.
-  const mpcsHealthScore = Math.round((mpcsAgmRate + mpcsAuditRate + mpcsFinancialRate + mpcsOperationalRate) / 4);
+  // Sector Health score — a plain average of the Financial + Operational
+  // rates. AGM and Audit compliance get their own dedicated card below
+  // instead of living here too, since they're the two metrics an admin
+  // needs to act on directly (who hasn't held their AGM / been audited),
+  // not just a health-score input.
+  const mpcsHealthScore = Math.round((mpcsFinancialRate + mpcsOperationalRate) / 2);
   const mpcsHealthSubs = [
-    { label: 'AGM Compliance', value: mpcsAgmRate, color: '#1D4ED8', count: `${mpcsAgmCompletedCount}/${mpcsRows.length}` },
-    { label: 'Audit Compliance', value: mpcsAuditRate, color: '#B45309', count: `${mpcsAuditedCount}/${mpcsRows.length}` },
     { label: 'Financial Performance', value: mpcsFinancialRate, color: '#0369A1', count: `${mpcsFinancialCompleted}/${mpcsRows.length}` },
     { label: 'Operational Activity', value: mpcsOperationalRate, color: '#7C2D12', count: `${mpcsOperationalCompleted}/${mpcsRows.length}` },
+  ];
+  const mpcsComplianceSubs = [
+    { label: 'AGM Compliance', value: mpcsAgmRate, color: '#1D4ED8', count: `${mpcsAgmCompletedCount}/${mpcsRows.length}` },
+    { label: 'Audit Compliance', value: mpcsAuditRate, color: '#B45309', count: `${mpcsAuditedCount}/${mpcsRows.length}` },
   ];
 
   // Milk forms only capture AGM and Audit status — no financial/CSC detail
@@ -1693,8 +1723,9 @@ function DistrictPerformance({ milkRows = [], mpcsRows = [], onViewMpcs, onViewM
           width, instead of the last card falling onto its own near-empty
           row when the flex-basis math doesn't divide evenly. */}
       <div style={{marginBottom:'16px'}}>
-        <div className="kpi-grid-fixed" style={{display:'grid', gridTemplateColumns:'2.4fr repeat(2, 1fr)', gap:'16px'}}>
+        <div className="kpi-grid-fixed" style={{display:'grid', gridTemplateColumns:'1.8fr 1.4fr 1fr 1fr', gap:'16px'}}>
           <CompositeHealthCard title="MPCS SECTOR HEALTH" score={mpcsHealthScore} subs={mpcsHealthSubs} accent="#7F1D1D" columns={2} />
+          <CompliancePairCard title="MPCS AGM & AUDIT COMPLIANCE" subs={mpcsComplianceSubs} accent="#1D4ED8" />
           {mpcsCards.map(c => (
             <BenchmarkCard key={c.key} title={c.title} value={c.value} sub={c.sub} color={c.color} bg={c.bg} icon={c.icon} rate={c.rate} />
           ))}
