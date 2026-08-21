@@ -1549,7 +1549,7 @@ function RankingListCard({ title, icon, accent, totalLabel, rows, nameOf, valueO
             key={r.id || i}
             className="list-row"
             onClick={() => onView(r)}
-            style={{display:'flex', alignItems:'center', gap:'16px', padding:'12px 16px', borderBottom:'1px solid #F1F5F9'}}
+            style={{display:'flex', alignItems:'center', gap:'16px', padding:'9px 16px', borderBottom:'1px solid #F1F5F9'}}
           >
             <span style={{width:'150px', flexShrink:0, fontWeight:700, color:'#0F172A', fontSize:'13px', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap'}}>{nameOf(r)}</span>
             <div style={{flex:1, height:'8px', borderRadius:'99px', background:'#F1F5F9', overflow:'hidden'}}>
@@ -1574,7 +1574,7 @@ function ComplianceListCard({ title, icon, accent, totalLabel, rows, onView, emp
           key={r.id || i}
           className="list-row"
           onClick={() => onView(r)}
-          style={{display:'flex', alignItems:'center', gap:'12px', padding:'10px 16px', borderBottom:'1px solid #F1F5F9'}}
+          style={{display:'flex', alignItems:'center', gap:'12px', padding:'7px 16px', borderBottom:'1px solid #F1F5F9'}}
         >
           <span style={{
             fontSize:'9px', fontWeight:800, padding:'2px 7px', borderRadius:'99px', flexShrink:0,
@@ -1748,43 +1748,44 @@ function DistrictPerformance({ milkRows = [], mpcsRows = [], onViewMpcs, onViewM
         <CompositeHealthCard title="MILK SECTOR HEALTH" score={milkHealthScore} subs={milkHealthSubs} accent="#0891B2" columns={1} />
       </div>
 
-      {/* Full record tables, stacked full-width rather than side by side —
-          MPCS and Milk have very different record counts (5 vs 3), and a
-          two-column row forces both columns to the height of the taller
-          one, leaving a large dead gap under the shorter table before the
-          next section. Stacking avoids that mismatch regardless of how
-          many rows either sector has. */}
-      <RankingListCard
-        title="Total Turnover — by Society"
-        accent="#7F1D1D"
-        icon={I.money}
-        totalLabel={fmtRs(mpcsTotalTurnover)}
-        emptyLabel="No MPCS societies on record."
-        rows={mpcsWithStatusSorted}
-        nameOf={r => r.society_name || 'Unnamed Society'}
-        valueOf={r => parseFloat(r.annual_turnover) || 0}
-        labelOf={r => fmtRs(r.annual_turnover)}
-        onView={onViewMpcs}
-      />
-      <RankingListCard
-        title="Liters Collected — by Unit"
-        accent="#0891B2"
-        icon={I.litres}
-        totalLabel={fmtL(milkTotalLitres)}
-        emptyLabel="No Milk PCS units on record."
-        rows={milkWithStatusSorted}
-        nameOf={r => r.center_name || 'Unnamed Center'}
-        valueOf={r => parseFloat(r.litres) || 0}
-        labelOf={r => fmtL(r.litres)}
-        onView={onViewMilk}
-      />
+      {/* Turnover + Litres stacked in one column, AGM/Audit compliance in
+          the other — the two rankings together (5 + 3 rows) run about as
+          tall as the 8-row compliance checklist, so this uses the page's
+          width instead of stacking all three full-width and pushing the
+          footer far down the page. */}
+      <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:'14px', marginBottom:'20px', alignItems:'start'}}>
+        <div>
+          <RankingListCard
+            title="Total Turnover — by Society"
+            accent="#7F1D1D"
+            icon={I.money}
+            totalLabel={fmtRs(mpcsTotalTurnover)}
+            emptyLabel="No MPCS societies on record."
+            rows={mpcsWithStatusSorted}
+            nameOf={r => r.society_name || 'Unnamed Society'}
+            valueOf={r => parseFloat(r.annual_turnover) || 0}
+            labelOf={r => fmtRs(r.annual_turnover)}
+            onView={onViewMpcs}
+          />
+          <RankingListCard
+            title="Liters Collected — by Unit"
+            accent="#0891B2"
+            icon={I.litres}
+            totalLabel={fmtL(milkTotalLitres)}
+            emptyLabel="No Milk PCS units on record."
+            rows={milkWithStatusSorted}
+            nameOf={r => r.center_name || 'Unnamed Center'}
+            valueOf={r => parseFloat(r.litres) || 0}
+            labelOf={r => fmtL(r.litres)}
+            onView={onViewMilk}
+          />
+        </div>
 
-      {/* One combined AGM/Audit compliance checklist across both sectors —
-          an admin checking who still needs to hold an AGM or get audited
-          shouldn't have to cross-reference two separate lists to see the
-          full picture. Sorted so entities with the most still pending
-          surface first. */}
-      <div style={{marginBottom:'20px'}}>
+        {/* One combined AGM/Audit compliance checklist across both sectors —
+            an admin checking who still needs to hold an AGM or get audited
+            shouldn't have to cross-reference two separate lists to see the
+            full picture. Sorted so entities with the most still pending
+            surface first. */}
         <ComplianceListCard
           title="AGM & Audit Compliance — All Entities"
           accent="#1D4ED8"
