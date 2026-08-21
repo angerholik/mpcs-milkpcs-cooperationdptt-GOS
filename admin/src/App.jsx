@@ -3372,6 +3372,12 @@ function Dashboard({ onLogout, session }) {
                                   🚩 FLAGGED FOR REVIEW
                                 </div>
                               )}
+                              {!m.flagged && m.resolved_at && (
+                                <div title={[m.resolution_note, m.resolved_by ? `Reviewed by ${m.resolved_by}` : null].filter(Boolean).join(' — ')}
+                                  style={{marginTop:'3px', display:'inline-flex', alignItems:'center', gap:'4px', background:'#ECFDF5', color:'#047857', fontSize:'9px', fontWeight:800, padding:'2px 6px', borderRadius:'10px', letterSpacing:'0.3px'}}>
+                                  ✓ REVIEWED{m.resolved_by ? ` BY ${m.resolved_by}` : ''}
+                                </div>
+                              )}
                             </td>
                             <td style={{fontSize:'13px', color:'#334155', fontWeight:600}}>{m.society_name||'—'}</td>
                             <td style={{textAlign:'center'}}>

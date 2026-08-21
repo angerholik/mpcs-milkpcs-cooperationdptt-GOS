@@ -339,7 +339,7 @@ export async function fetchMembers(societyName, societyType) {
   if (!societyName || !societyType) return { data: [], error: null };
   const { data, error } = await supabase
     .from('member_registry')
-    .select('id, member_name, mobile_number, ward_name, address, aadhaar_hash, aadhaar_number, flagged, flag_reason, flagged_by, created_at')
+    .select('id, member_name, mobile_number, ward_name, address, aadhaar_hash, aadhaar_number, flagged, flag_reason, flagged_by, resolved_by, resolved_at, resolution_note, created_at')
     .eq('society_type', societyType)
     .ilike('society_name', societyName.trim())
     .order('created_at', { ascending: false });
@@ -386,6 +386,20 @@ export async function updateMember(memberId, { memberName, aadhaarNumber, mobile
     console.error('[CORE] updateMember exception:', err);
     return { data: null, error: err };
   }
+}
+
+// The CI's response to a district-admin flag: clears the flag and records
+// who reviewed it and any note, without touching flag_reason/flagged_by —
+// admin's original flag stays visible as history alongside the resolution.
+export async function resolveMemberFlag(memberId, { resolvedBy, resolutionNote }) {
+  const { data, error } = await supabase.from('member_registry').update({
+    flagged: false,
+    resolved_by: resolvedBy || null,
+    resolved_at: new Date().toISOString(),
+    resolution_note: (resolutionNote || '').trim() || null,
+  }).eq('id', memberId).select();
+  if (error) console.error('[CORE] resolveMemberFlag failed:', error.message);
+  return { data, error };
 }
 
 export async function deleteMember(memberId) {

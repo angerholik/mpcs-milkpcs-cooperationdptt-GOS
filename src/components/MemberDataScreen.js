@@ -5,7 +5,7 @@ import {
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { fetchMembers, saveMember, updateMember, deleteMember } from '../supabase';
+import { fetchMembers, saveMember, updateMember, deleteMember, resolveMemberFlag } from '../supabase';
 
 const COLORS = {
   surface: '#ffffff',
@@ -70,6 +70,9 @@ export default function MemberDataScreen({
   const [form, setForm] = useState(emptyForm);
   const [showReview, setShowReview] = useState(false);
   const [editingId, setEditingId] = useState(null);
+  const [resolvingMember, setResolvingMember] = useState(null);
+  const [resolutionNote, setResolutionNote] = useState('');
+  const [resolving, setResolving] = useState(false);
 
   const loadMembers = useCallback(async () => {
     setLoading(true);
@@ -147,6 +150,38 @@ export default function MemberDataScreen({
         { text: 'Remove', style: 'destructive', onPress: doDelete },
       ]);
     }
+  };
+
+  const handleOpenResolve = (member) => {
+    setResolvingMember(member);
+    setResolutionNote('');
+  };
+
+  const handleCancelResolve = () => {
+    setResolvingMember(null);
+    setResolutionNote('');
+  };
+
+  // The CI's reply to a district-admin flag: not a deletion, just a record
+  // that this member was checked and is a valid registration (or whatever
+  // note the CI leaves) — the flag clears but admin's original reason and
+  // this resolution both stay on the row as history.
+  const handleConfirmResolve = async () => {
+    if (!resolvingMember || resolving) return;
+    setResolving(true);
+    const { error } = await resolveMemberFlag(resolvingMember.id, {
+      resolvedBy: inspectorEmail,
+      resolutionNote,
+    });
+    setResolving(false);
+    if (error) {
+      notify('Could Not Resolve', error.message || 'Could not mark this member as reviewed.');
+      return;
+    }
+    setMembers(prev => prev.map(m => m.id === resolvingMember.id ? { ...m, flagged: false } : m));
+    setResolvingMember(null);
+    setResolutionNote('');
+    if (onMemberDataChanged) onMemberDataChanged();
   };
 
   return (
@@ -375,9 +410,14 @@ export default function MemberDataScreen({
                   <View style={[styles.td, styles.colMember]}>
                     <Text style={styles.tdMemberName} numberOfLines={1}>{m.member_name}</Text>
                     {m.flagged ? (
-                      <Text style={styles.flaggedBadge} numberOfLines={1}>
-                        🚩 Flagged{m.flag_reason ? `: ${m.flag_reason}` : ''}
-                      </Text>
+                      <>
+                        <Text style={styles.flaggedBadge} numberOfLines={1}>
+                          🚩 Flagged{m.flag_reason ? `: ${m.flag_reason}` : ''}
+                        </Text>
+                        <TouchableOpacity onPress={() => handleOpenResolve(m)} activeOpacity={0.7}>
+                          <Text style={styles.markReviewedLink}>Mark as Reviewed</Text>
+                        </TouchableOpacity>
+                      </>
                     ) : null}
                   </View>
                   <View style={[styles.td, styles.colMobile]}>
@@ -485,6 +525,68 @@ export default function MemberDataScreen({
                   <MaterialCommunityIcons name="database-check-outline" size={16} color="#ffffff" />
                 )}
                 <Text style={styles.addBtnText}>{saving ? (editingId ? 'UPDATING...' : 'SAVING...') : (editingId ? 'CONFIRM & UPDATE' : 'CONFIRM & SAVE')}</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      )}
+
+      {/* ── Resolve Flag Sheet — the CI's reply to a district-admin flag ── */}
+      {resolvingMember && (
+        <View style={styles.reviewOverlay}>
+          <TouchableOpacity style={StyleSheet.absoluteFillObject} activeOpacity={1} onPress={() => !resolving && handleCancelResolve()} />
+          <View style={styles.reviewSheet}>
+            <View style={styles.reviewHeaderRow}>
+              <View style={styles.cardIconBox}>
+                <MaterialCommunityIcons name="flag-checkered" size={18} color={COLORS.primary} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.cardHeaderTitle}>Mark as Reviewed</Text>
+                <Text style={styles.cardHeaderSub}>{resolvingMember.member_name} was flagged by district admin{resolvingMember.flag_reason ? `: "${resolvingMember.flag_reason}"` : ''}.</Text>
+              </View>
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Your Note (Optional)</Text>
+              <View style={[styles.inputBox, { height: 64, alignItems: 'flex-start', paddingTop: 10 }]}>
+                <MaterialCommunityIcons name="pencil-outline" size={15} color={COLORS.slate400} style={{ marginRight: 6, marginTop: 2 }} />
+                <TextInput
+                  style={[styles.textInput, { height: '100%' }]}
+                  value={resolutionNote}
+                  onChangeText={setResolutionNote}
+                  placeholder="e.g. Verified against Aadhaar, valid member"
+                  placeholderTextColor={COLORS.slate300}
+                  multiline
+                />
+              </View>
+            </View>
+
+            <View style={{ flexDirection: 'row', gap: 10 }}>
+              <TouchableOpacity
+                style={styles.reviewBackBtn}
+                onPress={handleCancelResolve}
+                disabled={resolving}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.reviewBackBtnText}>CANCEL</Text>
+              </TouchableOpacity>
+              <Pressable
+                style={({ pressed }) => [styles.reviewConfirmBtn, pressed && { transform: [{ scale: 0.98 }] }]}
+                onPress={handleConfirmResolve}
+                disabled={resolving}
+              >
+                <LinearGradient
+                  colors={['#7a1a1f', '#4a1017']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                  style={StyleSheet.absoluteFillObject}
+                />
+                {resolving ? (
+                  <ActivityIndicator size="small" color="#ffffff" />
+                ) : (
+                  <MaterialCommunityIcons name="check-decagram-outline" size={16} color="#ffffff" />
+                )}
+                <Text style={styles.addBtnText}>{resolving ? 'SAVING...' : 'CONFIRM REVIEWED'}</Text>
               </Pressable>
             </View>
           </View>
@@ -796,6 +898,14 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: COLORS.amber900,
     marginTop: 2,
+  },
+  markReviewedLink: {
+    fontFamily: FONT_FAMILY,
+    fontSize: 10,
+    fontWeight: '800',
+    color: COLORS.primary,
+    marginTop: 3,
+    textDecorationLine: 'underline',
   },
   td: {
     paddingHorizontal: 20,
