@@ -1655,6 +1655,19 @@ function DistrictPerformance({ milkRows = [], mpcsRows = [], onViewMpcs, onViewM
   const maxMpcsTurnover = parseFloat(mpcsWithStatusSorted[0]?.annual_turnover) || 0;
   const maxMilkLitres = parseFloat(milkWithStatusSorted[0]?.litres) || 0;
 
+  // AGM/Audit status for both sectors in one list — most-pending-first, so
+  // whoever needs the most follow-up surfaces at the top regardless of
+  // whether they're an MPCS society or a Milk unit.
+  const combinedCompliance = useMemo(() => {
+    const tagged = [
+      ...mpcsWithStatus.map(r => ({ ...r, _sector: 'MPCS', _name: r.society_name || 'Unnamed Society' })),
+      ...milkWithStatus.map(r => ({ ...r, _sector: 'MILK', _name: r.center_name || 'Unnamed Center' })),
+    ];
+    const pendingCount = r => (r.agm_status === 'Completed' ? 0 : 1) + (r.audit_status === 'Completed' ? 0 : 1);
+    return tagged.sort((a, b) => pendingCount(b) - pendingCount(a));
+  }, [mpcsWithStatus, milkWithStatus]);
+  const combinedPendingCount = combinedCompliance.filter(r => r.agm_status !== 'Completed' || r.audit_status !== 'Completed').length;
+
   const isThisMonth = d => {
     if (!d) return false;
     const dt = new Date(d);
@@ -1723,8 +1736,6 @@ function DistrictPerformance({ milkRows = [], mpcsRows = [], onViewMpcs, onViewM
           columns={[
             { key: 'society', label: 'Society', render: r => <span style={{fontWeight:700, color:'#0F172A'}}>{r.society_name || '—'}</span> },
             { key: 'turnover', label: 'Turnover', align: 'right', render: r => <InlineBar value={parseFloat(r.annual_turnover) || 0} max={maxMpcsTurnover} color="#7F1D1D" label={fmtRs(r.annual_turnover)} /> },
-            { key: 'agm', label: 'AGM', align: 'center', render: r => <StatusPill status={r.agm_status} /> },
-            { key: 'audit', label: 'Audit', align: 'center', render: r => <StatusPill status={r.audit_status} /> },
           ]}
         />
         <ParamTable
@@ -1736,11 +1747,36 @@ function DistrictPerformance({ milkRows = [], mpcsRows = [], onViewMpcs, onViewM
           columns={[
             { key: 'center', label: 'Center', render: r => <span style={{fontWeight:700, color:'#0F172A'}}>{r.center_name || '—'}</span> },
             { key: 'litres', label: 'Litres', align: 'right', render: r => <InlineBar value={parseFloat(r.litres) || 0} max={maxMilkLitres} color="#0891B2" label={fmtL(r.litres)} /> },
-            { key: 'agm', label: 'AGM', align: 'center', render: r => <StatusPill status={r.agm_status} /> },
-            { key: 'audit', label: 'Audit', align: 'center', render: r => <StatusPill status={r.audit_status} /> },
           ]}
         />
       </div>
+
+      {/* One combined AGM/Audit compliance table across both sectors — an
+          admin checking who still needs to hold an AGM or get audited
+          shouldn't have to cross-reference two separate tables to see the
+          full picture. Sorted so entities with the most still pending
+          surface first. */}
+      <ParamTable
+        title="AGM & Audit Compliance — All Entities"
+        totalLabel={`${combinedPendingCount} pending`}
+        emptyLabel="No societies or units on record."
+        rows={combinedCompliance}
+        onView={r => (r._sector === 'MPCS' ? onViewMpcs(r) : onViewMilk(r))}
+        columns={[
+          { key: 'name', label: 'Entity', render: r => (
+            <div style={{display:'flex', alignItems:'center', gap:'8px'}}>
+              <span style={{
+                fontSize:'9px', fontWeight:800, padding:'2px 7px', borderRadius:'99px', flexShrink:0,
+                color: r._sector === 'MPCS' ? '#92400E' : '#0369A1',
+                background: r._sector === 'MPCS' ? '#FFFBEB' : '#F0F9FF',
+              }}>{r._sector}</span>
+              <span style={{fontWeight:700, color:'#0F172A'}}>{r._name}</span>
+            </div>
+          ) },
+          { key: 'agm', label: 'AGM', align: 'center', render: r => <StatusPill status={r.agm_status} /> },
+          { key: 'audit', label: 'Audit', align: 'center', render: r => <StatusPill status={r.audit_status} /> },
+        ]}
+      />
 
       {/* Footer stat strip — only figures we can compute directly from real
           submission records; no invented "next sync" countdown. */}
