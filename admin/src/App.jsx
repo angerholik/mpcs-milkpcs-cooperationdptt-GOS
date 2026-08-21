@@ -1488,14 +1488,14 @@ function RankedBarList({ title, items, color = '#7F1D1D', valueFmt, max: fixedMa
       {visible.length === 0 ? (
         <div style={{padding:'20px', textAlign:'center', color:'#9CA3AF', fontSize:'12px'}}>No data on record.</div>
       ) : (
-        <div style={{padding:'14px', display:'flex', flexDirection:'column', gap:'10px'}}>
+        <div style={{padding:'16px', display:'flex', flexDirection:'column', gap:'14px'}}>
           {visible.map((item, i) => (
-            <div key={item.name + i} style={{display:'flex', alignItems:'center', gap:'10px'}}>
-              <span style={{width:'110px', flexShrink:0, fontSize:'11px', fontWeight:700, color:'#334155', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap'}}>{item.name}</span>
+            <div key={item.name + i} style={{display:'flex', alignItems:'center', gap:'12px'}}>
+              <span title={item.name} style={{width:'160px', flexShrink:0, fontSize:'12px', fontWeight:700, color:'#334155', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap'}}>{item.name}</span>
               <div style={{flex:1, height:'8px', borderRadius:'99px', background:'#F1F5F9', overflow:'hidden'}}>
-                <div style={{width: `${max > 0 ? Math.max(2, (item.value / max) * 100) : 0}%`, height:'100%', borderRadius:'99px', background: color}} />
+                <div style={{width: `${max > 0 ? Math.max(2, (item.value / max) * 100) : 0}%`, height:'100%', borderRadius:'99px', background: item.color || color}} />
               </div>
-              <span style={{width:'80px', flexShrink:0, textAlign:'right', fontSize:'11px', fontWeight:800, color:'#0F172A'}}>{valueFmt ? valueFmt(item.value) : item.value}</span>
+              <span style={{width:'80px', flexShrink:0, textAlign:'right', fontSize:'12px', fontWeight:800, color:'#0F172A'}}>{valueFmt ? valueFmt(item.value) : item.value}</span>
             </div>
           ))}
         </div>
@@ -1514,24 +1514,26 @@ function CompositeHealthCard({ score, subs }) {
   const labelColor = score >= 55 ? '#047857' : score >= 35 ? '#B45309' : '#B91C1C';
   const labelBg = score >= 55 ? '#ECFDF5' : score >= 35 ? '#FFFBEB' : '#FEF2F2';
   return (
-    <div className="kpi-card" style={{borderLeft:'4px solid #7F1D1D'}}>
-      <span className="kpi-title">COOPERATIVE SECTOR HEALTH</span>
-      <div style={{display:'flex', alignItems:'baseline', gap:'8px', marginTop:'2px'}}>
-        <span key={score} className="kpi-val kpi-pop" style={{color:'#7F1D1D'}}>{score} / 100</span>
-        <span style={{fontSize:'10px', fontWeight:800, color:labelColor, background:labelBg, padding:'2px 8px', borderRadius:'99px'}}>{label}</span>
+    <div className="kpi-card" style={{gridColumn:'span 2', borderLeft:'4px solid #7F1D1D'}}>
+      <div style={{display:'flex', alignItems:'center', justifyContent:'space-between'}}>
+        <span className="kpi-title">COOPERATIVE SECTOR HEALTH</span>
+        <span style={{fontSize:'10px', fontWeight:800, color:labelColor, background:labelBg, padding:'3px 10px', borderRadius:'99px', whiteSpace:'nowrap'}}>{label}</span>
       </div>
-      <div className="kpi-progress-track" style={{marginTop:'6px'}}>
-        <div className="kpi-progress-fill" style={{width:`${score}%`, background:'#7F1D1D'}} />
+      <div style={{display:'flex', alignItems:'center', gap:'16px', marginTop:'2px'}}>
+        <span key={score} className="kpi-val kpi-pop" style={{color:'#7F1D1D', whiteSpace:'nowrap'}}>{score} / 100</span>
+        <div className="kpi-progress-track" style={{flex:1}}>
+          <div className="kpi-progress-fill" style={{width:`${score}%`, background:'#7F1D1D'}} />
+        </div>
       </div>
-      <div style={{display:'flex', flexDirection:'column', gap:'6px', marginTop:'10px'}}>
+      <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', columnGap:'20px', rowGap:'8px', marginTop:'8px'}}>
         {subs.map(s => (
-          <div key={s.label} style={{display:'flex', alignItems:'center', gap:'6px'}}>
+          <div key={s.label} style={{display:'flex', alignItems:'center', gap:'8px'}}>
             <span style={{width:'6px', height:'6px', borderRadius:'50%', background:s.color, flexShrink:0}} />
-            <span style={{fontSize:'10px', fontWeight:700, color:'#475569', flex:1}}>{s.label}</span>
-            <div style={{width:'46px', height:'4px', borderRadius:'99px', background:'#F1F5F9', overflow:'hidden', flexShrink:0}}>
+            <span style={{fontSize:'11px', fontWeight:700, color:'#475569', flex:1, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap'}}>{s.label}</span>
+            <div style={{width:'44px', height:'4px', borderRadius:'99px', background:'#F1F5F9', overflow:'hidden', flexShrink:0}}>
               <div style={{width:`${s.value}%`, height:'100%', background:s.color}} />
             </div>
-            <span style={{fontSize:'10px', fontWeight:800, color:'#0F172A', width:'40px', textAlign:'right', flexShrink:0}}>{s.value}/100</span>
+            <span style={{fontSize:'11px', fontWeight:800, color:'#0F172A', width:'34px', textAlign:'right', flexShrink:0}}>{s.value}%</span>
           </div>
         ))}
       </div>
@@ -1674,10 +1676,10 @@ function DistrictPerformance({ milkRows = [], mpcsRows = [], onViewMpcs, onViewM
   ];
 
   const mpcsComplianceOverview = [
-    { name: 'AGM Compliance', value: mpcsAgmRate },
-    { name: 'Audit Compliance', value: mpcsAuditRate },
-    { name: 'Financial Performance', value: mpcsFinancialRate },
-    { name: 'Operational Activity', value: mpcsOperationalRate },
+    { name: 'AGM Compliance', value: mpcsAgmRate, color: '#1D4ED8' },
+    { name: 'Audit Compliance', value: mpcsAuditRate, color: '#B45309' },
+    { name: 'Financial Performance', value: mpcsFinancialRate, color: '#0369A1' },
+    { name: 'Operational Activity', value: mpcsOperationalRate, color: '#7C2D12' },
   ];
 
   const mpcsTurnoverRanking = useMemo(
