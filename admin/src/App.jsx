@@ -1505,7 +1505,9 @@ function CompositeHealthCard({ title, score, subs, accent = '#7F1D1D', columns =
             <div style={{width:'44px', height:'4px', borderRadius:'99px', background:'#F1F5F9', overflow:'hidden', flexShrink:0}}>
               <div style={{width:`${s.value}%`, height:'100%', background:s.color}} />
             </div>
-            <span style={{fontSize:'11px', fontWeight:800, color:'#0F172A', width:'34px', textAlign:'right', flexShrink:0}}>{s.value}%</span>
+            <span style={{fontSize:'11px', fontWeight:800, color:'#0F172A', width: s.count ? '76px' : '34px', textAlign:'right', flexShrink:0}}>
+              {s.count ? `${s.count} · ${s.value}%` : `${s.value}%`}
+            </span>
           </div>
         ))}
       </div>
@@ -1607,10 +1609,10 @@ function DistrictPerformance({ milkRows = [], mpcsRows = [], onViewMpcs, onViewM
   // above. See CompositeHealthCard for why this isn't a fabricated number.
   const mpcsHealthScore = Math.round((mpcsAgmRate + mpcsAuditRate + mpcsFinancialRate + mpcsOperationalRate) / 4);
   const mpcsHealthSubs = [
-    { label: 'AGM Compliance', value: mpcsAgmRate, color: '#1D4ED8' },
-    { label: 'Audit Compliance', value: mpcsAuditRate, color: '#B45309' },
-    { label: 'Financial Performance', value: mpcsFinancialRate, color: '#0369A1' },
-    { label: 'Operational Activity', value: mpcsOperationalRate, color: '#7C2D12' },
+    { label: 'AGM Compliance', value: mpcsAgmRate, color: '#1D4ED8', count: `${mpcsAgmCompletedCount}/${mpcsRows.length}` },
+    { label: 'Audit Compliance', value: mpcsAuditRate, color: '#B45309', count: `${mpcsAuditedCount}/${mpcsRows.length}` },
+    { label: 'Financial Performance', value: mpcsFinancialRate, color: '#0369A1', count: `${mpcsFinancialCompleted}/${mpcsRows.length}` },
+    { label: 'Operational Activity', value: mpcsOperationalRate, color: '#7C2D12', count: `${mpcsOperationalCompleted}/${mpcsRows.length}` },
   ];
 
   // Milk forms only capture AGM and Audit status — no financial/CSC detail
@@ -1618,26 +1620,22 @@ function DistrictPerformance({ milkRows = [], mpcsRows = [], onViewMpcs, onViewM
   // of just those two rates, not padded out to match MPCS's four.
   const milkHealthScore = Math.round((milkAgmRate + milkAuditRate) / 2);
   const milkHealthSubs = [
-    { label: 'AGM Compliance', value: milkAgmRate, color: '#047857' },
-    { label: 'Audit Compliance', value: milkAuditRate, color: '#7C3AED' },
+    { label: 'AGM Compliance', value: milkAgmRate, color: '#047857', count: `${milkAgmCompletedCount}/${milkRows.length}` },
+    { label: 'Audit Compliance', value: milkAuditRate, color: '#7C3AED', count: `${milkAuditedCount}/${milkRows.length}` },
   ];
 
-  // One card config per KPI — the grid renders these as clickable tiles, and
-  // the single table below always shows whichever one is selected, instead
-  // of stacking a separate table under every card (which made the page very
-  // long) or cramming every parameter into one wide table (unreadable).
+  // KPI cards cover only what the Sector Health card doesn't already show —
+  // AGM/Audit/Financial/Operational compliance live there now (with their
+  // counts alongside the percentage), so a standalone "MPCS AGM Completed"
+  // card here would just restate the same number in a different shape.
   const mpcsCards = [
     { key: 'csc', title: 'CSC TRANSACTIONS', value: mpcsCscCount, sub: 'Active CSC centers', color: '#047857', bg: '#ECFDF5', icon: I.domain },
     { key: 'deposit', title: 'MONTHLY DEPOSIT', value: fmtRs(mpcsMonthlyDeposit), sub: 'Aggregate sales deposit', color: '#7F1D1D', bg: '#FEF2F2', icon: I.money },
-    { key: 'agm', title: 'MPCS AGM COMPLETED', value: `${mpcsAgmCompletedCount} / ${mpcsRows.length}`, sub: `${mpcsAgmRate}% AGM compliance`, color: '#1D4ED8', bg: '#EFF6FF', icon: I.members, rate: mpcsAgmRate },
-    { key: 'audit', title: 'MPCS AGM AUDITED', value: `${mpcsAuditedCount} / ${mpcsRows.length}`, sub: `${mpcsAuditRate}% audit compliance`, color: '#B45309', bg: '#FFFBEB', icon: I.chart, rate: mpcsAuditRate },
     { key: 'turnover', title: 'TOTAL TURNOVER', value: fmtRs(mpcsTotalTurnover), sub: 'Aggregate annual turnover', color: '#065F46', bg: '#ECFDF5', icon: I.money },
   ];
 
   const milkCards = [
     { key: 'litres', title: 'LITERS COLLECTED', value: fmtL(milkTotalLitres), sub: 'Total milk volume', color: '#0891B2', bg: '#ECFEFF', icon: I.litres },
-    { key: 'agm', title: 'MILK AGM COMPLETED', value: `${milkAgmCompletedCount} / ${milkRows.length}`, sub: `${milkAgmRate}% AGM compliance`, color: '#047857', bg: '#ECFDF5', icon: I.members, rate: milkAgmRate },
-    { key: 'audit', title: 'MILK AGM AUDITED', value: `${milkAuditedCount} / ${milkRows.length}`, sub: `${milkAuditRate}% audit compliance`, color: '#7C3AED', bg: '#F5F3FF', icon: I.chart, rate: milkAuditRate },
   ];
 
   // Tables are sorted highest-first so the ranking is visible directly in
@@ -1692,7 +1690,7 @@ function DistrictPerformance({ milkRows = [], mpcsRows = [], onViewMpcs, onViewM
           width, instead of the last card falling onto its own near-empty
           row when the flex-basis math doesn't divide evenly. */}
       <div style={{marginBottom:'16px'}}>
-        <div className="kpi-grid-fixed" style={{display:'grid', gridTemplateColumns:'1.6fr repeat(5, 1fr)', gap:'16px'}}>
+        <div className="kpi-grid-fixed" style={{display:'grid', gridTemplateColumns:'2.2fr repeat(3, 1fr)', gap:'16px'}}>
           <CompositeHealthCard title="MPCS SECTOR HEALTH" score={mpcsHealthScore} subs={mpcsHealthSubs} accent="#7F1D1D" columns={2} />
           {mpcsCards.map(c => (
             <BenchmarkCard key={c.key} title={c.title} value={c.value} sub={c.sub} color={c.color} bg={c.bg} icon={c.icon} rate={c.rate} />
@@ -1703,7 +1701,7 @@ function DistrictPerformance({ milkRows = [], mpcsRows = [], onViewMpcs, onViewM
       {/* Milk at a glance — same row treatment as MPCS above, so neither
           sector is buried below the fold. */}
       <div style={{marginBottom:'20px'}}>
-        <div className="kpi-grid-fixed" style={{display:'grid', gridTemplateColumns:'1.3fr repeat(3, 1fr)', gap:'16px'}}>
+        <div className="kpi-grid-fixed" style={{display:'grid', gridTemplateColumns:'2fr 1fr', gap:'16px'}}>
           <CompositeHealthCard title="MILK SECTOR HEALTH" score={milkHealthScore} subs={milkHealthSubs} accent="#0891B2" columns={1} />
           {milkCards.map(c => (
             <BenchmarkCard key={c.key} title={c.title} value={c.value} sub={c.sub} color={c.color} bg={c.bg} icon={c.icon} rate={c.rate} />
