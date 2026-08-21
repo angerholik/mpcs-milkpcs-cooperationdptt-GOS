@@ -1406,7 +1406,6 @@ function BenchmarkCard({ title, value, sub, color, bg, icon, rate, onClick, acti
       onClick={onClick}
       style={{
         cursor: onClick ? 'pointer' : 'default',
-        borderLeft: `4px solid ${color}`,
         borderColor: active ? color : undefined,
         background: active ? (bg || '#FFFFFF') : '#FFFFFF',
         boxShadow: active ? `0 0 0 2px ${color}26` : undefined,
@@ -1475,7 +1474,7 @@ function CompositeHealthCard({ title, score, subs, accent = '#7F1D1D', columns =
   const labelColor = score >= 55 ? '#047857' : score >= 35 ? '#B45309' : '#B91C1C';
   const labelBg = score >= 55 ? '#ECFDF5' : score >= 35 ? '#FFFBEB' : '#FEF2F2';
   return (
-    <div className="kpi-card" style={{height:'100%', borderLeft:`4px solid ${accent}`}}>
+    <div className="kpi-card" style={{height:'100%'}}>
       <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', gap:'8px'}}>
         <div style={{display:'flex', alignItems:'center', gap:'6px'}}>
           <span className="kpi-title">{title}</span>
@@ -1524,7 +1523,7 @@ function CompositeHealthCard({ title, score, subs, accent = '#7F1D1D', columns =
 // checklist, respectively, so they get list rows instead of table chrome.
 function ListCard({ title, icon, accent, totalLabel, count, emptyLabel, children, footerLabel, onFooterClick }) {
   return (
-    <div className="card" style={{marginTop:'10px', padding:0, overflow:'hidden', borderRadius:'8px', border:'1px solid #E2E8F0', borderLeft:`4px solid ${accent}`}}>
+    <div className="card" style={{marginTop:'10px', padding:0, overflow:'hidden', borderRadius:'8px', border:'1px solid #E2E8F0'}}>
       <div style={{padding:'12px 16px', borderBottom:'1px solid var(--border)', background:'#FAFAFA', display:'flex', justifyContent:'space-between', alignItems:'center'}}>
         <div style={{display:'flex', alignItems:'center', gap:'10px'}}>
           {icon && (
