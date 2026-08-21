@@ -1394,9 +1394,17 @@ function GlobalBroadcast({ activeTab, userRole }) {
   );
 }
 
-function BenchmarkCard({ title, value, sub, color }) {
+function BenchmarkCard({ title, value, sub, color, onClick, active }) {
   return (
-    <div className="kpi-card">
+    <div
+      className="kpi-card"
+      onClick={onClick}
+      style={onClick ? {
+        cursor: 'pointer',
+        border: active ? '2px solid #7F1D1D' : '1px solid var(--border)',
+        boxShadow: active ? '0 0 0 3px rgba(127,29,29,0.08)' : undefined,
+      } : undefined}
+    >
       <div className="kpi-title">{title}</div>
       <div className="kpi-val" style={{color}}>{value}</div>
       <div className="kpi-sub">{sub}</div>
@@ -1486,6 +1494,101 @@ function DistrictPerformance({ milkRows = [], mpcsRows = [], onViewMpcs, onViewM
   const milkAgmRate = Math.round((milkAgmCompletedCount / milkTotal) * 100);
   const milkAuditRate = Math.round((milkAuditedCount / milkTotal) * 100);
 
+  // One card config per KPI — the grid renders these as clickable tiles, and
+  // the single table below always shows whichever one is selected, instead
+  // of stacking a separate table under every card (which made the page very
+  // long) or cramming every parameter into one wide table (unreadable).
+  const mpcsCards = [
+    {
+      key: 'csc', title: 'CSC TRANSACTIONS', value: mpcsCscCount, sub: 'Active CSC centers', color: '#047857',
+      tableTitle: 'CSC Transactions — by Society',
+      columns: [
+        { key: 'society', label: 'Society', render: r => <span style={{fontWeight:700, color:'#0F172A'}}>{r.society_name || '—'}</span> },
+        { key: 'csc', label: 'CSC Active', align: 'center', render: r => {
+            const active = r.form_data?.['9.1'] === 'Yes' || r.form_data?.['9.7z'] === 'Yes';
+            return (
+              <span style={{fontSize:'10px', fontWeight:800, padding:'3px 9px', borderRadius:'10px', background: active ? '#ECFDF5' : '#F1F5F9', color: active ? '#047857' : '#64748B', border: `1px solid ${active ? '#A7F3D0' : '#E2E8F0'}`}}>
+                {active ? 'YES' : 'NO'}
+              </span>
+            );
+          } },
+        { key: 'month', label: "This Month's Transactions", align: 'right', render: r => fmtRs(r.form_data?.['9.9']) },
+        { key: 'total', label: 'Total Transactions Till Date', align: 'right', render: r => fmtRs(r.form_data?.['9.10']) },
+      ],
+    },
+    {
+      key: 'deposit', title: 'MONTHLY DEPOSIT', value: fmtRs(mpcsMonthlyDeposit), sub: 'Aggregate sales deposit', color: '#7F1D1D',
+      tableTitle: 'Monthly Deposit — by Society',
+      columns: [
+        { key: 'society', label: 'Society', render: r => <span style={{fontWeight:700, color:'#0F172A'}}>{r.society_name || '—'}</span> },
+        { key: 'deposit', label: 'Deposit', align: 'right', render: r => <span style={{fontWeight:700, color:'#7F1D1D'}}>{fmtRs(r.form_data?.['7.71'] || r.bank_balance)}</span> },
+      ],
+    },
+    {
+      key: 'agm', title: 'MPCS AGM COMPLETED', value: `${mpcsAgmCompletedCount} / ${mpcsRows.length}`, sub: `${mpcsAgmRate}% AGM compliance`, color: '#1D4ED8',
+      tableTitle: 'MPCS AGM Completed — by Society', onView: onViewMpcs,
+      columns: [
+        { key: 'society', label: 'Society', render: r => <span style={{fontWeight:700, color:'#0F172A'}}>{r.society_name || '—'}</span> },
+        { key: 'status', label: 'AGM Status', align: 'center', render: r => <StatusPill status={r.agm_status} /> },
+        { key: 'date', label: 'AGM Date', render: r => r.agm_date || '—' },
+      ],
+    },
+    {
+      key: 'audit', title: 'MPCS AGM AUDITED', value: `${mpcsAuditedCount} / ${mpcsRows.length}`, sub: `${mpcsAuditRate}% audit compliance`, color: '#B45309',
+      tableTitle: 'MPCS AGM Audited — by Society', onView: onViewMpcs,
+      columns: [
+        { key: 'society', label: 'Society', render: r => <span style={{fontWeight:700, color:'#0F172A'}}>{r.society_name || '—'}</span> },
+        { key: 'status', label: 'Audit Status', align: 'center', render: r => <StatusPill status={r.audit_status} /> },
+        { key: 'date', label: 'Audit Date', render: r => r.audit_date || '—' },
+        { key: 'category', label: 'Audit Category', align: 'center', render: r => r.audit_category || '—' },
+      ],
+    },
+    {
+      key: 'turnover', title: 'TOTAL TURNOVER', value: fmtRs(mpcsTotalTurnover), sub: 'Aggregate annual turnover', color: '#065F46',
+      tableTitle: 'Total Turnover — by Society', onView: onViewMpcs,
+      columns: [
+        { key: 'society', label: 'Society', render: r => <span style={{fontWeight:700, color:'#0F172A'}}>{r.society_name || '—'}</span> },
+        { key: 'turnover', label: 'Annual Turnover', align: 'right', render: r => <span style={{fontWeight:700, color:'#065F46'}}>{fmtRs(r.annual_turnover)}</span> },
+      ],
+    },
+  ];
+
+  const milkCards = [
+    {
+      key: 'litres', title: 'LITERS COLLECTED', value: fmtL(milkTotalLitres), sub: 'Total milk volume', color: '#0F172A',
+      tableTitle: 'Liters Collected — by Unit', onView: onViewMilk,
+      columns: [
+        { key: 'center', label: 'Center', render: r => <span style={{fontWeight:700, color:'#0F172A'}}>{r.center_name || '—'}</span> },
+        { key: 'litres', label: 'Litres', align: 'right', render: r => <span style={{fontWeight:700, color:'#0F172A'}}>{fmtL(r.litres)}</span> },
+        { key: 'withdrawal', label: 'Withdrawal', align: 'right', render: r => fmtRs(r.withdrawal) },
+        { key: 'balance', label: 'Balance', align: 'right', render: r => fmtRs(r.balance) },
+      ],
+    },
+    {
+      key: 'agm', title: 'MILK AGM COMPLETED', value: `${milkAgmCompletedCount} / ${milkRows.length}`, sub: `${milkAgmRate}% AGM compliance`, color: '#047857',
+      tableTitle: 'Milk AGM Completed — by Unit', onView: onViewMilk,
+      columns: [
+        { key: 'center', label: 'Center', render: r => <span style={{fontWeight:700, color:'#0F172A'}}>{r.center_name || '—'}</span> },
+        { key: 'status', label: 'AGM Status', align: 'center', render: r => <StatusPill status={r.agm_status} /> },
+        { key: 'date', label: 'AGM Date', render: r => r.agm_date || '—' },
+      ],
+    },
+    {
+      key: 'audit', title: 'MILK AGM AUDITED', value: `${milkAuditedCount} / ${milkRows.length}`, sub: `${milkAuditRate}% audit compliance`, color: '#7C3AED',
+      tableTitle: 'Milk AGM Audited — by Unit', onView: onViewMilk,
+      columns: [
+        { key: 'center', label: 'Center', render: r => <span style={{fontWeight:700, color:'#0F172A'}}>{r.center_name || '—'}</span> },
+        { key: 'status', label: 'Audit Status', align: 'center', render: r => <StatusPill status={r.audit_status} /> },
+        { key: 'date', label: 'Audit Date', render: r => r.audit_date || '—' },
+      ],
+    },
+  ];
+
+  const [selectedMpcsCard, setSelectedMpcsCard] = useState('csc');
+  const [selectedMilkCard, setSelectedMilkCard] = useState('litres');
+  const activeMpcsCard = mpcsCards.find(c => c.key === selectedMpcsCard) || mpcsCards[0];
+  const activeMilkCard = milkCards.find(c => c.key === selectedMilkCard) || milkCards[0];
+
   return (
     <div className="fade-in">
       {/* Benchmark Header */}
@@ -1497,139 +1600,47 @@ function DistrictPerformance({ milkRows = [], mpcsRows = [], onViewMpcs, onViewM
         </div>
       </div>
 
-      {/* MPCS Sector Benchmarks — each card's own dataset sits directly under it */}
-      <div style={{marginBottom:'24px'}}>
+      {/* MPCS Sector Benchmarks */}
+      <div style={{marginBottom:'28px'}}>
         <div style={{fontSize:'12px', fontWeight:800, color:'#92400E', textTransform:'uppercase', letterSpacing:'1px', marginBottom:'12px', background:'#FFFBEB', padding:'6px 12px', borderRadius:'6px', display:'inline-block', border:'1px solid #FDE68A'}}>
           🏛️ MPCS Societies Benchmarks
         </div>
-
-        <BenchmarkCard title="CSC TRANSACTIONS" value={mpcsCscCount} sub="Active CSC centers" color="#047857" />
+        <div className="kpi-grid" style={{gridTemplateColumns:'repeat(auto-fit, minmax(200px, 1fr))'}}>
+          {mpcsCards.map(c => (
+            <BenchmarkCard
+              key={c.key} title={c.title} value={c.value} sub={c.sub} color={c.color}
+              onClick={() => setSelectedMpcsCard(c.key)} active={selectedMpcsCard === c.key}
+            />
+          ))}
+        </div>
         <ParamTable
-          title="CSC Transactions — by Society"
+          title={activeMpcsCard.tableTitle}
           emptyLabel="No MPCS societies on record."
           rows={mpcsWithStatus}
-          columns={[
-            { key: 'society', label: 'Society', render: r => <span style={{fontWeight:700, color:'#0F172A'}}>{r.society_name || '—'}</span> },
-            { key: 'csc', label: 'CSC Active', align: 'center', render: r => {
-                const active = r.form_data?.['9.1'] === 'Yes' || r.form_data?.['9.7z'] === 'Yes';
-                return (
-                  <span style={{fontSize:'10px', fontWeight:800, padding:'3px 9px', borderRadius:'10px', background: active ? '#ECFDF5' : '#F1F5F9', color: active ? '#047857' : '#64748B', border: `1px solid ${active ? '#A7F3D0' : '#E2E8F0'}`}}>
-                    {active ? 'YES' : 'NO'}
-                  </span>
-                );
-              } },
-            { key: 'month', label: 'This Month\'s Transactions', align: 'right', render: r => fmtRs(r.form_data?.['9.9']) },
-            { key: 'total', label: 'Total Transactions Till Date', align: 'right', render: r => fmtRs(r.form_data?.['9.10']) },
-          ]}
-        />
-
-        <BenchmarkCard title="MONTHLY DEPOSIT" value={fmtRs(mpcsMonthlyDeposit)} sub="Aggregate sales deposit" color="#7F1D1D" />
-        <ParamTable
-          title="Monthly Deposit — by Society"
-          emptyLabel="No MPCS societies on record."
-          rows={mpcsWithStatus}
-          columns={[
-            { key: 'society', label: 'Society', render: r => <span style={{fontWeight:700, color:'#0F172A'}}>{r.society_name || '—'}</span> },
-            { key: 'deposit', label: 'Deposit', align: 'right', render: r => <span style={{fontWeight:700, color:'#7F1D1D'}}>{fmtRs(r.form_data?.['7.71'] || r.bank_balance)}</span> },
-          ]}
-        />
-
-        <BenchmarkCard
-          title="MPCS AGM COMPLETED" value={`${mpcsAgmCompletedCount} / ${mpcsRows.length}`}
-          sub={`${mpcsAgmRate}% AGM compliance`} color="#1D4ED8"
-        />
-        <ParamTable
-          title="MPCS AGM Completed — by Society"
-          emptyLabel="No MPCS societies on record."
-          rows={mpcsWithStatus}
-          onView={onViewMpcs}
-          columns={[
-            { key: 'society', label: 'Society', render: r => <span style={{fontWeight:700, color:'#0F172A'}}>{r.society_name || '—'}</span> },
-            { key: 'status', label: 'AGM Status', align: 'center', render: r => <StatusPill status={r.agm_status} /> },
-            { key: 'date', label: 'AGM Date', render: r => r.agm_date || '—' },
-          ]}
-        />
-
-        <BenchmarkCard
-          title="MPCS AGM AUDITED" value={`${mpcsAuditedCount} / ${mpcsRows.length}`}
-          sub={`${mpcsAuditRate}% audit compliance`} color="#B45309"
-        />
-        <ParamTable
-          title="MPCS AGM Audited — by Society"
-          emptyLabel="No MPCS societies on record."
-          rows={mpcsWithStatus}
-          onView={onViewMpcs}
-          columns={[
-            { key: 'society', label: 'Society', render: r => <span style={{fontWeight:700, color:'#0F172A'}}>{r.society_name || '—'}</span> },
-            { key: 'status', label: 'Audit Status', align: 'center', render: r => <StatusPill status={r.audit_status} /> },
-            { key: 'date', label: 'Audit Date', render: r => r.audit_date || '—' },
-            { key: 'category', label: 'Audit Category', align: 'center', render: r => r.audit_category || '—' },
-          ]}
-        />
-
-        <BenchmarkCard title="TOTAL TURNOVER" value={fmtRs(mpcsTotalTurnover)} sub="Aggregate annual turnover" color="#065F46" />
-        <ParamTable
-          title="Total Turnover — by Society"
-          emptyLabel="No MPCS societies on record."
-          rows={mpcsWithStatus}
-          onView={onViewMpcs}
-          columns={[
-            { key: 'society', label: 'Society', render: r => <span style={{fontWeight:700, color:'#0F172A'}}>{r.society_name || '—'}</span> },
-            { key: 'turnover', label: 'Annual Turnover', align: 'right', render: r => <span style={{fontWeight:700, color:'#065F46'}}>{fmtRs(r.annual_turnover)}</span> },
-          ]}
+          onView={activeMpcsCard.onView}
+          columns={activeMpcsCard.columns}
         />
       </div>
 
-      {/* Milk Sector Benchmarks — same one-table-per-card pattern */}
+      {/* Milk Sector Benchmarks */}
       <div style={{marginBottom:'28px'}}>
         <div style={{fontSize:'12px', fontWeight:800, color:'#991B1B', textTransform:'uppercase', letterSpacing:'1px', marginBottom:'12px', background:'#FEF2F2', padding:'6px 12px', borderRadius:'6px', display:'inline-block', border:'1px solid #FECACA'}}>
           🥛 Milk PCS Benchmarks
         </div>
-
-        <BenchmarkCard title="LITERS COLLECTED" value={fmtL(milkTotalLitres)} sub="Total milk volume" color="#0F172A" />
+        <div className="kpi-grid" style={{gridTemplateColumns:'repeat(auto-fit, minmax(200px, 1fr))'}}>
+          {milkCards.map(c => (
+            <BenchmarkCard
+              key={c.key} title={c.title} value={c.value} sub={c.sub} color={c.color}
+              onClick={() => setSelectedMilkCard(c.key)} active={selectedMilkCard === c.key}
+            />
+          ))}
+        </div>
         <ParamTable
-          title="Liters Collected — by Unit"
+          title={activeMilkCard.tableTitle}
           emptyLabel="No Milk PCS units on record."
           rows={milkWithStatus}
-          onView={onViewMilk}
-          columns={[
-            { key: 'center', label: 'Center', render: r => <span style={{fontWeight:700, color:'#0F172A'}}>{r.center_name || '—'}</span> },
-            { key: 'litres', label: 'Litres', align: 'right', render: r => <span style={{fontWeight:700, color:'#0F172A'}}>{fmtL(r.litres)}</span> },
-            { key: 'withdrawal', label: 'Withdrawal', align: 'right', render: r => fmtRs(r.withdrawal) },
-            { key: 'balance', label: 'Balance', align: 'right', render: r => fmtRs(r.balance) },
-          ]}
-        />
-
-        <BenchmarkCard
-          title="MILK AGM COMPLETED" value={`${milkAgmCompletedCount} / ${milkRows.length}`}
-          sub={`${milkAgmRate}% AGM compliance`} color="#047857"
-        />
-        <ParamTable
-          title="Milk AGM Completed — by Unit"
-          emptyLabel="No Milk PCS units on record."
-          rows={milkWithStatus}
-          onView={onViewMilk}
-          columns={[
-            { key: 'center', label: 'Center', render: r => <span style={{fontWeight:700, color:'#0F172A'}}>{r.center_name || '—'}</span> },
-            { key: 'status', label: 'AGM Status', align: 'center', render: r => <StatusPill status={r.agm_status} /> },
-            { key: 'date', label: 'AGM Date', render: r => r.agm_date || '—' },
-          ]}
-        />
-
-        <BenchmarkCard
-          title="MILK AGM AUDITED" value={`${milkAuditedCount} / ${milkRows.length}`}
-          sub={`${milkAuditRate}% audit compliance`} color="#7C3AED"
-        />
-        <ParamTable
-          title="Milk AGM Audited — by Unit"
-          emptyLabel="No Milk PCS units on record."
-          rows={milkWithStatus}
-          onView={onViewMilk}
-          columns={[
-            { key: 'center', label: 'Center', render: r => <span style={{fontWeight:700, color:'#0F172A'}}>{r.center_name || '—'}</span> },
-            { key: 'status', label: 'Audit Status', align: 'center', render: r => <StatusPill status={r.audit_status} /> },
-            { key: 'date', label: 'Audit Date', render: r => r.audit_date || '—' },
-          ]}
+          onView={activeMilkCard.onView}
+          columns={activeMilkCard.columns}
         />
       </div>
 
