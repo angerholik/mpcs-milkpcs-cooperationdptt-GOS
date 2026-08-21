@@ -1649,10 +1649,10 @@ function DistrictPerformance({ milkRows = [], mpcsRows = [], onViewMpcs, onViewM
   ];
 
   // Milk forms only capture AGM and Audit status — no financial/CSC detail
-  // exists for milk units — so the Milk health score is honestly an average
-  // of just those two rates, not padded out to match MPCS's four.
-  const milkHealthScore = Math.round((milkAgmRate + milkAuditRate) / 2);
-  const milkHealthSubs = [
+  // exists for milk units. An averaged "health score" here would just be
+  // restating these same two numbers as one more figure, so — same as MPCS
+  // — Milk gets the plain compliance card instead of a composite score.
+  const milkComplianceSubs = [
     { label: 'AGM Compliance', value: milkAgmRate, color: '#047857', count: `${milkAgmCompletedCount}/${milkRows.length}` },
     { label: 'Audit Compliance', value: milkAuditRate, color: '#7C3AED', count: `${milkAuditedCount}/${milkRows.length}` },
   ];
@@ -1733,11 +1733,11 @@ function DistrictPerformance({ milkRows = [], mpcsRows = [], onViewMpcs, onViewM
       </div>
 
       {/* Milk at a glance — same row treatment as MPCS above, so neither
-          sector is buried below the fold. No KPI cards here: litres already
-          shows in the table below with its own total, and AGM/Audit are in
-          the health card, so there's nothing left that isn't a duplicate. */}
+          sector is buried below the fold. Litres already shows in the table
+          below with its own total, so AGM & Audit compliance is the only
+          card left to show here. */}
       <div style={{marginBottom:'20px'}}>
-        <CompositeHealthCard title="MILK SECTOR HEALTH" score={milkHealthScore} subs={milkHealthSubs} accent="#0891B2" columns={1} />
+        <CompliancePairCard title="MILK AGM & AUDIT COMPLIANCE" subs={milkComplianceSubs} accent="#0891B2" />
       </div>
 
       {/* Full record tables — MPCS and Milk side by side, both always visible
