@@ -1394,20 +1394,34 @@ function GlobalBroadcast({ activeTab, userRole }) {
   );
 }
 
-function BenchmarkCard({ title, value, sub, color, onClick, active }) {
+function BenchmarkCard({ title, value, sub, color, bg, icon, rate, onClick, active }) {
   return (
     <div
       className="kpi-card"
       onClick={onClick}
-      style={onClick ? {
-        cursor: 'pointer',
-        border: active ? '2px solid #7F1D1D' : '1px solid var(--border)',
-        boxShadow: active ? '0 0 0 3px rgba(127,29,29,0.08)' : undefined,
-      } : undefined}
+      style={{
+        cursor: onClick ? 'pointer' : 'default',
+        borderLeft: `4px solid ${color}`,
+        borderColor: active ? color : undefined,
+        background: active ? (bg || '#FFFFFF') : '#FFFFFF',
+        boxShadow: active ? `0 0 0 2px ${color}26` : undefined,
+      }}
     >
-      <div className="kpi-title">{title}</div>
-      <div className="kpi-val" style={{color}}>{value}</div>
+      <div style={{display:'flex', alignItems:'center', justifyContent:'space-between'}}>
+        <span className="kpi-title" style={{color: active ? color : undefined}}>{title}</span>
+        {icon && (
+          <div className="kpi-icon-box" style={{background: bg || '#F1F5F9'}}>
+            <Icon d={icon} size={15} color={color} />
+          </div>
+        )}
+      </div>
+      <div key={value} className="kpi-val kpi-pop" style={{color}}>{value}</div>
       <div className="kpi-sub">{sub}</div>
+      {typeof rate === 'number' && (
+        <div className="kpi-progress-track">
+          <div className="kpi-progress-fill" style={{width: `${Math.max(0, Math.min(100, rate))}%`, background: color}} />
+        </div>
+      )}
     </div>
   );
 }
@@ -1500,7 +1514,7 @@ function DistrictPerformance({ milkRows = [], mpcsRows = [], onViewMpcs, onViewM
   // long) or cramming every parameter into one wide table (unreadable).
   const mpcsCards = [
     {
-      key: 'csc', title: 'CSC TRANSACTIONS', value: mpcsCscCount, sub: 'Active CSC centers', color: '#047857',
+      key: 'csc', title: 'CSC TRANSACTIONS', value: mpcsCscCount, sub: 'Active CSC centers', color: '#047857', bg: '#ECFDF5', icon: I.domain,
       tableTitle: 'CSC Transactions — by Society',
       columns: [
         { key: 'society', label: 'Society', render: r => <span style={{fontWeight:700, color:'#0F172A'}}>{r.society_name || '—'}</span> },
@@ -1517,7 +1531,7 @@ function DistrictPerformance({ milkRows = [], mpcsRows = [], onViewMpcs, onViewM
       ],
     },
     {
-      key: 'deposit', title: 'MONTHLY DEPOSIT', value: fmtRs(mpcsMonthlyDeposit), sub: 'Aggregate sales deposit', color: '#7F1D1D',
+      key: 'deposit', title: 'MONTHLY DEPOSIT', value: fmtRs(mpcsMonthlyDeposit), sub: 'Aggregate sales deposit', color: '#7F1D1D', bg: '#FEF2F2', icon: I.money,
       tableTitle: 'Monthly Deposit — by Society',
       columns: [
         { key: 'society', label: 'Society', render: r => <span style={{fontWeight:700, color:'#0F172A'}}>{r.society_name || '—'}</span> },
@@ -1525,7 +1539,7 @@ function DistrictPerformance({ milkRows = [], mpcsRows = [], onViewMpcs, onViewM
       ],
     },
     {
-      key: 'agm', title: 'MPCS AGM COMPLETED', value: `${mpcsAgmCompletedCount} / ${mpcsRows.length}`, sub: `${mpcsAgmRate}% AGM compliance`, color: '#1D4ED8',
+      key: 'agm', title: 'MPCS AGM COMPLETED', value: `${mpcsAgmCompletedCount} / ${mpcsRows.length}`, sub: `${mpcsAgmRate}% AGM compliance`, color: '#1D4ED8', bg: '#EFF6FF', icon: I.members, rate: mpcsAgmRate,
       tableTitle: 'MPCS AGM Completed — by Society', onView: onViewMpcs,
       columns: [
         { key: 'society', label: 'Society', render: r => <span style={{fontWeight:700, color:'#0F172A'}}>{r.society_name || '—'}</span> },
@@ -1534,7 +1548,7 @@ function DistrictPerformance({ milkRows = [], mpcsRows = [], onViewMpcs, onViewM
       ],
     },
     {
-      key: 'audit', title: 'MPCS AGM AUDITED', value: `${mpcsAuditedCount} / ${mpcsRows.length}`, sub: `${mpcsAuditRate}% audit compliance`, color: '#B45309',
+      key: 'audit', title: 'MPCS AGM AUDITED', value: `${mpcsAuditedCount} / ${mpcsRows.length}`, sub: `${mpcsAuditRate}% audit compliance`, color: '#B45309', bg: '#FFFBEB', icon: I.chart, rate: mpcsAuditRate,
       tableTitle: 'MPCS AGM Audited — by Society', onView: onViewMpcs,
       columns: [
         { key: 'society', label: 'Society', render: r => <span style={{fontWeight:700, color:'#0F172A'}}>{r.society_name || '—'}</span> },
@@ -1544,7 +1558,7 @@ function DistrictPerformance({ milkRows = [], mpcsRows = [], onViewMpcs, onViewM
       ],
     },
     {
-      key: 'turnover', title: 'TOTAL TURNOVER', value: fmtRs(mpcsTotalTurnover), sub: 'Aggregate annual turnover', color: '#065F46',
+      key: 'turnover', title: 'TOTAL TURNOVER', value: fmtRs(mpcsTotalTurnover), sub: 'Aggregate annual turnover', color: '#065F46', bg: '#ECFDF5', icon: I.money,
       tableTitle: 'Total Turnover — by Society', onView: onViewMpcs,
       columns: [
         { key: 'society', label: 'Society', render: r => <span style={{fontWeight:700, color:'#0F172A'}}>{r.society_name || '—'}</span> },
@@ -1555,7 +1569,7 @@ function DistrictPerformance({ milkRows = [], mpcsRows = [], onViewMpcs, onViewM
 
   const milkCards = [
     {
-      key: 'litres', title: 'LITERS COLLECTED', value: fmtL(milkTotalLitres), sub: 'Total milk volume', color: '#0F172A',
+      key: 'litres', title: 'LITERS COLLECTED', value: fmtL(milkTotalLitres), sub: 'Total milk volume', color: '#0891B2', bg: '#ECFEFF', icon: I.litres,
       tableTitle: 'Liters Collected — by Unit', onView: onViewMilk,
       columns: [
         { key: 'center', label: 'Center', render: r => <span style={{fontWeight:700, color:'#0F172A'}}>{r.center_name || '—'}</span> },
@@ -1565,7 +1579,7 @@ function DistrictPerformance({ milkRows = [], mpcsRows = [], onViewMpcs, onViewM
       ],
     },
     {
-      key: 'agm', title: 'MILK AGM COMPLETED', value: `${milkAgmCompletedCount} / ${milkRows.length}`, sub: `${milkAgmRate}% AGM compliance`, color: '#047857',
+      key: 'agm', title: 'MILK AGM COMPLETED', value: `${milkAgmCompletedCount} / ${milkRows.length}`, sub: `${milkAgmRate}% AGM compliance`, color: '#047857', bg: '#ECFDF5', icon: I.members, rate: milkAgmRate,
       tableTitle: 'Milk AGM Completed — by Unit', onView: onViewMilk,
       columns: [
         { key: 'center', label: 'Center', render: r => <span style={{fontWeight:700, color:'#0F172A'}}>{r.center_name || '—'}</span> },
@@ -1574,7 +1588,7 @@ function DistrictPerformance({ milkRows = [], mpcsRows = [], onViewMpcs, onViewM
       ],
     },
     {
-      key: 'audit', title: 'MILK AGM AUDITED', value: `${milkAuditedCount} / ${milkRows.length}`, sub: `${milkAuditRate}% audit compliance`, color: '#7C3AED',
+      key: 'audit', title: 'MILK AGM AUDITED', value: `${milkAuditedCount} / ${milkRows.length}`, sub: `${milkAuditRate}% audit compliance`, color: '#7C3AED', bg: '#F5F3FF', icon: I.chart, rate: milkAuditRate,
       tableTitle: 'Milk AGM Audited — by Unit', onView: onViewMilk,
       columns: [
         { key: 'center', label: 'Center', render: r => <span style={{fontWeight:700, color:'#0F172A'}}>{r.center_name || '—'}</span> },
@@ -1608,18 +1622,20 @@ function DistrictPerformance({ milkRows = [], mpcsRows = [], onViewMpcs, onViewM
         <div className="kpi-grid" style={{gridTemplateColumns:'repeat(auto-fit, minmax(200px, 1fr))'}}>
           {mpcsCards.map(c => (
             <BenchmarkCard
-              key={c.key} title={c.title} value={c.value} sub={c.sub} color={c.color}
+              key={c.key} title={c.title} value={c.value} sub={c.sub} color={c.color} bg={c.bg} icon={c.icon} rate={c.rate}
               onClick={() => setSelectedMpcsCard(c.key)} active={selectedMpcsCard === c.key}
             />
           ))}
         </div>
-        <ParamTable
-          title={activeMpcsCard.tableTitle}
-          emptyLabel="No MPCS societies on record."
-          rows={mpcsWithStatus}
-          onView={activeMpcsCard.onView}
-          columns={activeMpcsCard.columns}
-        />
+        <div key={activeMpcsCard.key} className="fade-in">
+          <ParamTable
+            title={activeMpcsCard.tableTitle}
+            emptyLabel="No MPCS societies on record."
+            rows={mpcsWithStatus}
+            onView={activeMpcsCard.onView}
+            columns={activeMpcsCard.columns}
+          />
+        </div>
       </div>
 
       {/* Milk Sector Benchmarks */}
@@ -1630,18 +1646,20 @@ function DistrictPerformance({ milkRows = [], mpcsRows = [], onViewMpcs, onViewM
         <div className="kpi-grid" style={{gridTemplateColumns:'repeat(auto-fit, minmax(200px, 1fr))'}}>
           {milkCards.map(c => (
             <BenchmarkCard
-              key={c.key} title={c.title} value={c.value} sub={c.sub} color={c.color}
+              key={c.key} title={c.title} value={c.value} sub={c.sub} color={c.color} bg={c.bg} icon={c.icon} rate={c.rate}
               onClick={() => setSelectedMilkCard(c.key)} active={selectedMilkCard === c.key}
             />
           ))}
         </div>
-        <ParamTable
-          title={activeMilkCard.tableTitle}
-          emptyLabel="No Milk PCS units on record."
-          rows={milkWithStatus}
-          onView={activeMilkCard.onView}
-          columns={activeMilkCard.columns}
-        />
+        <div key={activeMilkCard.key} className="fade-in">
+          <ParamTable
+            title={activeMilkCard.tableTitle}
+            emptyLabel="No Milk PCS units on record."
+            rows={milkWithStatus}
+            onView={activeMilkCard.onView}
+            columns={activeMilkCard.columns}
+          />
+        </div>
       </div>
 
     </div>
