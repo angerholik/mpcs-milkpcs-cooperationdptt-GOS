@@ -1394,37 +1394,12 @@ function GlobalBroadcast({ activeTab, userRole }) {
   );
 }
 
-// A KPI card that can drive the compliance table below it. Non-compliance
-// cards (CSC/Deposit/Turnover/Litres) have no natural "pending" state, so
-// they stay static info tiles — only AGM/Audit cards are clickable.
-function BenchmarkCard({ title, value, sub, color, filterKey, activeFilter, onToggle, complianceRate }) {
-  const clickable = !!filterKey;
-  const isActive = clickable && activeFilter === filterKey;
+function BenchmarkCard({ title, value, sub, color }) {
   return (
-    <div
-      className="kpi-card"
-      onClick={clickable ? () => onToggle(isActive ? '' : filterKey) : undefined}
-      style={{
-        cursor: clickable ? 'pointer' : 'default',
-        border: isActive ? '2px solid #7F1D1D' : '1px solid var(--border)',
-        boxShadow: isActive ? '0 0 0 3px rgba(127,29,29,0.08)' : undefined,
-        position: 'relative',
-      }}
-      title={clickable ? 'Click to see which societies are pending' : undefined}
-    >
-      {typeof complianceRate === 'number' && (
-        <div style={{
-          position: 'absolute', top: '10px', right: '10px',
-          fontSize: '9px', fontWeight: 800, padding: '2px 7px', borderRadius: '10px',
-          background: complianceRate >= 80 ? '#ECFDF5' : complianceRate >= 50 ? '#FFFBEB' : '#FEF2F2',
-          color: complianceRate >= 80 ? '#047857' : complianceRate >= 50 ? '#92400E' : '#B91C1C',
-        }}>
-          {complianceRate >= 80 ? 'ON TRACK' : complianceRate >= 50 ? 'WATCH' : 'AT RISK'}
-        </div>
-      )}
+    <div className="kpi-card">
       <div className="kpi-title">{title}</div>
       <div className="kpi-val" style={{color}}>{value}</div>
-      <div className="kpi-sub">{sub}{clickable ? (isActive ? ' • showing pending ↓' : ' • click to see who') : ''}</div>
+      <div className="kpi-sub">{sub}</div>
     </div>
   );
 }
@@ -1443,9 +1418,6 @@ function StatusPill({ status }) {
 }
 
 function DistrictPerformance({ milkRows = [], mpcsRows = [], onViewMpcs, onViewMilk }) {
-  const [mpcsFilter, setMpcsFilter] = useState('');
-  const [milkFilter, setMilkFilter] = useState('');
-
   const mpcsWithStatus = useMemo(
     () => mpcsRows.map(r => ({ ...r, ...getMpcsAuditAgm(r) })),
     [mpcsRows]
@@ -1471,18 +1443,6 @@ function DistrictPerformance({ milkRows = [], mpcsRows = [], onViewMpcs, onViewM
   const milkAgmRate = Math.round((milkAgmCompletedCount / milkTotal) * 100);
   const milkAuditRate = Math.round((milkAuditedCount / milkTotal) * 100);
 
-  const mpcsTableRows = useMemo(() => {
-    if (mpcsFilter === 'agm_pending') return mpcsWithStatus.filter(r => r.agm_status !== 'Completed');
-    if (mpcsFilter === 'audit_pending') return mpcsWithStatus.filter(r => r.audit_status !== 'Completed');
-    return mpcsWithStatus;
-  }, [mpcsWithStatus, mpcsFilter]);
-
-  const milkTableRows = useMemo(() => {
-    if (milkFilter === 'agm_pending') return milkWithStatus.filter(r => r.agm_status !== 'Completed');
-    if (milkFilter === 'audit_pending') return milkWithStatus.filter(r => r.audit_status !== 'Completed');
-    return milkWithStatus;
-  }, [milkWithStatus, milkFilter]);
-
   return (
     <div className="fade-in">
       {/* Benchmark Header */}
@@ -1505,29 +1465,22 @@ function DistrictPerformance({ milkRows = [], mpcsRows = [], onViewMpcs, onViewM
           <BenchmarkCard
             title="MPCS AGM COMPLETED" value={`${mpcsAgmCompletedCount} / ${mpcsRows.length}`}
             sub={`${mpcsAgmRate}% AGM compliance`} color="#1D4ED8"
-            filterKey="agm_pending" activeFilter={mpcsFilter} onToggle={setMpcsFilter} complianceRate={mpcsAgmRate}
           />
           <BenchmarkCard
             title="MPCS AGM AUDITED" value={`${mpcsAuditedCount} / ${mpcsRows.length}`}
             sub={`${mpcsAuditRate}% audit compliance`} color="#B45309"
-            filterKey="audit_pending" activeFilter={mpcsFilter} onToggle={setMpcsFilter} complianceRate={mpcsAuditRate}
           />
           <BenchmarkCard title="TOTAL TURNOVER" value={fmtRs(mpcsTotalTurnover)} sub="Aggregate annual turnover" color="#065F46" />
         </div>
 
-        {/* Per-society breakdown — always visible, filtered by the KPI cards above */}
+        {/* Per-society breakdown — every MPCS society, always shown in full */}
         <div className="card" style={{marginTop:'16px', padding:0, overflow:'hidden', borderRadius:'8px', border:'1px solid #E2E8F0'}}>
           <div style={{padding:'12px 16px', borderBottom:'1px solid var(--border)', display:'flex', justifyContent:'space-between', alignItems:'center', background:'#FAFAFA'}}>
             <span style={{fontSize:'13px', fontWeight:800, color:'#0F172A'}}>MPCS Society Breakdown</span>
-            <div style={{display:'flex', alignItems:'center', gap:'8px'}}>
-              <span style={{fontSize:'11px', color:'var(--text-muted)', fontWeight:600}}>{mpcsTableRows.length} of {mpcsRows.length} shown</span>
-              {mpcsFilter && (
-                <button className="btn-ghost" onClick={()=>setMpcsFilter('')} style={{fontSize:'11px', padding:'4px 10px', fontWeight:700}}>Clear filter ×</button>
-              )}
-            </div>
+            <span style={{fontSize:'11px', color:'var(--text-muted)', fontWeight:600}}>{mpcsWithStatus.length} societies</span>
           </div>
-          {mpcsTableRows.length === 0 ? (
-            <div style={{padding:'32px', textAlign:'center', color:'#9CA3AF', fontSize:'13px'}}>No societies match this filter.</div>
+          {mpcsWithStatus.length === 0 ? (
+            <div style={{padding:'32px', textAlign:'center', color:'#9CA3AF', fontSize:'13px'}}>No MPCS societies on record.</div>
           ) : (
             <div className="table-responsive">
               <table className="data-table">
@@ -1542,7 +1495,7 @@ function DistrictPerformance({ milkRows = [], mpcsRows = [], onViewMpcs, onViewM
                   </tr>
                 </thead>
                 <tbody>
-                  {mpcsTableRows.map((r, i) => (
+                  {mpcsWithStatus.map((r, i) => (
                     <tr key={r.id || i}>
                       <td style={{fontWeight:700, color:'#0F172A'}}>{r.society_name || '—'}</td>
                       <td style={{fontSize:'12px', color:'#64748B'}}>{r.registration_number || '—'}</td>
@@ -1571,27 +1524,20 @@ function DistrictPerformance({ milkRows = [], mpcsRows = [], onViewMpcs, onViewM
           <BenchmarkCard
             title="MILK AGM COMPLETED" value={`${milkAgmCompletedCount} / ${milkRows.length}`}
             sub={`${milkAgmRate}% AGM compliance`} color="#047857"
-            filterKey="agm_pending" activeFilter={milkFilter} onToggle={setMilkFilter} complianceRate={milkAgmRate}
           />
           <BenchmarkCard
             title="MILK AGM AUDITED" value={`${milkAuditedCount} / ${milkRows.length}`}
             sub={`${milkAuditRate}% audit compliance`} color="#7C3AED"
-            filterKey="audit_pending" activeFilter={milkFilter} onToggle={setMilkFilter} complianceRate={milkAuditRate}
           />
         </div>
 
         <div className="card" style={{marginTop:'16px', padding:0, overflow:'hidden', borderRadius:'8px', border:'1px solid #E2E8F0'}}>
           <div style={{padding:'12px 16px', borderBottom:'1px solid var(--border)', display:'flex', justifyContent:'space-between', alignItems:'center', background:'#FAFAFA'}}>
             <span style={{fontSize:'13px', fontWeight:800, color:'#0F172A'}}>Milk Unit Breakdown</span>
-            <div style={{display:'flex', alignItems:'center', gap:'8px'}}>
-              <span style={{fontSize:'11px', color:'var(--text-muted)', fontWeight:600}}>{milkTableRows.length} of {milkRows.length} shown</span>
-              {milkFilter && (
-                <button className="btn-ghost" onClick={()=>setMilkFilter('')} style={{fontSize:'11px', padding:'4px 10px', fontWeight:700}}>Clear filter ×</button>
-              )}
-            </div>
+            <span style={{fontSize:'11px', color:'var(--text-muted)', fontWeight:600}}>{milkWithStatus.length} units</span>
           </div>
-          {milkTableRows.length === 0 ? (
-            <div style={{padding:'32px', textAlign:'center', color:'#9CA3AF', fontSize:'13px'}}>No units match this filter.</div>
+          {milkWithStatus.length === 0 ? (
+            <div style={{padding:'32px', textAlign:'center', color:'#9CA3AF', fontSize:'13px'}}>No Milk PCS units on record.</div>
           ) : (
             <div className="table-responsive">
               <table className="data-table">
@@ -1606,7 +1552,7 @@ function DistrictPerformance({ milkRows = [], mpcsRows = [], onViewMpcs, onViewM
                   </tr>
                 </thead>
                 <tbody>
-                  {milkTableRows.map((r, i) => (
+                  {milkWithStatus.map((r, i) => (
                     <tr key={r.id || i}>
                       <td style={{fontWeight:700, color:'#0F172A'}}>{r.center_name || '—'}</td>
                       <td style={{fontSize:'12px', color:'#64748B'}}>{r.registration_number || '—'}</td>
