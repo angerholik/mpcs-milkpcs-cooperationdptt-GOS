@@ -1439,6 +1439,22 @@ function StatusPill({ status }) {
   );
 }
 
+// A ranked value cell — the value itself plus a small bar scaled against the
+// highest value in the same table, so the "who's on top" read that used to
+// live in a separate bar-chart panel is now just part of this one cell,
+// instead of a duplicate panel repeating the same names and numbers.
+function InlineBar({ value, max, color, label }) {
+  const pct = max > 0 ? Math.max(3, (value / max) * 100) : 0;
+  return (
+    <div style={{display:'flex', alignItems:'center', gap:'8px', justifyContent:'flex-end'}}>
+      <div style={{width:'52px', height:'6px', borderRadius:'99px', background:'#F1F5F9', overflow:'hidden', flexShrink:0}}>
+        <div style={{width:`${pct}%`, height:'100%', borderRadius:'99px', background:color}} />
+      </div>
+      <span style={{fontWeight:700, color, minWidth:'60px', textAlign:'right'}}>{label}</span>
+    </div>
+  );
+}
+
 // Renders a signals array (booleans) as filled/empty dots — a quick visual
 // read on how many real, on-record checks a row passes, out of however many
 // were actually evaluated (never implies a formula beyond "count of true").
@@ -1635,6 +1651,8 @@ function DistrictPerformance({ milkRows = [], mpcsRows = [], onViewMpcs, onViewM
     () => [...milkWithStatus].sort((a, b) => (parseFloat(b.litres) || 0) - (parseFloat(a.litres) || 0)),
     [milkWithStatus]
   );
+  const maxMpcsTurnover = parseFloat(mpcsWithStatusSorted[0]?.annual_turnover) || 0;
+  const maxMilkLitres = parseFloat(milkWithStatusSorted[0]?.litres) || 0;
 
   const isThisMonth = d => {
     if (!d) return false;
@@ -1705,7 +1723,7 @@ function DistrictPerformance({ milkRows = [], mpcsRows = [], onViewMpcs, onViewM
           onView={onViewMpcs}
           columns={[
             { key: 'society', label: 'Society', render: r => <span style={{fontWeight:700, color:'#0F172A'}}>{r.society_name || '—'}</span> },
-            { key: 'turnover', label: 'Turnover', align: 'right', render: r => <span style={{fontWeight:700, color:'#065F46'}}>{fmtRs(r.annual_turnover)}</span> },
+            { key: 'turnover', label: 'Turnover', align: 'right', render: r => <InlineBar value={parseFloat(r.annual_turnover) || 0} max={maxMpcsTurnover} color="#7F1D1D" label={fmtRs(r.annual_turnover)} /> },
             { key: 'agm', label: 'AGM', align: 'center', render: r => <StatusPill status={r.agm_status} /> },
             { key: 'audit', label: 'Audit', align: 'center', render: r => <StatusPill status={r.audit_status} /> },
           ]}
@@ -1717,7 +1735,7 @@ function DistrictPerformance({ milkRows = [], mpcsRows = [], onViewMpcs, onViewM
           onView={onViewMilk}
           columns={[
             { key: 'center', label: 'Center', render: r => <span style={{fontWeight:700, color:'#0F172A'}}>{r.center_name || '—'}</span> },
-            { key: 'litres', label: 'Litres', align: 'right', render: r => <span style={{fontWeight:700, color:'#0F172A'}}>{fmtL(r.litres)}</span> },
+            { key: 'litres', label: 'Litres', align: 'right', render: r => <InlineBar value={parseFloat(r.litres) || 0} max={maxMilkLitres} color="#0891B2" label={fmtL(r.litres)} /> },
             { key: 'agm', label: 'AGM', align: 'center', render: r => <StatusPill status={r.agm_status} /> },
             { key: 'audit', label: 'Audit', align: 'center', render: r => <StatusPill status={r.audit_status} /> },
           ]}
