@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, Platform, Pressable } from 'react-native';
 import { MaterialIcons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import { webCapWidth } from '../utils/webStyles';
 
 const COLORS = {
   surface: '#ffffff',
@@ -132,7 +133,7 @@ export default function DemographicsScreen({
           "Submit to Database" is the wizard's forward-navigation action, so
           it lives in a bottom footer after the reviewable content instead. */}
       <View style={styles.stickyActionBanner}>
-        <View style={{ flexDirection: 'row', gap: 8 }}>
+        <View style={[{ flexDirection: 'row', gap: 8 }, webCapWidth]}>
           <View style={styles.btnWrapper}>
             <Pressable
               style={({ hovered, pressed }) => [
@@ -168,7 +169,7 @@ export default function DemographicsScreen({
         </View>
       )}
 
-      <ScrollView style={styles.scrollContent} contentContainerStyle={styles.scrollInner} showsVerticalScrollIndicator={false}>
+      <ScrollView style={styles.scrollContent} contentContainerStyle={[styles.scrollInner, webCapWidth]} showsVerticalScrollIndicator={false}>
         {/* Profile Status Banner */}
         <View style={styles.alertCard}>
           <View style={styles.alertIconBox}>
@@ -220,7 +221,7 @@ export default function DemographicsScreen({
 
       {/* Bottom Footer: wizard forward-navigation action */}
       <View style={styles.bottomFooter}>
-        <View style={styles.btnWrapper}>
+        <View style={[styles.btnWrapper, webCapWidth]}>
           <Pressable
             style={({ hovered, pressed }) => [
               styles.editCtaBtn,

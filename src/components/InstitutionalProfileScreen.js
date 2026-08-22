@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, Platform, Pressable, Switch } from 'react-native';
 import { MaterialIcons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import { webCapWidth } from '../utils/webStyles';
 import { useAutosave } from '../hooks/useAutosave';
 
 const COLORS = {
@@ -269,7 +270,7 @@ export default function InstitutionalProfileScreen({
           "Save & Exit" / "Save & Next" are wizard navigation actions, so
           they live in a bottom footer after the reviewable content instead. */}
       <View style={styles.stickyActionBanner}>
-        <View style={{ flexDirection: 'row', gap: 8 }}>
+        <View style={[{ flexDirection: 'row', gap: 8 }, webCapWidth]}>
           <View style={styles.btnWrapper}>
             <Pressable
               style={({ hovered, pressed }) => [
@@ -306,7 +307,7 @@ export default function InstitutionalProfileScreen({
       <View style={styles.bgBlobBottomLeft} pointerEvents="none" />
       <View style={styles.bgBlobBottomRight} pointerEvents="none" />
 
-      <ScrollView style={styles.scrollContent} contentContainerStyle={styles.scrollInner} showsVerticalScrollIndicator={false}>
+      <ScrollView style={styles.scrollContent} contentContainerStyle={[styles.scrollInner, webCapWidth]} showsVerticalScrollIndicator={false}>
         {/* Profile Status Banner */}
         <View style={styles.alertCard}>
           <View style={styles.alertIconBox}>
@@ -497,7 +498,7 @@ export default function InstitutionalProfileScreen({
 
       {/* Bottom Footer: wizard navigation actions */}
       <View style={styles.bottomFooter}>
-        <View style={{ flexDirection: 'row', gap: 8 }}>
+        <View style={[{ flexDirection: 'row', gap: 8 }, webCapWidth]}>
           <View style={[styles.btnWrapper, { flex: 1 }]}>
             <Pressable
               style={({ hovered, pressed }) => [

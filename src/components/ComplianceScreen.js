@@ -5,6 +5,7 @@ import {
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import { webCapWidth } from '../utils/webStyles';
 
 const COLORS = {
   surface: '#ffffff',
@@ -157,7 +158,7 @@ export default function ComplianceScreen({
           a bottom footer after the reviewable content instead. */}
       {loanIsActive && (
         <View style={styles.stickyActionBanner}>
-          <View style={{ flexDirection: 'row', gap: 8 }}>
+          <View style={[{ flexDirection: 'row', gap: 8 }, webCapWidth]}>
             <View style={styles.btnWrapper}>
               <Pressable
                 style={({ hovered, pressed }) => [
@@ -186,7 +187,7 @@ export default function ComplianceScreen({
       <View style={styles.bgBlobBottomLeft} pointerEvents="none" />
       <View style={styles.bgBlobBottomRight} pointerEvents="none" />
 
-      <ScrollView style={styles.scrollContent} contentContainerStyle={styles.scrollInner} showsVerticalScrollIndicator={false}>
+      <ScrollView style={styles.scrollContent} contentContainerStyle={[styles.scrollInner, webCapWidth]} showsVerticalScrollIndicator={false}>
         <View style={styles.alertCard}>
           <View style={styles.alertIconBox}>
             <MaterialCommunityIcons name="bank-outline" size={20} color={COLORS.amber900} />
@@ -264,7 +265,7 @@ export default function ComplianceScreen({
 
       {/* Bottom Footer: wizard forward-navigation action */}
       <View style={styles.bottomFooter}>
-        <View style={styles.btnWrapper}>
+        <View style={[styles.btnWrapper, webCapWidth]}>
           <Pressable
             style={({ hovered, pressed }) => [
               styles.editCtaBtn,
