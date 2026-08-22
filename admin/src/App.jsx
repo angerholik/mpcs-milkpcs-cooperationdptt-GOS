@@ -304,7 +304,7 @@ const downloadCSV = (rows, filename) => {
 // the same complete field set and flattening (form_data spread to fd_X)
 // that downloadCSV uses, so a "Master"/"Directory" report actually means
 // every recorded field, not a curated handful of summary columns.
-const fullFieldColumns = (fieldOrder) => fieldOrder.map(k => {
+const fieldColumn = (k) => {
   const lookupKey = k.startsWith('fd_') ? k.replace('fd_', '') : k;
   return {
     label: EXPORT_LABELS[lookupKey] || k,
@@ -320,7 +320,91 @@ const fullFieldColumns = (fieldOrder) => fieldOrder.map(k => {
       return String(v);
     },
   };
-});
+};
+const fullFieldColumns = (fieldOrder) => fieldOrder.map(fieldColumn);
+
+// MPCS_FIELD_ORDER was built for the legacy flat-field MPCSForm.js, which
+// isn't even imported in App.js anymore — the real submission flow is a
+// multi-screen wizard that stores demographics/dividend/loan/share-capital/
+// CSC data as nested objects (demographicsData, dividendData, loanData,
+// shareCapitalData, cscDetailsData, cscTransData) instead of the old
+// '3.1'-style scalar keys. Those columns were always blank despite the
+// data genuinely existing — this rewires them to the real shape. A few
+// columns are dropped outright because nothing in the current app collects
+// them at all (bank account/IFSC/type, sales-deposit year/month/volume —
+// the Sales Deposit screen just reuses the turnover/balance fields with no
+// distinct data of its own —, loan recovered/outstanding, CSC PAN/Aadhaar/
+// bank account).
+const MPCS_DEAD_COLUMNS = new Set([
+  'fd_7.1', 'fd_7.3', 'fd_7.4', 'fd_7.6',
+  'fd_7.69', 'fd_7.70', 'fd_7.71', 'fd_7.72',
+  'fd_8.5', 'fd_8.6',
+  'fd_9.3', 'fd_9.4', 'fd_9.6',
+]);
+const mpcsMasterColumns = () => {
+  const demoRow = (r, category) => (r.form_data?.demographicsData || []).find(d => d.category === category) || {};
+  const demoSum = (r, key) => (r.form_data?.demographicsData || []).reduce((s, d) => s + (parseInt(d[key]) || 0), 0) || '';
+  const agmDate = (r) => {
+    try {
+      const raw = r.form_data?.activities;
+      const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
+      const m = String(parsed?.agm_done || '').match(/\(([^)]+)\)/);
+      return m ? m[1] : '';
+    } catch { return ''; }
+  };
+  const cscTx = (r) => r.form_data?.cscTransData?.transactions || [];
+  const cscTxTotal = (r) => cscTx(r).reduce((s, t) => s + (parseFloat(t.amount) || 0), 0) || '';
+
+  const overrides = {
+    'fd_3.1': r => demoRow(r, 'SC').male || '',
+    'fd_3.2': r => demoRow(r, 'SC').female || '',
+    'fd_3.3': r => demoRow(r, 'ST').male || '',
+    'fd_3.4': r => demoRow(r, 'ST').female || '',
+    'fd_3.5': r => demoRow(r, 'OBC').male || '',
+    'fd_3.6': r => demoRow(r, 'OBC').female || '',
+    'fd_3.7': r => demoRow(r, 'Others').male || '', // "GEN" in the label, "Others" in the newer schema's category name
+    'fd_3.8': r => demoRow(r, 'Others').female || '',
+    'fd_3.9': r => demoSum(r, 'total'),
+    'fd_3.10': r => demoSum(r, 'male'),
+    'fd_3.11': r => demoSum(r, 'female'),
+    'fd_4.4': agmDate,
+    'fd_6.1': r => (parseFloat(r.form_data?.dividendData?.dividendAmount) > 0 ? 'Yes' : 'No'),
+    'fd_6.2': r => r.form_data?.dividendData?.dividendRate || '',
+    'fd_6.3': r => r.form_data?.dividendData?.dividendAmount || '',
+    'fd_8.0': r => (r.form_data?.loanData?.hasLoan ? 'Yes' : 'No'),
+    'fd_8.1': r => r.form_data?.loanData?.loanType || '',
+    'fd_8.2': r => r.form_data?.loanData?.sanctionDate || '',
+    'fd_8.3': r => r.form_data?.loanData?.beneficiaries || '',
+    'fd_8.4': r => r.form_data?.loanData?.loanExtended || '',
+    'fd_8.8': r => r.form_data?.shareCapitalData?.authorizedCapital || '',
+    'fd_8.9': r => r.form_data?.shareCapitalData?.paidUpCapital || '',
+    'fd_8.10': r => r.form_data?.shareCapitalData?.asOfDate || '',
+    'fd_8.11': r => r.form_data?.shareCapitalData?.totalDeposits || '',
+    'fd_9.1': r => (r.form_data?.cscDetailsData?.isCscActive ? 'Yes' : 'No'),
+    'fd_9.2': r => r.form_data?.cscDetailsData?.cscId || '',
+    'fd_9.5': r => r.form_data?.cscDetailsData?.mobileNumber || '',
+    'fd_9.7': r => r.form_data?.cscDetailsData?.emailId || '',
+    'fd_9.7z': r => (cscTx(r).length > 0 ? 'Yes' : 'No'),
+    'fd_9.7a': r => { const d = cscTx(r)[0]?.date; return d ? (new Date(d).getFullYear() || '') : ''; },
+    'fd_9.8': r => { const d = cscTx(r)[0]?.date; return d ? new Date(d).toLocaleString('en-IN', { month: 'long' }) : ''; },
+    'fd_9.9': cscTxTotal,
+    'fd_9.10': cscTxTotal,
+    // Never written as a top-level DB column despite the field being real
+    // and collected — fall back to the raw form_data the mobile app also
+    // saves alongside it.
+    'manager_name': r => r.manager_name || r.form_data?.managerName || r.form_data?.['2.2'] || '',
+  };
+
+  return MPCS_FIELD_ORDER
+    .filter(k => !MPCS_DEAD_COLUMNS.has(k))
+    .map(k => {
+      if (overrides[k]) {
+        const lookupKey = k.startsWith('fd_') ? k.replace('fd_', '') : k;
+        return { label: EXPORT_LABELS[lookupKey] || k, get: overrides[k] };
+      }
+      return fieldColumn(k);
+    });
+};
 
 // A generic CSV exporter for arbitrary column shapes — unlike downloadCSV
 // above (which only knows the fixed MPCS/Milk submission field layouts),
@@ -3440,7 +3524,7 @@ function Dashboard({ onLogout, session }) {
                   // per entity, widening left-right instead of exploding into
                   // a member-per-row table that would break the one-entity-
                   // one-row shape every other report here uses).
-                  const withMembers = (rows, fieldOrder, nameOf, type) => {
+                  const withMembers = (rows, baseColumns, nameOf, type) => {
                     const sets = rows.map(r => membersFor(nameOf(r), type));
                     const maxMembers = sets.length ? Math.max(0, ...sets.map(s => s.length)) : 0;
                     const memberCols = [];
@@ -3452,7 +3536,7 @@ function Dashboard({ onLogout, session }) {
                       );
                     }
                     return [
-                      ...fullFieldColumns(fieldOrder),
+                      ...baseColumns,
                       { label: 'Registered Members Count', get: r => membersFor(nameOf(r), type).length },
                       ...memberCols,
                     ];
@@ -3466,10 +3550,10 @@ function Dashboard({ onLogout, session }) {
                     // export, joined with Member Registry, not a curated
                     // subset of either.
                     rows = scopedMilkRows.filter(r => inRange(r.created_at));
-                    columns = withMembers(rows, MILK_FIELD_ORDER, r => r.center_name, 'MILK');
+                    columns = withMembers(rows, fullFieldColumns(MILK_FIELD_ORDER), r => r.center_name, 'MILK');
                   } else if (reportCategory === 'MPCS Master') {
                     rows = scopedMpcsRows.filter(r => inRange(r.created_at));
-                    columns = withMembers(rows, MPCS_FIELD_ORDER, r => r.society_name, 'MPCS');
+                    columns = withMembers(rows, mpcsMasterColumns(), r => r.society_name, 'MPCS');
                   } else if (reportCategory === 'Audit & Compliance Audit Log') {
                     rows = [
                       ...scopedMpcsRows.filter(r => inRange(r.created_at)).map(r => ({ ...r, ...getMpcsAuditAgm(r), _sector: 'MPCS', _name: r.society_name || 'Unnamed Society' })),
