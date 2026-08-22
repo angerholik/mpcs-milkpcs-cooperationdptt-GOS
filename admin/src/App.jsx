@@ -3018,74 +3018,77 @@ function Dashboard({ onLogout, session }) {
   );
 
   const MpcsCharts = () => (
-    <div style={{display:'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(380px, 1fr))', gap: '24px', marginBottom: '32px'}}>
-      
+    <div style={{display:'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px', marginBottom: '24px'}}>
+
       {/* 1. Economic Health Donut */}
-      <div className="card" style={{height:'360px', padding: '24px', position: 'relative', overflow: 'hidden'}}>
+      <div className="card" style={{height:'220px', padding: '18px', position: 'relative', overflow: 'hidden'}}>
         <div style={{position:'absolute', top:0, right:0, width:'150px', height:'150px', background:'radial-gradient(circle, rgba(212,175,55,0.05) 0%, transparent 70%)', pointerEvents:'none'}}/>
-        <div style={{display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:'20px'}}>
+        <div style={{display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:'8px'}}>
           <div>
-            <h3 style={{fontSize:'15px', fontWeight: 800, color: 'var(--text-primary)', display: 'flex', alignItems:'center', gap: '8px'}}>
-              <Icon d={I.money} size={18} color="var(--gold)"/> Economic Sustainability
+            <h3 style={{fontSize:'14px', fontWeight: 800, color: 'var(--text-primary)', display: 'flex', alignItems:'center', gap: '8px'}}>
+              <Icon d={I.money} size={16} color="var(--gold)"/> Economic Sustainability
             </h3>
-            <p style={{fontSize:'11px', color:'var(--text-muted)', marginTop:'2px', fontWeight:600}}>Profitability Ratio</p>
+            <p style={{fontSize:'10px', color:'var(--text-muted)', marginTop:'2px', fontWeight:600}}>Profitability Ratio</p>
           </div>
         </div>
-        <ResponsiveContainer width="100%" height="70%">
-          <PieChart>
-            <defs>
-              <linearGradient id="gradProfit" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#7F1D1D" stopOpacity={1}/>
-                <stop offset="100%" stopColor="#7F1D1D" stopOpacity={1}/>
-              </linearGradient>
-              <linearGradient id="gradLoss" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#EF4444" stopOpacity={1}/>
-                <stop offset="100%" stopColor="#991B1B" stopOpacity={1}/>
-              </linearGradient>
-            </defs>
-            <Pie
-              data={chartData_MpcsProfit}
-              innerRadius={75}
-              outerRadius={95}
-              paddingAngle={8}
-              dataKey="value"
-              isAnimationActive={false}
-            >
-              {chartData_MpcsProfit.map((entry, index) => {
-                const fill = entry.name === 'Profitable' ? 'url(#gradProfit)' : entry.name === 'Loss Making' ? 'url(#gradLoss)' : '#B45309';
-                return <Cell key={`cell-${index}`} fill={fill} stroke="rgba(255,255,255,0.2)" strokeWidth={2}/>;
-              })}
-            </Pie>
-            <Tooltip content={<CustomTooltip />} />
-          </PieChart>
-        </ResponsiveContainer>
-        <div style={{display:'flex', justifyContent:'center', gap:'24px', marginTop:'4px'}}>
-           {chartData_MpcsProfit.map(d => (
-             <div key={d.name} style={{display:'flex', alignItems:'center', gap:'8px'}}>
-               <div style={{width:'10px', height:'10px', borderRadius:'3px', background: d.name === 'Profitable' ? 'var(--emerald)' : d.name === 'Loss Making' ? '#EF4444' : '#B45309', boxShadow: '0 2px 4px rgba(0,0,0,0.1)'}}/>
-               <span style={{fontSize:'12px', fontWeight:700, color:'var(--text-secondary)'}}>{d.name}</span>
-             </div>
-           ))}
+        <div style={{display:'flex', alignItems:'center', gap:'16px', height:'calc(100% - 46px)'}}>
+          <ResponsiveContainer width="55%" height="100%">
+            <PieChart>
+              <defs>
+                <linearGradient id="gradProfit" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#7F1D1D" stopOpacity={1}/>
+                  <stop offset="100%" stopColor="#7F1D1D" stopOpacity={1}/>
+                </linearGradient>
+                <linearGradient id="gradLoss" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#EF4444" stopOpacity={1}/>
+                  <stop offset="100%" stopColor="#991B1B" stopOpacity={1}/>
+                </linearGradient>
+              </defs>
+              <Pie
+                data={chartData_MpcsProfit}
+                innerRadius={42}
+                outerRadius={58}
+                paddingAngle={8}
+                dataKey="value"
+                isAnimationActive={false}
+              >
+                {chartData_MpcsProfit.map((entry, index) => {
+                  const fill = entry.name === 'Profitable' ? 'url(#gradProfit)' : entry.name === 'Loss Making' ? 'url(#gradLoss)' : '#B45309';
+                  return <Cell key={`cell-${index}`} fill={fill} stroke="rgba(255,255,255,0.2)" strokeWidth={2}/>;
+                })}
+              </Pie>
+              <Tooltip content={<CustomTooltip />} />
+            </PieChart>
+          </ResponsiveContainer>
+          <div style={{display:'flex', flexDirection:'column', gap:'10px'}}>
+             {chartData_MpcsProfit.map(d => (
+               <div key={d.name} style={{display:'flex', alignItems:'center', gap:'8px'}}>
+                 <div style={{width:'10px', height:'10px', borderRadius:'3px', flexShrink:0, background: d.name === 'Profitable' ? 'var(--emerald)' : d.name === 'Loss Making' ? '#EF4444' : '#B45309', boxShadow: '0 2px 4px rgba(0,0,0,0.1)'}}/>
+                 <span style={{fontSize:'11px', fontWeight:700, color:'var(--text-secondary)'}}>{d.name} ({d.value})</span>
+               </div>
+             ))}
+          </div>
         </div>
       </div>
 
       {/* 2. Audit Grade Bar */}
-      <div className="card" style={{height:'360px', padding: '24px'}}>
-        <div style={{display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:'20px'}}>
+      <div className="card" style={{height:'220px', padding: '18px'}}>
+        <div style={{display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:'8px'}}>
           <div>
-            <h3 style={{fontSize:'15px', fontWeight: 800, color: 'var(--text-primary)', display: 'flex', alignItems:'center', gap: '8px'}}>
-              <Icon d={I.submit} size={18} color="var(--emerald)"/> Compliance Audit
+            <h3 style={{fontSize:'14px', fontWeight: 800, color: 'var(--text-primary)', display: 'flex', alignItems:'center', gap: '8px'}}>
+              <Icon d={I.submit} size={16} color="var(--emerald)"/> Compliance Audit
             </h3>
-            <p style={{fontSize:'11px', color:'var(--text-muted)', marginTop:'2px', fontWeight:600}}>AGM & Audit Completion Status</p>
+            <p style={{fontSize:'10px', color:'var(--text-muted)', marginTop:'2px', fontWeight:600}}>AGM & Audit Completion Status</p>
           </div>
         </div>
-        <ResponsiveContainer width="100%" height="80%">
-          <BarChart data={chartData_MpcsAudit} margin={{top: 10, bottom: 20}}>
+        <div style={{height:'144px'}}>
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart data={chartData_MpcsAudit} margin={{top: 10, bottom: 0}}>
             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(0,0,0,0.03)" />
-            <XAxis dataKey="name" fontSize={11} fontWeight={800} axisLine={false} tickLine={false} tick={{fill: 'var(--text-secondary)'}} />
-            <YAxis hide />
+            <XAxis dataKey="name" fontSize={10} fontWeight={800} axisLine={false} tickLine={false} tick={{fill: 'var(--text-secondary)'}} />
+            <YAxis hide allowDecimals={false} />
             <Tooltip content={<CustomTooltip />} cursor={{fill: 'rgba(0,0,0,0.02)'}}/>
-            <Bar dataKey="value" name="Societies" radius={[8, 8, 8, 8]} barSize={40} isAnimationActive={false}>
+            <Bar dataKey="value" name="Societies" radius={[6, 6, 6, 6]} barSize={32} isAnimationActive={false}>
               {chartData_MpcsAudit.map((entry, index) => {
                  const colors = { 'Audit Completed': '#047857', 'Audit Pending': '#EF4444', 'AGM Completed': '#1D4ED8', 'AGM Pending': '#B45309' };
                  return <Cell key={`cell-${index}`} fill={colors[entry.name] || 'var(--emerald-light)'} fillOpacity={0.9} />;
@@ -3093,33 +3096,42 @@ function Dashboard({ onLogout, session }) {
             </Bar>
           </BarChart>
         </ResponsiveContainer>
+        </div>
       </div>
 
       {/* 3. Turnover & Balance by Society */}
-      <div className="card" style={{height:'360px', padding: '24px', gridColumn: 'span 1'}}>
-        <div style={{display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:'20px'}}>
+      <div className="card" style={{height:'220px', padding: '18px', gridColumn: 'span 1'}}>
+        <div style={{display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:'8px'}}>
           <div>
-            <h3 style={{fontSize:'15px', fontWeight: 800, color: 'var(--text-primary)', display: 'flex', alignItems:'center', gap: '8px'}}>
-              <Icon d={I.domain} size={18} color="var(--emerald)"/> Financial Authority Index
+            <h3 style={{fontSize:'14px', fontWeight: 800, color: 'var(--text-primary)', display: 'flex', alignItems:'center', gap: '8px'}}>
+              <Icon d={I.domain} size={16} color="var(--emerald)"/> Financial Authority Index
             </h3>
-            <p style={{fontSize:'11px', color:'var(--text-muted)', marginTop:'2px', fontWeight:600}}>Turnover & Balance by Society</p>
+            <p style={{fontSize:'10px', color:'var(--text-muted)', marginTop:'2px', fontWeight:600}}>Turnover & Balance by Society</p>
           </div>
         </div>
-        <ResponsiveContainer width="100%" height="80%">
-          <AreaChart data={chartData_MpcsRegional} margin={{left: -20, right: 10}}>
-            <defs>
-              <linearGradient id="colorTurnover" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="var(--emerald)" stopOpacity={0.15}/>
-                <stop offset="95%" stopColor="var(--emerald)" stopOpacity={0}/>
-              </linearGradient>
-            </defs>
-            <XAxis dataKey="name" fontSize={10} fontWeight={800} axisLine={false} tickLine={false} tick={{fill: 'var(--text-muted)'}} />
-            <YAxis hide />
-            <Tooltip content={<CustomTooltip />} />
-            <Area type="monotone" dataKey="turnover" name="Aggregate Turnover" stroke="var(--emerald)" strokeWidth={3} fillOpacity={1} fill="url(#colorTurnover)" isAnimationActive={false} />
-            <Area type="monotone" dataKey="balance" name="Cash Liquidity" stroke="var(--gold)" strokeWidth={3} fill="transparent" strokeDasharray="5 5" isAnimationActive={false} />
-          </AreaChart>
-        </ResponsiveContainer>
+        {chartData_MpcsRegional.every(d => d.turnover === 0 && d.balance === 0) ? (
+          <div style={{height:'144px', display:'flex', alignItems:'center', justifyContent:'center', color:'#9CA3AF', fontSize:'12px', fontStyle:'italic'}}>
+            No turnover or balance recorded yet.
+          </div>
+        ) : (
+          <div style={{height:'144px'}}>
+          <ResponsiveContainer width="100%" height="100%">
+            <AreaChart data={chartData_MpcsRegional} margin={{left: -20, right: 10}}>
+              <defs>
+                <linearGradient id="colorTurnover" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="var(--emerald)" stopOpacity={0.15}/>
+                  <stop offset="95%" stopColor="var(--emerald)" stopOpacity={0}/>
+                </linearGradient>
+              </defs>
+              <XAxis dataKey="name" fontSize={10} fontWeight={800} axisLine={false} tickLine={false} tick={{fill: 'var(--text-muted)'}} />
+              <YAxis hide />
+              <Tooltip content={<CustomTooltip />} />
+              <Area type="monotone" dataKey="turnover" name="Aggregate Turnover" stroke="var(--emerald)" strokeWidth={3} fillOpacity={1} fill="url(#colorTurnover)" isAnimationActive={false} />
+              <Area type="monotone" dataKey="balance" name="Cash Liquidity" stroke="var(--gold)" strokeWidth={3} fill="transparent" strokeDasharray="5 5" isAnimationActive={false} />
+            </AreaChart>
+          </ResponsiveContainer>
+          </div>
+        )}
       </div>
     </div>
   );
