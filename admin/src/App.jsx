@@ -2585,7 +2585,23 @@ function Dashboard({ onLogout, session }) {
   const [reportCategory, setReportCategory] = useState('Milk PCS Master');
   const [reportStartDate, setReportStartDate] = useState('2026-01-01');
   const [reportEndDate, setReportEndDate] = useState(new Date().toISOString().slice(0, 10));
+  const [reportEntity, setReportEntity] = useState(''); // '' = all societies/centers
   const [generatedReport, setGeneratedReport] = useState(null); // { title, columns, rows } | null
+
+  // Which society/center names to offer depends on the report category —
+  // an MPCS report should only list MPCS societies, a Milk report only
+  // Milk centers, so the dropdown can't accidentally suggest a name that
+  // doesn't exist in the category being generated.
+  const reportEntityOptions = useMemo(() => {
+    let names;
+    if (reportCategory === 'Milk PCS Master') names = scopedMilkRows.map(r => r.center_name);
+    else if (reportCategory === 'MPCS Master') names = scopedMpcsRows.map(r => r.society_name);
+    else if (reportCategory === 'MPCS Member List') names = scopedMemberRows.filter(m => (m.society_type || '').toUpperCase() === 'MPCS').map(m => m.society_name);
+    else if (reportCategory === 'Milk PCS Member List') names = scopedMemberRows.filter(m => (m.society_type || '').toUpperCase() === 'MILK').map(m => m.society_name);
+    else if (reportCategory === 'Audit & Compliance Audit Log') names = [...scopedMpcsRows.map(r => r.society_name), ...scopedMilkRows.map(r => r.center_name)];
+    else names = [];
+    return [...new Set(names.filter(Boolean))].sort();
+  }, [reportCategory, scopedMilkRows, scopedMpcsRows, scopedMemberRows]);
   const reportTableRef = useRef(null);
 
   const formatTimeAgo = (dateStr) => {
@@ -3479,13 +3495,21 @@ function Dashboard({ onLogout, session }) {
               <div style={{display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(220px, 1fr))', gap:'16px', marginBottom:'24px'}}>
                 <div className="field-group">
                   <label className="field-label">Report Category</label>
-                  <select className="field-input" value={reportCategory} onChange={e=>{setReportCategory(e.target.value); setGeneratedReport(null);}}>
+                  <select className="field-input" value={reportCategory} onChange={e=>{setReportCategory(e.target.value); setReportEntity(''); setGeneratedReport(null);}}>
                     <option>Milk PCS Master</option>
                     <option>MPCS Master</option>
                     <option>MPCS Member List</option>
                     <option>Milk PCS Member List</option>
                     <option>Audit & Compliance Audit Log</option>
                     <option>Official Inspectors Registry</option>
+                  </select>
+                </div>
+                <div className="field-group">
+                  <label className="field-label">Society / Center{reportCategory === 'Official Inspectors Registry' && ' (not applicable)'}</label>
+                  <select className="field-input" value={reportEntity} disabled={reportCategory === 'Official Inspectors Registry'}
+                    onChange={e=>{setReportEntity(e.target.value); setGeneratedReport(null);}}>
+                    <option value="">All ({reportEntityOptions.length})</option>
+                    {reportEntityOptions.map(n => <option key={n} value={n}>{n}</option>)}
                   </select>
                 </div>
                 <div className="field-group">
@@ -3516,16 +3540,16 @@ function Dashboard({ onLogout, session }) {
                     // columns bolted onto this one, which made the table
                     // unmanageably wide and turned a simple submission log
                     // into a lopsided grid.
-                    rows = scopedMilkRows.filter(r => inRange(r.created_at));
+                    rows = scopedMilkRows.filter(r => inRange(r.created_at) && (!reportEntity || r.center_name === reportEntity));
                     columns = fullFieldColumns(MILK_FIELD_ORDER);
                   } else if (reportCategory === 'MPCS Master') {
-                    rows = scopedMpcsRows.filter(r => inRange(r.created_at));
+                    rows = scopedMpcsRows.filter(r => inRange(r.created_at) && (!reportEntity || r.society_name === reportEntity));
                     columns = mpcsMasterColumns();
                   } else if (reportCategory === 'MPCS Member List' || reportCategory === 'Milk PCS Member List') {
                     // One row per registered member — a proper flat table
                     // instead of the Member N repeating-column pattern.
                     const type = reportCategory === 'MPCS Member List' ? 'MPCS' : 'MILK';
-                    rows = scopedMemberRows.filter(m => (m.society_type || '').toUpperCase() === type && inRange(m.created_at));
+                    rows = scopedMemberRows.filter(m => (m.society_type || '').toUpperCase() === type && inRange(m.created_at) && (!reportEntity || m.society_name === reportEntity));
                     columns = [
                       { label: 'Date Added', get: r => r.created_at ? new Date(r.created_at).toLocaleDateString('en-IN') : '—' },
                       { label: 'Member Name', get: r => r.member_name || '—' },
@@ -3537,8 +3561,8 @@ function Dashboard({ onLogout, session }) {
                     ];
                   } else if (reportCategory === 'Audit & Compliance Audit Log') {
                     rows = [
-                      ...scopedMpcsRows.filter(r => inRange(r.created_at)).map(r => ({ ...r, ...getMpcsAuditAgm(r), _sector: 'MPCS', _name: r.society_name || 'Unnamed Society' })),
-                      ...scopedMilkRows.filter(r => inRange(r.created_at)).map(r => ({ ...r, ...getMilkAuditAgm(r), _sector: 'MILK', _name: r.center_name || 'Unnamed Center' })),
+                      ...scopedMpcsRows.filter(r => inRange(r.created_at) && (!reportEntity || r.society_name === reportEntity)).map(r => ({ ...r, ...getMpcsAuditAgm(r), _sector: 'MPCS', _name: r.society_name || 'Unnamed Society' })),
+                      ...scopedMilkRows.filter(r => inRange(r.created_at) && (!reportEntity || r.center_name === reportEntity)).map(r => ({ ...r, ...getMilkAuditAgm(r), _sector: 'MILK', _name: r.center_name || 'Unnamed Center' })),
                     ];
                     columns = [
                       { label: 'Date', get: r => r.created_at ? new Date(r.created_at).toLocaleDateString('en-IN') : '—' },
