@@ -234,7 +234,7 @@ function normalizeMpcsAuditFields(row) {
 
 // Helper to parse MPCS Audit & AGM details
 function getMpcsAuditAgm(row) {
-  if (!row) return { audit_done: 'No', audit_year: '—', audit_category: '—', audit_status: 'Not Completed', agm_done: 'No', agm_date: '—' };
+  if (!row) return { audit_done: 'No', audit_year: '—', audit_category: '—', audit_status: 'Not Completed', agm_done: 'No', agm_date: '—', agm_status: 'Pending' };
   const fd = row.form_data || {};
   let audit_done = row.audit_done || (fd['4.1'] || 'No');
   let audit_year = row.audit_year || fd['4.2'] || '—';
@@ -243,7 +243,12 @@ function getMpcsAuditAgm(row) {
   let agm_done = (fd['4.4'] || row.agm_done || (fd['4.1'] === 'Yes' ? 'Yes' : 'No'));
   if (agm_done !== 'No' && agm_done !== 'Yes') agm_done = 'Yes';
 
-  return { audit_done, audit_year, audit_category, audit_status: isYes(audit_done) ? 'Completed' : 'Not Completed', agm_done, agm_date };
+  // agm_status mirrors getMilkAuditAgm's field so callers can read a single
+  // 'Completed'/'Pending' status for either sector without branching on
+  // shape — this field was missing here entirely, so every AGM figure for
+  // MPCS anywhere in the app was silently reading undefined (always
+  // counted as not-completed) regardless of the real agm_done value.
+  return { audit_done, audit_year, audit_category, audit_status: isYes(audit_done) ? 'Completed' : 'Not Completed', agm_done, agm_date, agm_status: agm_done === 'Yes' ? 'Completed' : 'Pending' };
 }
 
 const downloadCSV = (rows, filename) => {
@@ -286,6 +291,30 @@ const downloadCSV = (rows, filename) => {
 
   // Trigger Download
   const blob = new Blob([headers + '\n' + csvBody], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `${filename}_${new Date().toISOString().split('T')[0]}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+};
+
+// A generic CSV exporter for arbitrary column shapes — unlike downloadCSV
+// above (which only knows the fixed MPCS/Milk submission field layouts),
+// this takes explicit {label, get} columns matching whatever's on screen,
+// so the Reports generator can export report types downloadCSV was never
+// built to handle (compliance log, inspector registry) without silently
+// mis-shaping them through the wrong field order.
+const downloadReportCSV = (columns, rows, filename) => {
+  if (!rows || !rows.length) return;
+  const escape = (v) => {
+    if (v === null || v === undefined) return '';
+    const str = String(v);
+    return /[",\n]/.test(str) ? `"${str.replace(/"/g, '""')}"` : str;
+  };
+  const headers = columns.map(c => escape(c.label)).join(',');
+  const body = rows.map(r => columns.map(c => escape(c.get(r))).join(',')).join('\n');
+  const blob = new Blob([headers + '\n' + body], { type: 'text/csv;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
@@ -2426,6 +2455,12 @@ function Dashboard({ onLogout, session }) {
   const [filterMpcsProfitStatus, setFilterMpcsProfitStatus] = useState('');
   const [filterMpcsAuditGrade, setFilterMpcsAuditGrade] = useState('');
 
+  // Reports & Export Center
+  const [reportCategory, setReportCategory] = useState('Milk Submissions Master');
+  const [reportStartDate, setReportStartDate] = useState('2026-01-01');
+  const [reportEndDate, setReportEndDate] = useState(new Date().toISOString().slice(0, 10));
+  const [generatedReport, setGeneratedReport] = useState(null); // { title, columns, rows } | null
+
   const formatTimeAgo = (dateStr) => {
     if (!dateStr) return 'Recently';
     const date = new Date(dateStr);
@@ -3310,14 +3345,14 @@ function Dashboard({ onLogout, session }) {
                   <h2 style={{fontSize:'20px', fontWeight:900, color:'#0F172A'}}>📄 Reports & Export Center</h2>
                   <p style={{fontSize:'12px', color:'#64748B', marginTop:'2px'}}>Generate and download official district co-operative oversight reports</p>
                 </div>
-                <button className="btn-primary" onClick={() => downloadCSV(scopedMilkRows, 'Gyalshing_District_Master_Report')}>
-                  <Icon d={I.download} size={14} color="#FFF"/> Download Master CSV
+                <button className="btn-primary" onClick={() => downloadCSV(scopedMilkRows, 'Gyalshing_Milk_Master_Report')}>
+                  <Icon d={I.download} size={14} color="#FFF"/> Download Milk Master CSV
                 </button>
               </div>
               <div style={{display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(220px, 1fr))', gap:'16px', marginBottom:'24px'}}>
                 <div className="field-group">
                   <label className="field-label">Report Category</label>
-                  <select className="field-input">
+                  <select className="field-input" value={reportCategory} onChange={e=>{setReportCategory(e.target.value); setGeneratedReport(null);}}>
                     <option>Milk Submissions Master</option>
                     <option>MPCS Societies Directory</option>
                     <option>Audit & Compliance Audit Log</option>
@@ -3325,17 +3360,106 @@ function Dashboard({ onLogout, session }) {
                   </select>
                 </div>
                 <div className="field-group">
-                  <label className="field-label">Start Date</label>
-                  <input type="date" className="field-input" defaultValue="2026-01-01"/>
+                  <label className="field-label">Start Date{reportCategory === 'Official Inspectors Registry' && ' (not applicable — roster, not dated submissions)'}</label>
+                  <input type="date" className="field-input" value={reportStartDate} disabled={reportCategory === 'Official Inspectors Registry'}
+                    onChange={e=>{setReportStartDate(e.target.value); setGeneratedReport(null);}}/>
                 </div>
                 <div className="field-group">
-                  <label className="field-label">End Date</label>
-                  <input type="date" className="field-input" defaultValue="2026-08-07"/>
+                  <label className="field-label">End Date{reportCategory === 'Official Inspectors Registry' && ' (not applicable)'}</label>
+                  <input type="date" className="field-input" value={reportEndDate} disabled={reportCategory === 'Official Inspectors Registry'}
+                    onChange={e=>{setReportEndDate(e.target.value); setGeneratedReport(null);}}/>
                 </div>
               </div>
-              <button className="btn-primary" onClick={() => downloadCSV(scopedMpcsRows, 'Filtered_MPCS_Report')}>
-                Generate & Export Filtered Report
+              <button
+                className="btn-primary"
+                onClick={() => {
+                  const inRange = (dateStr) => {
+                    if (!dateStr) return false;
+                    const d = dateStr.slice(0, 10);
+                    return d >= reportStartDate && d <= reportEndDate;
+                  };
+                  let rows = [], columns = [];
+                  if (reportCategory === 'Milk Submissions Master') {
+                    rows = scopedMilkRows.filter(r => inRange(r.created_at));
+                    columns = [
+                      { label: 'Date', get: r => r.created_at ? new Date(r.created_at).toLocaleDateString('en-IN') : '—' },
+                      { label: 'Center', get: r => r.center_name || '—' },
+                      { label: 'Officer', get: r => resolveSubmitter(r, '—') },
+                      { label: 'Litres', get: r => fmtL(r.litres) },
+                      { label: 'Withdrawal', get: r => fmtRs(r.withdrawal) },
+                      { label: 'Balance', get: r => fmtRs(r.balance) },
+                    ];
+                  } else if (reportCategory === 'MPCS Societies Directory') {
+                    rows = scopedMpcsRows.filter(r => inRange(r.created_at));
+                    columns = [
+                      { label: 'Date', get: r => r.created_at ? new Date(r.created_at).toLocaleDateString('en-IN') : '—' },
+                      { label: 'Society', get: r => r.society_name || '—' },
+                      { label: 'Turnover', get: r => fmtRs(r.annual_turnover) },
+                      { label: 'AGM Status', get: r => getMpcsAuditAgm(r).agm_status },
+                      { label: 'Audit Status', get: r => getMpcsAuditAgm(r).audit_status },
+                    ];
+                  } else if (reportCategory === 'Audit & Compliance Audit Log') {
+                    rows = [
+                      ...scopedMpcsRows.filter(r => inRange(r.created_at)).map(r => ({ ...r, ...getMpcsAuditAgm(r), _sector: 'MPCS', _name: r.society_name || 'Unnamed Society' })),
+                      ...scopedMilkRows.filter(r => inRange(r.created_at)).map(r => ({ ...r, ...getMilkAuditAgm(r), _sector: 'MILK', _name: r.center_name || 'Unnamed Center' })),
+                    ];
+                    columns = [
+                      { label: 'Date', get: r => r.created_at ? new Date(r.created_at).toLocaleDateString('en-IN') : '—' },
+                      { label: 'Sector', get: r => r._sector },
+                      { label: 'Entity', get: r => r._name },
+                      { label: 'AGM Status', get: r => r.agm_status },
+                      { label: 'Audit Status', get: r => r.audit_status },
+                    ];
+                  } else {
+                    rows = officers;
+                    columns = [
+                      { label: 'Officer Name', get: r => r.name || '—' },
+                      { label: 'Email', get: r => r.email || '—' },
+                      { label: 'Contact', get: r => r.subdivision || r.mobile || r.phone || '—' },
+                      { label: 'Role', get: r => r.role || 'Inspector' },
+                    ];
+                  }
+                  setGeneratedReport({ title: reportCategory, columns, rows });
+                }}
+              >
+                Generate Report
               </button>
+
+              {generatedReport && (
+                <div style={{marginTop:'20px'}}>
+                  <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'12px'}}>
+                    <span style={{fontSize:'13px', fontWeight:800, color:'#0F172A'}}>{generatedReport.title} — {generatedReport.rows.length} record{generatedReport.rows.length === 1 ? '' : 's'}</span>
+                    <button
+                      className="btn-primary"
+                      disabled={generatedReport.rows.length === 0}
+                      style={{opacity: generatedReport.rows.length === 0 ? 0.5 : 1, cursor: generatedReport.rows.length === 0 ? 'not-allowed' : 'pointer'}}
+                      onClick={() => downloadReportCSV(generatedReport.columns, generatedReport.rows, generatedReport.title.replace(/\s+/g, '_'))}
+                    >
+                      <Icon d={I.download} size={14} color="#FFF"/> Download CSV
+                    </button>
+                  </div>
+                  {generatedReport.rows.length === 0 ? (
+                    <div style={{padding:'30px', textAlign:'center', color:'#9CA3AF', fontSize:'12px', border:'1px solid #E2E8F0', borderRadius:'8px'}}>
+                      No records in this category for the selected date range.
+                    </div>
+                  ) : (
+                    <div className="table-responsive" style={{border:'1px solid #E2E8F0', borderRadius:'8px', overflow:'hidden'}}>
+                      <table className="data-table">
+                        <thead>
+                          <tr>{generatedReport.columns.map(c => <th key={c.label}>{c.label}</th>)}</tr>
+                        </thead>
+                        <tbody>
+                          {generatedReport.rows.map((r, i) => (
+                            <tr key={r.id || i}>
+                              {generatedReport.columns.map(c => <td key={c.label}>{c.get(r)}</td>)}
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           )}
 
