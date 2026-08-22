@@ -3799,7 +3799,7 @@ function Dashboard({ onLogout, session }) {
                   <span>Assigned Jurisdiction:</span> <strong>Cooperation Department Geyzing HQ</strong>
                 </div>
                 <div style={{padding:'12px 16px', background:'#F8FAFC', borderRadius:'8px', border:'1px solid #E2E8F0', display:'flex', justifyContent:'space-between'}}>
-                  <span>Realtime Field Sync:</span> <strong style={{color:'#059669'}}>Active (30-second interval)</strong>
+                  <span>Realtime Field Sync:</span> <strong style={{color:'#059669'}}>Active (10-second interval)</strong>
                 </div>
               </div>
             </div>
