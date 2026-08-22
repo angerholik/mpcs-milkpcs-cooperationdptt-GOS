@@ -58,10 +58,10 @@ const formatLastUpdated = (isoString) => {
 export default function HomeScreen({
   activeModule = 'MILK',
   onSwitchModule,
-  societyName = "Khorong",
-  centerId = "SOC-492-X",
-  district = "District 4, Sector B",
-  reportingMonth = "AUG 2024",
+  societyName = "",
+  centerId = "",
+  district = "",
+  reportingMonth = "",
   reportStatus = "DRAFT",
   progressPercent = 0,
   completedCount = 0,
@@ -103,7 +103,7 @@ export default function HomeScreen({
 
         <View style={styles.headerRight}>
           <TouchableOpacity style={styles.societySelector} onPress={onManageInstitutions}>
-            <Text style={styles.societySelectorText}>{selectedSociety?.name || societyName || 'KHORONG'}</Text>
+            <Text style={styles.societySelectorText}>{selectedSociety?.name || societyName || 'Select Society'}</Text>
             <MaterialCommunityIcons name="chevron-down" size={16} color="rgba(255,255,255,0.7)" />
           </TouchableOpacity>
           <TouchableOpacity style={styles.notifyBtn}>
@@ -146,10 +146,10 @@ export default function HomeScreen({
         <View style={styles.overviewCard}>
           <View style={styles.overviewHeader}>
             <View style={{ flex: 1 }}>
-              <Text style={styles.societyTitle}>{societyName || selectedSociety?.name || 'Gyalshing Milk Center'}</Text>
+              <Text style={styles.societyTitle}>{societyName || selectedSociety?.name || 'Society Name Missing'}</Text>
               <View style={styles.locationRow}>
                 <MaterialCommunityIcons name="map-marker-outline" size={16} color={COLORS.slate400} />
-                <Text style={styles.societyLocation}>{formatGpuLabel(district) || "Ranchi, Jharkhand"}</Text>
+                <Text style={styles.societyLocation}>{formatGpuLabel(district) || 'Location Not Set'}</Text>
               </View>
             </View>
             <View style={styles.activeBadge}>
@@ -171,7 +171,7 @@ export default function HomeScreen({
           <View style={styles.reportHeader}>
             <View>
               <Text style={styles.reportSubtitle}>CURRENT REPORTING PERIOD</Text>
-              <Text style={styles.reportTitle}>{reportingMonth || 'AUG 2024'}</Text>
+              <Text style={styles.reportTitle}>{reportingMonth || 'Current Month'}</Text>
             </View>
             <View style={[styles.monthBadge, reportStatus === 'MONTHLY PARAMS OK' ? styles.badgeSuccess : styles.badgeWarning]}>
               <Text style={[styles.monthBadgeText, reportStatus === 'MONTHLY PARAMS OK' ? styles.badgeTextSuccess : styles.badgeTextWarning]}>
