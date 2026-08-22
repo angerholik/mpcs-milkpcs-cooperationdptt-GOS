@@ -5,6 +5,7 @@ import {
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import { webCapWidth } from '../../utils/webStyles';
 
 const COLORS = {
   surface: '#ffffff',
@@ -137,7 +138,7 @@ export default function MpcsCscTransactionsScreen({
 
       <ScrollView
         style={styles.scrollContent}
-        contentContainerStyle={styles.scrollInner}
+        contentContainerStyle={[styles.scrollInner, webCapWidth]}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
@@ -454,6 +455,7 @@ export default function MpcsCscTransactionsScreen({
 
       {/* ── Bottom Bar ── */}
       <View style={styles.bottomBar}>
+        <View style={[{ flexDirection: 'row', flex: 1, gap: 10 }, webCapWidth]}>
         <TouchableOpacity style={styles.navBackBtn} onPress={onBack} activeOpacity={0.7}>
           <Text style={styles.buttonTextSecondary}>BACK</Text>
         </TouchableOpacity>
@@ -470,6 +472,7 @@ export default function MpcsCscTransactionsScreen({
           <Text style={styles.buttonTextPrimary}>SAVE &amp; NEXT</Text>
           <MaterialCommunityIcons name="arrow-right" size={16} color="#ffffff" />
         </Pressable>
+        </View>
       </View>
     </View>
   );
@@ -967,12 +970,10 @@ const styles = StyleSheet.create({
 
   // ── Bottom Bar ──
   bottomBar: {
-    flexDirection: 'row',
     padding: 14,
     backgroundColor: COLORS.surface,
     borderTopWidth: 1,
     borderTopColor: COLORS.slate200,
-    gap: 10,
   },
   navBackBtn: {
     flex: 1,

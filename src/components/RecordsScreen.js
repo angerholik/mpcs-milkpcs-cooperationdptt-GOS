@@ -6,6 +6,7 @@ import * as Sharing from 'expo-sharing';
 import HeaderNav from './HeaderNav';
 import BottomNav from './BottomNav';
 import { supabase } from '../supabase';
+import { webCapWidth } from '../utils/webStyles';
 
 const COLORS = {
   primary: '#7C1C1C',
@@ -270,7 +271,7 @@ export default function RecordsScreen({
     <View style={styles.container}>
       <HeaderNav />
 
-      <ScrollView style={styles.scrollContent} contentContainerStyle={styles.scrollInner}>
+      <ScrollView style={styles.scrollContent} contentContainerStyle={[styles.scrollInner, webCapWidth]}>
         {/* Screen Title */}
         <View style={styles.titleRow}>
           <View>

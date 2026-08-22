@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Pressable, ScrollView, TextInput, Platform } from 'react-native';
 import { MaterialIcons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import { webCapWidth } from '../utils/webStyles';
 
 // STITCH Design Tokens (Matching Dashboard Overview)
 const COLORS = {
@@ -130,7 +131,7 @@ export default function MyInstitutionsScreen({
       <View style={styles.bgBlobTop} pointerEvents="none" />
       <View style={styles.bgBlobBottomRight} pointerEvents="none" />
 
-      <ScrollView style={styles.scrollContent} contentContainerStyle={styles.scrollInner} showsVerticalScrollIndicator={false}>
+      <ScrollView style={styles.scrollContent} contentContainerStyle={[styles.scrollInner, webCapWidth]} showsVerticalScrollIndicator={false}>
         {/* Modern Quick Summary Cards Bar */}
         <View style={styles.summaryBarRow}>
           <View style={styles.summaryCard}>

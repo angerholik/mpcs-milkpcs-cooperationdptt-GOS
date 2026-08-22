@@ -5,6 +5,7 @@ import {
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import { webCapWidth } from '../utils/webStyles';
 import { fetchMembers, saveMember, updateMember, deleteMember, resolveMemberFlag } from '../supabase';
 
 const COLORS = {
@@ -205,7 +206,7 @@ export default function MemberDataScreen({
 
       <ScrollView
         style={styles.scrollContent}
-        contentContainerStyle={styles.scrollInner}
+        contentContainerStyle={[styles.scrollInner, webCapWidth]}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
