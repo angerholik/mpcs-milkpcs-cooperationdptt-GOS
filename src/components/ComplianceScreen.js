@@ -152,11 +152,13 @@ export default function ComplianceScreen({
         </View>
       </View>
 
-      {/* Sticky Action Banner */}
-      <View style={styles.stickyActionBanner}>
-        <View style={{ flexDirection: 'row', gap: 8 }}>
-          {loanIsActive && (
-            <View style={[styles.btnWrapper, { flex: 1 }]}>
+      {/* Sticky Action Banner — only the contextual edit action. "Save &
+          Next" is the wizard's forward-navigation action, so it lives in
+          a bottom footer after the reviewable content instead. */}
+      {loanIsActive && (
+        <View style={styles.stickyActionBanner}>
+          <View style={{ flexDirection: 'row', gap: 8 }}>
+            <View style={styles.btnWrapper}>
               <Pressable
                 style={({ hovered, pressed }) => [
                   styles.editCtaBtn,
@@ -175,29 +177,9 @@ export default function ComplianceScreen({
                 <Text style={styles.editCtaText}>Update Loan Status</Text>
               </Pressable>
             </View>
-          )}
-
-          <View style={[styles.btnWrapper, { flex: 1 }]}>
-            <Pressable
-              style={({ hovered, pressed }) => [
-                styles.editCtaBtn,
-                pressed && { transform: [{ scale: 0.98 }] },
-                hovered && Platform.OS === 'web' && { shadowOpacity: 0.4 }
-              ]}
-              onPress={handleSaveAndNext}
-            >
-              <LinearGradient
-                colors={['#047857', '#064e3b']}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-                style={StyleSheet.absoluteFillObject}
-              />
-              <Text style={styles.editCtaText}>Save & Next</Text>
-              <MaterialCommunityIcons name="arrow-right" size={16} color="#ffffff" />
-            </Pressable>
           </View>
         </View>
-      </View>
+      )}
 
       {/* Decorative Ambient Background Blobs */}
       <View style={styles.bgBlobTop} pointerEvents="none" />
@@ -280,6 +262,29 @@ export default function ComplianceScreen({
         )}
       </ScrollView>
 
+      {/* Bottom Footer: wizard forward-navigation action */}
+      <View style={styles.bottomFooter}>
+        <View style={styles.btnWrapper}>
+          <Pressable
+            style={({ hovered, pressed }) => [
+              styles.editCtaBtn,
+              pressed && { transform: [{ scale: 0.98 }] },
+              hovered && Platform.OS === 'web' && { shadowOpacity: 0.4 }
+            ]}
+            onPress={handleSaveAndNext}
+          >
+            <LinearGradient
+              colors={['#047857', '#064e3b']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={StyleSheet.absoluteFillObject}
+            />
+            <Text style={styles.editCtaText}>Save & Next</Text>
+            <MaterialCommunityIcons name="arrow-right" size={16} color="#ffffff" />
+          </Pressable>
+        </View>
+      </View>
+
       {/* Edit Modal */}
       {modalVisible && (
         <View style={styles.inAppModalOverlay}>
@@ -354,6 +359,15 @@ const styles = StyleSheet.create({
     borderBottomColor: 'rgba(226, 232, 240, 0.8)',
     paddingHorizontal: 12,
     paddingVertical: 8,
+    zIndex: 10,
+  },
+  bottomFooter: {
+    backgroundColor: 'rgba(255, 255, 255, 0.97)',
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(226, 232, 240, 0.8)',
+    paddingHorizontal: 12,
+    paddingTop: 10,
+    paddingBottom: Platform.OS === 'ios' ? 28 : 12,
     zIndex: 10,
   },
   bgBlobTop: {

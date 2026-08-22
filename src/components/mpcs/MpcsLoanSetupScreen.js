@@ -122,10 +122,12 @@ export default function MpcsLoanSetupScreen({
         </View>
       </View>
 
-      {/* Sticky Action Banner at Top */}
+      {/* Sticky Action Banner at Top — only the contextual edit action.
+          "Save & Next" is the wizard's forward-navigation action, so it
+          lives in a bottom footer after the reviewable content instead. */}
       <View style={styles.stickyActionBanner}>
         <View style={{ flexDirection: 'row', gap: 8 }}>
-          <View style={[styles.btnWrapper, { flex: 1 }]}>
+          <View style={styles.btnWrapper}>
             <Pressable
               style={({ hovered, pressed }) => [
                 styles.editCtaBtn,
@@ -144,28 +146,6 @@ export default function MpcsLoanSetupScreen({
               <Text style={styles.editCtaText}>Edit Loan Details</Text>
             </Pressable>
           </View>
-
-          {onNext && (
-            <View style={[styles.btnWrapper, { flex: 1 }]}>
-              <Pressable
-                style={({ hovered, pressed }) => [
-                  styles.editCtaBtn,
-                  pressed && { transform: [{ scale: 0.98 }] },
-                  hovered && Platform.OS === 'web' && { shadowOpacity: 0.4 }
-                ]}
-                onPress={() => { handleSave(); onNext(); }}
-              >
-                <LinearGradient
-                  colors={['#047857', '#064e3b']}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 0 }}
-                  style={StyleSheet.absoluteFillObject}
-                />
-                <Text style={styles.editCtaText}>Save & Next</Text>
-                <MaterialCommunityIcons name="arrow-right" size={16} color="#ffffff" />
-              </Pressable>
-            </View>
-          )}
         </View>
       </View>
 
@@ -285,6 +265,31 @@ export default function MpcsLoanSetupScreen({
         </View>
 
       </ScrollView>
+
+      {/* Bottom Footer: wizard forward-navigation action */}
+      {onNext && (
+        <View style={styles.bottomFooter}>
+          <View style={styles.btnWrapper}>
+            <Pressable
+              style={({ hovered, pressed }) => [
+                styles.editCtaBtn,
+                pressed && { transform: [{ scale: 0.98 }] },
+                hovered && Platform.OS === 'web' && { shadowOpacity: 0.4 }
+              ]}
+              onPress={() => { handleSave(); onNext(); }}
+            >
+              <LinearGradient
+                colors={['#047857', '#064e3b']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={StyleSheet.absoluteFillObject}
+              />
+              <Text style={styles.editCtaText}>Save & Next</Text>
+              <MaterialCommunityIcons name="arrow-right" size={16} color="#ffffff" />
+            </Pressable>
+          </View>
+        </View>
+      )}
 
       {/* In-App Slide-Up Sheet */}
       {modalVisible && (
@@ -424,6 +429,15 @@ const styles = StyleSheet.create({
     borderBottomColor: 'rgba(226, 232, 240, 0.8)',
     paddingHorizontal: 12,
     paddingVertical: 8,
+    zIndex: 10,
+  },
+  bottomFooter: {
+    backgroundColor: 'rgba(255, 255, 255, 0.97)',
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(226, 232, 240, 0.8)',
+    paddingHorizontal: 12,
+    paddingTop: 10,
+    paddingBottom: Platform.OS === 'ios' ? 28 : 12,
     zIndex: 10,
   },
   bgBlobTop: {
