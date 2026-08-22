@@ -3286,13 +3286,6 @@ function Dashboard({ onLogout, session }) {
           {/* 🏠 DASHBOARD MAIN OVERVIEW */}
           {activeTab === 'DASHBOARD' && (
             <div className="fade-in">
-              {/* Header actions */}
-              <div style={{display:'flex', justifyContent:'flex-end', alignItems:'center', marginBottom:'24px'}}>
-                <button className="btn-ghost" onClick={fetchAll}>
-                  <Icon d={I.refresh} size={14} color="#334155"/> Refresh
-                </button>
-              </div>
-
               {/* Module Filter Tab Pill Bar */}
               <div style={{display:'flex', gap:'8px', marginBottom:'24px'}}>
                 <TabBtn id="MPCS" label="MPCS Societies" icon={I.domain} count={scopedMpcsRows.length}/>
