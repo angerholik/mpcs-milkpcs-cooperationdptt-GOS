@@ -2977,7 +2977,7 @@ export default function App() {
                         initialMobile={cscDetailsData?.mobileNumber || ''}
                         initialEmail={cscDetailsData?.emailId || ''}
                         initialActiveServices={cscDetailsData?.activeServicesCount || ''}
-                        initialIsCscActive={cscDetailsData?.isCscActive ?? true}
+                        initialIsCscActive={!!cscDetailsData?.isCscActive}
                         onSaveCscDetails={(data) => {
                           setCscDetailsData(data);
                           saveMasterStateToStorage({ cscDetailsData: data });

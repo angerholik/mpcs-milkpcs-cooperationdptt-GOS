@@ -34,7 +34,7 @@ export default function MpcsCscDetailsScreen({
   initialMobile = "",
   initialEmail = "",
   initialActiveServices = "",
-  initialIsCscActive = true,
+  initialIsCscActive = false,
   onSaveCscDetails,
   onNext,
   onBack

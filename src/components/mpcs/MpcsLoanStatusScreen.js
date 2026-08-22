@@ -170,7 +170,7 @@ export default function MpcsLoanStatusScreen({
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={styles.cardHeaderTitle}>Loan Recovery Ledger</Text>
-                <Text style={styles.cardHeaderSub}>{masterLoanType || 'Active loan'} — ₹{masterLoanExtended || 0} extended</Text>
+                <Text style={styles.cardHeaderSub}>{masterLoanType || 'Loan type not set'} — ₹{masterLoanExtended || 0} extended</Text>
               </View>
             </View>
 
