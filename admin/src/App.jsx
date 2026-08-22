@@ -3453,7 +3453,7 @@ function Dashboard({ onLogout, session }) {
                       <span style={{color:'#64748B', fontWeight:600}}>Field Officers Active</span>
                       <strong style={{color:'#059669', fontWeight:800}}>{officers.length}</strong>
                     </div>
-                    <div style={{display:'flex', justifyContent:'space-between', padding:'10px 0', borderBottom:'1px solid #F1F5F9', cursor:'pointer'}} onClick={() => setActiveTab('AUDIT')}>
+                    <div style={{display:'flex', justifyContent:'space-between', padding:'10px 0', borderBottom:'1px solid #F1F5F9', cursor:'pointer'}} onClick={() => { setActiveFilter(null); setFilterMpcsAuditStatus('No'); setActiveTab('MPCS'); }}>
                       <span style={{color:'#64748B', fontWeight:600}}>Pending Audits</span>
                       <strong style={{color:'#D97706', fontWeight:800}}>{scopedMpcsRows.filter(r=>!isYes(r.audit_done)).length}</strong>
                     </div>
