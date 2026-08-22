@@ -75,6 +75,7 @@ const EXPORT_LABELS = {
   'registration_number': 'Registration No',
   'registration_authority': 'Authority / Division',
   'president_name': 'Official Name',
+  'manager_name': 'Manager Name',
   'president_mobile': 'President Mobile (Cell)',
   'manager_mobile': 'Manager Mobile (Cell)',
   'audit_done': 'Audit Status',
@@ -101,7 +102,7 @@ const EXPORT_LABELS = {
   '6.1': 'Dividend Declared?', '6.2': 'Dividend Rate (%)', '6.3': 'Dividend Amount Paid', '6.4': 'Dividend Distribution Date',
   '7.1': 'Primary Bank Type', '7.3': 'Bank A/c No', '7.4': 'Bank IFSC', '7.6': 'Balance As On Date',
   '7.69': 'Sales Deposit Year', '7.70': 'Sales Deposit Month', '7.71': 'Monthly Sales Volume', '7.72': 'Total Sales Till Date',
-  '8.1': 'Loan Specifics', '8.2': 'Sanction Date', '8.3': 'No. of Beneficiaries', '8.4': 'Loan Extended (Last FY)', '8.5': 'Loan Recovered (Last FY)', '8.6': 'Loan Outstanding (Total)',
+  '8.0': 'Active Loan?', '8.1': 'Loan Specifics', '8.2': 'Sanction Date', '8.3': 'No. of Beneficiaries', '8.4': 'Loan Extended (Last FY)', '8.5': 'Loan Recovered (Last FY)', '8.6': 'Loan Outstanding (Total)',
   '8.8': 'Authorised Cap', '8.9': 'Paid-Up Cap', '8.10': 'Paid-Up Date', '8.11': 'Total Institutional Deposit',
   '9.1': 'CSC Active?', '9.2': 'CSC ID', '9.3': 'CSC Registered PAN', '9.4': 'CSC Aadhaar No', '9.5': 'CSC Contact No', '9.6': 'CSC Bank Account', '9.7': 'CSC Email ID',
   '9.7z': 'CSC Monthly Transaction Done?', '9.7a': 'CSC Transaction Year', '9.8': 'CSC Transaction Month', '9.9': 'Monthly CSC Turnover', '9.10': 'Total CSC Volume'
@@ -3463,7 +3464,18 @@ function Dashboard({ onLogout, session }) {
                         <tbody>
                           {generatedReport.rows.map((r, i) => (
                             <tr key={r.id || i}>
-                              {generatedReport.columns.map(c => <td key={c.label}>{c.get(r)}</td>)}
+                              {generatedReport.columns.map(c => {
+                                const val = c.get(r);
+                                // The CSV export (same c.get) always gets the full value —
+                                // this only clips the on-screen cell so long JSON-ish
+                                // fields (e.g. Activities Log) don't render as raw text
+                                // cut off mid-character. Full value is still on hover.
+                                return (
+                                  <td key={c.label} title={val.length > 40 ? val : undefined}>
+                                    <span style={{display:'inline-block', maxWidth:'220px', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', verticalAlign:'bottom'}}>{val}</span>
+                                  </td>
+                                );
+                              })}
                             </tr>
                           ))}
                         </tbody>
