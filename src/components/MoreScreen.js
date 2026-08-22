@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Pressable, ScrollView, Platform } from 'react-native';
 import { MaterialIcons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import { webCapWidth } from '../utils/webStyles';
 import HeaderNav from './HeaderNav';
 import BottomNav from './BottomNav';
 
@@ -104,7 +105,7 @@ export default function MoreScreen({
       <View style={styles.bgBlobTop} pointerEvents="none" />
       <View style={styles.bgBlobBottomLeft} pointerEvents="none" />
 
-      <ScrollView style={styles.scrollContent} contentContainerStyle={styles.scrollInner} showsVerticalScrollIndicator={false}>
+      <ScrollView style={styles.scrollContent} contentContainerStyle={[styles.scrollInner, webCapWidth]} showsVerticalScrollIndicator={false}>
         {/* Officer Profile Card with Gradient */}
         <LinearGradient
           colors={['#7a1a1f', '#4a1017']}
