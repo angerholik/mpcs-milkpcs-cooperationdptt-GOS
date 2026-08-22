@@ -3480,7 +3480,14 @@ function Dashboard({ onLogout, session }) {
               {generatedReport && (
                 <div style={{marginTop:'20px'}}>
                   <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'12px'}}>
-                    <span style={{fontSize:'13px', fontWeight:800, color:'#0F172A'}}>{generatedReport.title} — {generatedReport.rows.length} record{generatedReport.rows.length === 1 ? '' : 's'}</span>
+                    <div>
+                      <span style={{fontSize:'13px', fontWeight:800, color:'#0F172A'}}>{generatedReport.title} — {generatedReport.rows.length} record{generatedReport.rows.length === 1 ? '' : 's'}</span>
+                      {generatedReport.columns.length > 8 && (
+                        <div style={{fontSize:'11px', color:'#64748B', fontWeight:600, marginTop:'2px'}}>
+                          {generatedReport.columns.length} columns — scroll the table horizontally to see all of them →
+                        </div>
+                      )}
+                    </div>
                     <button
                       className="btn-primary"
                       disabled={generatedReport.rows.length === 0}

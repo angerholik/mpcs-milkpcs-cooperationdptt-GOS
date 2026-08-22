@@ -394,7 +394,18 @@ button { cursor: pointer; font-family: inherit; border: none; outline: none; tra
   width: 100%;
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
+  /* macOS/iOS hide scrollbars until actively scrolling by default, so a
+     wide table (e.g. the Reports generator's 60+ column exports) looks
+     like it ends at the card edge with no hint that more data exists.
+     Force a persistent, visible scrollbar instead of relying on the OS
+     default. */
+  scrollbar-width: thin;
+  scrollbar-color: #CBD5E1 #F1F5F9;
 }
+.table-responsive::-webkit-scrollbar { height: 10px; }
+.table-responsive::-webkit-scrollbar-track { background: #F1F5F9; }
+.table-responsive::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 99px; }
+.table-responsive::-webkit-scrollbar-thumb:hover { background: #94A3B8; }
 
 /* Mobile Hamburger Button */
 .mobile-menu-btn {
