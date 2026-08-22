@@ -2888,30 +2888,47 @@ function Dashboard({ onLogout, session }) {
   }, [scopedMilkRows]);
 
   // MPCS Calculations
+  // is_profit's real stored values are 'PROFIT' / 'LOSS' / 'NO_PROFIT_NO_LOSS'
+  // (the profitOrLoss enum saveMpcsSubmission writes, matching what
+  // MPCSDetailModal already reads elsewhere) — this used to compare against
+  // 'Yes'/'No', which real rows never contain, so the chart was always empty
+  // regardless of how many societies had profit data on record.
   const chartData_MpcsProfit = useMemo(() => {
-    const profits = scopedMpcsRows.filter(r => r.is_profit === 'Yes').length;
-    const losses = scopedMpcsRows.filter(r => r.is_profit === 'No').length;
+    const profits = scopedMpcsRows.filter(r => r.is_profit === 'PROFIT').length;
+    const losses = scopedMpcsRows.filter(r => r.is_profit === 'LOSS').length;
+    const breakEven = scopedMpcsRows.filter(r => r.is_profit === 'NO_PROFIT_NO_LOSS').length;
     return [
       { name: 'Profitable', value: profits, color: 'var(--emerald-light)' },
       { name: 'Loss Making', value: losses, color: '#EF4444' },
+      { name: 'Break-even', value: breakEven, color: '#B45309' },
     ].filter(d => d.value > 0);
   }, [scopedMpcsRows]);
 
+  // audit_category (a letter grade A-D) was only ever set by the legacy,
+  // now-unused MPCSForm.js — the live compliance screen collects a
+  // Completed/Pending status and a date, no grade at all, so this bucket
+  // was structurally always zero. Real, always-current data does exist for
+  // AGM/Audit completion status, so that's what this chart shows instead.
   const chartData_MpcsAudit = useMemo(() => {
-    const grades = { 'A': 0, 'B': 0, 'C': 0, 'D': 0 };
-    scopedMpcsRows.forEach(r => { if (r.audit_category && grades[r.audit_category] !== undefined) grades[r.audit_category]++; });
-    return Object.keys(grades).map(k => ({ name: `Grade ${k}`, value: grades[k] }));
+    const withStatus = scopedMpcsRows.map(getMpcsAuditAgm);
+    return [
+      { name: 'Audit Completed', value: withStatus.filter(r => r.audit_status === 'Completed').length },
+      { name: 'Audit Pending', value: withStatus.filter(r => r.audit_status !== 'Completed').length },
+      { name: 'AGM Completed', value: withStatus.filter(r => r.agm_status === 'Completed').length },
+      { name: 'AGM Pending', value: withStatus.filter(r => r.agm_status !== 'Completed').length },
+    ];
   }, [scopedMpcsRows]);
 
+  // registration_authority is never collected anywhere in the live app —
+  // it always falls back to the same hardcoded default, so every society
+  // landed in one bucket and a single-point chart has no line/area to draw.
+  // Grouping by society name instead uses data that's actually distinct
+  // per row.
   const chartData_MpcsRegional = useMemo(() => {
-    const data = {};
-    scopedMpcsRows.forEach(r => {
-      const auth = (r.registration_authority || 'Unknown').replace('Cooperation Department ', '');
-      if (!data[auth]) data[auth] = { name: auth, turnover: 0, balance: 0 };
-      data[auth].turnover += (parseFloat(r.annual_turnover) || 0);
-      data[auth].balance += (parseFloat(r.bank_balance) || 0);
-    });
-    return Object.values(data).sort((a,b) => b.turnover - a.turnover);
+    return scopedMpcsRows
+      .filter(r => r.society_name)
+      .map(r => ({ name: r.society_name, turnover: parseFloat(r.annual_turnover) || 0, balance: parseFloat(r.bank_balance) || 0 }))
+      .sort((a, b) => b.turnover - a.turnover);
   }, [scopedMpcsRows]);
 
   const CustomTooltip = ({ active, payload, label }) => {
@@ -3010,18 +3027,18 @@ function Dashboard({ onLogout, session }) {
                 <stop offset="100%" stopColor="#991B1B" stopOpacity={1}/>
               </linearGradient>
             </defs>
-            <Pie 
-              data={chartData_MpcsProfit} 
-              innerRadius={75} 
-              outerRadius={95} 
-              paddingAngle={8} 
+            <Pie
+              data={chartData_MpcsProfit}
+              innerRadius={75}
+              outerRadius={95}
+              paddingAngle={8}
               dataKey="value"
-              animationBegin={0}
-              animationDuration={1500}
+              isAnimationActive={false}
             >
-              {chartData_MpcsProfit.map((entry, index) => (
-                <Cell key={`cell-${index}`} fill={entry.name === 'Profitable' ? 'url(#gradProfit)' : 'url(#gradLoss)'} stroke="rgba(255,255,255,0.2)" strokeWidth={2}/>
-              ))}
+              {chartData_MpcsProfit.map((entry, index) => {
+                const fill = entry.name === 'Profitable' ? 'url(#gradProfit)' : entry.name === 'Loss Making' ? 'url(#gradLoss)' : '#B45309';
+                return <Cell key={`cell-${index}`} fill={fill} stroke="rgba(255,255,255,0.2)" strokeWidth={2}/>;
+              })}
             </Pie>
             <Tooltip content={<CustomTooltip />} />
           </PieChart>
@@ -3029,7 +3046,7 @@ function Dashboard({ onLogout, session }) {
         <div style={{display:'flex', justifyContent:'center', gap:'24px', marginTop:'4px'}}>
            {chartData_MpcsProfit.map(d => (
              <div key={d.name} style={{display:'flex', alignItems:'center', gap:'8px'}}>
-               <div style={{width:'10px', height:'10px', borderRadius:'3px', background: d.name === 'Profitable' ? 'var(--emerald)' : '#EF4444', boxShadow: '0 2px 4px rgba(0,0,0,0.1)'}}/>
+               <div style={{width:'10px', height:'10px', borderRadius:'3px', background: d.name === 'Profitable' ? 'var(--emerald)' : d.name === 'Loss Making' ? '#EF4444' : '#B45309', boxShadow: '0 2px 4px rgba(0,0,0,0.1)'}}/>
                <span style={{fontSize:'12px', fontWeight:700, color:'var(--text-secondary)'}}>{d.name}</span>
              </div>
            ))}
@@ -3043,7 +3060,7 @@ function Dashboard({ onLogout, session }) {
             <h3 style={{fontSize:'15px', fontWeight: 800, color: 'var(--text-primary)', display: 'flex', alignItems:'center', gap: '8px'}}>
               <Icon d={I.submit} size={18} color="var(--emerald)"/> Compliance Audit
             </h3>
-            <p style={{fontSize:'11px', color:'var(--text-muted)', marginTop:'2px', fontWeight:600}}>Grade Distribution Overview</p>
+            <p style={{fontSize:'11px', color:'var(--text-muted)', marginTop:'2px', fontWeight:600}}>AGM & Audit Completion Status</p>
           </div>
         </div>
         <ResponsiveContainer width="100%" height="80%">
@@ -3052,9 +3069,9 @@ function Dashboard({ onLogout, session }) {
             <XAxis dataKey="name" fontSize={11} fontWeight={800} axisLine={false} tickLine={false} tick={{fill: 'var(--text-secondary)'}} />
             <YAxis hide />
             <Tooltip content={<CustomTooltip />} cursor={{fill: 'rgba(0,0,0,0.02)'}}/>
-            <Bar dataKey="value" name="Societies" radius={[8, 8, 8, 8]} barSize={40}>
+            <Bar dataKey="value" name="Societies" radius={[8, 8, 8, 8]} barSize={40} isAnimationActive={false}>
               {chartData_MpcsAudit.map((entry, index) => {
-                 const colors = { 'Grade A': '#7F1D1D', 'Grade B': '#92400E', 'Grade C': '#F59E0B', 'Grade D': '#EF4444' };
+                 const colors = { 'Audit Completed': '#047857', 'Audit Pending': '#EF4444', 'AGM Completed': '#1D4ED8', 'AGM Pending': '#B45309' };
                  return <Cell key={`cell-${index}`} fill={colors[entry.name] || 'var(--emerald-light)'} fillOpacity={0.9} />;
               })}
             </Bar>
@@ -3062,14 +3079,14 @@ function Dashboard({ onLogout, session }) {
         </ResponsiveContainer>
       </div>
 
-      {/* 3. Regional Financial Index */}
+      {/* 3. Turnover & Balance by Society */}
       <div className="card" style={{height:'360px', padding: '24px', gridColumn: 'span 1'}}>
         <div style={{display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:'20px'}}>
           <div>
             <h3 style={{fontSize:'15px', fontWeight: 800, color: 'var(--text-primary)', display: 'flex', alignItems:'center', gap: '8px'}}>
               <Icon d={I.domain} size={18} color="var(--emerald)"/> Financial Authority Index
             </h3>
-            <p style={{fontSize:'11px', color:'var(--text-muted)', marginTop:'2px', fontWeight:600}}>Capital Capacity by Region</p>
+            <p style={{fontSize:'11px', color:'var(--text-muted)', marginTop:'2px', fontWeight:600}}>Turnover & Balance by Society</p>
           </div>
         </div>
         <ResponsiveContainer width="100%" height="80%">
@@ -3083,8 +3100,8 @@ function Dashboard({ onLogout, session }) {
             <XAxis dataKey="name" fontSize={10} fontWeight={800} axisLine={false} tickLine={false} tick={{fill: 'var(--text-muted)'}} />
             <YAxis hide />
             <Tooltip content={<CustomTooltip />} />
-            <Area type="monotone" dataKey="turnover" name="Aggregate Turnover" stroke="var(--emerald)" strokeWidth={3} fillOpacity={1} fill="url(#colorTurnover)" />
-            <Area type="monotone" dataKey="balance" name="Cash Liquidity" stroke="var(--gold)" strokeWidth={3} fill="transparent" strokeDasharray="5 5" />
+            <Area type="monotone" dataKey="turnover" name="Aggregate Turnover" stroke="var(--emerald)" strokeWidth={3} fillOpacity={1} fill="url(#colorTurnover)" isAnimationActive={false} />
+            <Area type="monotone" dataKey="balance" name="Cash Liquidity" stroke="var(--gold)" strokeWidth={3} fill="transparent" strokeDasharray="5 5" isAnimationActive={false} />
           </AreaChart>
         </ResponsiveContainer>
       </div>
