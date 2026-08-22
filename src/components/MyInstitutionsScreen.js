@@ -277,75 +277,69 @@ export default function MyInstitutionsScreen({
             filteredInstitutions.map((item) => (
               <Pressable
                 key={item.id}
-                style={({ hovered }) => [
+                onPress={() => onSelectSociety && onSelectSociety(item)}
+                style={({ hovered, pressed }) => [
                   styles.institutionCard,
-                  Platform.OS === 'web' && { transition: 'all 0.25s ease' },
-                  hovered && { borderColor: COLORS.slate300, shadowOpacity: 0.08, elevation: 4 }
+                  Platform.OS === 'web' && { transition: 'all 0.2s ease', cursor: 'pointer' },
+                  hovered && { borderColor: COLORS.primary, shadowOpacity: 0.1, elevation: 4 },
+                  pressed && { transform: [{ scale: 0.995 }] }
                 ]}
               >
                 {({ hovered }) => (
                   <>
-                    <View style={styles.cardTopRow}>
-                      {item.type === 'MPCS' ? (
-                        <LinearGradient
-                          colors={['#7a1a1f', '#5c1317']}
-                          start={{ x: 0, y: 0 }}
-                          end={{ x: 1, y: 0 }}
-                          style={styles.typeBadgeGradient}
-                        >
-                          <MaterialCommunityIcons name="office-building" size={12} color="#FFFFFF" />
-                          <Text style={styles.typeBadgeText}>MPCS</Text>
-                        </LinearGradient>
-                      ) : (
-                        <LinearGradient
-                          colors={['#2563eb', '#1d4ed8']}
-                          start={{ x: 0, y: 0 }}
-                          end={{ x: 1, y: 0 }}
-                          style={styles.typeBadgeGradient}
-                        >
-                          <MaterialCommunityIcons name="storefront" size={12} color="#FFFFFF" />
-                          <Text style={styles.typeBadgeText}>MILK PCS</Text>
-                        </LinearGradient>
-                      )}
+                    <View style={[styles.cardAccentBar, { backgroundColor: item.type === 'MPCS' ? COLORS.primary : '#2563eb' }]} />
+                    <View style={styles.cardBody}>
+                      <View style={styles.cardTopRow}>
+                        {item.type === 'MPCS' ? (
+                          <LinearGradient
+                            colors={['#7a1a1f', '#5c1317']}
+                            start={{ x: 0, y: 0 }}
+                            end={{ x: 1, y: 0 }}
+                            style={styles.typeBadgeGradient}
+                          >
+                            <MaterialCommunityIcons name="office-building" size={12} color="#FFFFFF" />
+                            <Text style={styles.typeBadgeText}>MPCS</Text>
+                          </LinearGradient>
+                        ) : (
+                          <LinearGradient
+                            colors={['#2563eb', '#1d4ed8']}
+                            start={{ x: 0, y: 0 }}
+                            end={{ x: 1, y: 0 }}
+                            style={styles.typeBadgeGradient}
+                          >
+                            <MaterialCommunityIcons name="storefront" size={12} color="#FFFFFF" />
+                            <Text style={styles.typeBadgeText}>MILK PCS</Text>
+                          </LinearGradient>
+                        )}
 
-                      <View style={styles.instCodePill}>
-                        <Text style={styles.instCodeText}>{item.gpu || item.district || 'GPU'}</Text>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                          <View style={styles.instCodePill}>
+                            <Text style={styles.instCodeText}>{item.gpu || item.district || 'GPU'}</Text>
+                          </View>
+                          {onRemoveInstitution && (
+                            <TouchableOpacity
+                              style={styles.deleteBtn}
+                              onPress={(e) => { e.stopPropagation?.(); onRemoveInstitution(item.id); }}
+                              activeOpacity={0.7}
+                              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                            >
+                              <MaterialCommunityIcons name="trash-can-outline" size={15} color={COLORS.red600} />
+                            </TouchableOpacity>
+                          )}
+                        </View>
                       </View>
-                    </View>
 
-                    <Text style={[styles.instTitle, hovered && { color: COLORS.primary }]}>{item.name}</Text>
+                      <Text style={[styles.instTitle, hovered && { color: COLORS.primary }]}>{item.name}</Text>
 
-                    <View style={styles.locationRow}>
-                      <MaterialCommunityIcons name="map-marker-outline" size={13} color={COLORS.slate400} />
-                      <Text style={styles.instSub}>{item.regNo || 'Reg. No. Not Set'} • GPU: {item.gpu || item.district || 'Not Set'}</Text>
-                    </View>
+                      <View style={styles.locationRow}>
+                        <MaterialCommunityIcons name="map-marker-outline" size={13} color={COLORS.slate400} />
+                        <Text style={styles.instSub}>{item.regNo || 'Reg. No. Not Set'} • GPU: {item.gpu || item.district || 'Not Set'}</Text>
+                      </View>
 
-                    <View style={styles.cardActionsRow}>
-                      <TouchableOpacity
-                        style={{ flex: 1 }}
-                        onPress={() => onSelectSociety && onSelectSociety(item)}
-                        activeOpacity={0.85}
-                      >
-                        <LinearGradient
-                          colors={['#7a1a1f', '#4a1017']}
-                          start={{ x: 0, y: 0 }}
-                          end={{ x: 1, y: 0 }}
-                          style={styles.openDashBtnGradient}
-                        >
-                          <Text style={styles.openDashBtnText}>SELECT & OPEN DASHBOARD</Text>
-                          <MaterialCommunityIcons name="arrow-right" size={16} color="#FFFFFF" />
-                        </LinearGradient>
-                      </TouchableOpacity>
-
-                      {onRemoveInstitution && (
-                        <TouchableOpacity
-                          style={styles.deleteBtn}
-                          onPress={() => onRemoveInstitution(item.id)}
-                          activeOpacity={0.7}
-                        >
-                          <MaterialCommunityIcons name="trash-can-outline" size={18} color={COLORS.red600} />
-                        </TouchableOpacity>
-                      )}
+                      <View style={styles.openDashRow}>
+                        <Text style={[styles.openDashLinkText, hovered && { color: COLORS.primary }]}>Open Dashboard</Text>
+                        <MaterialCommunityIcons name="arrow-right" size={15} color={hovered ? COLORS.primary : COLORS.slate400} />
+                      </View>
                     </View>
                   </>
                 )}
@@ -693,9 +687,9 @@ const styles = StyleSheet.create({
   emptySub: { fontFamily: FONT_FAMILY, fontSize: 12, color: COLORS.slate500, textAlign: 'center', maxWidth: 260 },
 
   institutionCard: {
+    flexDirection: 'row',
     backgroundColor: COLORS.surface,
     borderRadius: 16,
-    padding: 14,
     borderWidth: 1,
     borderColor: COLORS.slate200,
     shadowColor: '#0f172a',
@@ -703,7 +697,10 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.04,
     shadowRadius: 8,
     elevation: 2,
+    overflow: 'hidden',
   },
+  cardAccentBar: { width: 4 },
+  cardBody: { flex: 1, padding: 14 },
   cardTopRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
   typeBadgeGradient: {
     paddingHorizontal: 8,
@@ -724,27 +721,22 @@ const styles = StyleSheet.create({
   },
   instCodeText: { fontFamily: FONT_FAMILY, fontSize: 11, fontWeight: '700', color: COLORS.slate600 },
   instTitle: { fontFamily: FONT_FAMILY, fontSize: 16, fontWeight: '800', color: COLORS.onSurface },
-  locationRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4, marginBottom: 14 },
+  locationRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4, marginBottom: 2 },
   instSub: { fontFamily: FONT_FAMILY, fontSize: 12, color: COLORS.slate500, fontWeight: '500' },
 
-  cardActionsRow: { flexDirection: 'row', gap: 8 },
-  openDashBtnGradient: {
-    paddingVertical: 10,
-    paddingHorizontal: 14,
-    borderRadius: 12,
+  openDashRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
+    gap: 4,
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.slate100,
   },
-  openDashBtnText: { color: '#FFFFFF', fontSize: 11, fontWeight: '800', letterSpacing: 0.4 },
+  openDashLinkText: { fontFamily: FONT_FAMILY, fontSize: 12, fontWeight: '800', color: COLORS.slate500, letterSpacing: 0.2 },
   deleteBtn: {
-    width: 38,
-    height: 38,
-    borderRadius: 12,
-    backgroundColor: COLORS.red50,
-    borderWidth: 1,
-    borderColor: COLORS.red100,
+    width: 26,
+    height: 26,
+    borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
   },
