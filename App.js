@@ -803,7 +803,7 @@ export default function App() {
       // complete one with stale data (see cloudSyncQueue comment above).
       cloudSyncQueue = cloudSyncQueue.then(async () => {
       try {
-        const gpuVal = selectedSociety?.gpu || selectedSociety?.district || 'Dentam GPU';
+        const gpuVal = selectedSociety?.gpu || selectedSociety?.district || '';
         let calcMembers = 0;
         if (stateObj.demographicsData) {
           if (Array.isArray(stateObj.demographicsData)) {
@@ -822,7 +822,7 @@ export default function App() {
 
           await saveMilkPcsSubmission({
             centerName: activeSocName,
-            centerId: stateObj.registrationNumber || selectedSociety?.regNo || 'MILK/2024/01',
+            centerId: stateObj.registrationNumber || selectedSociety?.regNo || '',
             district: gpuVal,
             presidentName: stateObj.presidentName,
             presidentMobile: stateObj.presidentMobile,
@@ -859,7 +859,7 @@ export default function App() {
         } else {
           await saveMpcsSubmission({
             societyName: activeSocName,
-            registrationNumber: stateObj.registrationNumber || selectedSociety?.regNo || 'SIK/MPCS/2024/01',
+            registrationNumber: stateObj.registrationNumber || selectedSociety?.regNo || '',
             gpu: gpuVal,
             district: gpuVal,
             presidentName: stateObj.presidentName,
@@ -873,7 +873,7 @@ export default function App() {
               : 'No',
             auditYear: stateObj.complianceData?.auditYear,
             annualTurnover: stateObj.financialsData?.annualTurnover,
-            profitOrLoss: stateObj.financialsData?.profitOrLoss || 'PROFIT',
+            profitOrLoss: stateObj.financialsData?.profitOrLoss || null,
             netProfit: stateObj.financialsData?.netProfit,
             // Same reasoning as auditDone above: without this, has_loan would
             // silently flip back to false on every autosave after the loan was
@@ -1354,7 +1354,7 @@ export default function App() {
     if (isSealing && !recordOverride) return;
 
     const recordItem = recordOverride?.rawData || recordOverride;
-    const socName = recordItem?.society_name || recordItem?.center_name || recordItem?.center || selectedSociety?.name || centerName?.trim() || 'Cooperative Collection Center';
+    const socName = recordItem?.society_name || recordItem?.center_name || recordItem?.center || selectedSociety?.name || centerName?.trim() || 'Institution Name Not Set';
     const repMonth = recordItem?.reporting_month || recordItem?.month || reportingMonth?.trim() || getCurrentMonthLabel();
 
     // --- DECLARE activeCenterName & activeReportingMonth BEFORE use (TDZ fix) ---
@@ -1910,7 +1910,7 @@ export default function App() {
       // so saveMpcsSubmission's is_profit column always fell back to its hardcoded
       // 'PROFIT' default regardless of what was actually selected on the Financial
       // Performance screen.
-      profitOrLoss: financialsData?.profitOrLoss || 'PROFIT',
+      profitOrLoss: financialsData?.profitOrLoss || null,
       netProfit: financialsData?.netProfit,
       gpsLat: location?.latitude ?? null, gpsLng: location?.longitude ?? null,
       capturedAt: timestamp || new Date().toISOString(),
@@ -2192,20 +2192,19 @@ export default function App() {
                         await saveMpcsSubmission({
                           societyName: newInst.name,
                           registrationNumber: newInst.regNo,
-                          gpu: newInst.gpu || newInst.district || 'Dentam GPU',
-                          district: newInst.gpu || newInst.district || 'Dentam GPU',
+                          gpu: newInst.gpu || newInst.district || '',
+                          district: newInst.gpu || newInst.district || '',
                           reportedBy: userProfile?.name || 'Cooperative Inspector',
                           inspectorEmail: session?.user?.email,
                           totalMembers: 0,
-                          annualTurnover: 0,
-                          isProfit: 'PROFIT'
+                          annualTurnover: 0
                         });
                       } else {
                         await saveMilkPcsSubmission({
                           centerName: newInst.name,
                           centerId: newInst.name,
                           registrationNumber: newInst.regNo,
-                          district: newInst.gpu || newInst.district || 'Dentam GPU',
+                          district: newInst.gpu || newInst.district || '',
                           reportedBy: userProfile?.name || 'Cooperative Inspector'
                         });
                       }
@@ -2926,7 +2925,7 @@ export default function App() {
                         initialExpenses={financialsData?.totalExpenses || ''}
                         initialNetProfit={financialsData?.netProfit || ''}
                         initialProfitability={financialsData?.profitability || ''}
-                        initialProfitOrLoss={financialsData?.profitOrLoss || 'PROFIT'}
+                        initialProfitOrLoss={financialsData?.profitOrLoss || ''}
                         onSaveFinancials={(data) => {
                           setFinancialsData(data);
                           saveMasterStateToStorage({ financialsData: data });
@@ -3854,6 +3853,7 @@ const styles = StyleSheet.create({
   },
   bulletinBoard: {
     width: '100%',
+    maxWidth: 500,
     maxHeight: '80%',
     backgroundColor: '#FFF',
     borderRadius: 24,

@@ -75,12 +75,12 @@ export default function MyInstitutionsScreen({
       return;
     }
 
-    const gpuVal = gpu.trim() || user?.district || 'Dentam GPU';
+    const gpuVal = gpu.trim() || user?.district || '';
     const newInst = {
       id: `inst-${Date.now()}`,
       name: instName.trim(),
       type: instType,
-      regNo: regNo.trim() || `SIK/${instType}/${new Date().getFullYear()}/${Math.floor(10 + Math.random() * 90)}`,
+      regNo: regNo.trim(),
       gpu: gpuVal,
       district: gpuVal,
       status: 'ACTIVE SOCIETY',
@@ -317,7 +317,7 @@ export default function MyInstitutionsScreen({
 
                     <View style={styles.locationRow}>
                       <MaterialCommunityIcons name="map-marker-outline" size={13} color={COLORS.slate400} />
-                      <Text style={styles.instSub}>{item.regNo} • GPU: {item.gpu || item.district || 'Gyalshing'}</Text>
+                      <Text style={styles.instSub}>{item.regNo || 'Reg. No. Not Set'} • GPU: {item.gpu || item.district || 'Not Set'}</Text>
                     </View>
 
                     <View style={styles.cardActionsRow}>

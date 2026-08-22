@@ -236,7 +236,7 @@ export async function saveMpcsSubmission(formData) {
     const totalMem = formData.totalMembers ? parseInt(formData.totalMembers) : ['3.1','3.2','3.3','3.4','3.5','3.6','3.7','3.8']
       .reduce((s, id) => s + (parseInt(formData[id]) || 0), 0);
 
-    const gpuVal = formData.gpu || formData.gpuName || formData.district || 'Dentam GPU';
+    const gpuVal = formData.gpu || formData.gpuName || formData.district || '';
 
     const row = {
       society_name: socName,
@@ -249,7 +249,7 @@ export async function saveMpcsSubmission(formData) {
       audit_year: formData.auditYear || formData['4.2'] || null,
       audit_category: formData.auditCategory || formData['4.3'] || null,
       annual_turnover: parseFloat(formData.annualTurnover || formData.withdrawal || formData['5.1']) || null,
-      is_profit: formData.profitOrLoss || formData.isProfit || formData['5.2'] || 'PROFIT',
+      is_profit: formData.profitOrLoss || formData.isProfit || formData['5.2'] || null,
       net_profit_loss: formData.profitOrLoss === 'NO_PROFIT_NO_LOSS' ? null : (parseFloat(formData.netProfit || formData.netProfitLoss || formData.balance || formData['5.3']) || null),
       bank_balance: parseFloat(formData.balance || formData.bankBalance || formData['7.5']) || null,
       bank_name: formData.bankName || formData['7.2'] || 'N/A',

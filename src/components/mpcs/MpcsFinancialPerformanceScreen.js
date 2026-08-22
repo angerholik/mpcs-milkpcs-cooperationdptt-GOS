@@ -33,7 +33,7 @@ export default function MpcsFinancialPerformanceScreen({
   initialExpenses = "",
   initialNetProfit = "",
   initialProfitability = "",
-  initialProfitOrLoss = "PROFIT",
+  initialProfitOrLoss = "",
   onSaveFinancials,
   onNext,
   onBack
@@ -174,20 +174,20 @@ export default function MpcsFinancialPerformanceScreen({
               <Text style={styles.infoLabel}>NET PROFIT / LOSS STATUS</Text>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4 }}>
                 <View style={{
-                  backgroundColor: profitOrLoss === 'PROFIT' ? COLORS.emerald50 : profitOrLoss === 'LOSS' ? '#FEF2F2' : COLORS.amber100,
+                  backgroundColor: profitOrLoss === 'PROFIT' ? COLORS.emerald50 : profitOrLoss === 'LOSS' ? '#FEF2F2' : profitOrLoss === 'NO_PROFIT_NO_LOSS' ? COLORS.amber100 : COLORS.slate100,
                   paddingHorizontal: 8,
                   paddingVertical: 4,
                   borderRadius: 6,
                   borderWidth: 1,
-                  borderColor: profitOrLoss === 'PROFIT' ? 'rgba(16,185,129,0.3)' : profitOrLoss === 'LOSS' ? 'rgba(239,68,68,0.3)' : 'rgba(217,119,6,0.3)'
+                  borderColor: profitOrLoss === 'PROFIT' ? 'rgba(16,185,129,0.3)' : profitOrLoss === 'LOSS' ? 'rgba(239,68,68,0.3)' : profitOrLoss === 'NO_PROFIT_NO_LOSS' ? 'rgba(217,119,6,0.3)' : COLORS.slate200
                 }}>
                   <Text style={{
                     fontFamily: FONT_FAMILY,
                     fontSize: 11,
                     fontWeight: '800',
-                    color: profitOrLoss === 'PROFIT' ? COLORS.emerald700 : profitOrLoss === 'LOSS' ? '#DC2626' : COLORS.amber900
+                    color: profitOrLoss === 'PROFIT' ? COLORS.emerald700 : profitOrLoss === 'LOSS' ? '#DC2626' : profitOrLoss === 'NO_PROFIT_NO_LOSS' ? COLORS.amber900 : COLORS.slate500
                   }}>
-                    {profitOrLoss === 'PROFIT' ? '✓ PROFIT' : profitOrLoss === 'LOSS' ? '⚠ LOSS' : '⚪ NO PROFIT / NO LOSS'}
+                    {profitOrLoss === 'PROFIT' ? '✓ PROFIT' : profitOrLoss === 'LOSS' ? '⚠ LOSS' : profitOrLoss === 'NO_PROFIT_NO_LOSS' ? '⚪ NO PROFIT / NO LOSS' : 'NOT REPORTED'}
                   </Text>
                 </View>
               </View>
