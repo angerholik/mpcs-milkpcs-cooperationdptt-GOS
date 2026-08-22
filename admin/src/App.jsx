@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { supabase } from './supabase.js';
 import sikkimEmblem from './sikkim-emblem-official.png';
 import { 
@@ -2192,6 +2192,25 @@ function Dashboard({ onLogout, session }) {
     });
   };
 
+  // A plain vertical mouse wheel does NOT auto-scroll an element that only
+  // has horizontal overflow — only Shift+wheel or a trackpad's horizontal
+  // gesture do that natively. Wide tables (the Reports generator's 60+
+  // column exports) have a visible, always-on scrollbar now, but a normal
+  // mouse wheel still did nothing over them. Redirect vertical wheel input
+  // into horizontal scroll whenever it lands on a .table-responsive that
+  // actually overflows, so a plain mouse works too, not just a trackpad.
+  useEffect(() => {
+    const handler = (e) => {
+      const scrollEl = e.target.closest('.table-responsive');
+      if (!scrollEl || scrollEl.scrollWidth <= scrollEl.clientWidth) return;
+      if (Math.abs(e.deltaX) > Math.abs(e.deltaY)) return; // already horizontal input — let the browser handle it natively
+      scrollEl.scrollLeft += e.deltaY;
+      e.preventDefault();
+    };
+    document.addEventListener('wheel', handler, { passive: false });
+    return () => document.removeEventListener('wheel', handler);
+  }, []);
+
   // MILK PCS state
   const [milkRows, setMilkRows]   = useState([]);
   const [milkFiltered, setMilkFiltered] = useState([]);
@@ -2483,6 +2502,7 @@ function Dashboard({ onLogout, session }) {
   const [reportStartDate, setReportStartDate] = useState('2026-01-01');
   const [reportEndDate, setReportEndDate] = useState(new Date().toISOString().slice(0, 10));
   const [generatedReport, setGeneratedReport] = useState(null); // { title, columns, rows } | null
+  const reportTableRef = useRef(null);
 
   const formatTimeAgo = (dateStr) => {
     if (!dateStr) return 'Recently';
@@ -3483,8 +3503,12 @@ function Dashboard({ onLogout, session }) {
                     <div>
                       <span style={{fontSize:'13px', fontWeight:800, color:'#0F172A'}}>{generatedReport.title} — {generatedReport.rows.length} record{generatedReport.rows.length === 1 ? '' : 's'}</span>
                       {generatedReport.columns.length > 8 && (
-                        <div style={{fontSize:'11px', color:'#64748B', fontWeight:600, marginTop:'2px'}}>
-                          {generatedReport.columns.length} columns — scroll the table horizontally to see all of them →
+                        <div style={{display:'flex', alignItems:'center', gap:'8px', marginTop:'2px'}}>
+                          <span style={{fontSize:'11px', color:'#64748B', fontWeight:600}}>
+                            {generatedReport.columns.length} columns — use the arrows or scroll to see all of them
+                          </span>
+                          <button className="btn-ghost" style={{padding:'1px 8px', fontSize:'11px'}} onClick={() => reportTableRef.current?.scrollBy({ left: -400, behavior: 'smooth' })}>←</button>
+                          <button className="btn-ghost" style={{padding:'1px 8px', fontSize:'11px'}} onClick={() => reportTableRef.current?.scrollBy({ left: 400, behavior: 'smooth' })}>→</button>
                         </div>
                       )}
                     </div>
@@ -3502,7 +3526,7 @@ function Dashboard({ onLogout, session }) {
                       No records in this category for the selected date range.
                     </div>
                   ) : (
-                    <div className="table-responsive" style={{border:'1px solid #E2E8F0', borderRadius:'8px', overflow:'hidden'}}>
+                    <div ref={reportTableRef} className="table-responsive" style={{border:'1px solid #E2E8F0', borderRadius:'8px'}}>
                       <table className="data-table">
                         <thead>
                           <tr>{generatedReport.columns.map(c => <th key={c.label}>{c.label}</th>)}</tr>
