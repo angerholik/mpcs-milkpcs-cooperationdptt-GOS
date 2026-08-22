@@ -2479,7 +2479,7 @@ function Dashboard({ onLogout, session }) {
   const [filterMpcsAuditGrade, setFilterMpcsAuditGrade] = useState('');
 
   // Reports & Export Center
-  const [reportCategory, setReportCategory] = useState('Milk Submissions Master');
+  const [reportCategory, setReportCategory] = useState('Milk PCS Master');
   const [reportStartDate, setReportStartDate] = useState('2026-01-01');
   const [reportEndDate, setReportEndDate] = useState(new Date().toISOString().slice(0, 10));
   const [generatedReport, setGeneratedReport] = useState(null); // { title, columns, rows } | null
@@ -3376,8 +3376,8 @@ function Dashboard({ onLogout, session }) {
                 <div className="field-group">
                   <label className="field-label">Report Category</label>
                   <select className="field-input" value={reportCategory} onChange={e=>{setReportCategory(e.target.value); setGeneratedReport(null);}}>
-                    <option>Milk Submissions Master</option>
-                    <option>MPCS Societies Directory</option>
+                    <option>Milk PCS Master</option>
+                    <option>MPCS Master</option>
                     <option>Audit & Compliance Audit Log</option>
                     <option>Official Inspectors Registry</option>
                   </select>
@@ -3401,16 +3401,55 @@ function Dashboard({ onLogout, session }) {
                     const d = dateStr.slice(0, 10);
                     return d >= reportStartDate && d <= reportEndDate;
                   };
+                  // Registered members belong to a society/center by name, not
+                  // by a foreign key, so match the same way scopedMemberRows
+                  // already does elsewhere in this file: normalized exact
+                  // match first, substring match as a fallback for minor
+                  // naming variance between the two data entry points.
+                  const membersFor = (name, type) => {
+                    const en = (name || '').trim().toLowerCase();
+                    return scopedMemberRows.filter(m => {
+                      if ((m.society_type || '').toUpperCase() !== type) return false;
+                      const mn = (m.society_name || '').trim().toLowerCase();
+                      return mn === en || (en && (mn.includes(en) || en.includes(mn)));
+                    });
+                  };
+                  // Master data (every recorded submission/registry field) +
+                  // Membership data (every registered member tied to that
+                  // society/center, as repeating Member N columns — one row
+                  // per entity, widening left-right instead of exploding into
+                  // a member-per-row table that would break the one-entity-
+                  // one-row shape every other report here uses).
+                  const withMembers = (rows, fieldOrder, nameOf, type) => {
+                    const sets = rows.map(r => membersFor(nameOf(r), type));
+                    const maxMembers = sets.length ? Math.max(0, ...sets.map(s => s.length)) : 0;
+                    const memberCols = [];
+                    for (let i = 0; i < maxMembers; i++) {
+                      memberCols.push(
+                        { label: `Member ${i + 1} Name`, get: r => membersFor(nameOf(r), type)[i]?.member_name || '' },
+                        { label: `Member ${i + 1} Ward`, get: r => membersFor(nameOf(r), type)[i]?.ward_name || '' },
+                        { label: `Member ${i + 1} Mobile`, get: r => membersFor(nameOf(r), type)[i]?.mobile_number || '' },
+                      );
+                    }
+                    return [
+                      ...fullFieldColumns(fieldOrder),
+                      { label: 'Registered Members Count', get: r => membersFor(nameOf(r), type).length },
+                      ...memberCols,
+                    ];
+                  };
+
                   let rows = [], columns = [];
-                  if (reportCategory === 'Milk Submissions Master') {
-                    // "Master" means every recorded field, matching what
+                  if (reportCategory === 'Milk PCS Master') {
+                    // "Master" means every recorded field plus every
+                    // registered member for that center — matching what
                     // downloadCSV / "Download Milk Master CSV" already
-                    // export — not a curated subset.
+                    // export, joined with Member Registry, not a curated
+                    // subset of either.
                     rows = scopedMilkRows.filter(r => inRange(r.created_at));
-                    columns = fullFieldColumns(MILK_FIELD_ORDER);
-                  } else if (reportCategory === 'MPCS Societies Directory') {
+                    columns = withMembers(rows, MILK_FIELD_ORDER, r => r.center_name, 'MILK');
+                  } else if (reportCategory === 'MPCS Master') {
                     rows = scopedMpcsRows.filter(r => inRange(r.created_at));
-                    columns = fullFieldColumns(MPCS_FIELD_ORDER);
+                    columns = withMembers(rows, MPCS_FIELD_ORDER, r => r.society_name, 'MPCS');
                   } else if (reportCategory === 'Audit & Compliance Audit Log') {
                     rows = [
                       ...scopedMpcsRows.filter(r => inRange(r.created_at)).map(r => ({ ...r, ...getMpcsAuditAgm(r), _sector: 'MPCS', _name: r.society_name || 'Unnamed Society' })),
