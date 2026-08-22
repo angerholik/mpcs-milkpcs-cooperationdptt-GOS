@@ -299,6 +299,28 @@ const downloadCSV = (rows, filename) => {
   URL.revokeObjectURL(url);
 };
 
+// Expands MPCS_FIELD_ORDER / MILK_FIELD_ORDER into {label, get} columns —
+// the same complete field set and flattening (form_data spread to fd_X)
+// that downloadCSV uses, so a "Master"/"Directory" report actually means
+// every recorded field, not a curated handful of summary columns.
+const fullFieldColumns = (fieldOrder) => fieldOrder.map(k => {
+  const lookupKey = k.startsWith('fd_') ? k.replace('fd_', '') : k;
+  return {
+    label: EXPORT_LABELS[lookupKey] || k,
+    get: (row) => {
+      const flat = { ...row };
+      if (row.form_data && typeof row.form_data === 'object') {
+        Object.entries(row.form_data).forEach(([fk, fv]) => { flat[`fd_${fk}`] = fv; });
+      }
+      let v = flat[k];
+      if (v === null || v === undefined) return '';
+      if (k === 'created_at') return new Date(v).toLocaleString('en-IN');
+      if (typeof v === 'boolean') return v ? 'Yes' : 'No';
+      return String(v);
+    },
+  };
+});
+
 // A generic CSV exporter for arbitrary column shapes — unlike downloadCSV
 // above (which only knows the fixed MPCS/Milk submission field layouts),
 // this takes explicit {label, get} columns matching whatever's on screen,
@@ -3380,24 +3402,14 @@ function Dashboard({ onLogout, session }) {
                   };
                   let rows = [], columns = [];
                   if (reportCategory === 'Milk Submissions Master') {
+                    // "Master" means every recorded field, matching what
+                    // downloadCSV / "Download Milk Master CSV" already
+                    // export — not a curated subset.
                     rows = scopedMilkRows.filter(r => inRange(r.created_at));
-                    columns = [
-                      { label: 'Date', get: r => r.created_at ? new Date(r.created_at).toLocaleDateString('en-IN') : '—' },
-                      { label: 'Center', get: r => r.center_name || '—' },
-                      { label: 'Officer', get: r => resolveSubmitter(r, '—') },
-                      { label: 'Litres', get: r => fmtL(r.litres) },
-                      { label: 'Withdrawal', get: r => fmtRs(r.withdrawal) },
-                      { label: 'Balance', get: r => fmtRs(r.balance) },
-                    ];
+                    columns = fullFieldColumns(MILK_FIELD_ORDER);
                   } else if (reportCategory === 'MPCS Societies Directory') {
                     rows = scopedMpcsRows.filter(r => inRange(r.created_at));
-                    columns = [
-                      { label: 'Date', get: r => r.created_at ? new Date(r.created_at).toLocaleDateString('en-IN') : '—' },
-                      { label: 'Society', get: r => r.society_name || '—' },
-                      { label: 'Turnover', get: r => fmtRs(r.annual_turnover) },
-                      { label: 'AGM Status', get: r => getMpcsAuditAgm(r).agm_status },
-                      { label: 'Audit Status', get: r => getMpcsAuditAgm(r).audit_status },
-                    ];
+                    columns = fullFieldColumns(MPCS_FIELD_ORDER);
                   } else if (reportCategory === 'Audit & Compliance Audit Log') {
                     rows = [
                       ...scopedMpcsRows.filter(r => inRange(r.created_at)).map(r => ({ ...r, ...getMpcsAuditAgm(r), _sector: 'MPCS', _name: r.society_name || 'Unnamed Society' })),
