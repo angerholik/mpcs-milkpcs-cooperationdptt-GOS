@@ -940,9 +940,11 @@ function MPCSDetailModal({ row, onClose }) {
   const auditAgm = getMpcsAuditAgm(row);
   
   const Sec = ({ title, children }) => (
-    <div style={{marginBottom:'24px', borderLeft: '3px solid var(--emerald)', paddingLeft: '16px'}}>
-      <div style={{fontSize:'12px', fontWeight:800, color:'var(--emerald-deep)', textTransform:'uppercase',
-        letterSpacing:'1.5px', marginBottom:'14px', background: 'var(--emerald-pale)', padding: '6px 10px', borderRadius: '4px', width: 'fit-content'}}>{title}</div>
+    <div style={{marginBottom:'28px'}}>
+      <div style={{display:'flex', alignItems:'center', gap:'10px', marginBottom:'14px'}}>
+        <span style={{fontSize:'12px', fontWeight:800, color:'var(--emerald-deep)', textTransform:'uppercase', letterSpacing:'1px', whiteSpace:'nowrap'}}>{title}</span>
+        <span style={{flex:1, height:'1px', background:'linear-gradient(to right, var(--emerald-pale), transparent)'}}/>
+      </div>
       {children}
     </div>
   );
@@ -993,14 +995,14 @@ function MPCSDetailModal({ row, onClose }) {
 
           {/* C. Registered Caste Demographics */}
           <Sec title="C. Registered Caste Demographics">
-            <div style={{overflowX: 'auto', marginBottom: '10px'}}>
+            <div style={{overflowX: 'auto', marginBottom: '10px', border:'1px solid #E2E8F0', borderRadius:'10px', boxShadow:'var(--shadow-subtle)'}}>
               <table style={{width:'100%', borderCollapse:'collapse', fontSize:'12px'}}>
                 <thead>
                   <tr style={{background: '#F8FAFC'}}>
-                    <th style={{textAlign:'left', padding: '8px', border: '1px solid #E2E8F0'}}>Category</th>
-                    <th style={{padding: '8px', border: '1px solid #E2E8F0'}}>Male</th>
-                    <th style={{padding: '8px', border: '1px solid #E2E8F0'}}>Female</th>
-                    <th style={{padding: '8px', border: '1px solid #E2E8F0'}}>Total</th>
+                    <th style={{textAlign:'left', padding: '10px 14px', borderBottom: '1px solid #E2E8F0', fontSize:'10.5px', fontWeight:700, color:'#94A3B8', textTransform:'uppercase', letterSpacing:'0.6px'}}>Category</th>
+                    <th style={{padding: '10px 14px', borderBottom: '1px solid #E2E8F0', fontSize:'10.5px', fontWeight:700, color:'#94A3B8', textTransform:'uppercase', letterSpacing:'0.6px'}}>Male</th>
+                    <th style={{padding: '10px 14px', borderBottom: '1px solid #E2E8F0', fontSize:'10.5px', fontWeight:700, color:'#94A3B8', textTransform:'uppercase', letterSpacing:'0.6px'}}>Female</th>
+                    <th style={{padding: '10px 14px', borderBottom: '1px solid #E2E8F0', fontSize:'10.5px', fontWeight:700, color:'#94A3B8', textTransform:'uppercase', letterSpacing:'0.6px'}}>Total</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1034,11 +1036,11 @@ function MPCSDetailModal({ row, onClose }) {
                       sumFemale += fVal;
                       const rowTotal = mVal + fVal;
                       return (
-                        <tr key={cat.lbl}>
-                          <td style={{padding: '8px', border: '1px solid #E2E8F0', fontWeight:700}}>{cat.lbl}</td>
-                          <td style={{padding: '8px', border: '1px solid #E2E8F0', textAlign:'center'}}>{mVal}</td>
-                          <td style={{padding: '8px', border: '1px solid #E2E8F0', textAlign:'center'}}>{fVal}</td>
-                          <td style={{padding: '8px', border: '1px solid #E2E8F0', textAlign:'center', background: '#F0FDF4', fontWeight:800}}>
+                        <tr key={cat.lbl} style={{borderBottom: '1px solid #F1F5F9'}}>
+                          <td style={{padding: '10px 14px', fontWeight:700, color:'#0F172A'}}>{cat.lbl}</td>
+                          <td style={{padding: '10px 14px', textAlign:'center', color:'#334155'}}>{mVal}</td>
+                          <td style={{padding: '10px 14px', textAlign:'center', color:'#334155'}}>{fVal}</td>
+                          <td style={{padding: '10px 14px', textAlign:'center', fontWeight:800, color:'#0F172A'}}>
                             {rowTotal}
                           </td>
                         </tr>
@@ -1050,10 +1052,10 @@ function MPCSDetailModal({ row, onClose }) {
                       <>
                         {rowsHtml}
                         <tr style={{background: 'var(--emerald-pale)', fontWeight: 900}}>
-                          <td style={{padding: '8px', border: '1px solid #E2E8F0'}}>GRAND TOTAL</td>
-                          <td style={{padding: '8px', border: '1px solid #E2E8F0', textAlign:'center'}}>{sumMale || fd['3.10'] || 0}</td>
-                          <td style={{padding: '8px', border: '1px solid #E2E8F0', textAlign:'center'}}>{sumFemale || fd['3.11'] || 0}</td>
-                          <td style={{padding: '8px', border: '1px solid #E2E8F0', textAlign:'center', color: 'var(--emerald-deep)'}}>{grandTotal}</td>
+                          <td style={{padding: '10px 14px', color:'var(--emerald-deep)'}}>GRAND TOTAL</td>
+                          <td style={{padding: '10px 14px', textAlign:'center', color:'var(--emerald-deep)'}}>{sumMale || fd['3.10'] || 0}</td>
+                          <td style={{padding: '10px 14px', textAlign:'center', color:'var(--emerald-deep)'}}>{sumFemale || fd['3.11'] || 0}</td>
+                          <td style={{padding: '10px 14px', textAlign:'center', color: 'var(--emerald-deep)'}}>{grandTotal}</td>
                         </tr>
                       </>
                     );
