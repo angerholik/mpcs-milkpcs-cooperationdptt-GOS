@@ -3482,6 +3482,8 @@ function Dashboard({ onLogout, session }) {
                   <select className="field-input" value={reportCategory} onChange={e=>{setReportCategory(e.target.value); setGeneratedReport(null);}}>
                     <option>Milk PCS Master</option>
                     <option>MPCS Master</option>
+                    <option>MPCS Member List</option>
+                    <option>Milk PCS Member List</option>
                     <option>Audit & Compliance Audit Log</option>
                     <option>Official Inspectors Registry</option>
                   </select>
@@ -3505,55 +3507,34 @@ function Dashboard({ onLogout, session }) {
                     const d = dateStr.slice(0, 10);
                     return d >= reportStartDate && d <= reportEndDate;
                   };
-                  // Registered members belong to a society/center by name, not
-                  // by a foreign key, so match the same way scopedMemberRows
-                  // already does elsewhere in this file: normalized exact
-                  // match first, substring match as a fallback for minor
-                  // naming variance between the two data entry points.
-                  const membersFor = (name, type) => {
-                    const en = (name || '').trim().toLowerCase();
-                    return scopedMemberRows.filter(m => {
-                      if ((m.society_type || '').toUpperCase() !== type) return false;
-                      const mn = (m.society_name || '').trim().toLowerCase();
-                      return mn === en || (en && (mn.includes(en) || en.includes(mn)));
-                    });
-                  };
-                  // Master data (every recorded submission/registry field) +
-                  // Membership data (every registered member tied to that
-                  // society/center, as repeating Member N columns — one row
-                  // per entity, widening left-right instead of exploding into
-                  // a member-per-row table that would break the one-entity-
-                  // one-row shape every other report here uses).
-                  const withMembers = (rows, baseColumns, nameOf, type) => {
-                    const sets = rows.map(r => membersFor(nameOf(r), type));
-                    const maxMembers = sets.length ? Math.max(0, ...sets.map(s => s.length)) : 0;
-                    const memberCols = [];
-                    for (let i = 0; i < maxMembers; i++) {
-                      memberCols.push(
-                        { label: `Member ${i + 1} Name`, get: r => membersFor(nameOf(r), type)[i]?.member_name || '' },
-                        { label: `Member ${i + 1} Ward`, get: r => membersFor(nameOf(r), type)[i]?.ward_name || '' },
-                        { label: `Member ${i + 1} Mobile`, get: r => membersFor(nameOf(r), type)[i]?.mobile_number || '' },
-                      );
-                    }
-                    return [
-                      ...baseColumns,
-                      { label: 'Registered Members Count', get: r => membersFor(nameOf(r), type).length },
-                      ...memberCols,
-                    ];
-                  };
-
                   let rows = [], columns = [];
                   if (reportCategory === 'Milk PCS Master') {
-                    // "Master" means every recorded field plus every
-                    // registered member for that center — matching what
-                    // downloadCSV / "Download Milk Master CSV" already
-                    // export, joined with Member Registry, not a curated
-                    // subset of either.
+                    // "Master" means every recorded submission field —
+                    // matching what downloadCSV / "Download Milk Master
+                    // CSV" already export. Membership is its own report
+                    // (Milk PCS Member List) instead of repeating Member N
+                    // columns bolted onto this one, which made the table
+                    // unmanageably wide and turned a simple submission log
+                    // into a lopsided grid.
                     rows = scopedMilkRows.filter(r => inRange(r.created_at));
-                    columns = withMembers(rows, fullFieldColumns(MILK_FIELD_ORDER), r => r.center_name, 'MILK');
+                    columns = fullFieldColumns(MILK_FIELD_ORDER);
                   } else if (reportCategory === 'MPCS Master') {
                     rows = scopedMpcsRows.filter(r => inRange(r.created_at));
-                    columns = withMembers(rows, mpcsMasterColumns(), r => r.society_name, 'MPCS');
+                    columns = mpcsMasterColumns();
+                  } else if (reportCategory === 'MPCS Member List' || reportCategory === 'Milk PCS Member List') {
+                    // One row per registered member — a proper flat table
+                    // instead of the Member N repeating-column pattern.
+                    const type = reportCategory === 'MPCS Member List' ? 'MPCS' : 'MILK';
+                    rows = scopedMemberRows.filter(m => (m.society_type || '').toUpperCase() === type && inRange(m.created_at));
+                    columns = [
+                      { label: 'Date Added', get: r => r.created_at ? new Date(r.created_at).toLocaleDateString('en-IN') : '—' },
+                      { label: 'Member Name', get: r => r.member_name || '—' },
+                      { label: type === 'MPCS' ? 'Society' : 'Center', get: r => r.society_name || '—' },
+                      { label: 'Ward', get: r => r.ward_name || '—' },
+                      { label: 'Mobile', get: r => r.mobile_number || '—' },
+                      { label: 'Aadhaar No', get: r => r.aadhaar_number ? fmtAadhaar(r.aadhaar_number) : '—' },
+                      { label: 'Address', get: r => r.address || '—' },
+                    ];
                   } else if (reportCategory === 'Audit & Compliance Audit Log') {
                     rows = [
                       ...scopedMpcsRows.filter(r => inRange(r.created_at)).map(r => ({ ...r, ...getMpcsAuditAgm(r), _sector: 'MPCS', _name: r.society_name || 'Unnamed Society' })),
