@@ -464,6 +464,8 @@ const I = {
   clipboard: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2M9 12h6m-6 4h4',
   cloudUpload: 'M7 17a4 4 0 01-1-7.87A5 5 0 0116 8a4.5 4.5 0 011 8.87M12 12v7m0-7l-3 3m3-3l3 3',
   info:    'M12 22a10 10 0 100-20 10 10 0 000 20zM12 16v-4M12 8h.01',
+  dashboard: 'M3 3h7v7H3zM14 3h7v7h-7zM14 14h7v7h-7zM3 14h7v7H3z',
+  gear:    'M12 15a3 3 0 100-6 3 3 0 000 6z M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82A1.65 1.65 0 003 13.09H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z',
 };
 
 // ─── LoginPage ────────────────────────────────────────────────────────────────
@@ -3170,7 +3172,9 @@ function Dashboard({ onLogout, session }) {
 
           <button style={{position:'relative', background:'rgba(255,255,255,0.1)', border:'none', padding:'8px', borderRadius:'10px', cursor:'pointer'}} onClick={()=>setShowNotificationsDrawer(true)}>
             <Icon d={I.alert} size={18} color="#FFFFFF"/>
-            <span style={{position:'absolute', top:'-2px', right:'-2px', background:'#EF4444', color:'#FFF', fontSize:'9px', fontWeight:900, width:'16px', height:'16px', borderRadius:'50%', display:'flex', alignItems:'center', justifyContent:'center'}}>3</span>
+            {recentActivities.length > 0 && (
+              <span style={{position:'absolute', top:'-2px', right:'-2px', background:'#EF4444', color:'#FFF', fontSize:'9px', fontWeight:900, width:'16px', height:'16px', borderRadius:'50%', display:'flex', alignItems:'center', justifyContent:'center'}}>{recentActivities.length}</span>
+            )}
           </button>
 
           <div style={{display:'flex', alignItems:'center', gap:'10px', borderLeft:'1px solid rgba(255,255,255,0.2)', paddingLeft:'12px', cursor:'pointer'}} onClick={()=>setShowProfileModal(true)}>
@@ -3224,7 +3228,7 @@ function Dashboard({ onLogout, session }) {
               // doesn't otherwise restrict what activeTab can be set to.
               ...(userRole === 'System Admin' ? [
                 { id: 'USERS', label: 'Users & Roles', icon: I.user },
-                { id: 'SETTINGS', label: 'Settings', icon: I.search },
+                { id: 'SETTINGS', label: 'Settings', icon: I.gear },
               ] : []),
             ].map(item => (
               <div
@@ -4331,7 +4335,17 @@ function Dashboard({ onLogout, session }) {
       {showAddMilkModal && <AddMilkReportModal onClose={()=>setShowAddMilkModal(false)} onSave={handleSaveMilkReport} />}
       {showAddMpcsModal && <AddMpcsSocietyModal onClose={()=>setShowAddMpcsModal(false)} onSave={handleSaveMpcsSociety} />}
       {showScheduleAuditModal && <ScheduleAuditModal mpcsRows={mpcsRows} onClose={()=>setShowScheduleAuditModal(false)} onSave={handleScheduleAudit} />}
-      {showNotificationsDrawer && <NotificationsDrawerModal onClose={()=>setShowNotificationsDrawer(false)} />}
+      {showNotificationsDrawer && (
+        <NotificationsDrawerModal
+          activities={recentActivities}
+          formatTimeAgo={formatTimeAgo}
+          onClose={()=>setShowNotificationsDrawer(false)}
+          onSelect={(act) => {
+            setShowNotificationsDrawer(false);
+            if (act.isMpcs) setMpcsSelected(act.row); else setMilkSelected(act.row);
+          }}
+        />
+      )}
       {showProfileModal && (
         <InspectorProfileModal
           session={session}
@@ -4623,7 +4637,13 @@ function ScheduleAuditModal({ mpcsRows, onClose, onSave }) {
 }
 
 // ─── NotificationsDrawerModal ──────────────────────────────────────────────────
-function NotificationsDrawerModal({ onClose }) {
+// Was a hardcoded array of fabricated events (a fictional weather advisory,
+// an audit clearance for a society that isn't even in this district's real
+// data, a milk volume alert with a made-up number) — none of it reflected
+// anything that actually happened. Now shows the same real, live submission
+// events the Dashboard's Recent Activity Stream already surfaces, clickable
+// through to the actual record.
+function NotificationsDrawerModal({ activities, onClose, onSelect, formatTimeAgo }) {
   return (
     <div className="modal-overlay" onClick={e=>e.target===e.currentTarget&&onClose()}>
       <div className="modal-box fade-in" style={{maxWidth:'500px'}}>
@@ -4635,17 +4655,24 @@ function NotificationsDrawerModal({ onClose }) {
           <button className="modal-close" onClick={onClose}><Icon d={I.close} size={18}/></button>
         </div>
         <div className="modal-body" style={{padding:'24px', display:'flex', flexDirection:'column', gap:'12px'}}>
-          {[
-            { title: '🚨 Emergency Weather Advisory', desc: 'Heavy rainfall alert in Dentam subdivision. Field officers advised to verify milk tanker routes.', time: '10 mins ago', type: 'urgent' },
-            { title: '📋 Quarterly Audit Clearance', desc: 'Gitan Karmatara MPCS audit clearance verified by ARCS Geyzing office.', time: '45 mins ago', type: 'info' },
-            { title: '🥛 Peak Volume Threshold Met', desc: 'Sardong MPCS exceeded daily collection quota (1,450 L).', time: '2 hours ago', type: 'success' },
-          ].map((n, i) => (
-            <div key={i} style={{padding:'14px', borderRadius:'10px', background: n.type==='urgent'?'#FEF2F2':'#F8FAFC', border: n.type==='urgent'?'1px solid #FECACA':'1px solid #E2E8F0'}}>
+          {(!activities || activities.length === 0) ? (
+            <div style={{padding:'30px', textAlign:'center', color:'#94A3B8', fontSize:'12px', fontStyle:'italic'}}>
+              No recent submissions to show yet.
+            </div>
+          ) : activities.map((act) => (
+            <div
+              key={act.id}
+              onClick={() => onSelect(act)}
+              style={{padding:'14px', borderRadius:'10px', background:'#F8FAFC', border:'1px solid #E2E8F0', cursor:'pointer'}}
+            >
               <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'4px'}}>
-                <span style={{fontSize:'13px', fontWeight:800, color: n.type==='urgent'?'#991B1B':'#0F172A'}}>{n.title}</span>
-                <span style={{fontSize:'10px', color:'#94A3B8'}}>{n.time}</span>
+                <span style={{fontSize:'13px', fontWeight:800, color:'#0F172A', display:'flex', alignItems:'center', gap:'8px'}}>
+                  <Icon d={act.icon} size={14} color={act.iconColor}/>
+                  {act.title}
+                </span>
+                <span style={{fontSize:'10px', color:'#94A3B8'}}>{formatTimeAgo(act.timeStr)}</span>
               </div>
-              <p style={{fontSize:'12px', color:'#475569'}}>{n.desc}</p>
+              <p style={{fontSize:'12px', color:'#475569'}}>{act.sub}</p>
             </div>
           ))}
         </div>
