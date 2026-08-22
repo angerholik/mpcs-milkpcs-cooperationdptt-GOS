@@ -8,6 +8,7 @@ import {
 } from 'react-native';
 import { MaterialCommunityIcons, MaterialIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import { webCapWidth } from '../utils/webStyles';
 
 const COLORS = {
   surface: '#ffffff',
@@ -179,7 +180,7 @@ export default function DigitalEvidenceScreen({
 
       <ScrollView
         style={styles.scrollContent}
-        contentContainerStyle={styles.scrollInner}
+        contentContainerStyle={[styles.scrollInner, webCapWidth]}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
@@ -278,6 +279,7 @@ export default function DigitalEvidenceScreen({
 
       {/* ── Bottom Navigation Bar ── */}
       <View style={styles.bottomBar}>
+        <View style={[{ flexDirection: 'row', flex: 1, gap: 12 }, webCapWidth]}>
         <TouchableOpacity style={styles.navBackBtn} onPress={onBack} activeOpacity={0.7}>
           <Text style={styles.buttonTextSecondary}>BACK</Text>
         </TouchableOpacity>
@@ -295,6 +297,7 @@ export default function DigitalEvidenceScreen({
           <Text style={styles.buttonTextPrimary}>SAVE & NEXT</Text>
           <MaterialCommunityIcons name="arrow-right" size={16} color="#ffffff" />
         </Pressable>
+        </View>
       </View>
     </View>
   );
@@ -532,13 +535,11 @@ const styles = StyleSheet.create({
   },
 
   bottomBar: {
-    flexDirection: 'row',
     padding: 16,
     paddingBottom: Platform.OS === 'ios' ? 32 : 16,
     backgroundColor: COLORS.surface,
     borderTopWidth: 1,
     borderTopColor: COLORS.slate200,
-    gap: 12,
   },
   navBackBtn: {
     flex: 1,
