@@ -472,7 +472,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(15, 23, 42, 0.65)', justifyContent: 'flex-end', zIndex: 9999,
   },
   modalCard: {
-    width: '100%', backgroundColor: COLORS.surface, borderTopLeftRadius: 24, borderTopRightRadius: 24,
+    width: '100%', maxWidth: 500, alignSelf: 'center', backgroundColor: COLORS.surface, borderTopLeftRadius: 24, borderTopRightRadius: 24,
     padding: 20, paddingBottom: Platform.OS === 'ios' ? 34 : 20, maxHeight: '85%',
     shadowColor: '#0f172a', shadowOffset: { width: 0, height: -10 }, shadowOpacity: 0.1, shadowRadius: 40, elevation: 25,
   },
