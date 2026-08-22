@@ -140,9 +140,9 @@ export default function MpcsInstitutionalProfileScreen({
 
       {/* Sticky Action Banner at Top */}
       <View style={styles.stickyActionBanner}>
-        <View style={{ flexDirection: 'row', gap: 8 }}>
+        <View style={[{ flexDirection: 'row', gap: 8 }, styles.webCapWidth]}>
           <View style={[styles.btnWrapper, { flex: 1 }]}>
-            <Pressable 
+            <Pressable
               style={({ hovered, pressed }) => [
                 styles.editCtaBtn,
                 pressed && { transform: [{ scale: 0.98 }] },
@@ -163,7 +163,7 @@ export default function MpcsInstitutionalProfileScreen({
 
           {onNext && (
             <View style={[styles.btnWrapper, { flex: 1 }]}>
-              <Pressable 
+              <Pressable
                 style={({ hovered, pressed }) => [
                   styles.editCtaBtn,
                   pressed && { transform: [{ scale: 0.98 }] },
@@ -190,7 +190,7 @@ export default function MpcsInstitutionalProfileScreen({
       <View style={styles.bgBlobBottomLeft} pointerEvents="none" />
       <View style={styles.bgBlobBottomRight} pointerEvents="none" />
 
-      <ScrollView style={styles.scrollContent} contentContainerStyle={styles.scrollInner} showsVerticalScrollIndicator={false}>
+      <ScrollView style={styles.scrollContent} contentContainerStyle={[styles.scrollInner, styles.webCapWidth]} showsVerticalScrollIndicator={false}>
         {/* Profile Status Banner */}
         <View style={styles.alertCard}>
           <View style={styles.alertIconBox}>
@@ -435,11 +435,16 @@ const styles = StyleSheet.create({
     letterSpacing: -0.16,
   },
   scrollContent: { flex: 1 },
-  scrollInner: { 
+  scrollInner: {
     padding: 12,
-    gap: 12,
+    gap: 14,
     paddingBottom: 40,
   },
+  // Mobile-first layout stretched edge-to-edge on wide desktop web looks
+  // sparse and unbalanced — cap it to a comfortable reading column there.
+  // No-op on native/narrow screens since maxWidth only binds when the
+  // available width actually exceeds it.
+  webCapWidth: Platform.OS === 'web' ? { width: '100%', maxWidth: 640, alignSelf: 'center' } : {},
   alertCard: {
     backgroundColor: 'rgba(254, 252, 232, 0.8)',
     borderRadius: 14,
@@ -482,8 +487,8 @@ const styles = StyleSheet.create({
   },
   card: {
     backgroundColor: COLORS.surface,
-    borderRadius: 16,
-    padding: 16,
+    borderRadius: 18,
+    padding: 20,
     borderWidth: 1,
     borderColor: 'rgba(226,232,240,0.6)',
     shadowColor: '#0f172a',
@@ -492,53 +497,53 @@ const styles = StyleSheet.create({
     shadowRadius: 20,
     elevation: 3,
   },
-  cardHeaderRow: { 
-    flexDirection: 'row', 
-    alignItems: 'center', 
-    gap: 10, 
-    marginBottom: 12 
+  cardHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginBottom: 16
   },
   cardIconBox: {
-    width: 32,
-    height: 32,
-    borderRadius: 10,
-    backgroundColor: COLORS.slate50,
+    width: 36,
+    height: 36,
+    borderRadius: 11,
+    backgroundColor: 'rgba(122,26,31,0.06)',
     borderWidth: 1,
-    borderColor: COLORS.slate100,
+    borderColor: 'rgba(122,26,31,0.12)',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  cardHeaderTitle: { 
-    fontFamily: FONT_FAMILY, 
-    fontSize: 14, 
-    fontWeight: '700', 
+  cardHeaderTitle: {
+    fontFamily: FONT_FAMILY,
+    fontSize: 15,
+    fontWeight: '800',
     color: COLORS.slate800,
-    letterSpacing: -0.14,
+    letterSpacing: -0.15,
   },
   divider: {
     height: 1,
     backgroundColor: COLORS.slate100,
-    marginVertical: 12,
+    marginVertical: 14,
   },
-  infoGrid: { 
-    flexDirection: 'row', 
-    gap: 12 
+  infoGrid: {
+    flexDirection: 'row',
+    gap: 16
   },
-  infoCol: { 
-    flex: 1 
+  infoCol: {
+    flex: 1
   },
-  infoLabel: { 
-    fontFamily: FONT_FAMILY, 
-    fontSize: 8, 
-    fontWeight: '800', 
+  infoLabel: {
+    fontFamily: FONT_FAMILY,
+    fontSize: 9,
+    fontWeight: '800',
     color: COLORS.slate400,
-    letterSpacing: 1.2,
-    marginBottom: 2,
+    letterSpacing: 1,
+    marginBottom: 4,
   },
-  infoValue: { 
-    fontFamily: FONT_FAMILY, 
-    fontSize: 13, 
-    fontWeight: '600', 
+  infoValue: {
+    fontFamily: FONT_FAMILY,
+    fontSize: 14.5,
+    fontWeight: '700',
     color: COLORS.slate800,
   },
   btnWrapper: {
