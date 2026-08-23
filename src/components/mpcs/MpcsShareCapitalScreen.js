@@ -201,26 +201,22 @@ export default function MpcsShareCapitalScreen({
           floating BottomNav pill for the same strip at the bottom. */}
 
       {onNext && (
-          <View style={[styles.btnWrapper, webCapWidth]}>
-            <Pressable
-              style={({ hovered, pressed }) => [
-                styles.editCtaBtn,
-                pressed && { transform: [{ scale: 0.98 }] },
-                hovered && Platform.OS === 'web' && { shadowOpacity: 0.4 }
-              ]}
-              onPress={() => { handleSave(); onNext(); }}
+          <View style={[{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 20, paddingTop: 16, marginTop: 4, borderTopWidth: 1, borderTopColor: 'rgba(226,232,240,0.8)' }, webCapWidth]}>
+            <TouchableOpacity
+              onPress={() => { handleSave(); if (onBack) onBack(); }}
+              style={styles.prevCircleBtn}
+              activeOpacity={0.85}
             >
-              <LinearGradient
-                colors={['#047857', '#064e3b']}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-                style={StyleSheet.absoluteFillObject}
-              />
-              <Text style={styles.editCtaText}>Save & Next</Text>
-              <MaterialCommunityIcons name="arrow-right" size={16} color="#ffffff" />
+              <MaterialCommunityIcons name="chevron-left" size={24} color="#ffffff" />
+            </TouchableOpacity>
+            <Text style={styles.stepLabelText}>STEP 5 OF 7</Text>
+            <Pressable
+              onPress={() => { handleSave(); onNext(); }}
+              style={({ pressed }) => [styles.nextCircleBtn, pressed && { transform: [{ scale: 0.95 }] }]}
+            >
+              <MaterialCommunityIcons name="chevron-right" size={24} color="#7a1a1f" />
             </Pressable>
           </View>
-
       )}
 
 
@@ -504,6 +500,31 @@ const styles = StyleSheet.create({
     fontSize: 13, 
     fontWeight: '700',
     letterSpacing: 0.5,
+  },
+  prevCircleBtn: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#7a1a1f',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  nextCircleBtn: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#ffffff',
+    borderWidth: 1.5,
+    borderColor: '#7a1a1f',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  stepLabelText: {
+    fontFamily: FONT_FAMILY,
+    fontSize: 11,
+    fontWeight: '700',
+    color: COLORS.slate400,
+    letterSpacing: 0.6,
   },
 
   // In-App Slide-Up Sheet
