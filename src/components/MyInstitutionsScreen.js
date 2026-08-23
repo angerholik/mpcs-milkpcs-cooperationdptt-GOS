@@ -217,22 +217,15 @@ export default function MyInstitutionsScreen({
           </TouchableOpacity>
         </View>
 
-        {/* Add Institution CTA — outlined rather than solid-filled, so it
-            doesn't stack a third block of maroon directly under the header
-            and the active filter chip. */}
+        {/* Add Institution CTA — same pale-bg / dark-circle treatment as
+            Save & Continue, so it doesn't stack a third block of maroon
+            directly under the header and the active filter chip. */}
         <AnimatedContinueButton
           label="ADD NEW INSTITUTION (MPCS / MILK PCS)"
           icon="plus"
           onPress={() => setModalVisible(true)}
           height={52}
-          radius={14}
           fontSize={11}
-          baseBg={COLORS.surface}
-          baseTextColor={COLORS.primary}
-          circleColor={COLORS.primary}
-          activeTextColor="#ffffff"
-          iconColor="#ffffff"
-          style={{ borderWidth: 1.5, borderColor: COLORS.primary }}
         />
 
         {/* List of Registered Institutions */}
