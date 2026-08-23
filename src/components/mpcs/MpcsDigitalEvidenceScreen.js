@@ -7,6 +7,7 @@ import {
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import BottomNav from '../BottomNav';
 import { webCapWidth } from '../../utils/webStyles';
 
 const COLORS = {
@@ -46,7 +47,9 @@ export default function MpcsDigitalEvidenceScreen({
   notes = "",
   setNotes,
   onSaveNext,
-  onBack
+  onBack,
+  activeTab,
+  onTabPress
 }) {
   const [isCapturing, setIsCapturing] = useState(false);
 
@@ -281,10 +284,9 @@ export default function MpcsDigitalEvidenceScreen({
             </View>
           </View>
         </View>
-      </ScrollView>
-
-      {/* ── Bottom Navigation Bar ── */}
-      <View style={styles.bottomBar}>
+      {/* Wizard navigation actions now scroll with the content
+          instead of sitting in a fixed footer, which competed with the
+          floating BottomNav pill for the same strip at the bottom. */}
         <View style={[{ flexDirection: 'row', flex: 1, gap: 10 }, webCapWidth]}>
         <TouchableOpacity style={styles.navBackBtn} onPress={onBack} activeOpacity={0.7}>
           <Text style={styles.buttonTextSecondary}>BACK</Text>
@@ -303,7 +305,10 @@ export default function MpcsDigitalEvidenceScreen({
           <MaterialCommunityIcons name="arrow-right" size={16} color="#ffffff" />
         </Pressable>
         </View>
-      </View>
+
+      </ScrollView>
+
+      {onTabPress && <BottomNav activeTab={activeTab || 'home'} onTabPress={onTabPress} />}
     </View>
   );
 }
@@ -352,7 +357,7 @@ const styles = StyleSheet.create({
 
   // Scroll
   scrollContent: { flex: 1 },
-  scrollInner: { padding: 16, paddingBottom: 24, gap: 14 },
+  scrollInner: { padding: 16, paddingBottom: 110, gap: 14 },
 
   // Month Card
   monthCard: {
@@ -581,12 +586,6 @@ const styles = StyleSheet.create({
   },
 
   // Bottom Bar
-  bottomBar: {
-    padding: 14,
-    backgroundColor: COLORS.surface,
-    borderTopWidth: 1,
-    borderTopColor: COLORS.slate200,
-  },
   navBackBtn: {
     flex: 1,
     paddingVertical: 14,

@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, Platfo
 import { MaterialIcons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useAutosave } from '../../hooks/useAutosave';
+import BottomNav from '../BottomNav';
 import { webCapWidth } from '../../utils/webStyles';
 
 const COLORS = {
@@ -36,7 +37,9 @@ export default function MpcsFinancialPerformanceScreen({
   initialProfitOrLoss = "",
   onSaveFinancials,
   onNext,
-  onBack
+  onBack,
+  activeTab,
+  onTabPress
 }) {
   const [modalVisible, setModalVisible] = useState(false);
 
@@ -202,11 +205,13 @@ export default function MpcsFinancialPerformanceScreen({
           </View>
         </View>
 
-      </ScrollView>
+      {/* Wizard forward-navigation action now scrolls with the content
 
-      {/* Bottom Footer: wizard forward-navigation action */}
+          instead of sitting in a fixed footer, which competed with the
+
+          floating BottomNav pill for the same strip at the bottom. */}
+
       {onNext && (
-        <View style={styles.bottomFooter}>
           <View style={[styles.btnWrapper, webCapWidth]}>
             <Pressable
               style={({ hovered, pressed }) => [
@@ -226,8 +231,14 @@ export default function MpcsFinancialPerformanceScreen({
               <MaterialCommunityIcons name="arrow-right" size={16} color="#ffffff" />
             </Pressable>
           </View>
-        </View>
+
       )}
+
+
+      </ScrollView>
+
+
+      {onTabPress && <BottomNav activeTab={activeTab || 'home'} onTabPress={onTabPress} />}
 
       {/* In-App Slide-Up Sheet */}
       {modalVisible && (
@@ -398,15 +409,6 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     zIndex: 10,
   },
-  bottomFooter: {
-    backgroundColor: 'rgba(255, 255, 255, 0.97)',
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(226, 232, 240, 0.8)',
-    paddingHorizontal: 12,
-    paddingTop: 10,
-    paddingBottom: Platform.OS === 'ios' ? 28 : 12,
-    zIndex: 10,
-  },
   bgBlobTop: {
     position: 'absolute',
     top: -40,
@@ -456,7 +458,7 @@ const styles = StyleSheet.create({
   scrollInner: { 
     padding: 12,
     gap: 12,
-    paddingBottom: 40,
+    paddingBottom: 110, // clears the floating BottomNav pill,
   },
   alertCard: {
     backgroundColor: 'rgba(254, 252, 232, 0.8)',

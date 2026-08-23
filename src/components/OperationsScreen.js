@@ -6,6 +6,7 @@ import {
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import BottomNav from './BottomNav';
 import { webCapWidth } from '../utils/webStyles';
 
 const COLORS = {
@@ -35,7 +36,9 @@ export default function OperationsScreen({
   onSave,
   onSaveNext,
   onNext,
-  onBack
+  onBack,
+  activeTab,
+  onTabPress
 }) {
   const [litres, setLitres] = useState("");
   const [withdrawal, setWithdrawal] = useState("");
@@ -209,10 +212,9 @@ export default function OperationsScreen({
             </View>
           </View>
         </View>
-      </ScrollView>
-
-      {/* ── Bottom Navigation Bar ── */}
-      <View style={styles.bottomBar}>
+      {/* Wizard navigation actions now scroll with the content
+          instead of sitting in a fixed footer, which competed with the
+          floating BottomNav pill for the same strip at the bottom. */}
         <View style={[{ flexDirection: 'row', flex: 1, gap: 12 }, webCapWidth]}>
         <TouchableOpacity style={styles.navBackBtn} onPress={onBack} activeOpacity={0.7}>
           <Text style={styles.buttonTextSecondary}>BACK</Text>
@@ -232,7 +234,10 @@ export default function OperationsScreen({
           <MaterialCommunityIcons name="arrow-right" size={16} color="#ffffff" />
         </Pressable>
         </View>
-      </View>
+
+      </ScrollView>
+
+      {onTabPress && <BottomNav activeTab={activeTab || 'home'} onTabPress={onTabPress} />}
     </View>
   );
 }
@@ -273,7 +278,7 @@ const styles = StyleSheet.create({
     fontFamily: FONT_FAMILY,
   },
   scrollContent: { flex: 1 },
-  scrollInner: { padding: 16, paddingBottom: 40, gap: 16 },
+  scrollInner: { padding: 16, paddingBottom: 110, gap: 16 },
 
   card: {
     backgroundColor: COLORS.surface,
@@ -345,14 +350,6 @@ const styles = StyleSheet.create({
     color: COLORS.slate400,
     fontWeight: '600',
     fontFamily: FONT_FAMILY,
-  },
-
-  bottomBar: {
-    padding: 16,
-    paddingBottom: Platform.OS === 'ios' ? 32 : 16,
-    backgroundColor: COLORS.surface,
-    borderTopWidth: 1,
-    borderTopColor: COLORS.slate200,
   },
   navBackBtn: {
     flex: 1,

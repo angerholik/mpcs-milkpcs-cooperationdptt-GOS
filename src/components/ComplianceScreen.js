@@ -6,6 +6,7 @@ import {
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { webCapWidth } from '../utils/webStyles';
+import BottomNav from './BottomNav';
 
 const COLORS = {
   surface: '#ffffff',
@@ -47,7 +48,9 @@ export default function ComplianceScreen({
   onSave,
   onSaveNext,
   onNext,
-  onBack
+  onBack,
+  activeTab,
+  onTabPress
 }) {
   const [modalVisible, setModalVisible] = useState(false);
   const [lastVerified, setLastVerified] = useState('Not verified');
@@ -261,10 +264,9 @@ export default function ComplianceScreen({
             </TouchableOpacity>
           </>
         )}
-      </ScrollView>
-
-      {/* Bottom Footer: wizard forward-navigation action */}
-      <View style={styles.bottomFooter}>
+        {/* Wizard forward-navigation action now scrolls with the content
+            instead of sitting in a fixed footer, which competed with the
+            floating BottomNav pill for the same strip at the bottom. */}
         <View style={[styles.btnWrapper, webCapWidth]}>
           <Pressable
             style={({ hovered, pressed }) => [
@@ -284,7 +286,9 @@ export default function ComplianceScreen({
             <MaterialCommunityIcons name="arrow-right" size={16} color="#ffffff" />
           </Pressable>
         </View>
-      </View>
+      </ScrollView>
+
+      {onTabPress && <BottomNav activeTab={activeTab || 'home'} onTabPress={onTabPress} />}
 
       {/* Edit Modal */}
       {modalVisible && (
@@ -362,15 +366,6 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     zIndex: 10,
   },
-  bottomFooter: {
-    backgroundColor: 'rgba(255, 255, 255, 0.97)',
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(226, 232, 240, 0.8)',
-    paddingHorizontal: 12,
-    paddingTop: 10,
-    paddingBottom: Platform.OS === 'ios' ? 28 : 12,
-    zIndex: 10,
-  },
   bgBlobTop: {
     position: 'absolute', top: -40, right: -40, width: 260, height: 260,
     borderRadius: 130, backgroundColor: 'rgba(122, 26, 31, 0.08)', zIndex: -1,
@@ -392,7 +387,7 @@ const styles = StyleSheet.create({
     fontWeight: '800', letterSpacing: -0.16,
   },
   scrollContent: { flex: 1 },
-  scrollInner: { padding: 12, gap: 12, paddingBottom: 40 },
+  scrollInner: { padding: 12, gap: 12, paddingBottom: 110 }, // clears the floating BottomNav pill
   alertCard: {
     backgroundColor: 'rgba(254, 252, 232, 0.8)',
     borderRadius: 14, padding: 12, flexDirection: 'row', alignItems: 'center',

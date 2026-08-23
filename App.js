@@ -2407,6 +2407,11 @@ export default function App() {
                           }
                         }}
                         onBack={() => setCurrentMobileScreen(returnMobileScreen || 'HOME')}
+                      activeTab="home"
+                      onTabPress={(tab) => {
+                        setActiveBottomTab(tab);
+                        if (tab === 'home') setCurrentMobileScreen('HOME');
+                      }}
                       />
                     )}
 
@@ -2428,6 +2433,11 @@ export default function App() {
                           }
                         }}
                         onBack={() => setCurrentMobileScreen(returnMobileScreen || 'HOME')}
+                      activeTab="home"
+                      onTabPress={(tab) => {
+                        setActiveBottomTab(tab);
+                        if (tab === 'home') setCurrentMobileScreen('HOME');
+                      }}
                       />
                     )}
 
@@ -2449,6 +2459,11 @@ export default function App() {
                           }
                         }}
                         onBack={() => setCurrentMobileScreen(returnMobileScreen || 'HOME')}
+                      activeTab="home"
+                      onTabPress={(tab) => {
+                        setActiveBottomTab(tab);
+                        if (tab === 'home') setCurrentMobileScreen('HOME');
+                      }}
                       />
                     )}
 
@@ -2521,6 +2536,11 @@ export default function App() {
                           setCurrentMobileScreen('HOME');
                         }}
                         onBack={() => setCurrentMobileScreen('PROFILE')}
+                      activeTab="home"
+                      onTabPress={(tab) => {
+                        setActiveBottomTab(tab);
+                        if (tab === 'home') setCurrentMobileScreen('HOME');
+                      }}
                       />
                     )}
 
@@ -2556,6 +2576,11 @@ export default function App() {
                           setCurrentMobileScreen('REVIEW');
                         }}
                         onBack={() => setCurrentMobileScreen(returnMobileScreen || 'HOME')}
+                      activeTab="home"
+                      onTabPress={(tab) => {
+                        setActiveBottomTab(tab);
+                        if (tab === 'home') setCurrentMobileScreen('HOME');
+                      }}
                       />
                     )}
 
@@ -2744,6 +2769,11 @@ export default function App() {
                           setCurrentMobileScreen('MPCS_REVIEW');
                         }}
                         onBack={() => setCurrentMobileScreen('MPCS_REVIEW')}
+                      activeTab="home"
+                      onTabPress={(tab) => {
+                        setActiveBottomTab(tab);
+                        if (tab === 'home') setCurrentMobileScreen('HOME');
+                      }}
                       />
                     )}
 
@@ -2768,6 +2798,11 @@ export default function App() {
                           setCurrentMobileScreen('MPCS_REVIEW');
                         }}
                         onBack={() => setCurrentMobileScreen('MPCS_REVIEW')}
+                      activeTab="home"
+                      onTabPress={(tab) => {
+                        setActiveBottomTab(tab);
+                        if (tab === 'home') setCurrentMobileScreen('HOME');
+                      }}
                       />
                     )}
 
@@ -2812,6 +2847,11 @@ export default function App() {
                           setCurrentMobileScreen('MPCS_REVIEW');
                         }}
                         onBack={() => setCurrentMobileScreen('MPCS_REVIEW')}
+                      activeTab="home"
+                      onTabPress={(tab) => {
+                        setActiveBottomTab(tab);
+                        if (tab === 'home') setCurrentMobileScreen('HOME');
+                      }}
                       />
                     )}
 
@@ -2827,6 +2867,11 @@ export default function App() {
                           setCurrentMobileScreen('MPCS_REVIEW');
                         }}
                         onBack={() => setCurrentMobileScreen('MPCS_REVIEW')}
+                      activeTab="home"
+                      onTabPress={(tab) => {
+                        setActiveBottomTab(tab);
+                        if (tab === 'home') setCurrentMobileScreen('HOME');
+                      }}
                       />
                     )}
 
@@ -2841,6 +2886,11 @@ export default function App() {
                           setCurrentMobileScreen('MPCS_REVIEW');
                         }}
                         onBack={() => setCurrentMobileScreen('MPCS_REVIEW')}
+                      activeTab="home"
+                      onTabPress={(tab) => {
+                        setActiveBottomTab(tab);
+                        if (tab === 'home') setCurrentMobileScreen('HOME');
+                      }}
                       />
                     )}
 
@@ -2907,6 +2957,11 @@ export default function App() {
                         }}
                         onNext={() => setCurrentMobileScreen('MPCS_COMPLIANCE')}
                         onBack={() => setCurrentMobileScreen('MPCS_INST_PROFILE')}
+                      activeTab="home"
+                      onTabPress={(tab) => {
+                        setActiveBottomTab(tab);
+                        if (tab === 'home') setCurrentMobileScreen('HOME');
+                      }}
                       />
                     )}
 
@@ -2925,6 +2980,11 @@ export default function App() {
                         }}
                         onNext={() => setCurrentMobileScreen('MPCS_FINANCIALS')}
                         onBack={() => setCurrentMobileScreen('MPCS_DEMOGRAPHICS')}
+                      activeTab="home"
+                      onTabPress={(tab) => {
+                        setActiveBottomTab(tab);
+                        if (tab === 'home') setCurrentMobileScreen('HOME');
+                      }}
                       />
                     )}
 
@@ -2943,6 +3003,11 @@ export default function App() {
                         }}
                         onNext={() => setCurrentMobileScreen('MPCS_DIVIDEND')}
                         onBack={() => setCurrentMobileScreen('MPCS_COMPLIANCE')}
+                      activeTab="home"
+                      onTabPress={(tab) => {
+                        setActiveBottomTab(tab);
+                        if (tab === 'home') setCurrentMobileScreen('HOME');
+                      }}
                       />
                     )}
 
@@ -2960,6 +3025,11 @@ export default function App() {
                         }}
                         onNext={() => setCurrentMobileScreen('MPCS_SHARE_CAPITAL')}
                         onBack={() => setCurrentMobileScreen('MPCS_FINANCIALS')}
+                      activeTab="home"
+                      onTabPress={(tab) => {
+                        setActiveBottomTab(tab);
+                        if (tab === 'home') setCurrentMobileScreen('HOME');
+                      }}
                       />
                     )}
 
@@ -2976,6 +3046,11 @@ export default function App() {
                         }}
                         onNext={() => setCurrentMobileScreen('MPCS_CSC_DETAILS')}
                         onBack={() => setCurrentMobileScreen('MPCS_DIVIDEND')}
+                      activeTab="home"
+                      onTabPress={(tab) => {
+                        setActiveBottomTab(tab);
+                        if (tab === 'home') setCurrentMobileScreen('HOME');
+                      }}
                       />
                     )}
 
@@ -2995,6 +3070,11 @@ export default function App() {
                         }}
                         onNext={() => setCurrentMobileScreen('MPCS_LOAN')}
                         onBack={() => setCurrentMobileScreen('MPCS_SHARE_CAPITAL')}
+                      activeTab="home"
+                      onTabPress={(tab) => {
+                        setActiveBottomTab(tab);
+                        if (tab === 'home') setCurrentMobileScreen('HOME');
+                      }}
                       />
                     )}
 
@@ -3016,6 +3096,11 @@ export default function App() {
                           setCurrentMobileScreen('HOME');
                         }}
                         onBack={() => setCurrentMobileScreen('MPCS_CSC_DETAILS')}
+                      activeTab="home"
+                      onTabPress={(tab) => {
+                        setActiveBottomTab(tab);
+                        if (tab === 'home') setCurrentMobileScreen('HOME');
+                      }}
                       />
                     )}
 
@@ -3048,6 +3133,11 @@ export default function App() {
                           setCurrentMobileScreen('MPCS_ACTIVITIES');
                         }}
                         onBack={() => setCurrentMobileScreen('HOME')}
+                      activeTab="home"
+                      onTabPress={(tab) => {
+                        setActiveBottomTab(tab);
+                        if (tab === 'home') setCurrentMobileScreen('HOME');
+                      }}
                       />
                     )}
 
