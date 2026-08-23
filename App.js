@@ -2410,6 +2410,7 @@ export default function App() {
                     onEditMasterData={() => {
                       setMasterDataViewReturnTab('profile');
                       setCurrentMobileScreen('PROFILE_VIEW');
+                      setActiveBottomTab('home');
                     }}
                     activeTab="profile"
                     onTabPress={(tab) => {
@@ -2901,6 +2902,7 @@ export default function App() {
                     onEditMasterData={() => {
                       setMasterDataViewReturnTab('profile');
                       setCurrentMobileScreen('MPCS_PROFILE_VIEW');
+                      setActiveBottomTab('home');
                     }}
                     activeTab="profile"
                     onTabPress={(tab) => {
