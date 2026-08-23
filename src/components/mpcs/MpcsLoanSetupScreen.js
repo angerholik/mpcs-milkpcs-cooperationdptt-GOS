@@ -268,14 +268,14 @@ export default function MpcsLoanSetupScreen({
           )}
         </View>
 
-      {/* Wizard forward-navigation action now scrolls with the content
-
-          instead of sitting in a fixed footer, which competed with the
-
-          floating BottomNav pill for the same strip at the bottom. */}
+      {/* This is the last step of the master data chain, so it pairs a
+          Previous chevron with a distinct terminal "finish" action instead
+          of the Next chevron the earlier steps use — that circle
+          specifically signals "there's another step after this," which
+          isn't true here. */}
 
       {onNext && (
-          <View style={[{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 20, paddingTop: 16, marginTop: 4, borderTopWidth: 1, borderTopColor: 'rgba(226,232,240,0.8)' }, webCapWidth]}>
+          <View style={[{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingTop: 16, marginTop: 4, borderTopWidth: 1, borderTopColor: 'rgba(226,232,240,0.8)' }, webCapWidth]}>
             <TouchableOpacity
               onPress={() => { handleSave(); if (onBack) onBack(); }}
               style={styles.prevCircleBtn}
@@ -283,13 +283,25 @@ export default function MpcsLoanSetupScreen({
             >
               <MaterialCommunityIcons name="chevron-left" size={24} color="#ffffff" />
             </TouchableOpacity>
-            <Text style={styles.stepLabelText}>STEP 8 OF 8</Text>
-            <Pressable
-              onPress={() => { handleSave(); onNext(); }}
-              style={({ pressed }) => [styles.nextCircleBtn, pressed && { transform: [{ scale: 0.95 }] }]}
-            >
-              <MaterialCommunityIcons name="chevron-right" size={24} color="#7a1a1f" />
-            </Pressable>
+            <View style={[styles.btnWrapper, { flex: 1 }]}>
+              <Pressable
+                style={({ hovered, pressed }) => [
+                  styles.editCtaBtn,
+                  pressed && { transform: [{ scale: 0.98 }] },
+                  hovered && Platform.OS === 'web' && { shadowOpacity: 0.4 }
+                ]}
+                onPress={() => { handleSave(); onNext(); }}
+              >
+                <LinearGradient
+                  colors={['#047857', '#064e3b']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                  style={StyleSheet.absoluteFillObject}
+                />
+                <Text style={styles.editCtaText}>Save Master Data</Text>
+                <MaterialCommunityIcons name="cloud-check-outline" size={16} color="#ffffff" />
+              </Pressable>
+            </View>
           </View>
       )}
 
@@ -624,24 +636,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  nextCircleBtn: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: '#ffffff',
-    borderWidth: 1.5,
-    borderColor: '#7a1a1f',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  stepLabelText: {
-    fontFamily: FONT_FAMILY,
-    fontSize: 11,
-    fontWeight: '700',
-    color: COLORS.slate400,
-    letterSpacing: 0.6,
-  },
-
   // In-App Slide-Up Sheet
   inAppModalOverlay: {
     position: 'absolute',
