@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, Platfo
 import { MaterialIcons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useAutosave } from '../../hooks/useAutosave';
+import BottomNav from '../BottomNav';
 
 const COLORS = {
   surface: '#ffffff',
@@ -66,7 +67,9 @@ export default function MpcsInstitutionalProfileScreen({
   lastVerified = "Not verified",
   onSaveProfile,
   onNext,
-  onBack
+  onBack,
+  activeTab,
+  onTabPress
 }) {
   const [modalVisible, setModalVisible] = useState(false);
 
@@ -251,11 +254,11 @@ export default function MpcsInstitutionalProfileScreen({
             </View>
           </View>
         </View>
-      </ScrollView>
 
-      {/* Bottom Footer: wizard forward-navigation action */}
-      {onNext && (
-        <View style={styles.bottomFooter}>
+        {/* Save & Next now scrolls with the content instead of sitting in
+            a fixed footer — that footer competed with the floating
+            BottomNav pill for the same strip at the bottom of the screen. */}
+        {onNext && (
           <View style={[styles.btnWrapper, styles.webCapWidth]}>
             <Pressable
               style={({ hovered, pressed }) => [
@@ -275,8 +278,10 @@ export default function MpcsInstitutionalProfileScreen({
               <MaterialCommunityIcons name="arrow-right" size={16} color="#ffffff" />
             </Pressable>
           </View>
-        </View>
-      )}
+        )}
+      </ScrollView>
+
+      {onTabPress && <BottomNav activeTab={activeTab || 'profile'} onTabPress={onTabPress} />}
 
       {/* In-App Slide-Up Sheet */}
       {modalVisible && (
@@ -396,15 +401,6 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     zIndex: 10,
   },
-  bottomFooter: {
-    backgroundColor: 'rgba(255, 255, 255, 0.97)',
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(226, 232, 240, 0.8)',
-    paddingHorizontal: 12,
-    paddingTop: 10,
-    paddingBottom: Platform.OS === 'ios' ? 28 : 12,
-    zIndex: 10,
-  },
   bgBlobTop: {
     position: 'absolute',
     top: -40,
@@ -454,7 +450,7 @@ const styles = StyleSheet.create({
   scrollInner: {
     padding: 12,
     gap: 14,
-    paddingBottom: 40,
+    paddingBottom: 110, // clears the floating BottomNav pill
   },
   // Mobile-first layout stretched edge-to-edge on wide desktop web looks
   // sparse and unbalanced — cap it to a comfortable reading column there.

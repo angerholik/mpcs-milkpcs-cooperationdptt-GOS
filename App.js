@@ -2328,6 +2328,11 @@ export default function App() {
                       setCurrentMobileScreen('HOME');
                       setActiveBottomTab('home');
                     }}
+                    activeTab="profile"
+                    onTabPress={(tab) => {
+                      setActiveBottomTab(tab);
+                      if (tab === 'home') setCurrentMobileScreen('HOME');
+                    }}
                   />
                 ) : (
                   <>
@@ -2641,6 +2646,11 @@ export default function App() {
                     onBack={() => {
                       setCurrentMobileScreen('HOME');
                       setActiveBottomTab('home');
+                    }}
+                    activeTab="profile"
+                    onTabPress={(tab) => {
+                      setActiveBottomTab(tab);
+                      if (tab === 'home') setCurrentMobileScreen('HOME');
                     }}
                   />
                 ) : activeBottomTab === 'more' ? (

@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, Platfo
 import { MaterialIcons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { webCapWidth } from '../utils/webStyles';
+import BottomNav from './BottomNav';
 import { useAutosave } from '../hooks/useAutosave';
 
 const COLORS = {
@@ -108,7 +109,9 @@ export default function InstitutionalProfileScreen({
   onSave,
   onSaveNext,
   onNext,
-  onBack
+  onBack,
+  activeTab,
+  onTabPress
 }) {
   const [modalVisible, setModalVisible] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
@@ -494,10 +497,10 @@ export default function InstitutionalProfileScreen({
             <Text style={styles.emptySubtitle}>No active loan record. Enable edit to add loan details. Once enabled, this society's monthly Compliance section will show a loan repayment tracker until it's marked cleared.</Text>
           )}
         </View>
-      </ScrollView>
-
-      {/* Bottom Footer: wizard navigation actions */}
-      <View style={styles.bottomFooter}>
+        {/* Wizard navigation actions now scroll with the content instead
+            of sitting in a fixed footer — that footer competed with the
+            floating BottomNav pill for the same strip at the bottom of
+            the screen. */}
         <View style={[{ flexDirection: 'row', gap: 8 }, webCapWidth]}>
           <View style={[styles.btnWrapper, { flex: 1 }]}>
             <Pressable
@@ -532,7 +535,9 @@ export default function InstitutionalProfileScreen({
             </Pressable>
           </View>
         </View>
-      </View>
+      </ScrollView>
+
+      {onTabPress && <BottomNav activeTab={activeTab || 'profile'} onTabPress={onTabPress} />}
 
       {/* In-App Slide-Up Sheet */}
       {modalVisible && (
@@ -725,15 +730,6 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     zIndex: 10,
   },
-  bottomFooter: {
-    backgroundColor: 'rgba(255, 255, 255, 0.97)',
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(226, 232, 240, 0.8)',
-    paddingHorizontal: 12,
-    paddingTop: 10,
-    paddingBottom: Platform.OS === 'ios' ? 28 : 12,
-    zIndex: 10,
-  },
   bgBlobTop: {
     position: 'absolute',
     top: -40,
@@ -780,10 +776,10 @@ const styles = StyleSheet.create({
     letterSpacing: -0.16,
   },
   scrollContent: { flex: 1 },
-  scrollInner: { 
+  scrollInner: {
     padding: 12,
     gap: 12,
-    paddingBottom: 40,
+    paddingBottom: 110, // clears the floating BottomNav pill
   },
   alertCard: {
     backgroundColor: 'rgba(254, 252, 232, 0.8)',
