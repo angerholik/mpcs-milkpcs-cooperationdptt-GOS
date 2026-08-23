@@ -219,13 +219,9 @@ export default function MpcsDigitalEvidenceScreen({
               <Text style={styles.inputLabel}>Latitude</Text>
               <View style={styles.inputBox}>
                 <MaterialCommunityIcons name="crosshairs-gps" size={15} color={COLORS.slate400} style={styles.inputIcon} />
-                <TextInput
-                  style={styles.textInput}
-                  value={latitude}
-                  onChangeText={setLatitude}
-                  placeholder="27.4400"
-                  placeholderTextColor={COLORS.slate300}
-                />
+                <Text style={styles.textInput} numberOfLines={1} ellipsizeMode="tail">
+                  {latitude || 'Not captured yet'}
+                </Text>
               </View>
             </View>
 
@@ -233,13 +229,9 @@ export default function MpcsDigitalEvidenceScreen({
               <Text style={styles.inputLabel}>Longitude</Text>
               <View style={styles.inputBox}>
                 <MaterialCommunityIcons name="crosshairs-gps" size={15} color={COLORS.slate400} style={styles.inputIcon} />
-                <TextInput
-                  style={styles.textInput}
-                  value={longitude}
-                  onChangeText={setLongitude}
-                  placeholder="88.5900"
-                  placeholderTextColor={COLORS.slate300}
-                />
+                <Text style={styles.textInput} numberOfLines={1} ellipsizeMode="tail">
+                  {longitude || 'Not captured yet'}
+                </Text>
               </View>
             </View>
           </View>
@@ -533,6 +525,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     paddingHorizontal: 10,
     height: 44,
+    overflow: 'hidden',
   },
   inputIcon: { marginRight: 6 },
   textInput: {

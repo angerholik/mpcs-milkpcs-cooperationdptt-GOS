@@ -112,6 +112,32 @@ if (Platform.OS === 'web' && typeof document !== 'undefined') {
       });
     });
   }
+
+  // iOS Safari sizes the page to the viewport height AT THE TIME the
+  // on-screen keyboard was last open, and doesn't reliably relayout once it
+  // closes — the app is left shifted up with a blank gap at the bottom
+  // where the keyboard used to be, until something else forces a reflow.
+  // `100dvh` (set in public/index.html) fixes this on iOS 15.4+, but the
+  // app needs to keep working on much older iOS releases too, so this pins
+  // #root's actual pixel height to the real visible viewport on every
+  // resize — covering iOS 13+ via the standard `visualViewport` API, and
+  // falling back to plain `window.innerHeight` + resize/orientationchange
+  // for iOS 11-12, which predate visualViewport entirely.
+  const applyViewportHeight = () => {
+    const root = document.getElementById('root');
+    if (!root) return;
+    const height = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+    document.documentElement.style.height = `${height}px`;
+    document.body.style.height = `${height}px`;
+    root.style.height = `${height}px`;
+  };
+  applyViewportHeight();
+  if (window.visualViewport) {
+    window.visualViewport.addEventListener('resize', applyViewportHeight);
+  } else {
+    window.addEventListener('resize', applyViewportHeight);
+    window.addEventListener('orientationchange', applyViewportHeight);
+  }
 }
 
 // The sealed-return certificate interpolates officer/center names straight into
