@@ -278,14 +278,19 @@ export default function InstitutionalProfileScreen({
             <Pressable
               style={({ hovered, pressed }) => [
                 styles.editCtaBtn,
-                { backgroundColor: '#c9b3a7' },
                 pressed && { transform: [{ scale: 0.98 }] },
-                hovered && Platform.OS === 'web' && { opacity: 0.9 }
+                hovered && Platform.OS === 'web' && { shadowOpacity: 0.4 }
               ]}
               onPress={() => setModalVisible(true)}
             >
-              <MaterialCommunityIcons name="pencil-outline" size={16} color="#7a1a1f" />
-              <Text style={[styles.editCtaText, { color: '#7a1a1f' }]}>Edit Profile</Text>
+              <LinearGradient
+                colors={['#7a1a1f', '#4a1017']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={StyleSheet.absoluteFillObject}
+              />
+              <MaterialCommunityIcons name="pencil-outline" size={16} color="#ffffff" />
+              <Text style={styles.editCtaText}>Edit Profile</Text>
             </Pressable>
           </View>
         </View>
