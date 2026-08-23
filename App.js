@@ -68,6 +68,23 @@ import { useFonts, Manrope_400Regular, Manrope_500Medium, Manrope_600SemiBold, M
 
 const { width } = Dimensions.get('window');
 
+// iOS Safari zooms the whole page in whenever a focused input's font-size is
+// under 16px, then leaves the viewport at that zoom level after blur — every
+// text field in this app renders well under that (11-13px design sizes), so
+// without this override, tapping into ANY field on an iPhone browser zooms
+// and misaligns the entire screen until the user manually pinches back out.
+// Native builds are unaffected (no browser, no zoom-on-focus behavior), so
+// this only needs to run on web.
+if (Platform.OS === 'web' && typeof document !== 'undefined') {
+  const style = document.createElement('style');
+  style.textContent = `
+    @media (max-width: 768px) {
+      input, textarea, select { font-size: 16px !important; }
+    }
+  `;
+  document.head.appendChild(style);
+}
+
 // The sealed-return certificate interpolates officer/center names straight into
 // HTML — escape them so a name containing `<`/`&` can't break the markup.
 function escapeHtml(value) {

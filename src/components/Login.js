@@ -892,12 +892,16 @@ const styles = StyleSheet.create({
     padding: 4,
     gap: 6,
   },
+  // Icon-above-label (column) instead of side-by-side — three flex:1 cells
+  // sharing a narrow phone width don't leave room for icon + "ACI (Assistant
+  // CI)" on one line, so it used to wrap mid-word with no center alignment.
   activeRoleGradient: {
-    flexDirection: 'row',
+    flexDirection: 'column',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 6,
-    paddingVertical: 11,
+    gap: 4,
+    paddingVertical: 10,
+    paddingHorizontal: 4,
     borderRadius: 10,
     shadowColor: COLORS.primary,
     shadowOffset: { width: 0, height: 2 },
@@ -907,23 +911,26 @@ const styles = StyleSheet.create({
   },
   activeRoleText: {
     fontFamily: FONT_FAMILY,
-    fontSize: 11,
+    fontSize: 10.5,
     fontWeight: '800',
     color: '#FFFFFF',
+    textAlign: 'center',
   },
   inactiveRoleContent: {
-    flexDirection: 'row',
+    flexDirection: 'column',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 6,
-    paddingVertical: 11,
+    gap: 4,
+    paddingVertical: 10,
+    paddingHorizontal: 4,
     borderRadius: 10,
   },
   inactiveRoleText: {
     fontFamily: FONT_FAMILY,
-    fontSize: 11,
+    fontSize: 10.5,
     fontWeight: '700',
     color: COLORS.slate600,
+    textAlign: 'center',
   },
 
   // Input Field Box
