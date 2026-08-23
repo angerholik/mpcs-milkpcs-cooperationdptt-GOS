@@ -173,14 +173,9 @@ export default function MyInstitutionsScreen({
             activeOpacity={0.85}
           >
             {activeTab === 'ALL' ? (
-              <LinearGradient
-                colors={['#7a1a1f', '#4a1017']}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-                style={styles.activeFilterChipGradient}
-              >
+              <View style={styles.activeFilterChip}>
                 <Text style={styles.activeFilterChipText}>ALL ({institutions.length})</Text>
-              </LinearGradient>
+              </View>
             ) : (
               <View style={styles.filterChip}>
                 <Text style={styles.filterChipText}>ALL ({institutions.length})</Text>
@@ -194,14 +189,9 @@ export default function MyInstitutionsScreen({
             activeOpacity={0.85}
           >
             {activeTab === 'MPCS' ? (
-              <LinearGradient
-                colors={['#7a1a1f', '#4a1017']}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-                style={styles.activeFilterChipGradient}
-              >
+              <View style={styles.activeFilterChip}>
                 <Text style={styles.activeFilterChipText}>MPCS ({mpcsCount})</Text>
-              </LinearGradient>
+              </View>
             ) : (
               <View style={styles.filterChip}>
                 <Text style={styles.filterChipText}>MPCS ({mpcsCount})</Text>
@@ -215,14 +205,9 @@ export default function MyInstitutionsScreen({
             activeOpacity={0.85}
           >
             {activeTab === 'MILK' ? (
-              <LinearGradient
-                colors={['#7a1a1f', '#4a1017']}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-                style={styles.activeFilterChipGradient}
-              >
+              <View style={styles.activeFilterChip}>
                 <Text style={styles.activeFilterChipText}>MILK PCS ({milkCount})</Text>
-              </LinearGradient>
+              </View>
             ) : (
               <View style={styles.filterChip}>
                 <Text style={styles.filterChipText}>MILK PCS ({milkCount})</Text>
@@ -231,29 +216,19 @@ export default function MyInstitutionsScreen({
           </TouchableOpacity>
         </View>
 
-        {/* Add Institution Primary CTA Button with Rich Gradient */}
+        {/* Add Institution CTA — outlined rather than solid-filled, so it
+            doesn't stack a third block of maroon directly under the header
+            and the active filter chip. */}
         <Pressable
           style={({ hovered, pressed }) => [
-            styles.addCtaBtnWrapper,
-            pressed && { transform: [{ scale: 0.98 }] },
-            hovered && { opacity: 0.95 }
+            styles.addCtaBtn,
+            pressed && { transform: [{ scale: 0.98 }], backgroundColor: COLORS.background },
+            hovered && Platform.OS === 'web' && { backgroundColor: COLORS.background }
           ]}
           onPress={() => setModalVisible(true)}
         >
-          {({ hovered }) => (
-            <LinearGradient
-              colors={['#7a1a1f', '#4a1017']}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-              style={[
-                styles.addCtaBtn,
-                hovered && Platform.OS === 'web' && { shadowOpacity: 0.2, shadowRadius: 12, elevation: 8 }
-              ]}
-            >
-              <MaterialCommunityIcons name="plus-circle-outline" size={20} color="#FFFFFF" />
-              <Text style={styles.addCtaText}>ADD NEW INSTITUTION (MPCS / MILK PCS)</Text>
-            </LinearGradient>
-          )}
+          <MaterialCommunityIcons name="plus-circle-outline" size={20} color={COLORS.primary} />
+          <Text style={styles.addCtaText}>ADD NEW INSTITUTION (MPCS / MILK PCS)</Text>
         </Pressable>
 
         {/* List of Registered Institutions */}
@@ -287,7 +262,6 @@ export default function MyInstitutionsScreen({
               >
                 {({ hovered }) => (
                   <>
-                    <View style={[styles.cardAccentBar, { backgroundColor: item.type === 'MPCS' ? COLORS.primary : '#2563eb' }]} />
                     <View style={styles.cardBody}>
                       <View style={styles.cardTopRow}>
                         {item.type === 'MPCS' ? (
@@ -617,37 +591,35 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  activeFilterChipGradient: {
+  // Tonal rather than solid-filled — a solid maroon gradient here, right
+  // beneath the maroon header, made the whole top of the screen read as
+  // one heavy red block.
+  activeFilterChip: {
     paddingVertical: 8,
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: COLORS.primary,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 4,
-    elevation: 2,
+    backgroundColor: 'rgba(122,26,31,0.08)',
+    borderWidth: 1,
+    borderColor: 'rgba(122,26,31,0.25)',
   },
   filterChipText: { fontFamily: FONT_FAMILY, fontSize: 11, fontWeight: '700', color: COLORS.slate600 },
-  activeFilterChipText: { fontFamily: FONT_FAMILY, fontSize: 11, fontWeight: '800', color: '#FFFFFF', letterSpacing: 0.3 },
+  activeFilterChipText: { fontFamily: FONT_FAMILY, fontSize: 11, fontWeight: '800', color: COLORS.primary, letterSpacing: 0.3 },
 
-  // Add Institution Primary CTA Button
-  addCtaBtnWrapper: { borderRadius: 14, overflow: 'hidden' },
+  // Add Institution CTA — outlined, not solid-filled, for the same reason.
   addCtaBtn: {
     paddingVertical: 14,
     paddingHorizontal: 16,
     borderRadius: 14,
+    borderWidth: 1.5,
+    borderColor: COLORS.primary,
+    backgroundColor: COLORS.surface,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    shadowColor: COLORS.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
-    elevation: 3,
   },
-  addCtaText: { color: '#FFFFFF', fontFamily: FONT_FAMILY, fontSize: 12, fontWeight: '800', letterSpacing: 0.6 },
+  addCtaText: { color: COLORS.primary, fontFamily: FONT_FAMILY, fontSize: 12, fontWeight: '800', letterSpacing: 0.6 },
 
   // List Section
   listSection: { gap: 10 },
@@ -687,7 +659,6 @@ const styles = StyleSheet.create({
   emptySub: { fontFamily: FONT_FAMILY, fontSize: 12, color: COLORS.slate500, textAlign: 'center', maxWidth: 260 },
 
   institutionCard: {
-    flexDirection: 'row',
     backgroundColor: COLORS.surface,
     borderRadius: 16,
     borderWidth: 1,
@@ -699,8 +670,7 @@ const styles = StyleSheet.create({
     elevation: 2,
     overflow: 'hidden',
   },
-  cardAccentBar: { width: 4 },
-  cardBody: { flex: 1, padding: 14 },
+  cardBody: { padding: 14 },
   cardTopRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
   typeBadgeGradient: {
     paddingHorizontal: 8,
