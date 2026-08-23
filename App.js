@@ -83,6 +83,22 @@ if (Platform.OS === 'web' && typeof document !== 'undefined') {
     }
   `;
   document.head.appendChild(style);
+
+  // Expo's generated index.html ships `initial-scale=1` with no max/min, so
+  // once anything nudges the page's zoom level away from 1 — the input-focus
+  // bug above, or the user pinching manually — the browser has no bound to
+  // snap back to and the layout is left rendered at that stale scale (visible
+  // as dead space on the right/bottom, content anchored top-left). Locking
+  // maximum-scale to 1 means the layout always renders at a true 1:1 fit of
+  // the actual device width on load, while minimum-scale stays low enough
+  // that a user can still deliberately pinch out for a wider view.
+  const viewportMeta = document.querySelector('meta[name="viewport"]');
+  if (viewportMeta) {
+    viewportMeta.setAttribute(
+      'content',
+      'width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=0.5, shrink-to-fit=no'
+    );
+  }
 }
 
 // The sealed-return certificate interpolates officer/center names straight into
