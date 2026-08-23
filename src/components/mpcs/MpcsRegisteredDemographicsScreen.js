@@ -193,7 +193,7 @@ export default function MpcsRegisteredDemographicsScreen({
             >
               <MaterialCommunityIcons name="chevron-left" size={24} color="#ffffff" />
             </TouchableOpacity>
-            <Text style={styles.stepLabelText}>STEP 1 OF 7</Text>
+            <Text style={styles.stepLabelText}>STEP 2 OF 8</Text>
             <Pressable
               onPress={() => { handleSave(); onNext(); }}
               style={({ pressed }) => [styles.nextCircleBtn, pressed && { transform: [{ scale: 0.95 }] }]}

@@ -251,7 +251,7 @@ export default function MpcsDividendDetailsScreen({
             >
               <MaterialCommunityIcons name="chevron-left" size={24} color="#ffffff" />
             </TouchableOpacity>
-            <Text style={styles.stepLabelText}>STEP 4 OF 7</Text>
+            <Text style={styles.stepLabelText}>STEP 5 OF 8</Text>
             <Pressable
               onPress={() => { handleSave(); onNext(); }}
               style={({ pressed }) => [styles.nextCircleBtn, pressed && { transform: [{ scale: 0.95 }] }]}

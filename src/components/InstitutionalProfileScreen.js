@@ -4,6 +4,7 @@ import { MaterialIcons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { webCapWidth } from '../utils/webStyles';
 import BottomNav from './BottomNav';
+import AnimatedContinueButton from './AnimatedContinueButton';
 
 const COLORS = {
   surface: '#ffffff',
@@ -236,25 +237,13 @@ export default function InstitutionalProfileScreen({
           </View>
         </View>
 
-        {/* Wizard forward-navigation action now scrolls with the content
-            instead of sitting in a fixed footer, which competed with the
-            floating BottomNav pill for the same strip at the bottom. */}
+        {/* This is the first step of the master data chain, so it opens
+            with Save & Continue only — matching MPCS's Institutional
+            Profile — instead of the Previous/Next chevron pair the later
+            steps use. */}
         {(onNext || onSaveNext) && (
-          <View style={[{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 20, paddingTop: 16, marginTop: 4, borderTopWidth: 1, borderTopColor: 'rgba(226,232,240,0.8)' }, webCapWidth]}>
-            <TouchableOpacity
-              onPress={() => { handleSaveProfile(); if (onBack) onBack(); }}
-              style={styles.prevCircleBtn}
-              activeOpacity={0.85}
-            >
-              <MaterialCommunityIcons name="chevron-left" size={24} color="#ffffff" />
-            </TouchableOpacity>
-            <Text style={styles.stepLabelText}>STEP 1 OF 4</Text>
-            <Pressable
-              onPress={handleSaveAndNext}
-              style={({ pressed }) => [styles.nextCircleBtn, pressed && { transform: [{ scale: 0.95 }] }]}
-            >
-              <MaterialCommunityIcons name="chevron-right" size={24} color="#7a1a1f" />
-            </Pressable>
+          <View style={[styles.btnWrapper, webCapWidth, { borderRadius: 28 }]}>
+            <AnimatedContinueButton onPress={handleSaveAndNext} />
           </View>
         )}
       </ScrollView>
@@ -530,31 +519,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '700',
     letterSpacing: 0.5,
-  },
-  prevCircleBtn: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: '#7a1a1f',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  nextCircleBtn: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: '#ffffff',
-    borderWidth: 1.5,
-    borderColor: '#7a1a1f',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  stepLabelText: {
-    fontFamily: FONT_FAMILY,
-    fontSize: 11,
-    fontWeight: '700',
-    color: COLORS.slate400,
-    letterSpacing: 0.6,
   },
   toastBanner: {
     position: 'absolute',
