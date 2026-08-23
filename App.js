@@ -584,6 +584,16 @@ export default function App() {
     return overrideEmail || session?.user?.email || userProfile?.email || null;
   };
 
+  // userProfile is the raw Supabase auth user object — it has no top-level
+  // `.name`, the display name only lives under user_metadata. Reading
+  // `userProfile?.name` (as the institution-registration code used to)
+  // always resolves to undefined and silently falls back to a generic
+  // placeholder, which then can never match this officer's real name in
+  // reconstructInstitutionsFromCloud's name-based lookup.
+  const getUserDisplayName = () => {
+    return userProfile?.user_metadata?.fullName || userProfile?.user_metadata?.inspectorName || userProfile?.fullName || '';
+  };
+
   const getSocietyStorageKey = (socName, userEmail = null) => {
     const activeEmail = getUserEmail(userEmail) || 'guest';
     const emailSafe = activeEmail.toLowerCase().replace(/[^a-z0-9]/g, '_');
@@ -731,18 +741,28 @@ export default function App() {
       const raw = await AsyncStorage.getItem(key);
       let list = raw ? JSON.parse(raw) : [];
 
-      if (list.length === 0) {
-        // Read the officer's display name straight off the auth user object
-        // passed in by the caller rather than the userProfile state variable
-        // — right after login, userProfile's setState hasn't been applied
-        // to this closure yet (same stale-closure trap documented above for
-        // the cloud master-state fallback), so it would always read as
-        // blank here and this recovery path could never actually match.
-        const u = userObj || userProfile;
-        const fullName = u?.user_metadata?.fullName || u?.user_metadata?.inspectorName || u?.fullName || '';
-        const cloudList = await reconstructInstitutionsFromCloud(activeEmail, fullName);
-        if (cloudList.length > 0) {
-          list = cloudList;
+      // Always reconcile with the cloud, not just when the local cache is
+      // empty — an institution registered on a different device writes its
+      // placeholder submission row straight to Supabase, but this device's
+      // own AsyncStorage has no idea it exists until it's merged in here.
+      // Gating this on "local list is empty" meant a device that already
+      // had ANY institutions cached would never pick up new ones added
+      // elsewhere, no matter how many times the user logged back in.
+      //
+      // Read the officer's display name straight off the auth user object
+      // passed in by the caller rather than the userProfile state variable
+      // — right after login, userProfile's setState hasn't been applied
+      // to this closure yet (same stale-closure trap documented above for
+      // the cloud master-state fallback), so it would always read as
+      // blank here and this recovery path could never actually match.
+      const u = userObj || userProfile;
+      const fullName = u?.user_metadata?.fullName || u?.user_metadata?.inspectorName || u?.fullName || '';
+      const cloudList = await reconstructInstitutionsFromCloud(activeEmail, fullName);
+      if (cloudList.length > 0) {
+        const known = new Set(list.map(i => `${i.type}_${(i.name || '').trim().toLowerCase()}`));
+        const additions = cloudList.filter(c => !known.has(`${c.type}_${(c.name || '').trim().toLowerCase()}`));
+        if (additions.length > 0) {
+          list = [...list, ...additions];
           await AsyncStorage.setItem(key, JSON.stringify(list));
         }
       }
@@ -914,7 +934,7 @@ export default function App() {
             presidentMobile: stateObj.presidentMobile,
             managerName: stateObj.managerName,
             managerMobile: stateObj.managerMobile,
-            reportedBy: userProfile?.name || 'Cooperative Inspector',
+            reportedBy: getUserDisplayName() || 'Cooperative Inspector',
             inspectorEmail: userEmail,
             activities: actsData ? JSON.stringify(actsData) : '',
             // Loan setup (type, who sanctioned it, total amount) is Master Data — set once.
@@ -966,7 +986,7 @@ export default function App() {
             // actually set up, since formData.hasLoan is otherwise never set here.
             hasLoan: !!(stateObj.loanData?.hasLoan && !stateObj.loanData?.loanCleared),
             totalMembers: calcMembers,
-            reportedBy: userProfile?.name || 'Cooperative Inspector',
+            reportedBy: getUserDisplayName() || 'Cooperative Inspector',
             inspectorEmail: userEmail,
             ...stateObj
           });
@@ -2274,7 +2294,7 @@ export default function App() {
                           registrationNumber: newInst.regNo,
                           gpu: newInst.gpu || newInst.district || '',
                           district: newInst.gpu || newInst.district || '',
-                          reportedBy: userProfile?.name || 'Cooperative Inspector',
+                          reportedBy: getUserDisplayName() || 'Cooperative Inspector',
                           inspectorEmail: session?.user?.email,
                           totalMembers: 0,
                           annualTurnover: 0
@@ -2285,7 +2305,7 @@ export default function App() {
                           centerId: newInst.name,
                           registrationNumber: newInst.regNo,
                           district: newInst.gpu || newInst.district || '',
-                          reportedBy: userProfile?.name || 'Cooperative Inspector'
+                          reportedBy: getUserDisplayName() || 'Cooperative Inspector'
                         });
                       }
                     } catch (e) {
