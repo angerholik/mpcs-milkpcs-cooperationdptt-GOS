@@ -95,21 +95,6 @@ export default function MpcsDigitalEvidenceScreen({
     setIsCapturing(false);
   };
 
-  const handlePickGallery = async () => {
-    setIsCapturing(true);
-    try {
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ['images'],
-        allowsEditing: true,
-        quality: 0.8,
-      });
-      await applyCaptureResult(result);
-    } catch (e) {
-      console.warn('Gallery failed:', e);
-    }
-    setIsCapturing(false);
-  };
-
   // Previously the button wired directly to `onPress={onSaveNext}`, so the
   // press event object (not a real date) was what App.js received as
   // `validUntil` — comparing "now < new Date(pressEvent)" is always false,
@@ -185,7 +170,7 @@ export default function MpcsDigitalEvidenceScreen({
           {imageUri ? (
             <View style={styles.photoPreviewContainer}>
               <Image source={{ uri: imageUri }} style={styles.photoPreview} />
-              <View style={[styles.photoOverlayGradient, styles.photoOverlayBtnRow]}>
+              <View style={styles.photoOverlayGradient}>
                 <TouchableOpacity style={styles.retakeBtn} onPress={handleCapturePhoto} activeOpacity={0.85}>
                   <LinearGradient
                     colors={['#7a1a1f', '#4a1017']}
@@ -194,52 +179,26 @@ export default function MpcsDigitalEvidenceScreen({
                     style={StyleSheet.absoluteFillObject}
                   />
                   <MaterialCommunityIcons name="camera-retake-outline" size={16} color="#FFFFFF" />
-                  <Text style={styles.retakeText}>RETAKE</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.retakeBtn} onPress={handlePickGallery} activeOpacity={0.85}>
-                  <LinearGradient
-                    colors={['#7a1a1f', '#4a1017']}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 0 }}
-                    style={StyleSheet.absoluteFillObject}
-                  />
-                  <MaterialCommunityIcons name="image-multiple-outline" size={16} color="#FFFFFF" />
-                  <Text style={styles.retakeText}>CHANGE</Text>
+                  <Text style={styles.retakeText}>RETAKE PHOTO</Text>
                 </TouchableOpacity>
               </View>
             </View>
           ) : (
-            <View>
-              <Pressable
-                style={({ pressed }) => [
-                  styles.captureBox,
-                  pressed && { backgroundColor: COLORS.slate100 }
-                ]}
-                onPress={handleCapturePhoto}
-              >
-                <View style={styles.captureCircle}>
-                  <MaterialCommunityIcons name="camera-outline" size={22} color={COLORS.primary} />
-                </View>
-                <Text style={styles.captureTitle}>
-                  {isCapturing ? "Capturing photo..." : "Take a photo"}
-                </Text>
-                <Text style={styles.captureSub}>Opens the camera directly</Text>
-              </Pressable>
-              <Pressable
-                style={({ pressed }) => [
-                  styles.captureBox,
-                  { marginTop: 10 },
-                  pressed && { backgroundColor: COLORS.slate100 }
-                ]}
-                onPress={handlePickGallery}
-              >
-                <View style={styles.captureCircle}>
-                  <MaterialCommunityIcons name="image-multiple-outline" size={22} color={COLORS.primary} />
-                </View>
-                <Text style={styles.captureTitle}>Choose from library</Text>
-                <Text style={styles.captureSub}>Pick an existing photo</Text>
-              </Pressable>
-            </View>
+            <Pressable
+              style={({ pressed }) => [
+                styles.captureBox,
+                pressed && { backgroundColor: COLORS.slate100 }
+              ]}
+              onPress={handleCapturePhoto}
+            >
+              <View style={styles.captureCircle}>
+                <MaterialCommunityIcons name="camera-plus-outline" size={26} color={COLORS.primary} />
+              </View>
+              <Text style={styles.captureTitle}>
+                {isCapturing ? "Capturing photo..." : "Tap to capture operational photo"}
+              </Text>
+              <Text style={styles.captureSub}>Geo-tagged PNG/JPG • Auto timestamped • Live capture only</Text>
+            </Pressable>
           )}
         </View>
 
@@ -537,11 +496,6 @@ const styles = StyleSheet.create({
     padding: 12,
     backgroundColor: 'rgba(0,0,0,0.4)',
     alignItems: 'center',
-  },
-  photoOverlayBtnRow: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    gap: 10,
   },
   retakeBtn: {
     flexDirection: 'row',
