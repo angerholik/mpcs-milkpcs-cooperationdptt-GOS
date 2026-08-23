@@ -4,6 +4,7 @@ import { MaterialIcons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useAutosave } from '../../hooks/useAutosave';
 import BottomNav from '../BottomNav';
+import AnimatedContinueButton from '../AnimatedContinueButton';
 
 const COLORS = {
   surface: '#ffffff',
@@ -260,17 +261,7 @@ export default function MpcsInstitutionalProfileScreen({
             BottomNav pill for the same strip at the bottom of the screen. */}
         {onNext && (
           <View style={[styles.btnWrapper, styles.webCapWidth, { borderRadius: 28 }]}>
-            <Pressable
-              style={({ hovered, pressed }) => [
-                styles.editCtaBtn,
-                { backgroundColor: '#e0e4ed', borderRadius: 28 },
-                pressed && { transform: [{ scale: 0.98 }] },
-                hovered && Platform.OS === 'web' && { opacity: 0.9 }
-              ]}
-              onPress={() => { handleSave(); onNext(); }}
-            >
-              <Text style={[styles.editCtaText, { color: '#1b1b1d' }]}>Save & Continue</Text>
-            </Pressable>
+            <AnimatedContinueButton onPress={() => { handleSave(); onNext(); }} />
           </View>
         )}
       </ScrollView>

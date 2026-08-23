@@ -4,6 +4,7 @@ import { MaterialIcons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { webCapWidth } from '../utils/webStyles';
 import BottomNav from './BottomNav';
+import AnimatedContinueButton from './AnimatedContinueButton';
 import { useAutosave } from '../hooks/useAutosave';
 
 const COLORS = {
@@ -516,17 +517,7 @@ export default function InstitutionalProfileScreen({
           </View>
 
           <View style={[styles.btnWrapper, { flex: 1, borderRadius: 28 }]}>
-            <Pressable
-              style={({ hovered, pressed }) => [
-                styles.editCtaBtn,
-                { backgroundColor: '#e0e4ed', borderRadius: 28 },
-                pressed && { transform: [{ scale: 0.98 }] },
-                hovered && Platform.OS === 'web' && { opacity: 0.9 }
-              ]}
-              onPress={handleSaveAndNext}
-            >
-              <Text style={[styles.editCtaText, { color: '#1b1b1d' }]}>Save & Continue</Text>
-            </Pressable>
+            <AnimatedContinueButton onPress={handleSaveAndNext} />
           </View>
         </View>
       </ScrollView>
