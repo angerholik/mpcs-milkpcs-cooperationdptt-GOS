@@ -2681,7 +2681,7 @@ export default function App() {
                           stampMasterDataUpdated('complianceAudit');
                         }}
                         onNext={() => setCurrentMobileScreen('LOAN_SETUP_VIEW')}
-                        onBack={() => { setCurrentMobileScreen('HOME'); setActiveBottomTab(masterDataViewReturnTab); }}
+                        onBack={() => setCurrentMobileScreen('PROFILE_VIEW')}
                       activeTab={masterDataViewReturnTab}
                       onTabPress={(tab) => {
                         setActiveBottomTab(tab);
@@ -2753,7 +2753,7 @@ export default function App() {
                           stampMasterDataUpdated('loanSetup');
                         }}
                         onNext={() => setCurrentMobileScreen('DEMOGRAPHICS')}
-                        onBack={() => { setCurrentMobileScreen('HOME'); setActiveBottomTab(masterDataViewReturnTab); }}
+                        onBack={() => setCurrentMobileScreen('COMPLIANCE_VIEW')}
                       activeTab={masterDataViewReturnTab}
                       onTabPress={(tab) => {
                         setActiveBottomTab(tab);
@@ -3304,7 +3304,7 @@ export default function App() {
                           stampMasterDataUpdated('demographics');
                         }}
                         onNext={() => setCurrentMobileScreen('MPCS_COMPLIANCE_VIEW')}
-                        onBack={() => { setCurrentMobileScreen('HOME'); setActiveBottomTab(masterDataViewReturnTab); }}
+                        onBack={() => setCurrentMobileScreen('MPCS_PROFILE_VIEW')}
                       activeTab={masterDataViewReturnTab}
                       onTabPress={(tab) => {
                         setActiveBottomTab(tab);
@@ -3350,7 +3350,7 @@ export default function App() {
                           stampMasterDataUpdated('compliance');
                         }}
                         onNext={() => setCurrentMobileScreen('MPCS_FINANCIALS_VIEW')}
-                        onBack={() => { setCurrentMobileScreen('HOME'); setActiveBottomTab(masterDataViewReturnTab); }}
+                        onBack={() => setCurrentMobileScreen('MPCS_DEMOGRAPHICS_VIEW')}
                       activeTab={masterDataViewReturnTab}
                       onTabPress={(tab) => {
                         setActiveBottomTab(tab);
@@ -3396,7 +3396,7 @@ export default function App() {
                           stampMasterDataUpdated('financials');
                         }}
                         onNext={() => setCurrentMobileScreen('MPCS_DIVIDEND_VIEW')}
-                        onBack={() => { setCurrentMobileScreen('HOME'); setActiveBottomTab(masterDataViewReturnTab); }}
+                        onBack={() => setCurrentMobileScreen('MPCS_COMPLIANCE_VIEW')}
                       activeTab={masterDataViewReturnTab}
                       onTabPress={(tab) => {
                         setActiveBottomTab(tab);
@@ -3440,7 +3440,7 @@ export default function App() {
                           stampMasterDataUpdated('dividend');
                         }}
                         onNext={() => setCurrentMobileScreen('MPCS_SHARE_CAPITAL_VIEW')}
-                        onBack={() => { setCurrentMobileScreen('HOME'); setActiveBottomTab(masterDataViewReturnTab); }}
+                        onBack={() => setCurrentMobileScreen('MPCS_FINANCIALS_VIEW')}
                       activeTab={masterDataViewReturnTab}
                       onTabPress={(tab) => {
                         setActiveBottomTab(tab);
@@ -3482,7 +3482,7 @@ export default function App() {
                           stampMasterDataUpdated('shareCapital');
                         }}
                         onNext={() => setCurrentMobileScreen('MPCS_CSC_DETAILS_VIEW')}
-                        onBack={() => { setCurrentMobileScreen('HOME'); setActiveBottomTab(masterDataViewReturnTab); }}
+                        onBack={() => setCurrentMobileScreen('MPCS_DIVIDEND_VIEW')}
                       activeTab={masterDataViewReturnTab}
                       onTabPress={(tab) => {
                         setActiveBottomTab(tab);
@@ -3530,7 +3530,7 @@ export default function App() {
                           stampMasterDataUpdated('csc');
                         }}
                         onNext={() => setCurrentMobileScreen('MPCS_LOAN')}
-                        onBack={() => { setCurrentMobileScreen('HOME'); setActiveBottomTab(masterDataViewReturnTab); }}
+                        onBack={() => setCurrentMobileScreen('MPCS_SHARE_CAPITAL_VIEW')}
                       activeTab={masterDataViewReturnTab}
                       onTabPress={(tab) => {
                         setActiveBottomTab(tab);
