@@ -111,3 +111,17 @@ export const getQueueStatus = async () => {
         return 0;
     }
 };
+
+/**
+ * Gets the full list of queued (not-yet-synced) submissions, newest first.
+ */
+export const getQueueItems = async () => {
+    try {
+        const queueJson = await AsyncStorage.getItem(QUEUE_KEY);
+        if (!queueJson) return [];
+        const queue = JSON.parse(queueJson);
+        return [...queue].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+    } catch (e) {
+        return [];
+    }
+};

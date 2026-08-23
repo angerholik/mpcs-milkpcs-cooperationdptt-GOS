@@ -38,6 +38,7 @@ import ComplianceScreen from './src/components/ComplianceScreen';
 import ReviewSubmitScreen from './src/components/ReviewSubmitScreen';
 import RecordsScreen from './src/components/RecordsScreen';
 import MoreScreen from './src/components/MoreScreen';
+import SyncStatusScreen from './src/components/SyncStatusScreen';
 import MyInstitutionsScreen from './src/components/MyInstitutionsScreen';
 import MemberDataScreen from './src/components/MemberDataScreen';
 
@@ -2580,6 +2581,23 @@ export default function App() {
                       />
                     )}
 
+                    {currentMobileScreen === 'SYNC_STATUS' && (
+                      <SyncStatusScreen
+                        pendingCount={pendingSyncCount}
+                        syncing={isSyncing}
+                        onRetrySync={() => {
+                          setIsSyncing(true);
+                          processQueue(({ pending }) => setPendingSyncCount(pending)).finally(() => setIsSyncing(false));
+                        }}
+                        onBack={() => setCurrentMobileScreen('HOME')}
+                        activeTab="home"
+                        onTabPress={(tab) => {
+                          setActiveBottomTab(tab);
+                          if (tab === 'home') setCurrentMobileScreen('HOME');
+                        }}
+                      />
+                    )}
+
                     {currentMobileScreen === 'MEMBERS' && (
                       <MemberDataScreen
                         societyName={selectedSociety?.name || centerName?.trim()}
@@ -3138,6 +3156,23 @@ export default function App() {
                         setActiveBottomTab(tab);
                         if (tab === 'home') setCurrentMobileScreen('HOME');
                       }}
+                      />
+                    )}
+
+                    {currentMobileScreen === 'SYNC_STATUS' && (
+                      <SyncStatusScreen
+                        pendingCount={pendingSyncCount}
+                        syncing={isSyncing}
+                        onRetrySync={() => {
+                          setIsSyncing(true);
+                          processQueue(({ pending }) => setPendingSyncCount(pending)).finally(() => setIsSyncing(false));
+                        }}
+                        onBack={() => setCurrentMobileScreen('HOME')}
+                        activeTab="home"
+                        onTabPress={(tab) => {
+                          setActiveBottomTab(tab);
+                          if (tab === 'home') setCurrentMobileScreen('HOME');
+                        }}
                       />
                     )}
 

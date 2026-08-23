@@ -90,7 +90,7 @@ export default function MoreScreen({
       bgColor: '#fffbeb',
     },
     {
-      id: 'SYNC',
+      id: 'SYNC_STATUS',
       label: 'Offline Engine Status',
       sub: 'Realtime cloud database sync status',
       icon: 'cloud-sync-outline',
