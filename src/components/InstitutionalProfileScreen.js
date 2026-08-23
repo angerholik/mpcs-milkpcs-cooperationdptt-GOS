@@ -516,8 +516,8 @@ export default function InstitutionalProfileScreen({
             </Pressable>
           </View>
 
-          <View style={[styles.btnWrapper, { flex: 1, borderRadius: 28 }]}>
-            <AnimatedContinueButton onPress={handleSaveAndNext} />
+          <View style={[styles.btnWrapper, { flex: 1, borderRadius: 24 }]}>
+            <AnimatedContinueButton onPress={handleSaveAndNext} height={48} radius={24} fontSize={12} />
           </View>
         </View>
       </ScrollView>
@@ -907,9 +907,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
-    paddingVertical: 12,
+    height: 48,
     paddingHorizontal: 10,
-    borderRadius: 16,
+    borderRadius: 24,
     borderWidth: 1.5,
     borderColor: COLORS.primary,
     backgroundColor: '#FFFFFF',
