@@ -1424,10 +1424,15 @@ export default function App() {
     if (!recordOverride && selectedSociety?.type === 'MPCS') {
       mpcsLoanMonthlyData = await getMilkSectionData(activeCenterName, activeReportingMonth, 'mpcs_loan');
     }
+    if (!recordOverride) {
+      // Digital Evidence uses the same 'evidence' section key for both MPCS
+      // and Milk PCS societies, so this must be fetched for both types —
+      // gating it to MILK-only left MPCS certificates with a blank photo.
+      evData = await getMilkSectionData(activeCenterName, activeReportingMonth, 'evidence');
+    }
     if (!recordOverride && selectedSociety?.type === 'MILK') {
        console.log('[CORE DEBUG] getMilkSectionData keys:', { activeCenterName, activeReportingMonth });
        opsData = await getMilkSectionData(activeCenterName, activeReportingMonth, 'operations');
-       evData = await getMilkSectionData(activeCenterName, activeReportingMonth, 'evidence');
        actsData = await getMilkSectionData(activeCenterName, activeReportingMonth, 'activities');
        compData = await getMilkSectionData(activeCenterName, activeReportingMonth, 'compliance');
        console.log('[CORE DEBUG] OPERATIONS DATA', opsData);
@@ -1511,7 +1516,9 @@ export default function App() {
 
     const pdfImageSrc = recordOverride
       ? (recordItem?.photo_url || null)
-      : (imageBase64 ? `data:image/jpeg;base64,${imageBase64}` : null);
+      : (evData?.imageBase64
+          ? `data:image/jpeg;base64,${evData.imageBase64}`
+          : (evData?.imageUri || (imageBase64 ? `data:image/jpeg;base64,${imageBase64}` : null)));
 
     // Robust internal calculation for totals
     const pdfMSc = parseInt(mSc) || 0;
@@ -1966,8 +1973,12 @@ export default function App() {
       // Performance screen.
       profitOrLoss: financialsData?.profitOrLoss || null,
       netProfit: financialsData?.netProfit,
-      gpsLat: location?.latitude ?? null, gpsLng: location?.longitude ?? null,
-      capturedAt: timestamp || new Date().toISOString(),
+      // location/timestamp/imageBase64 top-level state is never set by
+      // DigitalEvidenceScreen (it manages its own local state and persists
+      // via saveMilkSectionData) — evData, fetched above, is the real source.
+      gpsLat: evData?.location?.latitude ?? location?.latitude ?? null,
+      gpsLng: evData?.location?.longitude ?? location?.longitude ?? null,
+      capturedAt: evData?.timestamp || timestamp || new Date().toISOString(),
       // Append all data sets to ensure they are captured in offline queue and cloud DB
       demographicsData,
       complianceData,
@@ -2012,9 +2023,10 @@ export default function App() {
           }
       } else {
           let uploadedPhotoUrl = null;
-          if (imageBase64) {
+          const submitPhotoBase64 = evData?.imageBase64 || imageBase64;
+          if (submitPhotoBase64) {
             try {
-              uploadedPhotoUrl = await uploadPhoto(imageBase64);
+              uploadedPhotoUrl = await uploadPhoto(submitPhotoBase64);
             } catch(e) {
               console.warn('Photo upload exception:', e);
             }
@@ -2029,8 +2041,8 @@ export default function App() {
               reportedBy: activeReportedBy,
               inspectorEmail: userProfile?.email,
               photoUrl: uploadedPhotoUrl,
-              latitude: location?.latitude,
-              longitude: location?.longitude,
+              latitude: evData?.location?.latitude ?? location?.latitude,
+              longitude: evData?.location?.longitude ?? location?.longitude,
               panCard: panCard || selectedSociety?.panCard || '',
               regDate: regDate || selectedSociety?.regDate || '',
               '1.8': panCard || selectedSociety?.panCard || '',

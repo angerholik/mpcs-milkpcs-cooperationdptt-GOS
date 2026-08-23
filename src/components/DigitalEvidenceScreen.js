@@ -225,25 +225,48 @@ export default function DigitalEvidenceScreen({
                   <MaterialCommunityIcons name="check-decagram" size={14} color={COLORS.emerald500} />
                   <Text style={styles.verifiedText}>Geo-tagged</Text>
                 </View>
-                <TouchableOpacity style={styles.retakeBtn} onPress={handleCapturePhoto}>
-                  <MaterialCommunityIcons name="camera-retake-outline" size={16} color="#fff" />
-                  <Text style={styles.retakeText}>Retake</Text>
-                </TouchableOpacity>
+                <View style={styles.overlayBtnRow}>
+                  <TouchableOpacity style={styles.retakeBtn} onPress={handleCapturePhoto}>
+                    <MaterialCommunityIcons name="camera-retake-outline" size={16} color="#fff" />
+                    <Text style={styles.retakeText}>Retake</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={styles.retakeBtn} onPress={handlePickGallery}>
+                    <MaterialCommunityIcons name="image-multiple-outline" size={16} color="#fff" />
+                    <Text style={styles.retakeText}>Change</Text>
+                  </TouchableOpacity>
+                </View>
               </View>
             </View>
           ) : (
-            <Pressable
-              style={({ pressed }) => [styles.captureArea, pressed && { backgroundColor: COLORS.slate50 }]}
-              onPress={handlePickGallery}
-            >
-              <View style={styles.captureCircle}>
-                <MaterialCommunityIcons name="camera-plus-outline" size={26} color={COLORS.primary} />
-              </View>
-              <Text style={styles.captureTitle}>
-                {isCapturing ? "Capturing photo..." : "Tap to capture operational photo"}
-              </Text>
-              <Text style={styles.captureSub}>Geo-tagged PNG/JPG • Auto timestamped</Text>
-            </Pressable>
+            <View>
+              <Pressable
+                style={({ pressed }) => [styles.captureBtn, pressed && { opacity: 0.85 }]}
+                onPress={handleCapturePhoto}
+              >
+                <View style={styles.captureCircle}>
+                  <MaterialCommunityIcons name="camera-outline" size={22} color={COLORS.primary} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.captureTitle}>
+                    {isCapturing ? "Capturing photo..." : "Take a photo"}
+                  </Text>
+                  <Text style={styles.captureSub}>Opens the camera directly</Text>
+                </View>
+              </Pressable>
+              <Pressable
+                style={({ pressed }) => [styles.captureBtn, pressed && { opacity: 0.85 }]}
+                onPress={handlePickGallery}
+              >
+                <View style={styles.captureCircle}>
+                  <MaterialCommunityIcons name="image-multiple-outline" size={22} color={COLORS.primary} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.captureTitle}>Choose from library</Text>
+                  <Text style={styles.captureSub}>Pick an existing photo</Text>
+                </View>
+              </Pressable>
+              <Text style={styles.captureFootnote}>Geo-tagged PNG/JPG • Auto timestamped</Text>
+            </View>
           )}
 
 
@@ -443,36 +466,49 @@ const styles = StyleSheet.create({
   timestampLabel: { fontSize: 11, color: COLORS.primary, fontWeight: '600', opacity: 0.8, fontFamily: FONT_FAMILY },
   timestampValue: { fontSize: 13, color: COLORS.primary, fontWeight: '800', marginTop: 2, fontFamily: FONT_FAMILY },
 
-  captureArea: {
+  captureBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
     borderWidth: 2,
     borderColor: COLORS.slate200,
     borderStyle: 'dashed',
     borderRadius: 12,
-    padding: 24,
-    alignItems: 'center',
-    justifyContent: 'center',
+    padding: 16,
     backgroundColor: '#FAFAFA',
+    marginBottom: 10,
   },
   captureCircle: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     backgroundColor: COLORS.primaryLight,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 12,
+    marginRight: 12,
   },
   captureTitle: {
     fontSize: 14,
     fontWeight: '700',
     color: COLORS.slate700,
-    marginBottom: 4,
+    marginBottom: 2,
     fontFamily: FONT_FAMILY,
   },
   captureSub: {
     fontSize: 12,
     color: COLORS.slate400,
     fontFamily: FONT_FAMILY,
+  },
+  captureFootnote: {
+    fontSize: 11,
+    color: COLORS.slate400,
+    textAlign: 'center',
+    marginTop: 2,
+    fontFamily: FONT_FAMILY,
+  },
+  overlayBtnRow: {
+    flexDirection: 'row',
+    alignSelf: 'flex-end',
+    gap: 8,
   },
 
   galleryBtn: {
