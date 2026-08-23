@@ -12,7 +12,6 @@ import { LinearGradient } from 'expo-linear-gradient';
 // `baseTextColor` describe the resting state. Works either direction (light pill
 // with dark fill, or dark pill with light fill).
 const EASE = Easing.bezier(0.65, 0, 0.076, 1);
-const CIRCLE = 44;
 
 export default function AnimatedContinueButton({
   label = 'Save & Continue',
@@ -36,7 +35,15 @@ export default function AnimatedContinueButton({
     Animated.timing(anim, { toValue, duration: 450, easing: EASE, useNativeDriver: false }).start();
   };
 
-  const expandedWidth = Math.max(CIRCLE, width - 12);
+  // The circle is always as tall as it is wide at rest (a true circle, not a
+  // rounded square) — its diameter is derived from the button's own height so
+  // it scales with `height` instead of a fixed constant. A huge borderRadius
+  // (999) is used instead of trying to interpolate it: CSS/RN both clamp a
+  // radius that exceeds half the box's own size, so the same value renders as
+  // a full circle at rest and a stadium-pill once expanded — the same trick
+  // the original CodePen uses with a single oversized border-radius.
+  const circleSize = height - 12;
+  const expandedWidth = Math.max(circleSize, width - 12);
 
   return (
     <Pressable
@@ -61,9 +68,8 @@ export default function AnimatedContinueButton({
         style={[
           styles.circle,
           {
-            borderRadius: radius - 6,
             backgroundColor: circleColor,
-            width: anim.interpolate({ inputRange: [0, 1], outputRange: [CIRCLE, expandedWidth] }),
+            width: anim.interpolate({ inputRange: [0, 1], outputRange: [circleSize, expandedWidth] }),
           },
         ]}
       />
@@ -104,6 +110,7 @@ const styles = StyleSheet.create({
     left: 6,
     top: 6,
     bottom: 6,
+    borderRadius: 999,
   },
   iconWrap: {
     position: 'absolute',
