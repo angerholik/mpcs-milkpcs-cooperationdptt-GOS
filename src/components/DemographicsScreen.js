@@ -222,25 +222,39 @@ export default function DemographicsScreen({
 
         {/* Wizard forward-navigation action now scrolls with the content
             instead of sitting in a fixed footer, which competed with the
-            floating BottomNav pill for the same strip at the bottom. */}
-        <View style={[styles.btnWrapper, webCapWidth]}>
-          <Pressable
-            style={({ hovered, pressed }) => [
-              styles.editCtaBtn,
-              pressed && { transform: [{ scale: 0.98 }] },
-              hovered && Platform.OS === 'web' && { shadowOpacity: 0.4 }
-            ]}
-            onPress={handleSaveAndNext}
-          >
-            <LinearGradient
-              colors={['#047857', '#064e3b']}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-              style={StyleSheet.absoluteFillObject}
-            />
-            <Text style={styles.editCtaText}>Submit to Database</Text>
-            <MaterialCommunityIcons name="cloud-check-outline" size={16} color="#ffffff" />
-          </Pressable>
+            floating BottomNav pill for the same strip at the bottom. This
+            is the last step, so it pairs a Previous chevron (matching the
+            other master data steps) with the terminal Submit action rather
+            than a Next chevron — there's nowhere forward to go. */}
+        <View style={[{ flexDirection: 'row', alignItems: 'center', gap: 12 }, webCapWidth]}>
+          {onBack && (
+            <TouchableOpacity
+              onPress={onBack}
+              style={styles.prevCircleBtn}
+              activeOpacity={0.85}
+            >
+              <MaterialCommunityIcons name="chevron-left" size={24} color="#ffffff" />
+            </TouchableOpacity>
+          )}
+          <View style={[styles.btnWrapper, { flex: 1 }]}>
+            <Pressable
+              style={({ hovered, pressed }) => [
+                styles.editCtaBtn,
+                pressed && { transform: [{ scale: 0.98 }] },
+                hovered && Platform.OS === 'web' && { shadowOpacity: 0.4 }
+              ]}
+              onPress={handleSaveAndNext}
+            >
+              <LinearGradient
+                colors={['#047857', '#064e3b']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={StyleSheet.absoluteFillObject}
+              />
+              <Text style={styles.editCtaText}>Submit to Database</Text>
+              <MaterialCommunityIcons name="cloud-check-outline" size={16} color="#ffffff" />
+            </Pressable>
+          </View>
         </View>
       </ScrollView>
 
@@ -503,6 +517,14 @@ const styles = StyleSheet.create({
   grandTotalLabel: { fontFamily: FONT_FAMILY, fontSize: 12, fontWeight: '800', color: COLORS.primary },
   grandTotalVal: { fontFamily: FONT_FAMILY, fontSize: 12, fontWeight: '800', color: COLORS.slate800 },
 
+  prevCircleBtn: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#7a1a1f',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   btnWrapper: {
     borderRadius: 16,
     shadowColor: COLORS.primary,
