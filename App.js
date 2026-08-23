@@ -2584,6 +2584,7 @@ export default function App() {
                           if (data) saveMasterStateToStorage(data);
                           stampMasterDataUpdated('instProfile');
                         }}
+                        onNext={() => setCurrentMobileScreen('COMPLIANCE_VIEW')}
                         onBack={() => { setCurrentMobileScreen('HOME'); setActiveBottomTab(masterDataViewReturnTab); }}
                       activeTab={masterDataViewReturnTab}
                       onTabPress={(tab) => {
@@ -3242,6 +3243,7 @@ export default function App() {
                           });
                           stampMasterDataUpdated('instProfile');
                         }}
+                        onNext={() => setCurrentMobileScreen('MPCS_DEMOGRAPHICS_VIEW')}
                         onBack={() => { setCurrentMobileScreen('HOME'); setActiveBottomTab(masterDataViewReturnTab); }}
                       activeTab={masterDataViewReturnTab}
                       onTabPress={(tab) => {
