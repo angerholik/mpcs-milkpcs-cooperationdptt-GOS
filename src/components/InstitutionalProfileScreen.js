@@ -278,7 +278,7 @@ export default function InstitutionalProfileScreen({
             <Pressable
               style={({ hovered, pressed }) => [
                 styles.editCtaBtn,
-                { backgroundColor: '#f2d6d9' },
+                { backgroundColor: '#c9b3a7' },
                 pressed && { transform: [{ scale: 0.98 }] },
                 hovered && Platform.OS === 'web' && { opacity: 0.9 }
               ]}
