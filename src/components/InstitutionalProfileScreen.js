@@ -1,11 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, Platform, Pressable, Switch } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, Platform, Pressable } from 'react-native';
 import { MaterialIcons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { webCapWidth } from '../utils/webStyles';
 import BottomNav from './BottomNav';
-import AnimatedContinueButton from './AnimatedContinueButton';
-import { useAutosave } from '../hooks/useAutosave';
 
 const COLORS = {
   surface: '#ffffff',
@@ -28,44 +26,10 @@ const COLORS = {
 
 const FONT_FAMILY = 'Manrope';
 
-// Helpers for Date & Financial Year (same convention used previously in ComplianceScreen)
-const deriveFinancialYear = (dateStr) => {
-  if (!dateStr) return '';
-  const d = new Date(dateStr);
-  if (isNaN(d.getTime())) return '';
-  const year = d.getFullYear();
-  const month = d.getMonth() + 1;
-  if (month >= 4) {
-    return `${year} - ${year + 1}`;
-  } else {
-    return `${year - 1} - ${year}`;
-  }
-};
-
-const formatToIsoDate = (dStr) => {
-  if (!dStr) return '';
-  const parts = dStr.split(' ');
-  if (parts.length === 3) {
-    const day = parts[0].padStart(2, '0');
-    const months = { Jan:'01', Feb:'02', Mar:'03', Apr:'04', May:'05', Jun:'06', Jul:'07', Aug:'08', Sep:'09', Oct:'10', Nov:'11', Dec:'12' };
-    const month = months[parts[1]] || '01';
-    const year = parts[2];
-    return `${year}-${month}-${day}`;
-  }
-  return dStr;
-};
-
-const formatFromIsoDate = (isoStr) => {
-  if (!isoStr) return '';
-  const d = new Date(isoStr);
-  if (isNaN(d.getTime())) return isoStr;
-  const day = String(d.getDate()).padStart(2, '0');
-  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-  const month = months[d.getMonth()];
-  const year = d.getFullYear();
-  return `${day} ${month} ${year}`;
-};
-
+// Master Data: Society Identification + Key Personnel Contacts only. Audit,
+// AGM, and Loan Setup were split into their own wizard steps (see
+// ComplianceAuditScreen and LoanSetupScreen) to match the MPCS master data
+// chain instead of stacking every section onto one long profile screen.
 export default function InstitutionalProfileScreen({
   centerName = "",
   setCenterName,
@@ -81,31 +45,6 @@ export default function InstitutionalProfileScreen({
   setManagerName,
   managerMobile = "",
   setManagerMobile,
-  // Master Data: Audit & AGM (done once/year, not monthly)
-  auditDate = "",
-  setAuditDate,
-  auditYear = "",
-  setAuditYear,
-  auditStatus = "Pending",
-  setAuditStatus,
-  agmDate = "",
-  setAgmDate,
-  agmYear = "",
-  setAgmYear,
-  agmStatus = "Pending",
-  setAgmStatus,
-  // Master Data: Loan setup (loan repayment tracking itself stays in the Monthly section)
-  hasLoan = false,
-  setHasLoan,
-  loanType = "",
-  setLoanType,
-  loanSanctionDate = "",
-  setLoanSanctionDate,
-  loanBeneficiaries = "",
-  setLoanBeneficiaries,
-  loanExtended = "",
-  setLoanExtended,
-  loanCleared = false,
   lastUpdated = "Not verified",
   onSave,
   onSaveNext,
@@ -125,19 +64,6 @@ export default function InstitutionalProfileScreen({
   const [editMgrName, setEditMgrName] = useState(managerName);
   const [editMgrMob, setEditMgrMob] = useState(managerMobile);
 
-  const [editAuditDate, setEditAuditDate] = useState(auditDate);
-  const [editAuditYear, setEditAuditYear] = useState(auditYear);
-  const [editAuditStatus, setEditAuditStatus] = useState(auditStatus);
-  const [editAgmDate, setEditAgmDate] = useState(agmDate);
-  const [editAgmYear, setEditAgmYear] = useState(agmYear);
-  const [editAgmStatus, setEditAgmStatus] = useState(agmStatus);
-
-  const [editHasLoan, setEditHasLoan] = useState(hasLoan);
-  const [editLoanType, setEditLoanType] = useState(loanType);
-  const [editLoanSanctionDate, setEditLoanSanctionDate] = useState(loanSanctionDate);
-  const [editLoanBeneficiaries, setEditLoanBeneficiaries] = useState(loanBeneficiaries);
-  const [editLoanExtended, setEditLoanExtended] = useState(loanExtended);
-
   useEffect(() => {
     setEditCenter(centerName || '');
     setEditRegNo(regNo || '');
@@ -147,36 +73,6 @@ export default function InstitutionalProfileScreen({
     setEditMgrMob(managerMobile || '');
   }, [centerName, regNo, presidentName, presidentMobile, managerName, managerMobile]);
 
-  useEffect(() => {
-    setEditAuditDate(auditDate || '');
-    setEditAuditYear(auditYear || '');
-    setEditAuditStatus(auditStatus || 'Pending');
-    setEditAgmDate(agmDate || '');
-    setEditAgmYear(agmYear || '');
-    setEditAgmStatus(agmStatus || 'Pending');
-    setEditHasLoan(!!hasLoan);
-    setEditLoanType(loanType || '');
-    setEditLoanSanctionDate(loanSanctionDate || '');
-    setEditLoanBeneficiaries(loanBeneficiaries || '');
-    setEditLoanExtended(loanExtended || '');
-  }, [auditDate, auditYear, auditStatus, agmDate, agmYear, agmStatus, hasLoan, loanType, loanSanctionDate, loanBeneficiaries, loanExtended]);
-
-  const handleAuditDateSelect = (isoValue) => {
-    const displayDate = formatFromIsoDate(isoValue);
-    setEditAuditDate(displayDate);
-    setEditAuditYear(deriveFinancialYear(isoValue));
-  };
-
-  const handleAgmDateSelect = (isoValue) => {
-    const displayDate = formatFromIsoDate(isoValue);
-    setEditAgmDate(displayDate);
-    setEditAgmYear(deriveFinancialYear(isoValue));
-  };
-
-  const handleLoanDateSelect = (isoValue) => {
-    setEditLoanSanctionDate(formatFromIsoDate(isoValue));
-  };
-
   const persistProfile = () => {
     if (setCenterName) setCenterName(editCenter);
     if (setRegNo) setRegNo(editRegNo);
@@ -184,19 +80,6 @@ export default function InstitutionalProfileScreen({
     if (setPresidentMobile) setPresidentMobile(editPresMob);
     if (setManagerName) setManagerName(editMgrName);
     if (setManagerMobile) setManagerMobile(editMgrMob);
-
-    if (setAuditDate) setAuditDate(editAuditDate);
-    if (setAuditYear) setAuditYear(editAuditYear);
-    if (setAuditStatus) setAuditStatus(editAuditStatus);
-    if (setAgmDate) setAgmDate(editAgmDate);
-    if (setAgmYear) setAgmYear(editAgmYear);
-    if (setAgmStatus) setAgmStatus(editAgmStatus);
-
-    if (setHasLoan) setHasLoan(editHasLoan);
-    if (setLoanType) setLoanType(editLoanType);
-    if (setLoanSanctionDate) setLoanSanctionDate(editLoanSanctionDate);
-    if (setLoanBeneficiaries) setLoanBeneficiaries(editLoanBeneficiaries);
-    if (setLoanExtended) setLoanExtended(editLoanExtended);
 
     if (onSave) {
       onSave({
@@ -206,29 +89,9 @@ export default function InstitutionalProfileScreen({
         presidentMobile: editPresMob,
         managerName: editMgrName,
         managerMobile: editMgrMob,
-        masterAuditDate: editAuditDate,
-        masterAuditYear: editAuditYear,
-        masterAuditStatus: editAuditStatus,
-        masterAgmDate: editAgmDate,
-        masterAgmYear: editAgmYear,
-        masterAgmStatus: editAgmStatus,
-        masterHasLoan: editHasLoan,
-        masterLoanType: editLoanType,
-        masterLoanSanctionDate: editLoanSanctionDate,
-        masterLoanBeneficiaries: editLoanBeneficiaries,
-        masterLoanExtended: editLoanExtended
       });
     }
   };
-
-  // Persists edits to AsyncStorage shortly after typing stops, so a value
-  // typed here survives even if the tab reloads before "Save Changes" is
-  // tapped (see src/hooks/useAutosave.js).
-  useAutosave(persistProfile, [
-    editCenter, editRegNo, editPresName, editPresMob, editMgrName, editMgrMob,
-    editAuditDate, editAuditYear, editAuditStatus, editAgmDate, editAgmYear, editAgmStatus,
-    editHasLoan, editLoanType, editLoanSanctionDate, editLoanBeneficiaries, editLoanExtended
-  ]);
 
   const handleSaveProfile = () => {
     persistProfile();
@@ -244,11 +107,6 @@ export default function InstitutionalProfileScreen({
     } else if (onNext) {
       onNext();
     }
-  };
-
-  const handleSaveAndExit = () => {
-    handleSaveProfile();
-    if (onBack) onBack();
   };
 
   return (
@@ -271,8 +129,8 @@ export default function InstitutionalProfileScreen({
       </View>
 
       {/* Sticky Action Banner at Top — only the contextual edit action.
-          "Save & Exit" / "Save & Next" are wizard navigation actions, so
-          they live in a bottom footer after the reviewable content instead. */}
+          "Save & Next" is the wizard's forward-navigation action, so it
+          lives in a bottom footer after the reviewable content instead. */}
       <View style={styles.stickyActionBanner}>
         <View style={[{ flexDirection: 'row', gap: 8 }, webCapWidth]}>
           <View style={styles.btnWrapper}>
@@ -363,7 +221,7 @@ export default function InstitutionalProfileScreen({
               <Text style={styles.infoValue}>{presidentMobile || "-"}</Text>
             </View>
           </View>
-          
+
           <View style={styles.divider} />
 
           <View style={styles.infoGrid}>
@@ -378,148 +236,27 @@ export default function InstitutionalProfileScreen({
           </View>
         </View>
 
-        {/* Section 3: Latest Audit (Master Data - once/year) */}
-        <View style={styles.card}>
-          <View style={styles.cardHeaderRow}>
-            <View style={styles.cardIconBox}>
-              <MaterialCommunityIcons name="gavel" size={20} color={COLORS.primary} />
-            </View>
-            <Text style={styles.cardHeaderTitle}>Latest Audit</Text>
-          </View>
-
-          <View style={styles.infoGrid}>
-            <View style={styles.infoCol}>
-              <Text style={styles.infoLabel}>AUDIT YEAR</Text>
-              <Text style={styles.infoValue}>{auditYear || "-"}</Text>
-            </View>
-            <View style={styles.infoCol}>
-              <Text style={styles.infoLabel}>AUDIT DATE</Text>
-              <Text style={styles.infoValue}>{auditDate || "-"}</Text>
-            </View>
-          </View>
-
-          <View style={styles.divider} />
-
-          <View style={styles.infoGrid}>
-            <View style={styles.infoCol}>
-              <Text style={styles.infoLabel}>AUDIT STATUS</Text>
-              <Text style={[
-                styles.infoValue,
-                { color: auditStatus === 'Completed' ? COLORS.emerald700 : COLORS.amber900, fontWeight: '800' }
-              ]}>
-                {auditStatus || "Pending"}
-              </Text>
-            </View>
-          </View>
-        </View>
-
-        {/* Section 4: Latest AGM (Master Data - once/year) */}
-        <View style={styles.card}>
-          <View style={styles.cardHeaderRow}>
-            <View style={styles.cardIconBox}>
-              <MaterialCommunityIcons name="account-group" size={20} color={COLORS.primary} />
-            </View>
-            <Text style={styles.cardHeaderTitle}>Latest AGM</Text>
-          </View>
-
-          <View style={styles.infoGrid}>
-            <View style={styles.infoCol}>
-              <Text style={styles.infoLabel}>AGM YEAR</Text>
-              <Text style={styles.infoValue}>{agmYear || "-"}</Text>
-            </View>
-            <View style={styles.infoCol}>
-              <Text style={styles.infoLabel}>AGM DATE</Text>
-              <Text style={styles.infoValue}>{agmDate || "-"}</Text>
-            </View>
-          </View>
-
-          <View style={styles.divider} />
-
-          <View style={styles.infoGrid}>
-            <View style={styles.infoCol}>
-              <Text style={styles.infoLabel}>AGM STATUS</Text>
-              <Text style={[
-                styles.infoValue,
-                { color: agmStatus === 'Completed' ? COLORS.emerald700 : COLORS.amber900, fontWeight: '800' }
-              ]}>
-                {agmStatus || "Pending"}
-              </Text>
-            </View>
-          </View>
-        </View>
-
-        {/* Section 5: Loan Setup (Master Data) */}
-        <View style={styles.card}>
-          <View style={styles.cardHeaderRow}>
-            <View style={styles.cardIconBox}>
-              <MaterialCommunityIcons name="bank-outline" size={20} color={COLORS.primary} />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.cardHeaderTitle}>Loan Setup</Text>
-            </View>
-            <View style={styles.statusBadge}>
-              <Text style={[styles.statusBadgeText, { color: hasLoan ? (loanCleared ? COLORS.slate500 : COLORS.emerald700) : COLORS.slate500 }]}>
-                {hasLoan ? (loanCleared ? 'CLEARED' : 'ON') : 'OFF'}
-              </Text>
-            </View>
-          </View>
-
-          {hasLoan ? (
-            <>
-              <View style={styles.infoGrid}>
-                <View style={styles.infoCol}>
-                  <Text style={styles.infoLabel}>LOAN TYPE</Text>
-                  <Text style={styles.infoValue}>{loanType || "-"}</Text>
-                </View>
-                <View style={styles.infoCol}>
-                  <Text style={styles.infoLabel}>SANCTION DATE</Text>
-                  <Text style={styles.infoValue}>{loanSanctionDate || "-"}</Text>
-                </View>
-              </View>
-              <View style={styles.divider} />
-              <View style={styles.infoGrid}>
-                <View style={styles.infoCol}>
-                  <Text style={styles.infoLabel}>BENEFICIARIES</Text>
-                  <Text style={styles.infoValue}>{loanBeneficiaries || "-"}</Text>
-                </View>
-                <View style={styles.infoCol}>
-                  <Text style={styles.infoLabel}>AMOUNT EXTENDED (Rs.)</Text>
-                  <Text style={styles.infoValue}>{loanExtended || "-"}</Text>
-                </View>
-              </View>
-              {loanCleared && (
-                <>
-                  <View style={styles.divider} />
-                  <Text style={styles.emptySubtitle}>This loan has been marked cleared from the Monthly section. Monthly repayment tracking is now hidden.</Text>
-                </>
-              )}
-            </>
-          ) : (
-            <Text style={styles.emptySubtitle}>No active loan record. Enable edit to add loan details. Once enabled, this society's monthly Compliance section will show a loan repayment tracker until it's marked cleared.</Text>
-          )}
-        </View>
-        {/* Wizard navigation actions now scroll with the content instead
-            of sitting in a fixed footer — that footer competed with the
-            floating BottomNav pill for the same strip at the bottom of
-            the screen. */}
-        <View style={[{ flexDirection: 'row', gap: 8 }, webCapWidth]}>
-          <View style={[styles.btnWrapper, { flex: 1 }]}>
-            <Pressable
-              style={({ hovered, pressed }) => [
-                styles.saveExitBtn,
-                pressed && { transform: [{ scale: 0.98 }] }
-              ]}
-              onPress={handleSaveAndExit}
+        {/* Wizard forward-navigation action now scrolls with the content
+            instead of sitting in a fixed footer, which competed with the
+            floating BottomNav pill for the same strip at the bottom. */}
+        {(onNext || onSaveNext) && (
+          <View style={[{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 20, paddingTop: 16, marginTop: 4, borderTopWidth: 1, borderTopColor: 'rgba(226,232,240,0.8)' }, webCapWidth]}>
+            <TouchableOpacity
+              onPress={() => { handleSaveProfile(); if (onBack) onBack(); }}
+              style={styles.prevCircleBtn}
+              activeOpacity={0.85}
             >
-              <MaterialCommunityIcons name="content-save-check-outline" size={16} color={COLORS.primary} />
-              <Text style={styles.saveExitText}>Save & Exit</Text>
+              <MaterialCommunityIcons name="chevron-left" size={24} color="#ffffff" />
+            </TouchableOpacity>
+            <Text style={styles.stepLabelText}>STEP 1 OF 4</Text>
+            <Pressable
+              onPress={handleSaveAndNext}
+              style={({ pressed }) => [styles.nextCircleBtn, pressed && { transform: [{ scale: 0.95 }] }]}
+            >
+              <MaterialCommunityIcons name="chevron-right" size={24} color="#7a1a1f" />
             </Pressable>
           </View>
-
-          <View style={[styles.btnWrapper, { flex: 1, borderRadius: 24 }]}>
-            <AnimatedContinueButton onPress={handleSaveAndNext} height={48} radius={24} fontSize={12} />
-          </View>
-        </View>
+        )}
       </ScrollView>
 
       {onTabPress && <BottomNav activeTab={activeTab || 'profile'} onTabPress={onTabPress} />}
@@ -569,106 +306,8 @@ export default function InstitutionalProfileScreen({
                 <TextInput style={styles.modalInput} value={editMgrMob} onChangeText={setEditMgrMob} keyboardType="phone-pad" placeholder="Enter manager mobile" placeholderTextColor={COLORS.slate400} />
               </View>
 
-              {/* Audit Details */}
-              <Text style={[styles.modalSectionTitle, { marginTop: 20 }]}>Latest Audit</Text>
-              <View style={styles.modalFormGroup}>
-                <Text style={styles.modalLabel}>Audit Date</Text>
-                {Platform.OS === 'web' ? (
-                  <View style={styles.datePickerWrapper}>
-                    <input type="date" value={formatToIsoDate(editAuditDate)} onChange={(e) => handleAuditDateSelect(e.target.value)} style={{ width: '100%', height: '100%', border: 'none', outline: 'none', background: 'transparent', fontFamily: FONT_FAMILY, fontSize: '13px', color: '#1e293b', fontWeight: '500', cursor: 'pointer' }} />
-                  </View>
-                ) : (
-                  <TextInput style={styles.modalInput} value={editAuditDate} onChangeText={(val) => { setEditAuditDate(val); setEditAuditYear(deriveFinancialYear(val)); }} placeholder="DD Mon YYYY" placeholderTextColor={COLORS.slate400} />
-                )}
-              </View>
-              <View style={styles.modalFormGroup}>
-                <Text style={styles.modalLabel}>Audit Year</Text>
-                <TextInput style={styles.modalInput} value={editAuditYear} onChangeText={setEditAuditYear} placeholder="e.g. 2024 - 2025" placeholderTextColor={COLORS.slate400} />
-              </View>
-              <View style={styles.modalFormGroup}>
-                <Text style={styles.modalLabel}>Audit Status</Text>
-                <View style={{ flexDirection: 'row', gap: 10, marginTop: 4 }}>
-                  {['Pending', 'Completed'].map((st) => (
-                    <TouchableOpacity key={st} style={[styles.statusToggleChip, editAuditStatus === st && styles.statusToggleChipActive]} onPress={() => setEditAuditStatus(st)} activeOpacity={0.7}>
-                      <Text style={[styles.statusToggleText, editAuditStatus === st && styles.statusToggleTextActive]}>{st}</Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-              </View>
-
-              {/* AGM Details */}
-              <Text style={[styles.modalSectionTitle, { marginTop: 20 }]}>Latest AGM</Text>
-              <View style={styles.modalFormGroup}>
-                <Text style={styles.modalLabel}>AGM Date</Text>
-                {Platform.OS === 'web' ? (
-                  <View style={styles.datePickerWrapper}>
-                    <input type="date" value={formatToIsoDate(editAgmDate)} onChange={(e) => handleAgmDateSelect(e.target.value)} style={{ width: '100%', height: '100%', border: 'none', outline: 'none', background: 'transparent', fontFamily: FONT_FAMILY, fontSize: '13px', color: '#1e293b', fontWeight: '500', cursor: 'pointer' }} />
-                  </View>
-                ) : (
-                  <TextInput style={styles.modalInput} value={editAgmDate} onChangeText={(val) => { setEditAgmDate(val); setEditAgmYear(deriveFinancialYear(val)); }} placeholder="DD Mon YYYY" placeholderTextColor={COLORS.slate400} />
-                )}
-              </View>
-              <View style={styles.modalFormGroup}>
-                <Text style={styles.modalLabel}>AGM Year</Text>
-                <TextInput style={styles.modalInput} value={editAgmYear} onChangeText={setEditAgmYear} placeholder="e.g. 2024 - 2025" placeholderTextColor={COLORS.slate400} />
-              </View>
-              <View style={styles.modalFormGroup}>
-                <Text style={styles.modalLabel}>AGM Status</Text>
-                <View style={{ flexDirection: 'row', gap: 10, marginTop: 4 }}>
-                  {['Pending', 'Completed'].map((st) => (
-                    <TouchableOpacity key={st} style={[styles.statusToggleChip, editAgmStatus === st && styles.statusToggleChipActive]} onPress={() => setEditAgmStatus(st)} activeOpacity={0.7}>
-                      <Text style={[styles.statusToggleText, editAgmStatus === st && styles.statusToggleTextActive]}>{st}</Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-              </View>
-
-              {/* Loan Setup */}
-              <View style={[styles.modalHeaderRow, { marginTop: 20, borderBottomWidth: 0, paddingBottom: 0 }]}>
-                <Text style={[styles.modalSectionTitle, { marginBottom: 0 }]}>Loan Setup</Text>
-                <Switch
-                  value={editHasLoan}
-                  onValueChange={setEditHasLoan}
-                  trackColor={{ false: COLORS.slate300, true: COLORS.primary }}
-                  thumbColor="#ffffff"
-                  disabled={loanCleared}
-                />
-              </View>
-              <Text style={styles.emptySubtitle}>
-                {loanCleared
-                  ? 'This loan was marked cleared from the Monthly section. To start a new loan, mark cleared status will need to be reset by an admin.'
-                  : 'If ON, the monthly Compliance section will show a repayment tracker until marked cleared.'}
-              </Text>
-
-              {editHasLoan && (
-                <View style={{ marginTop: 12 }}>
-                  <View style={styles.modalFormGroup}>
-                    <Text style={styles.modalLabel}>Loan Type</Text>
-                    <TextInput style={styles.modalInput} value={editLoanType} onChangeText={setEditLoanType} placeholder="e.g. Working Capital" placeholderTextColor={COLORS.slate400} />
-                  </View>
-                  <View style={styles.modalFormGroup}>
-                    <Text style={styles.modalLabel}>Sanction Date</Text>
-                    {Platform.OS === 'web' ? (
-                      <View style={styles.datePickerWrapper}>
-                        <input type="date" value={formatToIsoDate(editLoanSanctionDate)} onChange={(e) => handleLoanDateSelect(e.target.value)} style={{ width: '100%', height: '100%', border: 'none', outline: 'none', background: 'transparent', fontFamily: FONT_FAMILY, fontSize: '13px', color: '#1e293b', fontWeight: '500', cursor: 'pointer' }} />
-                      </View>
-                    ) : (
-                      <TextInput style={styles.modalInput} value={editLoanSanctionDate} onChangeText={setEditLoanSanctionDate} placeholder="DD Mon YYYY" placeholderTextColor={COLORS.slate400} />
-                    )}
-                  </View>
-                  <View style={styles.modalFormGroup}>
-                    <Text style={styles.modalLabel}>Total Beneficiaries</Text>
-                    <TextInput style={styles.modalInput} value={editLoanBeneficiaries} onChangeText={setEditLoanBeneficiaries} placeholder="e.g. 150" keyboardType="numeric" placeholderTextColor={COLORS.slate400} />
-                  </View>
-                  <View style={styles.modalFormGroup}>
-                    <Text style={styles.modalLabel}>Amount Extended (Rs.)</Text>
-                    <TextInput style={styles.modalInput} value={editLoanExtended} onChangeText={setEditLoanExtended} placeholder="e.g. 500000" keyboardType="numeric" placeholderTextColor={COLORS.slate400} />
-                  </View>
-                </View>
-              )}
-
               <View style={[styles.btnWrapper, { marginTop: 16, marginBottom: 20 }]}>
-                <Pressable 
+                <Pressable
                   style={({ hovered, pressed }) => [
                     styles.saveModalBtn,
                     pressed && { transform: [{ scale: 0.98 }] },
@@ -703,10 +342,11 @@ const styles = StyleSheet.create({
     paddingTop: Platform.OS === 'ios' ? 44 : 12,
     overflow: 'hidden',
   },
-  backBtn: { 
+  backBtn: {
     padding: 8,
     marginRight: 8,
   },
+  topBarTitleContainer: { flex: 1 },
   stickyActionBanner: {
     backgroundColor: 'rgba(255, 255, 255, 0.95)',
     borderBottomWidth: 1,
@@ -745,18 +385,18 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(122, 26, 31, 0.05)',
     zIndex: -1,
   },
-  moduleTag: { 
-    color: 'rgba(255,255,255,0.7)', 
+  moduleTag: {
+    color: 'rgba(255,255,255,0.7)',
     fontFamily: FONT_FAMILY,
-    fontSize: 8, 
-    fontWeight: '800', 
+    fontSize: 8,
+    fontWeight: '800',
     letterSpacing: 1.2,
     marginBottom: 2,
   },
-  screenTitleHeader: { 
-    color: '#FFFFFF', 
-    fontFamily: FONT_FAMILY, 
-    fontSize: 16, 
+  screenTitleHeader: {
+    color: '#FFFFFF',
+    fontFamily: FONT_FAMILY,
+    fontSize: 16,
     fontWeight: '800',
     letterSpacing: -0.16,
   },
@@ -818,11 +458,11 @@ const styles = StyleSheet.create({
     shadowRadius: 20,
     elevation: 3,
   },
-  cardHeaderRow: { 
-    flexDirection: 'row', 
-    alignItems: 'center', 
-    gap: 10, 
-    marginBottom: 12 
+  cardHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginBottom: 12
   },
   cardIconBox: {
     width: 32,
@@ -834,49 +474,38 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  cardHeaderTitle: { 
-    fontFamily: FONT_FAMILY, 
-    fontSize: 14, 
-    fontWeight: '700', 
+  cardHeaderTitle: {
+    fontFamily: FONT_FAMILY,
+    fontSize: 14,
+    fontWeight: '700',
     color: COLORS.slate800,
     letterSpacing: -0.14,
-  },
-  statusBadge: {
-    paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6,
-    backgroundColor: COLORS.slate100, marginLeft: 'auto',
-  },
-  statusBadgeText: {
-    fontFamily: FONT_FAMILY, fontSize: 10, fontWeight: '800',
   },
   divider: {
     height: 1,
     backgroundColor: COLORS.slate100,
     marginVertical: 12,
   },
-  infoGrid: { 
-    flexDirection: 'row', 
-    gap: 12 
+  infoGrid: {
+    flexDirection: 'row',
+    gap: 12
   },
-  infoCol: { 
-    flex: 1 
+  infoCol: {
+    flex: 1
   },
-  infoLabel: { 
-    fontFamily: FONT_FAMILY, 
-    fontSize: 8, 
-    fontWeight: '800', 
+  infoLabel: {
+    fontFamily: FONT_FAMILY,
+    fontSize: 8,
+    fontWeight: '800',
     color: COLORS.slate400,
     letterSpacing: 1.2,
     marginBottom: 2,
   },
-  infoValue: { 
-    fontFamily: FONT_FAMILY, 
-    fontSize: 13, 
-    fontWeight: '600', 
+  infoValue: {
+    fontFamily: FONT_FAMILY,
+    fontSize: 13,
+    fontWeight: '600',
     color: COLORS.slate800,
-  },
-  emptySubtitle: {
-    fontFamily: FONT_FAMILY, fontSize: 12, color: COLORS.slate500,
-    fontStyle: 'italic',
   },
   btnWrapper: {
     borderRadius: 16,
@@ -887,39 +516,45 @@ const styles = StyleSheet.create({
     elevation: 4,
     overflow: 'hidden',
   },
-  editCtaBtn: { 
+  editCtaBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    paddingVertical: 12, 
+    paddingVertical: 12,
     paddingHorizontal: 16,
   },
-  editCtaText: { 
-    color: '#FFFFFF', 
-    fontFamily: FONT_FAMILY, 
-    fontSize: 13, 
+  editCtaText: {
+    color: '#FFFFFF',
+    fontFamily: FONT_FAMILY,
+    fontSize: 13,
     fontWeight: '700',
     letterSpacing: 0.5,
   },
-  saveExitBtn: {
-    flexDirection: 'row',
+  prevCircleBtn: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#7a1a1f',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 6,
-    height: 48,
-    paddingHorizontal: 10,
-    borderRadius: 24,
-    borderWidth: 1.5,
-    borderColor: COLORS.primary,
-    backgroundColor: '#FFFFFF',
   },
-  saveExitText: {
-    color: COLORS.primary,
+  nextCircleBtn: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#ffffff',
+    borderWidth: 1.5,
+    borderColor: '#7a1a1f',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  stepLabelText: {
     fontFamily: FONT_FAMILY,
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '700',
-    letterSpacing: 0.3,
+    color: COLORS.slate400,
+    letterSpacing: 0.6,
   },
   toastBanner: {
     position: 'absolute',
@@ -982,10 +617,10 @@ const styles = StyleSheet.create({
     borderBottomColor: COLORS.slate100,
     marginBottom: 16,
   },
-  modalTitle: { 
-    fontFamily: FONT_FAMILY, 
-    fontSize: 16, 
-    fontWeight: '800', 
+  modalTitle: {
+    fontFamily: FONT_FAMILY,
+    fontSize: 16,
+    fontWeight: '800',
     color: COLORS.slate800,
     letterSpacing: -0.16,
   },
@@ -999,24 +634,24 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  modalFormScroll: { 
-    maxHeight: 500 
+  modalFormScroll: {
+    maxHeight: 500
   },
-  modalSectionTitle: { 
-    fontFamily: FONT_FAMILY, 
-    fontSize: 12, 
-    fontWeight: '800', 
-    color: COLORS.slate800, 
-    marginBottom: 12 
+  modalSectionTitle: {
+    fontFamily: FONT_FAMILY,
+    fontSize: 12,
+    fontWeight: '800',
+    color: COLORS.slate800,
+    marginBottom: 12
   },
-  modalFormGroup: { 
-    marginBottom: 12, 
-    gap: 6 
+  modalFormGroup: {
+    marginBottom: 12,
+    gap: 6
   },
-  modalLabel: { 
-    fontFamily: FONT_FAMILY, 
-    fontSize: 9, 
-    fontWeight: '800', 
+  modalLabel: {
+    fontFamily: FONT_FAMILY,
+    fontSize: 9,
+    fontWeight: '800',
     color: COLORS.slate500,
     letterSpacing: 1.2,
   },
@@ -1033,28 +668,17 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.slate50,
     ...(Platform.OS === 'web' && { outlineStyle: 'none' }),
   },
-  datePickerWrapper: {
-    borderWidth: 1, borderColor: COLORS.slate200, borderRadius: 10, paddingHorizontal: 14, height: 42,
-    backgroundColor: COLORS.slate50, flexDirection: 'row', alignItems: 'center',
-  },
-  saveModalBtn: { 
-    alignItems: 'center', 
+  saveModalBtn: {
+    alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 12, 
+    paddingVertical: 12,
     paddingHorizontal: 16,
   },
-  saveModalText: { 
-    color: '#FFFFFF', 
-    fontFamily: FONT_FAMILY, 
-    fontSize: 13, 
+  saveModalText: {
+    color: '#FFFFFF',
+    fontFamily: FONT_FAMILY,
+    fontSize: 13,
     fontWeight: '700',
     letterSpacing: 0.5,
   },
-  statusToggleChip: {
-    flex: 1, paddingVertical: 10, paddingHorizontal: 12, borderRadius: 10,
-    borderWidth: 1, borderColor: COLORS.slate200, backgroundColor: COLORS.slate50, alignItems: 'center', justifyContent: 'center',
-  },
-  statusToggleChipActive: { borderColor: '#7a1a1f', backgroundColor: '#7a1a1f' },
-  statusToggleText: { fontFamily: FONT_FAMILY, fontSize: 12, fontWeight: '700', color: COLORS.slate600 },
-  statusToggleTextActive: { color: '#FFFFFF' },
 });

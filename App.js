@@ -31,6 +31,8 @@ import DigitalEvidenceScreen from './src/components/DigitalEvidenceScreen';
 import OperationsScreen from './src/components/OperationsScreen';
 import ActivitiesScreen from './src/components/ActivitiesScreen';
 import InstitutionalProfileScreen from './src/components/InstitutionalProfileScreen';
+import ComplianceAuditScreen from './src/components/ComplianceAuditScreen';
+import LoanSetupScreen from './src/components/LoanSetupScreen';
 import DemographicsScreen from './src/components/DemographicsScreen';
 import ComplianceScreen from './src/components/ComplianceScreen';
 import ReviewSubmitScreen from './src/components/ReviewSubmitScreen';
@@ -2292,36 +2294,13 @@ export default function App() {
                     setManagerName={setManagerName}
                     managerMobile={managerMobile}
                     setManagerMobile={setManagerMobile}
-                    auditDate={masterAuditDate}
-                    setAuditDate={setMasterAuditDate}
-                    auditYear={masterAuditYear}
-                    setAuditYear={setMasterAuditYear}
-                    auditStatus={masterAuditStatus}
-                    setAuditStatus={setMasterAuditStatus}
-                    agmDate={masterAgmDate}
-                    setAgmDate={setMasterAgmDate}
-                    agmYear={masterAgmYear}
-                    setAgmYear={setMasterAgmYear}
-                    agmStatus={masterAgmStatus}
-                    setAgmStatus={setMasterAgmStatus}
-                    hasLoan={masterHasLoan}
-                    setHasLoan={setMasterHasLoan}
-                    loanType={masterLoanType}
-                    setLoanType={setMasterLoanType}
-                    loanSanctionDate={masterLoanSanctionDate}
-                    setLoanSanctionDate={setMasterLoanSanctionDate}
-                    loanBeneficiaries={masterLoanBeneficiaries}
-                    setLoanBeneficiaries={setMasterLoanBeneficiaries}
-                    loanExtended={masterLoanExtended}
-                    setLoanExtended={setMasterLoanExtended}
-                    loanCleared={masterLoanCleared}
                     lastUpdated=""
                     onSave={(data) => {
                       if (data) saveMasterStateToStorage(data);
                       stampMasterDataUpdated('instProfile');
                     }}
                     onNext={() => {
-                      setCurrentMobileScreen('DEMOGRAPHICS');
+                      setCurrentMobileScreen('COMPLIANCE_AUDIT');
                       setActiveBottomTab('home');
                     }}
                     onBack={() => {
@@ -2482,29 +2461,6 @@ export default function App() {
                         setManagerName={setManagerName}
                         managerMobile={managerMobile}
                         setManagerMobile={setManagerMobile}
-                        auditDate={masterAuditDate}
-                        setAuditDate={setMasterAuditDate}
-                        auditYear={masterAuditYear}
-                        setAuditYear={setMasterAuditYear}
-                        auditStatus={masterAuditStatus}
-                        setAuditStatus={setMasterAuditStatus}
-                        agmDate={masterAgmDate}
-                        setAgmDate={setMasterAgmDate}
-                        agmYear={masterAgmYear}
-                        setAgmYear={setMasterAgmYear}
-                        agmStatus={masterAgmStatus}
-                        setAgmStatus={setMasterAgmStatus}
-                        hasLoan={masterHasLoan}
-                        setHasLoan={setMasterHasLoan}
-                        loanType={masterLoanType}
-                        setLoanType={setMasterLoanType}
-                        loanSanctionDate={masterLoanSanctionDate}
-                        setLoanSanctionDate={setMasterLoanSanctionDate}
-                        loanBeneficiaries={masterLoanBeneficiaries}
-                        setLoanBeneficiaries={setMasterLoanBeneficiaries}
-                        loanExtended={masterLoanExtended}
-                        setLoanExtended={setMasterLoanExtended}
-                        loanCleared={masterLoanCleared}
                         lastUpdated=""
                         onSave={(data) => {
                           if (data) saveMasterStateToStorage(data);
@@ -2513,9 +2469,88 @@ export default function App() {
                         onSaveNext={(data) => {
                           if (data) saveMasterStateToStorage(data);
                           stampMasterDataUpdated('instProfile');
-                          setCurrentMobileScreen('DEMOGRAPHICS');
+                          setCurrentMobileScreen('COMPLIANCE_AUDIT');
                         }}
                         onBack={() => setCurrentMobileScreen('HOME')}
+                      activeTab="home"
+                      onTabPress={(tab) => {
+                        setActiveBottomTab(tab);
+                        if (tab === 'home') setCurrentMobileScreen('HOME');
+                      }}
+                      />
+                    )}
+
+                    {currentMobileScreen === 'COMPLIANCE_AUDIT' && (
+                      <ComplianceAuditScreen
+                        lastVerified=""
+                        initialAuditYear={masterAuditYear}
+                        initialAuditDate={masterAuditDate}
+                        initialAuditStatus={masterAuditStatus}
+                        initialAgmYear={masterAgmYear}
+                        initialAgmDate={masterAgmDate}
+                        initialAgmStatus={masterAgmStatus}
+                        onSaveCompliance={(data) => {
+                          if (data) {
+                            setMasterAuditYear(data.auditYear);
+                            setMasterAuditDate(data.auditDate);
+                            setMasterAuditStatus(data.auditStatus);
+                            setMasterAgmYear(data.agmYear);
+                            setMasterAgmDate(data.agmDate);
+                            setMasterAgmStatus(data.agmStatus);
+                            saveMasterStateToStorage({
+                              masterAuditYear: data.auditYear,
+                              masterAuditDate: data.auditDate,
+                              masterAuditStatus: data.auditStatus,
+                              masterAgmYear: data.agmYear,
+                              masterAgmDate: data.agmDate,
+                              masterAgmStatus: data.agmStatus,
+                            });
+                          }
+                          stampMasterDataUpdated('complianceAudit');
+                        }}
+                        onNext={() => setCurrentMobileScreen('LOAN_SETUP')}
+                        onBack={() => setCurrentMobileScreen('PROFILE')}
+                      activeTab="home"
+                      onTabPress={(tab) => {
+                        setActiveBottomTab(tab);
+                        if (tab === 'home') setCurrentMobileScreen('HOME');
+                      }}
+                      />
+                    )}
+
+                    {currentMobileScreen === 'LOAN_SETUP' && (
+                      <LoanSetupScreen
+                        lastVerified=""
+                        initialHasLoan={masterHasLoan}
+                        initialLoanType={masterLoanType}
+                        initialSanctionDate={masterLoanSanctionDate}
+                        initialBeneficiaries={masterLoanBeneficiaries}
+                        initialLoanExtended={masterLoanExtended}
+                        initialLoanCleared={masterLoanCleared}
+                        onSaveLoan={(data) => {
+                          if (data) {
+                            setMasterHasLoan(data.hasLoan);
+                            setMasterLoanType(data.loanType);
+                            setMasterLoanSanctionDate(data.sanctionDate);
+                            setMasterLoanBeneficiaries(data.beneficiaries);
+                            setMasterLoanExtended(data.loanExtended);
+                            saveMasterStateToStorage({
+                              masterHasLoan: data.hasLoan,
+                              masterLoanType: data.loanType,
+                              masterLoanSanctionDate: data.sanctionDate,
+                              masterLoanBeneficiaries: data.beneficiaries,
+                              masterLoanExtended: data.loanExtended,
+                            });
+                          }
+                          stampMasterDataUpdated('loanSetup');
+                        }}
+                        onNext={() => setCurrentMobileScreen('DEMOGRAPHICS')}
+                        onBack={() => setCurrentMobileScreen('COMPLIANCE_AUDIT')}
+                      activeTab="home"
+                      onTabPress={(tab) => {
+                        setActiveBottomTab(tab);
+                        if (tab === 'home') setCurrentMobileScreen('HOME');
+                      }}
                       />
                     )}
 
@@ -2535,7 +2570,7 @@ export default function App() {
                           stampMasterDataUpdated('demographics');
                           setCurrentMobileScreen('HOME');
                         }}
-                        onBack={() => setCurrentMobileScreen('PROFILE')}
+                        onBack={() => setCurrentMobileScreen('LOAN_SETUP')}
                       activeTab="home"
                       onTabPress={(tab) => {
                         setActiveBottomTab(tab);
