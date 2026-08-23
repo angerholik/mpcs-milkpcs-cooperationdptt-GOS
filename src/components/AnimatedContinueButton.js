@@ -1,33 +1,14 @@
 import React, { useRef, useState } from 'react';
 import { Animated, Pressable, StyleSheet, Platform, Easing } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
 
 // Recreates the classic "Learn More" hover button (codepen.io/kathykato/pen/rZRaNe):
-// a small circle sits at the left of the pill; on hover/press it expands to fill
-// the button, the icon slides right, and the label inverts color — all in 0.45s.
-//
-// Two color roles: `circleColor`/`activeTextColor` describe what the button looks
-// like once the circle has expanded to fill it; `baseBg` (or `gradientColors`) and
-// `baseTextColor` describe the resting state. Works either direction (light pill
-// with dark fill, or dark pill with light fill).
+// a small dark circle sits at the left of a light pill; on hover/press it expands
+// to fill the button, the arrow slides right, and the label inverts to white.
 const EASE = Easing.bezier(0.65, 0, 0.076, 1);
 const CIRCLE = 44;
 
-export default function AnimatedContinueButton({
-  label = 'Save & Continue',
-  icon = 'arrow-right',
-  onPress,
-  style,
-  height = 56,
-  radius = 28,
-  baseBg = '#e0e4ed',
-  gradientColors,
-  baseTextColor = '#1b1b1d',
-  circleColor = '#282936',
-  activeTextColor = '#ffffff',
-  iconColor = '#ffffff',
-}) {
+export default function AnimatedContinueButton({ label = 'Save & Continue', onPress, style }) {
   const [width, setWidth] = useState(0);
   const anim = useRef(new Animated.Value(0)).current;
 
@@ -45,25 +26,13 @@ export default function AnimatedContinueButton({
       onHoverIn={Platform.OS === 'web' ? () => animateTo(1) : undefined}
       onHoverOut={Platform.OS === 'web' ? () => animateTo(0) : undefined}
       onPress={onPress}
-      style={[styles.btn, { height, borderRadius: radius, backgroundColor: baseBg }, style]}
+      style={[styles.btn, style]}
     >
-      {gradientColors && (
-        <LinearGradient
-          colors={gradientColors}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 0 }}
-          style={StyleSheet.absoluteFillObject}
-        />
-      )}
       <Animated.View
         pointerEvents="none"
         style={[
           styles.circle,
-          {
-            borderRadius: radius - 6,
-            backgroundColor: circleColor,
-            width: anim.interpolate({ inputRange: [0, 1], outputRange: [CIRCLE, expandedWidth] }),
-          },
+          { width: anim.interpolate({ inputRange: [0, 1], outputRange: [CIRCLE, expandedWidth] }) },
         ]}
       />
       <Animated.View
@@ -73,12 +42,12 @@ export default function AnimatedContinueButton({
           { transform: [{ translateX: anim.interpolate({ inputRange: [0, 1], outputRange: [0, 16] }) }] },
         ]}
       >
-        <MaterialCommunityIcons name={icon} size={18} color={iconColor} />
+        <MaterialCommunityIcons name="arrow-right" size={18} color="#ffffff" />
       </Animated.View>
       <Animated.Text
         style={[
           styles.text,
-          { color: anim.interpolate({ inputRange: [0, 1], outputRange: [baseTextColor, activeTextColor] }) },
+          { color: anim.interpolate({ inputRange: [0, 1], outputRange: ['#1b1b1d', '#ffffff'] }) },
         ]}
       >
         {label}
@@ -89,6 +58,9 @@ export default function AnimatedContinueButton({
 
 const styles = StyleSheet.create({
   btn: {
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: '#e0e4ed',
     justifyContent: 'center',
     alignItems: 'center',
     overflow: 'hidden',
@@ -98,6 +70,8 @@ const styles = StyleSheet.create({
     left: 6,
     top: 6,
     bottom: 6,
+    borderRadius: 22,
+    backgroundColor: '#282936',
   },
   iconWrap: {
     position: 'absolute',
