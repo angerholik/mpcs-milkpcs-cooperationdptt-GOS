@@ -99,6 +99,19 @@ if (Platform.OS === 'web' && typeof document !== 'undefined') {
       'width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no, shrink-to-fit=no'
     );
   }
+
+  // Registers the offline cache-fallback worker (public/sw.js). Runs after
+  // 'load' per the standard recommendation, so it doesn't compete with the
+  // initial page/bundle fetch for bandwidth on a slow connection.
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('/sw.js').catch(() => {
+        // Registration failing (e.g. unsupported browser, blocked by a
+        // privacy setting) shouldn't break the app — it just means no
+        // offline support this session.
+      });
+    });
+  }
 }
 
 // The sealed-return certificate interpolates officer/center names straight into
