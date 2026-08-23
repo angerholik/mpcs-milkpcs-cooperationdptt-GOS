@@ -2680,6 +2680,7 @@ export default function App() {
                           }
                           stampMasterDataUpdated('complianceAudit');
                         }}
+                        onNext={() => setCurrentMobileScreen('LOAN_SETUP_VIEW')}
                         onBack={() => { setCurrentMobileScreen('HOME'); setActiveBottomTab(masterDataViewReturnTab); }}
                       activeTab={masterDataViewReturnTab}
                       onTabPress={(tab) => {
@@ -2751,6 +2752,7 @@ export default function App() {
                           }
                           stampMasterDataUpdated('loanSetup');
                         }}
+                        onNext={() => setCurrentMobileScreen('DEMOGRAPHICS')}
                         onBack={() => { setCurrentMobileScreen('HOME'); setActiveBottomTab(masterDataViewReturnTab); }}
                       activeTab={masterDataViewReturnTab}
                       onTabPress={(tab) => {
