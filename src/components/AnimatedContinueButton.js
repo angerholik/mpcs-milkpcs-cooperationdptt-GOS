@@ -21,7 +21,7 @@ export default function AnimatedContinueButton({
   height = 56,
   radius = 28,
   fontSize = 13,
-  baseBg = '#e0e4ed',
+  baseBg = '#f3f8fa',
   gradientColors,
   baseTextColor = '#1b1b1d',
   circleColor = '#282936',
