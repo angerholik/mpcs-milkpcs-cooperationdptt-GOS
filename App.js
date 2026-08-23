@@ -2482,6 +2482,38 @@ export default function App() {
                       />
                     )}
 
+                    {/* Opened from the More menu to check/edit just this section —
+                        no Save & Continue, Back returns to the More menu instead of
+                        chaining into Compliance & Audit. */}
+                    {currentMobileScreen === 'PROFILE_VIEW' && (
+                      <InstitutionalProfileScreen
+                        centerName={centerName}
+                        setCenterName={setCenterName}
+                        centerId={registrationNumber}
+                        regNo={registrationNumber}
+                        setRegNo={setRegistrationNumber}
+                        presidentName={presidentName}
+                        setPresidentName={setPresidentName}
+                        presidentMobile={presidentMobile}
+                        setPresidentMobile={setPresidentMobile}
+                        managerName={managerName}
+                        setManagerName={setManagerName}
+                        managerMobile={managerMobile}
+                        setManagerMobile={setManagerMobile}
+                        lastUpdated=""
+                        onSave={(data) => {
+                          if (data) saveMasterStateToStorage(data);
+                          stampMasterDataUpdated('instProfile');
+                        }}
+                        onBack={() => { setCurrentMobileScreen('HOME'); setActiveBottomTab('more'); }}
+                      activeTab="more"
+                      onTabPress={(tab) => {
+                        setActiveBottomTab(tab);
+                        if (tab === 'home') setCurrentMobileScreen('HOME');
+                      }}
+                      />
+                    )}
+
                     {currentMobileScreen === 'COMPLIANCE_AUDIT' && (
                       <ComplianceAuditScreen
                         lastVerified=""
@@ -2513,6 +2545,43 @@ export default function App() {
                         onNext={() => setCurrentMobileScreen('LOAN_SETUP')}
                         onBack={() => setCurrentMobileScreen('PROFILE')}
                       activeTab="home"
+                      onTabPress={(tab) => {
+                        setActiveBottomTab(tab);
+                        if (tab === 'home') setCurrentMobileScreen('HOME');
+                      }}
+                      />
+                    )}
+
+                    {currentMobileScreen === 'COMPLIANCE_VIEW' && (
+                      <ComplianceAuditScreen
+                        lastVerified=""
+                        initialAuditYear={masterAuditYear}
+                        initialAuditDate={masterAuditDate}
+                        initialAuditStatus={masterAuditStatus}
+                        initialAgmYear={masterAgmYear}
+                        initialAgmDate={masterAgmDate}
+                        initialAgmStatus={masterAgmStatus}
+                        onSaveCompliance={(data) => {
+                          if (data) {
+                            setMasterAuditYear(data.auditYear);
+                            setMasterAuditDate(data.auditDate);
+                            setMasterAuditStatus(data.auditStatus);
+                            setMasterAgmYear(data.agmYear);
+                            setMasterAgmDate(data.agmDate);
+                            setMasterAgmStatus(data.agmStatus);
+                            saveMasterStateToStorage({
+                              masterAuditYear: data.auditYear,
+                              masterAuditDate: data.auditDate,
+                              masterAuditStatus: data.auditStatus,
+                              masterAgmYear: data.agmYear,
+                              masterAgmDate: data.agmDate,
+                              masterAgmStatus: data.agmStatus,
+                            });
+                          }
+                          stampMasterDataUpdated('complianceAudit');
+                        }}
+                        onBack={() => { setCurrentMobileScreen('HOME'); setActiveBottomTab('more'); }}
+                      activeTab="more"
                       onTabPress={(tab) => {
                         setActiveBottomTab(tab);
                         if (tab === 'home') setCurrentMobileScreen('HOME');
@@ -3002,6 +3071,66 @@ export default function App() {
                       />
                     )}
 
+                    {/* Opened from the More menu to check/edit just this section —
+                        no Save & Continue, Back returns to the More menu instead of
+                        chaining into Registered Demographics. */}
+                    {currentMobileScreen === 'MPCS_PROFILE_VIEW' && (
+                      <MpcsInstitutionalProfileScreen
+                        societyName={selectedSociety?.name || centerName?.trim() || ''}
+                        panCard={panCard || selectedSociety?.panCard || ''}
+                        regNumber={selectedSociety?.regNo || registrationNumber || ''}
+                        regDate={regDate || selectedSociety?.regDate || ''}
+                        presidentName={presidentName || ''}
+                        presidentMobile={presidentMobile || ''}
+                        secretaryName={managerName || ''}
+                        secretaryMobile={managerMobile || ''}
+                        onSaveProfile={(data) => {
+                          if (data.societyName !== undefined) setCenterName(data.societyName);
+                          if (data.panCard !== undefined) setPanCard(data.panCard);
+                          if (data.regDate !== undefined) setRegDate(data.regDate);
+                          if (data.regNumber !== undefined) setRegistrationNumber(data.regNumber);
+                          if (data.presidentName !== undefined) setPresidentName(data.presidentName);
+                          if (data.presidentMobile !== undefined) setPresidentMobile(data.presidentMobile);
+                          if (data.secretaryName !== undefined) setManagerName(data.secretaryName);
+                          if (data.secretaryMobile !== undefined) setManagerMobile(data.secretaryMobile);
+
+                          if (selectedSociety) {
+                            setSelectedSociety(prev => ({
+                              ...prev,
+                              name: data.societyName || prev?.name,
+                              regNo: data.regNumber || prev?.regNo,
+                              panCard: data.panCard || prev?.panCard,
+                              regDate: data.regDate || prev?.regDate
+                            }));
+                          }
+                          if (institutionsList && institutionsList.length > 0 && selectedSociety?.id) {
+                            setInstitutionsList(prev => prev.map(inst =>
+                              inst.id === selectedSociety.id
+                                ? { ...inst, name: data.societyName || inst.name, regNo: data.regNumber || inst.regNo, panCard: data.panCard || inst.panCard, regDate: data.regDate || inst.regDate }
+                                : inst
+                            ));
+                          }
+                          saveMasterStateToStorage({
+                            centerName: data.societyName,
+                            panCard: data.panCard,
+                            regDate: data.regDate,
+                            registrationNumber: data.regNumber,
+                            presidentName: data.presidentName,
+                            presidentMobile: data.presidentMobile,
+                            managerName: data.secretaryName,
+                            managerMobile: data.secretaryMobile
+                          });
+                          stampMasterDataUpdated('instProfile');
+                        }}
+                        onBack={() => { setCurrentMobileScreen('HOME'); setActiveBottomTab('more'); }}
+                      activeTab="more"
+                      onTabPress={(tab) => {
+                        setActiveBottomTab(tab);
+                        if (tab === 'home') setCurrentMobileScreen('HOME');
+                      }}
+                      />
+                    )}
+
                     {currentMobileScreen === 'MPCS_DEMOGRAPHICS' && (
                       <MpcsRegisteredDemographicsScreen
                         initialDemographics={demographicsData.length > 0 ? demographicsData : undefined}
@@ -3013,6 +3142,25 @@ export default function App() {
                         onNext={() => setCurrentMobileScreen('MPCS_COMPLIANCE')}
                         onBack={() => setCurrentMobileScreen('MPCS_INST_PROFILE')}
                       activeTab="home"
+                      onTabPress={(tab) => {
+                        setActiveBottomTab(tab);
+                        if (tab === 'home') setCurrentMobileScreen('HOME');
+                      }}
+                      />
+                    )}
+
+                    {/* Opened from the More menu — no Save & Continue, Back
+                        returns to the More menu instead of chaining onward. */}
+                    {currentMobileScreen === 'MPCS_DEMOGRAPHICS_VIEW' && (
+                      <MpcsRegisteredDemographicsScreen
+                        initialDemographics={demographicsData.length > 0 ? demographicsData : undefined}
+                        onSaveDemographics={(data) => {
+                          setDemographicsData(data);
+                          saveMasterStateToStorage({ demographicsData: data });
+                          stampMasterDataUpdated('demographics');
+                        }}
+                        onBack={() => { setCurrentMobileScreen('HOME'); setActiveBottomTab('more'); }}
+                      activeTab="more"
                       onTabPress={(tab) => {
                         setActiveBottomTab(tab);
                         if (tab === 'home') setCurrentMobileScreen('HOME');
@@ -3036,6 +3184,28 @@ export default function App() {
                         onNext={() => setCurrentMobileScreen('MPCS_FINANCIALS')}
                         onBack={() => setCurrentMobileScreen('MPCS_DEMOGRAPHICS')}
                       activeTab="home"
+                      onTabPress={(tab) => {
+                        setActiveBottomTab(tab);
+                        if (tab === 'home') setCurrentMobileScreen('HOME');
+                      }}
+                      />
+                    )}
+
+                    {currentMobileScreen === 'MPCS_COMPLIANCE_VIEW' && (
+                      <MpcsComplianceAuditScreen
+                        initialAuditYear={complianceData?.auditYear || ''}
+                        initialAuditDate={complianceData?.auditDate || ''}
+                        initialAuditStatus={complianceData?.auditStatus || 'Pending'}
+                        initialAgmYear={complianceData?.agmYear || ''}
+                        initialAgmDate={complianceData?.agmDate || ''}
+                        initialAgmStatus={complianceData?.agmStatus || 'Pending'}
+                        onSaveCompliance={(data) => {
+                          setComplianceData(data);
+                          saveMasterStateToStorage({ complianceData: data });
+                          stampMasterDataUpdated('compliance');
+                        }}
+                        onBack={() => { setCurrentMobileScreen('HOME'); setActiveBottomTab('more'); }}
+                      activeTab="more"
                       onTabPress={(tab) => {
                         setActiveBottomTab(tab);
                         if (tab === 'home') setCurrentMobileScreen('HOME');

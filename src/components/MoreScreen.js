@@ -58,7 +58,11 @@ export default function MoreScreen({
   const isMpcs = module === 'MPCS';
   const menuOptions = [
     {
-      id: isMpcs ? 'MPCS_INST_PROFILE' : 'PROFILE',
+      // The _VIEW ids render the same screens as the wizard chain but with
+      // no forward Save & Continue action and Back returning here instead
+      // of chaining into the next master data step — opening this from the
+      // menu is "let me check one section," not "start the wizard."
+      id: isMpcs ? 'MPCS_PROFILE_VIEW' : 'PROFILE_VIEW',
       label: 'Institutional Profile',
       sub: 'Manage center details & management team',
       icon: 'office-building-outline',
@@ -66,7 +70,7 @@ export default function MoreScreen({
       bgColor: '#eff6ff',
     },
     {
-      id: isMpcs ? 'MPCS_DEMOGRAPHICS' : 'DEMOGRAPHICS',
+      id: isMpcs ? 'MPCS_DEMOGRAPHICS_VIEW' : 'DEMOGRAPHICS',
       label: 'Demographics Breakdown',
       sub: 'SC/ST/OBC/GEN registered member counts',
       icon: 'account-group-outline',
@@ -74,7 +78,7 @@ export default function MoreScreen({
       bgColor: '#f5f3ff',
     },
     {
-      id: isMpcs ? 'MPCS_COMPLIANCE' : 'COMPLIANCE_AUDIT',
+      id: isMpcs ? 'MPCS_COMPLIANCE_VIEW' : 'COMPLIANCE_VIEW',
       label: 'Compliance & Audit Details',
       sub: 'Audit date, AGM records & active loan status',
       icon: 'shield-check-outline',
