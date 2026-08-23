@@ -276,23 +276,19 @@ export default function InstitutionalProfileScreen({
       <View style={styles.stickyActionBanner}>
         <View style={[{ flexDirection: 'row', gap: 8 }, webCapWidth]}>
           <View style={styles.btnWrapper}>
-            <Pressable
-              style={({ hovered, pressed }) => [
-                styles.editCtaBtn,
-                pressed && { transform: [{ scale: 0.98 }] },
-                hovered && Platform.OS === 'web' && { shadowOpacity: 0.4 }
-              ]}
+            <AnimatedContinueButton
+              label="Edit Profile"
+              icon="pencil-outline"
               onPress={() => setModalVisible(true)}
-            >
-              <LinearGradient
-                colors={['#7a1a1f', '#4a1017']}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-                style={StyleSheet.absoluteFillObject}
-              />
-              <MaterialCommunityIcons name="pencil-outline" size={16} color="#ffffff" />
-              <Text style={styles.editCtaText}>Edit Profile</Text>
-            </Pressable>
+              height={44}
+              radius={22}
+              gradientColors={['#7a1a1f', '#4a1017']}
+              baseBg="transparent"
+              baseTextColor="#ffffff"
+              iconColor="#ffffff"
+              circleColor="#932026"
+              activeTextColor="#ffffff"
+            />
           </View>
         </View>
       </View>
