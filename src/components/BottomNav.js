@@ -1,5 +1,5 @@
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Platform } from 'react-native';
+import React, { useEffect, useRef } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Platform, Animated } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 // STITCH Design Tokens (Extracted for Bottom Nav)
@@ -11,86 +11,126 @@ const COLORS = {
   slate100: '#f1f5f9',
   slate50: '#f8fafc',
   primary: '#7a1a1f',
+  primaryPale: 'rgba(122,26,31,0.08)',
 };
 
 const FONT_FAMILY = 'Manrope';
 
-export default function BottomNav({ activeTab = 'home', onTabPress }) {
-  const tabs = [
-    { id: 'home', label: 'HOME', icon: 'home-outline', activeIcon: 'home' },
-    { id: 'records', label: 'RECORDS', icon: 'chart-bar', activeIcon: 'chart-bar' },
-    { id: 'profile', label: 'PROFILE', icon: 'account-outline', activeIcon: 'account' },
-    { id: 'more', label: 'MORE', icon: 'view-grid-outline', activeIcon: 'view-grid' },
-  ];
+const TABS = [
+  { id: 'home', label: 'HOME', icon: 'home-outline', activeIcon: 'home' },
+  { id: 'records', label: 'RECORDS', icon: 'chart-bar', activeIcon: 'chart-bar' },
+  { id: 'profile', label: 'PROFILE', icon: 'account-outline', activeIcon: 'account' },
+  { id: 'more', label: 'MORE', icon: 'view-grid-outline', activeIcon: 'view-grid' },
+];
+
+function NavTab({ tab, isActive, onPress }) {
+  const progress = useRef(new Animated.Value(isActive ? 1 : 0)).current;
+
+  useEffect(() => {
+    Animated.spring(progress, {
+      toValue: isActive ? 1 : 0,
+      useNativeDriver: false,
+      speed: 18,
+      bounciness: 6,
+    }).start();
+  }, [isActive]);
+
+  const bgColor = progress.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['rgba(122,26,31,0)', COLORS.primaryPale],
+  });
+  const iconScale = progress.interpolate({ inputRange: [0, 1], outputRange: [1, 1.1] });
+  const labelColor = progress.interpolate({
+    inputRange: [0, 1],
+    outputRange: [COLORS.slate400, COLORS.primary],
+  });
+  const iconColor = isActive ? COLORS.primary : COLORS.slate400;
 
   return (
-    <View style={styles.container}>
-      {tabs.map((tab) => {
-        const isActive = activeTab === tab.id;
-        const color = isActive ? COLORS.primary : COLORS.slate400;
-        return (
-          <TouchableOpacity
+    <TouchableOpacity
+      style={styles.tabBtn}
+      onPress={onPress}
+      activeOpacity={0.7}
+    >
+      <Animated.View style={[styles.iconContainer, { backgroundColor: bgColor, transform: [{ scale: iconScale }] }]}>
+        <MaterialCommunityIcons name={isActive ? tab.activeIcon : tab.icon} size={22} color={iconColor} />
+      </Animated.View>
+      <Animated.Text style={[styles.label, { color: labelColor }]}>{tab.label}</Animated.Text>
+    </TouchableOpacity>
+  );
+}
+
+export default function BottomNav({ activeTab = 'home', onTabPress }) {
+  const entrance = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.spring(entrance, { toValue: 1, useNativeDriver: false, speed: 14, bounciness: 8 }).start();
+  }, []);
+
+  const translateY = entrance.interpolate({ inputRange: [0, 1], outputRange: [40, 0] });
+
+  return (
+    <Animated.View style={[styles.wrapper, { opacity: entrance, transform: [{ translateY }] }]}>
+      <View style={styles.pill}>
+        {TABS.map((tab) => (
+          <NavTab
             key={tab.id}
-            style={styles.tabBtn}
+            tab={tab}
+            isActive={activeTab === tab.id}
             onPress={() => onTabPress && onTabPress(tab.id)}
-            activeOpacity={0.7}
-          >
-            <View style={[styles.iconContainer, isActive && styles.iconContainerActive]}>
-              <MaterialCommunityIcons
-                name={isActive ? tab.activeIcon : tab.icon}
-                size={24}
-                color={color}
-              />
-            </View>
-            <Text style={[styles.label, { color }]}>{tab.label}</Text>
-          </TouchableOpacity>
-        );
-      })}
-    </View>
+          />
+        ))}
+      </View>
+    </Animated.View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  // Floating pill, inset from the screen edges, instead of a bar attached
+  // flush to the bottom edge and full width.
+  wrapper: {
+    position: 'absolute',
+    left: 16,
+    right: 16,
+    bottom: Platform.OS === 'ios' ? 28 : 16,
+    alignItems: 'center',
+  },
+  pill: {
     flexDirection: 'row',
-    height: 72,
-    backgroundColor: 'rgba(255, 255, 255, 0.95)',
-    borderTopWidth: 1,
-    borderTopColor: COLORS.slate100,
+    height: 68,
+    width: '100%',
+    maxWidth: 420,
+    backgroundColor: 'rgba(255, 255, 255, 0.97)',
+    borderRadius: 30,
+    borderWidth: 1,
+    borderColor: COLORS.slate100,
     alignItems: 'center',
     justifyContent: 'space-around',
-    paddingHorizontal: 16,
-    paddingBottom: Platform.OS === 'ios' ? 20 : 0,
+    paddingHorizontal: 10,
     shadowColor: '#0f172a',
-    shadowOffset: { width: 0, height: -10 },
-    shadowOpacity: 0.06,
-    shadowRadius: 40,
-    elevation: 10,
-    position: 'absolute',
-    bottom: 0,
-    width: '100%',
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.12,
+    shadowRadius: 24,
+    elevation: 12,
   },
   tabBtn: {
-    width: 64, // w-16
+    flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 6, // gap-1.5
+    gap: 4,
     height: '100%',
   },
   iconContainer: {
-    width: 56, // w-14
-    height: 32, // h-8
-    borderRadius: 16, // rounded-full
+    width: 52,
+    height: 30,
+    borderRadius: 15,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  iconContainerActive: {
-    backgroundColor: COLORS.slate100,
-  },
   label: {
     fontFamily: FONT_FAMILY,
-    fontSize: 10,
-    fontWeight: '800', // label-caps
-    letterSpacing: 1.2,
+    fontSize: 9,
+    fontWeight: '800',
+    letterSpacing: 1,
   },
 });
