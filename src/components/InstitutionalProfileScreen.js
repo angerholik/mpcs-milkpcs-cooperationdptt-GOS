@@ -515,23 +515,17 @@ export default function InstitutionalProfileScreen({
             </Pressable>
           </View>
 
-          <View style={[styles.btnWrapper, { flex: 1 }]}>
+          <View style={[styles.btnWrapper, { flex: 1, borderRadius: 28 }]}>
             <Pressable
               style={({ hovered, pressed }) => [
                 styles.editCtaBtn,
+                { backgroundColor: '#ffffff', borderRadius: 28 },
                 pressed && { transform: [{ scale: 0.98 }] },
-                hovered && Platform.OS === 'web' && { shadowOpacity: 0.4 }
+                hovered && Platform.OS === 'web' && { opacity: 0.9 }
               ]}
               onPress={handleSaveAndNext}
             >
-              <LinearGradient
-                colors={['#047857', '#064e3b']}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-                style={StyleSheet.absoluteFillObject}
-              />
-              <Text style={styles.editCtaText}>Save & Continue</Text>
-              <MaterialCommunityIcons name="arrow-right" size={16} color="#ffffff" />
+              <Text style={[styles.editCtaText, { color: '#1b1b1d' }]}>Save & Continue</Text>
             </Pressable>
           </View>
         </View>

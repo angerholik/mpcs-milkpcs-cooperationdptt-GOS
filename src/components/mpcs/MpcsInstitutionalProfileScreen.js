@@ -259,23 +259,17 @@ export default function MpcsInstitutionalProfileScreen({
             a fixed footer — that footer competed with the floating
             BottomNav pill for the same strip at the bottom of the screen. */}
         {onNext && (
-          <View style={[styles.btnWrapper, styles.webCapWidth]}>
+          <View style={[styles.btnWrapper, styles.webCapWidth, { borderRadius: 28 }]}>
             <Pressable
               style={({ hovered, pressed }) => [
                 styles.editCtaBtn,
+                { backgroundColor: '#ffffff', borderRadius: 28 },
                 pressed && { transform: [{ scale: 0.98 }] },
-                hovered && Platform.OS === 'web' && { shadowOpacity: 0.4 }
+                hovered && Platform.OS === 'web' && { opacity: 0.9 }
               ]}
               onPress={() => { handleSave(); onNext(); }}
             >
-              <LinearGradient
-                colors={['#047857', '#064e3b']}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-                style={StyleSheet.absoluteFillObject}
-              />
-              <Text style={styles.editCtaText}>Save & Continue</Text>
-              <MaterialCommunityIcons name="arrow-right" size={16} color="#ffffff" />
+              <Text style={[styles.editCtaText, { color: '#1b1b1d' }]}>Save & Continue</Text>
             </Pressable>
           </View>
         )}
