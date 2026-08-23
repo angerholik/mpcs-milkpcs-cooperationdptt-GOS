@@ -424,9 +424,14 @@ export default function HomeScreen({
             <Text style={styles.sectionTitle}>Master Data Directory</Text>
             <View style={styles.masterListContainer}>
               {[
-                { id: 'PROFILE', title: 'Institutional Profile', icon: 'office-building-outline', updated: formatLastUpdated(masterDataUpdated.instProfile) },
-                { id: 'COMPLIANCE_AUDIT', title: 'Compliance & Audit', icon: 'gavel', updated: formatLastUpdated(masterDataUpdated.complianceAudit) },
-                { id: 'LOAN_SETUP', title: 'Loan Details', icon: 'bank-outline', updated: formatLastUpdated(masterDataUpdated.loanSetup) },
+                // _VIEW ids open the screen standalone — no Save & Continue /
+                // Previous chevron pulling the user into an adjacent section.
+                // DEMOGRAPHICS is the terminal step (Submit to Database is its
+                // own legitimate action, not a hop to somewhere else), so it
+                // keeps the plain key.
+                { id: 'PROFILE_VIEW', title: 'Institutional Profile', icon: 'office-building-outline', updated: formatLastUpdated(masterDataUpdated.instProfile) },
+                { id: 'COMPLIANCE_VIEW', title: 'Compliance & Audit', icon: 'gavel', updated: formatLastUpdated(masterDataUpdated.complianceAudit) },
+                { id: 'LOAN_SETUP_VIEW', title: 'Loan Details', icon: 'bank-outline', updated: formatLastUpdated(masterDataUpdated.loanSetup) },
                 { id: 'DEMOGRAPHICS', title: 'Registered Demographics', icon: 'account-group-outline', updated: formatLastUpdated(masterDataUpdated.demographics) }
               ].map((item, index) => (
                 <Pressable
