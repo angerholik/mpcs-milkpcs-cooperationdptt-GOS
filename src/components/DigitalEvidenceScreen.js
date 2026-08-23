@@ -263,7 +263,7 @@ export default function DigitalEvidenceScreen({
 
           <View style={styles.inputBox}>
             <MaterialCommunityIcons name="crosshairs-gps" size={15} color={COLORS.slate400} style={styles.inputIcon} />
-            <Text style={styles.textInput}>{gpsDisplay || "Not captured yet"}</Text>
+            <Text style={styles.textInput} numberOfLines={1} ellipsizeMode="tail">{gpsDisplay || "Not captured yet"}</Text>
           </View>
 
           {/* Timestamp Box */}
@@ -414,6 +414,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     height: 48,
+    overflow: 'hidden',
     backgroundColor: COLORS.slate50,
     borderWidth: 1,
     borderColor: COLORS.slate200,
