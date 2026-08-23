@@ -57,18 +57,12 @@ export default function MoreScreen({
   // currentMobileScreen to a key nothing renders, producing a blank screen.
   const isMpcs = module === 'MPCS';
   const menuOptions = [
-    {
-      // The _VIEW ids render the same screens as the wizard chain but with
-      // no forward Save & Continue action and Back returning here instead
-      // of chaining into the next master data step — opening this from the
-      // menu is "let me check one section," not "start the wizard."
-      id: isMpcs ? 'MPCS_PROFILE_VIEW' : 'PROFILE_VIEW',
-      label: 'Institutional Profile',
-      sub: 'Manage center details & management team',
-      icon: 'office-building-outline',
-      color: '#1e40af',
-      bgColor: '#eff6ff',
-    },
+    // Institutional Profile used to be listed here too, opening the same
+    // screen as the Profile tab and Master Data's entry — three separate
+    // places doing the same thing, which is exactly what let their
+    // navigation wiring drift out of sync with each other over time. The
+    // Profile tab now covers this (a summary card with a link into Master
+    // Data to actually edit), so it's dropped from this menu entirely.
     {
       id: isMpcs ? 'MPCS_DEMOGRAPHICS_VIEW' : 'DEMOGRAPHICS',
       label: 'Demographics Breakdown',

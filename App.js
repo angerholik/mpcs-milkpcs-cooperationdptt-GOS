@@ -31,6 +31,7 @@ import DigitalEvidenceScreen from './src/components/DigitalEvidenceScreen';
 import OperationsScreen from './src/components/OperationsScreen';
 import ActivitiesScreen from './src/components/ActivitiesScreen';
 import InstitutionalProfileScreen from './src/components/InstitutionalProfileScreen';
+import ProfileSummaryScreen from './src/components/ProfileSummaryScreen';
 import ComplianceAuditScreen from './src/components/ComplianceAuditScreen';
 import LoanSetupScreen from './src/components/LoanSetupScreen';
 import DemographicsScreen from './src/components/DemographicsScreen';
@@ -50,6 +51,7 @@ import MpcsBusinessPerformanceScreen from './src/components/mpcs/MpcsBusinessPer
 import MpcsCscTransactionsScreen from './src/components/mpcs/MpcsCscTransactionsScreen';
 import MpcsActivitiesLogScreen from './src/components/mpcs/MpcsActivitiesLogScreen';
 import MpcsInstitutionalProfileScreen from './src/components/mpcs/MpcsInstitutionalProfileScreen';
+import MpcsProfileSummaryScreen from './src/components/mpcs/MpcsProfileSummaryScreen';
 import MpcsRegisteredDemographicsScreen from './src/components/mpcs/MpcsRegisteredDemographicsScreen';
 import MpcsComplianceAuditScreen from './src/components/mpcs/MpcsComplianceAuditScreen';
 import MpcsFinancialPerformanceScreen from './src/components/mpcs/MpcsFinancialPerformanceScreen';
@@ -2388,32 +2390,26 @@ export default function App() {
                     onSignOut={handleUserLogout}
                   />
                 ) : activeBottomTab === 'profile' ? (
-                  <InstitutionalProfileScreen
+                  <ProfileSummaryScreen
                     centerName={centerName}
-                    setCenterName={setCenterName}
-                    centerId={registrationNumber}
                     regNo={registrationNumber}
-                    setRegNo={setRegistrationNumber}
                     presidentName={presidentName}
-                    setPresidentName={setPresidentName}
                     presidentMobile={presidentMobile}
-                    setPresidentMobile={setPresidentMobile}
                     managerName={managerName}
-                    setManagerName={setManagerName}
                     managerMobile={managerMobile}
-                    setManagerMobile={setManagerMobile}
-                    lastUpdated=""
-                    onSave={(data) => {
-                      if (data) saveMasterStateToStorage(data);
-                      stampMasterDataUpdated('instProfile');
-                    }}
-                    onNext={() => {
-                      setCurrentMobileScreen('COMPLIANCE_AUDIT');
-                      setActiveBottomTab('home');
-                    }}
-                    onBack={() => {
-                      setCurrentMobileScreen('HOME');
-                      setActiveBottomTab('home');
+                    auditStatus={masterAuditStatus}
+                    auditDate={masterAuditDate}
+                    agmStatus={masterAgmStatus}
+                    agmDate={masterAgmDate}
+                    totalMembers={
+                      (parseInt(mSc) || 0) + (parseInt(fSc) || 0) +
+                      (parseInt(mSt) || 0) + (parseInt(fSt) || 0) +
+                      (parseInt(mObc) || 0) + (parseInt(fObc) || 0) +
+                      (parseInt(mGen) || 0) + (parseInt(fGen) || 0)
+                    }
+                    onEditMasterData={() => {
+                      setMasterDataViewReturnTab('profile');
+                      setCurrentMobileScreen('PROFILE_VIEW');
                     }}
                     activeTab="profile"
                     onTabPress={(tab) => {
@@ -2885,60 +2881,26 @@ export default function App() {
                     onViewPdf={generatePDF}
                   />
                 ) : activeBottomTab === 'profile' ? (
-                  <MpcsInstitutionalProfileScreen
+                  <MpcsProfileSummaryScreen
                     societyName={selectedSociety?.name || centerName?.trim() || ''}
-                    panCard={panCard || selectedSociety?.panCard || ''}
                     regNumber={selectedSociety?.regNo || registrationNumber || ''}
-                    regDate={regDate || selectedSociety?.regDate || ''}
+                    panCard={panCard || selectedSociety?.panCard || ''}
                     presidentName={presidentName || ''}
                     presidentMobile={presidentMobile || ''}
                     secretaryName={managerName || ''}
                     secretaryMobile={managerMobile || ''}
-                    onSaveProfile={(data) => {
-                      if (data.societyName !== undefined) setCenterName(data.societyName);
-                      if (data.panCard !== undefined) setPanCard(data.panCard);
-                      if (data.regDate !== undefined) setRegDate(data.regDate);
-                      if (data.regNumber !== undefined) setRegistrationNumber(data.regNumber);
-                      if (data.presidentName !== undefined) setPresidentName(data.presidentName);
-                      if (data.presidentMobile !== undefined) setPresidentMobile(data.presidentMobile);
-                      if (data.secretaryName !== undefined) setManagerName(data.secretaryName);
-                      if (data.secretaryMobile !== undefined) setManagerMobile(data.secretaryMobile);
-
-                      if (selectedSociety) {
-                        setSelectedSociety(prev => ({
-                          ...prev,
-                          name: data.societyName || prev?.name,
-                          regNo: data.regNumber || prev?.regNo,
-                          panCard: data.panCard || prev?.panCard,
-                          regDate: data.regDate || prev?.regDate
-                        }));
-                      }
-                      if (institutionsList && institutionsList.length > 0 && selectedSociety?.id) {
-                        setInstitutionsList(prev => prev.map(inst => 
-                          inst.id === selectedSociety.id
-                            ? { ...inst, name: data.societyName || inst.name, regNo: data.regNumber || inst.regNo, panCard: data.panCard || inst.panCard, regDate: data.regDate || inst.regDate }
-                            : inst
-                        ));
-                      }
-                      saveMasterStateToStorage({
-                        centerName: data.societyName,
-                        panCard: data.panCard,
-                        regDate: data.regDate,
-                        registrationNumber: data.regNumber,
-                        presidentName: data.presidentName,
-                        presidentMobile: data.presidentMobile,
-                        managerName: data.secretaryName,
-                        managerMobile: data.secretaryMobile
-                      });
-                      stampMasterDataUpdated('instProfile');
-                    }}
-                    onNext={() => {
-                      setCurrentMobileScreen('MPCS_DEMOGRAPHICS');
-                      setActiveBottomTab('home');
-                    }}
-                    onBack={() => {
-                      setCurrentMobileScreen('HOME');
-                      setActiveBottomTab('home');
+                    auditStatus={complianceData?.auditStatus || ''}
+                    auditDate={complianceData?.auditDate || ''}
+                    agmStatus={complianceData?.agmStatus || ''}
+                    agmDate={complianceData?.agmDate || ''}
+                    totalMembers={
+                      Array.isArray(demographicsData)
+                        ? demographicsData.reduce((s, d) => s + (parseInt(d.male || 0) + parseInt(d.female || 0)), 0)
+                        : 0
+                    }
+                    onEditMasterData={() => {
+                      setMasterDataViewReturnTab('profile');
+                      setCurrentMobileScreen('MPCS_PROFILE_VIEW');
                     }}
                     activeTab="profile"
                     onTabPress={(tab) => {
