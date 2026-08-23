@@ -263,7 +263,7 @@ export default function MpcsInstitutionalProfileScreen({
             <Pressable
               style={({ hovered, pressed }) => [
                 styles.editCtaBtn,
-                { backgroundColor: '#ffffff', borderRadius: 28 },
+                { backgroundColor: '#e0e4ed', borderRadius: 28 },
                 pressed && { transform: [{ scale: 0.98 }] },
                 hovered && Platform.OS === 'web' && { opacity: 0.9 }
               ]}
