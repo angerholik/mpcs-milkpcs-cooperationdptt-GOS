@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, Pressable, ScrollView, TextIn
 import { MaterialIcons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { webCapWidth } from '../utils/webStyles';
+import AnimatedContinueButton from './AnimatedContinueButton';
 
 // STITCH Design Tokens (Matching Dashboard Overview)
 const COLORS = {
@@ -219,17 +220,20 @@ export default function MyInstitutionsScreen({
         {/* Add Institution CTA — outlined rather than solid-filled, so it
             doesn't stack a third block of maroon directly under the header
             and the active filter chip. */}
-        <Pressable
-          style={({ hovered, pressed }) => [
-            styles.addCtaBtn,
-            pressed && { transform: [{ scale: 0.98 }], backgroundColor: COLORS.background },
-            hovered && Platform.OS === 'web' && { backgroundColor: COLORS.background }
-          ]}
+        <AnimatedContinueButton
+          label="ADD NEW INSTITUTION (MPCS / MILK PCS)"
+          icon="plus"
           onPress={() => setModalVisible(true)}
-        >
-          <MaterialCommunityIcons name="plus-circle-outline" size={20} color={COLORS.primary} />
-          <Text style={styles.addCtaText}>ADD NEW INSTITUTION (MPCS / MILK PCS)</Text>
-        </Pressable>
+          height={52}
+          radius={14}
+          fontSize={11}
+          baseBg={COLORS.surface}
+          baseTextColor={COLORS.primary}
+          circleColor={COLORS.primary}
+          activeTextColor="#ffffff"
+          iconColor="#ffffff"
+          style={{ borderWidth: 1.5, borderColor: COLORS.primary }}
+        />
 
         {/* List of Registered Institutions */}
         <View style={styles.listSection}>
