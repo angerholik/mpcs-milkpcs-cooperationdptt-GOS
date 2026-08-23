@@ -2266,6 +2266,7 @@ export default function App() {
                   />
                 ) : activeBottomTab === 'more' ? (
                   <MoreScreen
+                    module="MILK"
                     activeTab="more"
                     user={userProfile}
                     onTabPress={(tab) => {
@@ -2715,6 +2716,7 @@ export default function App() {
                   />
                 ) : activeBottomTab === 'more' ? (
                   <MoreScreen
+                    module="MPCS"
                     activeTab="more"
                     onTabPress={(tab) => {
                       setActiveBottomTab(tab);

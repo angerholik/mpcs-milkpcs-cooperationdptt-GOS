@@ -43,6 +43,7 @@ const FONT_FAMILY = Platform.select({
 });
 
 export default function MoreScreen({
+  module = 'MILK',
   activeTab = 'more',
   onTabPress,
   onNavigateScreen,
@@ -50,9 +51,14 @@ export default function MoreScreen({
   onSignOut,
   user
 }) {
+  // Screen keys diverge between the two apps (MPCS prefixes its master data
+  // screens with MPCS_; Milk PCS doesn't), so this menu can't use one fixed
+  // set of ids for both — navigating with the wrong id sets
+  // currentMobileScreen to a key nothing renders, producing a blank screen.
+  const isMpcs = module === 'MPCS';
   const menuOptions = [
     {
-      id: 'PROFILE',
+      id: isMpcs ? 'MPCS_INST_PROFILE' : 'PROFILE',
       label: 'Institutional Profile',
       sub: 'Manage center details & management team',
       icon: 'office-building-outline',
@@ -60,7 +66,7 @@ export default function MoreScreen({
       bgColor: '#eff6ff',
     },
     {
-      id: 'DEMOGRAPHICS',
+      id: isMpcs ? 'MPCS_DEMOGRAPHICS' : 'DEMOGRAPHICS',
       label: 'Demographics Breakdown',
       sub: 'SC/ST/OBC/GEN registered member counts',
       icon: 'account-group-outline',
@@ -68,7 +74,7 @@ export default function MoreScreen({
       bgColor: '#f5f3ff',
     },
     {
-      id: 'COMPLIANCE',
+      id: isMpcs ? 'MPCS_COMPLIANCE' : 'COMPLIANCE_AUDIT',
       label: 'Compliance & Audit Details',
       sub: 'Audit date, AGM records & active loan status',
       icon: 'shield-check-outline',
