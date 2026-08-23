@@ -429,6 +429,12 @@ export default function App() {
 
   // Modal State
   const [showHistory, setShowHistory] = useState(false);
+  // Web-only in-app PDF preview: a window.open() print tab in an installed
+  // iOS/Android standalone PWA has no browser chrome (no address bar, no
+  // close/back button), leaving the user stuck on the printed certificate
+  // with no way back into the app. Rendering it inside our own Modal gives
+  // us a visible Close button regardless of standalone/browser context.
+  const [pdfPreviewHtml, setPdfPreviewHtml] = useState(null);
 
   const resetAllFormFields = () => {
     setCenterName('');
@@ -1881,16 +1887,7 @@ export default function App() {
     // --- If viewing historical record PDF from RecordsScreen ---
     if (recordOverride) {
       if (Platform.OS === 'web') {
-        try {
-          const printWin = window.open('', '_blank');
-          if (printWin) {
-            printWin.document.write(htmlContent);
-            printWin.document.close();
-            setTimeout(() => { printWin.focus(); printWin.print(); }, 300);
-          }
-        } catch(e) {
-          console.warn('Web print exception:', e);
-        }
+        setPdfPreviewHtml(htmlContent);
       } else {
         try {
           const printResult = await Print.printToFileAsync({ html: htmlContent });
@@ -2119,16 +2116,7 @@ export default function App() {
       // this same function with the saved data to regenerate and open the PDF on demand.
       if (recordOverride) {
         if (Platform.OS === 'web') {
-          try {
-            const printWin = window.open('', '_blank');
-            if (printWin) {
-              printWin.document.write(htmlContent);
-              printWin.document.close();
-              setTimeout(() => { printWin.focus(); printWin.print(); }, 300);
-            }
-          } catch(e) {
-            console.warn('Web print error:', e);
-          }
+          setPdfPreviewHtml(htmlContent);
         } else {
           try {
             const printResult = await Print.printToFileAsync({ html: htmlContent });
@@ -3638,6 +3626,33 @@ export default function App() {
            </View>
         </Modal>
       )}
+
+      {/* PDF Preview Modal (web only) — see pdfPreviewHtml state comment */}
+      {Platform.OS === 'web' && pdfPreviewHtml && (
+        <Modal visible={true} transparent={false} animationType="slide" onRequestClose={() => setPdfPreviewHtml(null)}>
+          <SafeAreaView style={styles.pdfPreviewContainer}>
+            <View style={styles.pdfPreviewBar}>
+              <Text style={styles.pdfPreviewTitle}>Sealed Certificate</Text>
+              <View style={{ flexDirection: 'row', gap: 10 }}>
+                <TouchableOpacity
+                  style={styles.pdfPreviewPrintBtn}
+                  onPress={() => {
+                    const frame = document.getElementById('pdf-preview-frame');
+                    if (frame?.contentWindow) frame.contentWindow.print();
+                  }}
+                >
+                  <MaterialIcons name="print" size={18} color={COLORS.emerald} />
+                  <Text style={styles.pdfPreviewPrintText}>Print / Save PDF</Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={() => setPdfPreviewHtml(null)} style={styles.modalCloseBtn}>
+                  <MaterialIcons name="close" size={24} color={COLORS.emerald} />
+                </TouchableOpacity>
+              </View>
+            </View>
+            <iframe id="pdf-preview-frame" srcDoc={pdfPreviewHtml} style={{ flex: 1, border: 'none', width: '100%', height: '100%' }} />
+          </SafeAreaView>
+        </Modal>
+      )}
     </View>
   );
 }
@@ -4384,6 +4399,41 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20,
+  },
+  pdfPreviewContainer: {
+    flex: 1,
+    backgroundColor: '#F8F5F2',
+  },
+  pdfPreviewBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
+  },
+  pdfPreviewTitle: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: COLORS.textPrimary,
+  },
+  pdfPreviewPrintBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    backgroundColor: '#FFFFFF',
+  },
+  pdfPreviewPrintText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: COLORS.emerald,
   },
   bulletinBoard: {
     width: '100%',
