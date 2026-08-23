@@ -2379,6 +2379,10 @@ export default function App() {
                       if (data) saveMasterStateToStorage(data);
                       stampMasterDataUpdated('instProfile');
                     }}
+                    onNext={() => {
+                      setCurrentMobileScreen('COMPLIANCE_AUDIT');
+                      setActiveBottomTab('home');
+                    }}
                     onBack={() => {
                       setCurrentMobileScreen('HOME');
                       setActiveBottomTab('home');
@@ -2896,6 +2900,10 @@ export default function App() {
                         managerMobile: data.secretaryMobile
                       });
                       stampMasterDataUpdated('instProfile');
+                    }}
+                    onNext={() => {
+                      setCurrentMobileScreen('MPCS_DEMOGRAPHICS');
+                      setActiveBottomTab('home');
                     }}
                     onBack={() => {
                       setCurrentMobileScreen('HOME');
