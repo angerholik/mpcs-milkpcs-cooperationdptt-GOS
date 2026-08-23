@@ -425,6 +425,8 @@ export default function HomeScreen({
             <View style={styles.masterListContainer}>
               {[
                 { id: 'PROFILE', title: 'Institutional Profile', icon: 'office-building-outline', updated: formatLastUpdated(masterDataUpdated.instProfile) },
+                { id: 'COMPLIANCE_AUDIT', title: 'Compliance & Audit', icon: 'gavel', updated: formatLastUpdated(masterDataUpdated.complianceAudit) },
+                { id: 'LOAN_SETUP', title: 'Loan Details', icon: 'bank-outline', updated: formatLastUpdated(masterDataUpdated.loanSetup) },
                 { id: 'DEMOGRAPHICS', title: 'Registered Demographics', icon: 'account-group-outline', updated: formatLastUpdated(masterDataUpdated.demographics) }
               ].map((item, index) => (
                 <Pressable
