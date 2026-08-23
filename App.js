@@ -249,6 +249,14 @@ export default function App() {
   // 'home' when opened from the Home tab's Master Data Directory, 'more'
   // when opened from the More menu's equivalent list.
   const [masterDataViewReturnTab, setMasterDataViewReturnTab] = useState('more');
+  // DEMOGRAPHICS and MPCS_LOAN are each the terminal step of two separate
+  // chains — the real onboarding wizard, and the Master Data view chain —
+  // but only ever had one hardcoded onBack target (the real chain's
+  // previous screen), so arriving from the view chain and hitting Back
+  // dropped the user into the wrong screen instead of returning to the
+  // view step they actually came from. Track which one to return to.
+  const [demographicsBackTarget, setDemographicsBackTarget] = useState('LOAN_SETUP');
+  const [mpcsLoanBackTarget, setMpcsLoanBackTarget] = useState('MPCS_CSC_DETAILS');
   const [activityItems, setActivityItems] = useState([]);
 
   // Evidence States
@@ -2486,7 +2494,7 @@ export default function App() {
                             setCurrentMobileScreen('OPERATIONS');
                           }
                         }}
-                        onBack={() => setCurrentMobileScreen(returnMobileScreen || 'HOME')}
+                        onBack={() => setCurrentMobileScreen(returnMobileScreen === 'REVIEW' ? 'REVIEW' : 'HOME')}
                       activeTab="home"
                       onTabPress={(tab) => {
                         setActiveBottomTab(tab);
@@ -2512,7 +2520,7 @@ export default function App() {
                             setCurrentMobileScreen('ACTIVITIES');
                           }
                         }}
-                        onBack={() => setCurrentMobileScreen(returnMobileScreen || 'HOME')}
+                        onBack={() => setCurrentMobileScreen(returnMobileScreen === 'REVIEW' ? 'REVIEW' : 'EVIDENCE')}
                       activeTab="home"
                       onTabPress={(tab) => {
                         setActiveBottomTab(tab);
@@ -2538,7 +2546,7 @@ export default function App() {
                             setCurrentMobileScreen('COMPLIANCE');
                           }
                         }}
-                        onBack={() => setCurrentMobileScreen(returnMobileScreen || 'HOME')}
+                        onBack={() => setCurrentMobileScreen(returnMobileScreen === 'REVIEW' ? 'REVIEW' : 'OPERATIONS')}
                       activeTab="home"
                       onTabPress={(tab) => {
                         setActiveBottomTab(tab);
@@ -2716,7 +2724,7 @@ export default function App() {
                           }
                           stampMasterDataUpdated('loanSetup');
                         }}
-                        onNext={() => setCurrentMobileScreen('DEMOGRAPHICS')}
+                        onNext={() => { setDemographicsBackTarget('LOAN_SETUP'); setCurrentMobileScreen('DEMOGRAPHICS'); }}
                         onBack={() => setCurrentMobileScreen('COMPLIANCE_AUDIT')}
                       activeTab="home"
                       onTabPress={(tab) => {
@@ -2752,7 +2760,7 @@ export default function App() {
                           }
                           stampMasterDataUpdated('loanSetup');
                         }}
-                        onNext={() => setCurrentMobileScreen('DEMOGRAPHICS')}
+                        onNext={() => { setDemographicsBackTarget('LOAN_SETUP_VIEW'); setCurrentMobileScreen('DEMOGRAPHICS'); }}
                         onBack={() => setCurrentMobileScreen('COMPLIANCE_VIEW')}
                       activeTab={masterDataViewReturnTab}
                       onTabPress={(tab) => {
@@ -2778,7 +2786,7 @@ export default function App() {
                           stampMasterDataUpdated('demographics');
                           setCurrentMobileScreen('HOME');
                         }}
-                        onBack={() => setCurrentMobileScreen('LOAN_SETUP')}
+                        onBack={() => setCurrentMobileScreen(demographicsBackTarget)}
                       activeTab="home"
                       onTabPress={(tab) => {
                         setActiveBottomTab(tab);
@@ -2835,7 +2843,7 @@ export default function App() {
                           saveMasterStateToStorage({});
                           setCurrentMobileScreen('REVIEW');
                         }}
-                        onBack={() => setCurrentMobileScreen(returnMobileScreen || 'HOME')}
+                        onBack={() => setCurrentMobileScreen(returnMobileScreen === 'REVIEW' ? 'REVIEW' : 'ACTIVITIES')}
                       activeTab="home"
                       onTabPress={(tab) => {
                         setActiveBottomTab(tab);
@@ -3505,7 +3513,7 @@ export default function App() {
                           saveMasterStateToStorage({ cscDetailsData: data });
                           stampMasterDataUpdated('csc');
                         }}
-                        onNext={() => setCurrentMobileScreen('MPCS_LOAN')}
+                        onNext={() => { setMpcsLoanBackTarget('MPCS_CSC_DETAILS'); setCurrentMobileScreen('MPCS_LOAN'); }}
                         onBack={() => setCurrentMobileScreen('MPCS_SHARE_CAPITAL')}
                       activeTab="home"
                       onTabPress={(tab) => {
@@ -3529,7 +3537,7 @@ export default function App() {
                           saveMasterStateToStorage({ cscDetailsData: data });
                           stampMasterDataUpdated('csc');
                         }}
-                        onNext={() => setCurrentMobileScreen('MPCS_LOAN')}
+                        onNext={() => { setMpcsLoanBackTarget('MPCS_CSC_DETAILS_VIEW'); setCurrentMobileScreen('MPCS_LOAN'); }}
                         onBack={() => setCurrentMobileScreen('MPCS_SHARE_CAPITAL_VIEW')}
                       activeTab={masterDataViewReturnTab}
                       onTabPress={(tab) => {
@@ -3556,7 +3564,7 @@ export default function App() {
                           showToast('✅ Master Data Saved Successfully!');
                           setCurrentMobileScreen('HOME');
                         }}
-                        onBack={() => setCurrentMobileScreen('MPCS_CSC_DETAILS')}
+                        onBack={() => setCurrentMobileScreen(mpcsLoanBackTarget)}
                       activeTab="home"
                       onTabPress={(tab) => {
                         setActiveBottomTab(tab);
@@ -3608,9 +3616,9 @@ export default function App() {
                         }}
                         onSaveNext={() => {
                           updateSectionState('loan', { status: 'COMPLETED ✓' });
-                          setCurrentMobileScreen('MPCS_ACTIVITIES');
+                          setCurrentMobileScreen('MPCS_REVIEW');
                         }}
-                        onBack={() => setCurrentMobileScreen('HOME')}
+                        onBack={() => setCurrentMobileScreen('MPCS_REVIEW')}
                       activeTab="home"
                       onTabPress={(tab) => {
                         setActiveBottomTab(tab);
