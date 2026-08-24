@@ -1580,9 +1580,18 @@ export default function App() {
     // return from Records shows this session's (usually empty) evidence,
     // producing broken images and blank timestamps on someone else's record.
     let activeLocation = evData?.location ? evData.location : location;
+    // MPCS records have no gps_lat/gps_lng columns at all (mpcs_submissions'
+    // only geo storage is inside form_data, since saveMpcsSubmission was
+    // written for a form_data-blob shape rather than dedicated columns) — so
+    // this fell straight through to the district-name fallback for every
+    // single MPCS record, while Milk PCS (which does have those columns)
+    // worked correctly. Falls back to recordFormData's nested latitude/
+    // longitude, which is where the MPCS compile/sync path actually writes it.
+    const recordGpsLat = recordItem?.gps_lat ?? recordFormData?.latitude;
+    const recordGpsLng = recordItem?.gps_lng ?? recordFormData?.longitude;
     const locText = recordOverride
-      ? (recordItem?.gps_lat != null && recordItem?.gps_lng != null
-          ? `${Number(recordItem.gps_lat).toFixed(6)}° N, ${Number(recordItem.gps_lng).toFixed(6)}° E`
+      ? (recordGpsLat != null && recordGpsLng != null
+          ? `${Number(recordGpsLat).toFixed(6)}° N, ${Number(recordGpsLng).toFixed(6)}° E`
           : (recordItem?.district ? `${recordItem.district} District` : 'N/A'))
       : (activeLocation ? `${activeLocation.latitude?.toFixed(6) || ''}° N, ${activeLocation.longitude?.toFixed(6) || ''}° E` : 'Gyalshing District GPS');
 
@@ -1590,8 +1599,10 @@ export default function App() {
       ? (recordItem?.captured_at || (recordItem?.created_at ? new Date(recordItem.created_at).toLocaleString('en-IN') : 'N/A'))
       : timestamp;
 
+    // Same form_data-vs-column gap as locText above: MPCS has no photo_url
+    // column, the real uploaded URL lives at form_data.evidence_photo_url.
     const pdfImageSrc = recordOverride
-      ? (recordItem?.photo_url || null)
+      ? (recordItem?.photo_url || recordFormData?.evidence_photo_url || null)
       : (evData?.imageBase64
           ? `data:image/jpeg;base64,${evData.imageBase64}`
           : (evData?.imageUri || (imageBase64 ? `data:image/jpeg;base64,${imageBase64}` : null)));

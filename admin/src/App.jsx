@@ -230,7 +230,18 @@ function normalizeMpcsAuditFields(row) {
     ? null
     : (financials.netProfit || row.net_profit_loss);
   const has_loan = loan.hasLoan !== undefined ? !!(loan.hasLoan && !loan.loanCleared) : !!row.has_loan;
-  return { ...row, audit_done, audit_year, audit_category, is_profit, net_profit_loss, has_loan };
+  // mpcs_submissions has no photo_url/gps_lat/gps_lng columns at all — the
+  // mobile app's Compile & Seal writes the real uploaded photo URL and GPS
+  // straight into form_data (evidence_photo_url/latitude/longitude) since
+  // there's nowhere else for them to go. Every read site in this dashboard
+  // (detail view, table, map markers) reads row.photo_url/gps_lat/gps_lng
+  // directly, so without this fallback every MPCS record showed "no photo"
+  // and "not captured" regardless of what was actually submitted — Milk PCS
+  // worked because milk_pcs_submissions does have those columns.
+  const photo_url = row.photo_url || fd.evidence_photo_url || null;
+  const gps_lat = row.gps_lat ?? fd.latitude ?? null;
+  const gps_lng = row.gps_lng ?? fd.longitude ?? null;
+  return { ...row, audit_done, audit_year, audit_category, is_profit, net_profit_loss, has_loan, photo_url, gps_lat, gps_lng };
 }
 
 // Helper to parse MPCS Audit & AGM details
@@ -1407,9 +1418,49 @@ function MPCSDetailModal({ row, onClose }) {
             )}
           </Sec>
 
+          {/* Field Evidence & Verification — this section never existed for
+              MPCS records (only the Milk PCS modal had it), so even once
+              photo_url/gps_lat/gps_lng were normalized from form_data above,
+              there was nowhere in this modal to actually display them. */}
+          {row.photo_url && (
+            <Sec title="N. Field Evidence">
+              <div style={{borderRadius:'12px',overflow:'hidden',border:'1.5px solid var(--border)',marginBottom:'4px'}}>
+                <img src={row.photo_url} alt="Field evidence" style={{width:'100%',maxHeight:'280px',objectFit:'cover'}}/>
+              </div>
+              <div style={{fontSize:'11px',color:'#9CA3AF',marginTop:'4px'}}>GPS-timestamped field photo</div>
+            </Sec>
+          )}
+          <Sec title="O. Verification">
+            <div className="detail-grid">
+              <D l="Field Visit Timestamp" v={row.captured_at ? new Date(row.captured_at).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' }) : null} />
+              <D l="GPS Location" v={row.gps_lat && row.gps_lng ? `${Number(row.gps_lat).toFixed(5)}°N, ${Number(row.gps_lng).toFixed(5)}°E` : null} />
+            </div>
+            {row.gps_lat && row.gps_lng ? (
+              <div style={{marginTop:'12px', borderRadius:'12px', overflow:'hidden', border:'1.5px solid var(--border)'}}>
+                <iframe
+                  title="Location Preview"
+                  width="100%"
+                  height="180"
+                  frameBorder="0"
+                  scrolling="no"
+                  marginHeight="0"
+                  marginWidth="0"
+                  src={`https://maps.google.com/maps?q=${row.gps_lat},${row.gps_lng}&z=15&output=embed`}
+                />
+                <a href={`https://maps.google.com/?q=${row.gps_lat},${row.gps_lng}`} target="_blank" rel="noreferrer"
+                   style={{display:'block', padding:'10px', background:'var(--emerald-pale)', color:'var(--emerald)', textAlign:'center', fontSize:'12px', fontWeight:800, textDecoration:'none', borderTop:'1.5px solid var(--border)'}}>
+                   View Full Map ↗
+                </a>
+              </div>
+            ) : (
+              <div style={{marginTop:'12px', padding:'12px 16px', borderRadius:'10px', background:'#F8FAFC', border:'1px solid #E2E8F0', fontSize:'12px', color:'#64748B', fontStyle:'italic'}}>
+                No GPS coordinates were captured for this submission's Digital Evidence photo.
+              </div>
+            )}
+          </Sec>
           {/* Registered Members — persistent roster from member_registry, not
               part of this monthly return (see MemberDataScreen on mobile) */}
-          <Sec title={`N. Registered Members (${members.length})`}>
+          <Sec title={`P. Registered Members (${members.length})`}>
             <MemberRosterSection members={members} loading={membersLoading} />
           </Sec>
 
