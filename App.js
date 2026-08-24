@@ -2207,6 +2207,15 @@ export default function App() {
       setActivityItems([]);
       setIsSealing(false);
 
+      // A fresh Compile & Seal (not a "View PDF" regeneration for a historical
+      // record) is done at this point — return to the dashboard instead of
+      // leaving the inspector on whatever section/review screen they sealed
+      // from, which read as the submission not having actually gone anywhere.
+      if (!recordOverride && (isCloudSaved || isOfflineSaved)) {
+        setCurrentMobileScreen('HOME');
+        setActiveBottomTab('home');
+      }
+
       if (isCloudSaved) {
         Alert.alert('Success', '✅ Submission successfully uploaded to the Admin Database.');
       } else if (isOfflineSaved) {
