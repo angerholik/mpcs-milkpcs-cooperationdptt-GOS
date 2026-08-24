@@ -91,10 +91,21 @@ export default function DigitalEvidenceScreen({
 
         let { status } = await Location.requestForegroundPermissionsAsync();
         if (status === 'granted') {
+          // getCurrentPositionAsync returns {coords: {latitude, longitude, ...},
+          // timestamp}, not a flat {latitude, longitude} object. Storing it
+          // as-is meant this screen's own display (which defensively checks
+          // both location.latitude and location.coords?.latitude) showed the
+          // real coordinates just fine, but every downstream reader — the
+          // sealed PDF, the background cloud sync, the admin dashboard —
+          // expects flat location.latitude and silently got undefined,
+          // showing "Not captured" despite GPS having genuinely been read.
           let loc = await Location.getCurrentPositionAsync({});
-          setLocation(loc);
+          setLocation({ latitude: loc.coords.latitude, longitude: loc.coords.longitude });
         } else {
-          setLocation({ latitude: 27.2764, longitude: 88.2713 });
+          // Don't fabricate a location when permission is denied — leave it
+          // unset so the evidence honestly shows "not captured" rather than
+          // a fixed, fake coordinate pretending to be a real GPS reading.
+          setLocation(null);
         }
       }
     } catch (e) {
