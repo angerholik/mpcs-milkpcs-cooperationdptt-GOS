@@ -19,7 +19,7 @@ export async function uploadPhoto(base64Data) {
         upsert: false,
       });
 
-    const timeoutPromise = new Promise(res => setTimeout(() => res({ error: { message: 'Storage timeout' } }), 2000));
+    const timeoutPromise = new Promise(res => setTimeout(() => res({ error: { message: 'Storage timeout' } }), 20000));
     const { error } = await Promise.race([uploadPromise, timeoutPromise]);
 
     if (error) {
@@ -49,7 +49,7 @@ export async function uploadEvidence(base64Data, societyName = 'general') {
         upsert: false,
       });
 
-    const timeoutPromise = new Promise(res => setTimeout(() => res({ error: { message: 'Storage timeout' } }), 2000));
+    const timeoutPromise = new Promise(res => setTimeout(() => res({ error: { message: 'Storage timeout' } }), 20000));
     const { error } = await Promise.race([uploadPromise, timeoutPromise]);
 
     if (error) {
