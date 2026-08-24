@@ -38,6 +38,7 @@ export default function MpcsDigitalEvidenceScreen({
   reportingMonth = "",
   imageUri,
   setImageUri,
+  setImageBase64,
   timestamp = "",
   setTimestamp,
   latitude = "",
@@ -60,6 +61,11 @@ export default function MpcsDigitalEvidenceScreen({
   const applyCaptureResult = async (result) => {
     if (result.canceled) return;
     setImageUri && setImageUri(result.assets[0].uri);
+    // launchCameraAsync must be asked for base64 explicitly (not implied by
+    // the URI) — without this, uploadEvidence() in saveMpcsSubmission always
+    // had nothing to upload, so no MPCS submission ever actually got a photo
+    // into Supabase Storage regardless of what the inspector captured here.
+    setImageBase64 && setImageBase64(result.assets[0].base64 || null);
 
     const now = new Date();
     const formattedTime = now.toLocaleDateString('en-IN', {
@@ -87,6 +93,7 @@ export default function MpcsDigitalEvidenceScreen({
         mediaTypes: ['images'],
         allowsEditing: true,
         quality: 0.8,
+        base64: true,
       });
       await applyCaptureResult(result);
     } catch (e) {

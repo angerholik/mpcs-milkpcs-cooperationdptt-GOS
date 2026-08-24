@@ -934,6 +934,7 @@ export default function App() {
           const opsData = await getMilkSectionData(activeSocName, repMonth, 'operations');
           const compData = await getMilkSectionData(activeSocName, repMonth, 'compliance');
           const actsData = await getMilkSectionData(activeSocName, repMonth, 'activities');
+          const evData = await getMilkSectionData(activeSocName, repMonth, 'evidence');
           const loanIsActive = !!stateObj.masterHasLoan && !stateObj.masterLoanCleared;
 
           await saveMilkPcsSubmission({
@@ -960,13 +961,17 @@ export default function App() {
             agmDone: stateObj.masterAgmDate ? `Yes (${stateObj.masterAgmDate})` : 'No',
             agmYear: stateObj.masterAgmYear,
             // GPS/timestamp evidence is captured once on the Digital Evidence screen and
-            // otherwise sits in local state — include it here too so a later silent sync
-            // (triggered by saving any other section) doesn't wipe it back to null. Photo
+            // persisted to its own AsyncStorage section (evData) — not top-level App.js
+            // state, which DigitalEvidenceScreen never touches. Reading the dead
+            // location/timestamp state here (as this used to) meant every single
+            // background sync — triggered by saving ANY other section — overwrote real
+            // captured coordinates back to null moments after they were set. Photo
             // upload itself stays Compile & Seal-only since it's an actual file upload,
-            // not cheap to repeat on every background sync.
-            gpsLat: location?.latitude ?? null,
-            gpsLng: location?.longitude ?? null,
-            capturedAt: timestamp || undefined,
+            // not cheap to repeat on every background sync; saveMilkPcsSubmission
+            // preserves the existing photo_url on update when none is supplied here.
+            gpsLat: evData?.location?.latitude ?? null,
+            gpsLng: evData?.location?.longitude ?? null,
+            capturedAt: evData?.timestamp || undefined,
             ...stateObj,
             litres: opsData?.litres || '',
             balance: opsData?.balance || '',
@@ -998,6 +1003,15 @@ export default function App() {
             totalMembers: calcMembers,
             reportedBy: getUserDisplayName() || 'Cooperative Inspector',
             inspectorEmail: userEmail,
+            // MPCS Digital Evidence writes straight into top-level location/imageBase64/
+            // timestamp state (unlike Milk PCS, which persists to its own AsyncStorage
+            // section) — but nothing was ever forwarding that state into this sync
+            // payload, so evidence_photo_url/latitude/longitude never reached Supabase
+            // at all, regardless of how many times a section was saved afterward.
+            latitude: location?.latitude ?? null,
+            longitude: location?.longitude ?? null,
+            imageBase64: imageBase64 || undefined,
+            capturedAt: timestamp || undefined,
             ...stateObj
           });
         }
@@ -2989,6 +3003,7 @@ export default function App() {
                         reportingMonth={reportingMonth || ''}
                         imageUri={imageUri}
                         setImageUri={setImageUri}
+                        setImageBase64={setImageBase64}
                         timestamp={timestamp}
                         setTimestamp={setTimestamp}
                         latitude={location?.latitude ? String(location.latitude) : ""}

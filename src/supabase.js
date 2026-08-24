@@ -188,6 +188,14 @@ export async function saveMilkPcsSubmission(params) {
           updated_at: new Date().toISOString()
         })
       };
+      // photo_url/pdf_url are only ever supplied by the actual Compile & Seal
+      // flow (the upload itself is too expensive to repeat on every routine
+      // background sync). Leaving them in `row` as null here would blank out
+      // an already-uploaded photo/PDF the moment the inspector saved any
+      // unrelated section afterward — so on update, only touch these columns
+      // when this call was actually given a real value for them.
+      if (!photoUrl) delete updatePayload.photo_url;
+      if (!pdfUrl) delete updatePayload.pdf_url;
       const res = await supabase.from('milk_pcs_submissions').update(updatePayload).eq('id', existingId).select();
       data = res.data;
       error = res.error;
