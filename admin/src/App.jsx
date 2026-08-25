@@ -3332,14 +3332,19 @@ function Dashboard({ onLogout, session }) {
               { id: 'STATS', label: 'Benchmarks', icon: I.chart },
               { id: 'OFFICERS', label: 'Official Registry', icon: I.members },
               { id: 'REPORTS', label: 'Reports', icon: I.download },
-              // Users & Roles (provisioning, ACI/scope assignment) and Settings
-              // are district-wide administrative actions — a scoped CI login
-              // shouldn't see or reach them, even though the tab list itself
-              // doesn't otherwise restrict what activeTab can be set to.
+              // Settings is a district-wide administrative surface — kept
+              // System Admin only. Users & Roles is where Field Delegation
+              // (CI -> ACI / PA) lives, which a CI is explicitly responsible
+              // for — canAccessDashboard already limits who can even reach
+              // this dashboard to System Admin or CI, so userRole==='Inspector'
+              // here can only mean a CI, never an ACI/PA (they sign in through
+              // the mobile app instead and never see this UI at all).
               ...(userRole === 'System Admin' ? [
                 { id: 'USERS', label: 'Users & Roles', icon: I.user },
                 { id: 'SETTINGS', label: 'Settings', icon: I.gear },
-              ] : []),
+              ] : [
+                { id: 'USERS', label: 'Users & Roles', icon: I.user },
+              ]),
             ].map(item => (
               <div
                 key={item.id}
@@ -3853,7 +3858,11 @@ function Dashboard({ onLogout, session }) {
                             <td><span className="badge badge-green">ACTIVE</span></td>
                             <td>
                               <div style={{display:'flex', gap:'6px', flexWrap:'wrap'}}>
-                                {isCiOfficer && (
+                                {/* Jurisdiction scope is an Admin-only grant (officer_registry write
+                                    stays System-Admin-only in RLS) — hidden for a CI viewer so this
+                                    tab's now-reachable-by-CI actions don't include a button that would
+                                    just come back as a permission error. */}
+                                {isCiOfficer && userRole === 'System Admin' && (
                                   <button type="button" className="btn-ghost" style={{padding:'4px 8px', fontSize:'11px'}} onClick={() => setScopeOfficer(off)}>
                                     🗺️ Assign Scope{off.assigned_units?.length ? ` (${off.assigned_units.length})` : ''}
                                   </button>
