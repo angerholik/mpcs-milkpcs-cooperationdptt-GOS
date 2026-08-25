@@ -604,6 +604,16 @@ export default function App() {
     return userProfile?.user_metadata?.fullName || userProfile?.user_metadata?.inspectorName || userProfile?.fullName || '';
   };
 
+  // Source of truth for role-based rendering/scoping in the app UI. This is
+  // still the client-editable auth user_metadata claim, same as everywhere
+  // else in this codebase (admin dashboard's isSystemAdmin/isCiUser gate,
+  // Login.js) — the real security boundary is now enforced server-side by
+  // RLS (keyed off officer_registry.role, not this claim), so this value is
+  // only ever used for UI decisions, never trusted for data access.
+  const getUserRole = () => {
+    return userProfile?.user_metadata?.role || null;
+  };
+
   const getSocietyStorageKey = (socName, userEmail = null) => {
     const activeEmail = getUserEmail(userEmail) || 'guest';
     const emailSafe = activeEmail.toLowerCase().replace(/[^a-z0-9]/g, '_');
@@ -677,11 +687,16 @@ export default function App() {
   // written when it was first added — see onAddInstitution) using the same
   // officer-isolation match RecordsScreen uses, so this can't leak another
   // officer's institutions.
-  const reconstructInstitutionsFromCloud = async (email, name) => {
-    const userEmail = (email || '').trim().toLowerCase();
-    const userName = (name || '').trim().toLowerCase();
-    if (!userEmail && !userName) return [];
-
+  // Institution scoping now happens server-side: RLS on mpcs_submissions /
+  // milk_pcs_submissions (added alongside the RBAC delegation model) only
+  // ever returns rows this signed-in officer is actually authorized to see
+  // — their own (created_by), their admin-granted CI scope, or institutions
+  // a CI has assigned to them as ACI/PA. A plain unfiltered select() is
+  // therefore already correctly scoped; the client no longer needs to (and
+  // must not) re-filter by fuzzy name/email matching on top of that, since
+  // that was a display filter, not a security boundary, and would silently
+  // hide rows RLS already deemed this user authorized to see.
+  const reconstructInstitutionsFromCloud = async () => {
     try {
       const [resMpcs, resMilk] = await Promise.all([
         supabase.from('mpcs_submissions').select('society_name, registration_number, form_data, created_at').order('created_at', { ascending: false }),
@@ -695,11 +710,6 @@ export default function App() {
         if (typeof fd === 'string') {
           try { fd = JSON.parse(fd); } catch (e) { fd = null; }
         }
-        const officerEmail = (fd?.inspectorEmail || '').trim().toLowerCase();
-        const officerName = (fd?.reportedBy || '').trim().toLowerCase();
-        const matchEmail = userEmail && officerEmail && officerEmail === userEmail;
-        const matchName = userName && officerName && officerName.includes(userName);
-        if (!matchEmail && !matchName) return;
         const key = `MPCS_${(r.society_name || '').trim().toLowerCase()}`;
         if (!r.society_name || found.has(key)) return;
         found.set(key, {
@@ -713,11 +723,6 @@ export default function App() {
       });
 
       (resMilk.data || []).forEach(r => {
-        // milk_pcs_submissions has no inspector email column, so this table
-        // can only ever be matched by officer name.
-        const officerName = (r.reported_by || '').trim().toLowerCase();
-        const matchName = userName && officerName && officerName.includes(userName);
-        if (!matchName) return;
         const key = `MILK_${(r.center_name || '').trim().toLowerCase()}`;
         if (!r.center_name || found.has(key)) return;
         found.set(key, {
@@ -737,7 +742,7 @@ export default function App() {
     }
   };
 
-  const loadInstitutionsForUser = async (email = null, userObj = null) => {
+  const loadInstitutionsForUser = async (email = null) => {
     // No fallback demo institutions here: a fresh inspector account starts
     // with zero registered institutions, and adds real ones via "Add New
     // Institution". This used to silently seed and persist two fake
@@ -758,16 +763,7 @@ export default function App() {
       // Gating this on "local list is empty" meant a device that already
       // had ANY institutions cached would never pick up new ones added
       // elsewhere, no matter how many times the user logged back in.
-      //
-      // Read the officer's display name straight off the auth user object
-      // passed in by the caller rather than the userProfile state variable
-      // — right after login, userProfile's setState hasn't been applied
-      // to this closure yet (same stale-closure trap documented above for
-      // the cloud master-state fallback), so it would always read as
-      // blank here and this recovery path could never actually match.
-      const u = userObj || userProfile;
-      const fullName = u?.user_metadata?.fullName || u?.user_metadata?.inspectorName || u?.fullName || '';
-      const cloudList = await reconstructInstitutionsFromCloud(activeEmail, fullName);
+      const cloudList = await reconstructInstitutionsFromCloud();
       if (cloudList.length > 0) {
         const known = new Set(list.map(i => `${i.type}_${(i.name || '').trim().toLowerCase()}`));
         const additions = cloudList.filter(c => !known.has(`${c.type}_${(c.name || '').trim().toLowerCase()}`));
@@ -1260,7 +1256,7 @@ export default function App() {
     setUserProfile(usr);
     setSession({ user: usr });
     if (activeEmail) {
-      const institutions = await loadInstitutionsForUser(activeEmail, usr);
+      const institutions = await loadInstitutionsForUser(activeEmail);
       // Resolve the society to restore from persistent storage rather than
       // the selectedSociety/centerName React state — those still hold their
       // pre-login (blank, post-logout) values in this closure, since the
@@ -2324,6 +2320,8 @@ export default function App() {
               <View style={styles.mobileDeviceFrame}>
                 <MyInstitutionsScreen
                   user={userProfile}
+                  role={getUserRole()}
+                  displayName={getUserDisplayName()}
                   institutions={institutionsList}
                   onAddInstitution={async (newInst) => {
                     const updated = [...institutionsList, newInst];
@@ -2358,7 +2356,11 @@ export default function App() {
 
                     handleSelectSociety(newInst, true);
                   }}
-                  onRemoveInstitution={async (id) => {
+                  // Only a CI ever owns institutions outright and can delete
+                  // them (RLS enforces this too — this is UI-level defense
+                  // in depth, matching the requirement that ACI/PA never see
+                  // a delete control on institutions assigned to them).
+                  onRemoveInstitution={getUserRole() !== 'CI' ? undefined : async (id) => {
                     const removedInst = institutionsList.find(i => i.id === id);
                     const updated = institutionsList.filter(i => i.id !== id);
                     setInstitutionsList(updated);
@@ -2411,6 +2413,8 @@ export default function App() {
                     module="MILK"
                     activeTab="more"
                     user={userProfile}
+                    role={getUserRole()}
+                    displayName={getUserDisplayName()}
                     onTabPress={(tab) => {
                       setActiveBottomTab(tab);
                       if (tab === 'home') setCurrentMobileScreen('HOME');
@@ -2948,6 +2952,9 @@ export default function App() {
                   <MoreScreen
                     module="MPCS"
                     activeTab="more"
+                    user={userProfile}
+                    role={getUserRole()}
+                    displayName={getUserDisplayName()}
                     onTabPress={(tab) => {
                       setActiveBottomTab(tab);
                       if (tab === 'home') setCurrentMobileScreen('HOME');

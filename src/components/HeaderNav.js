@@ -28,8 +28,10 @@ export default function HeaderNav({
   onMenuPress,
   onNotifyPress,
   onProfilePress,
-  unreadCount = 0
+  unreadCount = 0,
+  role
 }) {
+  const isCi = role === 'CI';
   const [dropdownOpen, setDropdownOpen] = useState(false);
 
   const displaySocietyName = selectedSociety?.name || (activeModule === 'MILK' ? 'Milk PCS' : 'MPCS');
@@ -139,8 +141,8 @@ export default function HeaderNav({
                 }}
                 activeOpacity={0.8}
               >
-                <MaterialIcons name="add-business" size={16} color={COLORS.primary} />
-                <Text style={styles.manageInstBtnText}>+ Add / Manage My Institutions</Text>
+                <MaterialIcons name={isCi ? 'add-business' : 'domain'} size={16} color={COLORS.primary} />
+                <Text style={styles.manageInstBtnText}>{isCi ? '+ Add / Manage My Institutions' : 'View My Institutions'}</Text>
               </TouchableOpacity>
             </ScrollView>
           </View>

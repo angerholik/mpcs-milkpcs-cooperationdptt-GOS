@@ -43,8 +43,16 @@ const FONT_FAMILY = Platform.select({
   android: 'Roboto',
 });
 
+const ROLE_LABELS = {
+  CI: 'CI',
+  ACI: 'ACI',
+  PA: 'PA',
+};
+
 export default function MyInstitutionsScreen({
   user,
+  role,
+  displayName,
   institutions = [],
   onAddInstitution,
   onRemoveInstitution,
@@ -52,6 +60,7 @@ export default function MyInstitutionsScreen({
   onProceedToDashboard,
   onLogout
 }) {
+  const isCi = role === 'CI';
   const [activeTab, setActiveTab] = useState('ALL'); // 'ALL', 'MPCS', 'MILK'
   const [modalVisible, setModalVisible] = useState(false);
 
@@ -108,7 +117,7 @@ export default function MyInstitutionsScreen({
           <View style={styles.roleBadgeRow}>
             <View style={styles.rolePill}>
               <MaterialCommunityIcons name="shield-check" size={13} color="#FDE68A" />
-              <Text style={styles.rolePillText}>{user?.role || 'CI'} INSPECTOR</Text>
+              <Text style={styles.rolePillText}>{ROLE_LABELS[role] || 'CI'} INSPECTOR</Text>
             </View>
             {user?.district ? (
               <View style={styles.districtPill}>
@@ -117,8 +126,10 @@ export default function MyInstitutionsScreen({
               </View>
             ) : null}
           </View>
-          <Text style={styles.welcomeName}>{user?.fullName || 'Cooperative Inspector'}</Text>
-          <Text style={styles.welcomeSub}>Manage registered MPCS & Milk PCS institutions</Text>
+          <Text style={styles.welcomeName}>{displayName || 'Cooperative Inspector'}</Text>
+          <Text style={styles.welcomeSub}>
+            {isCi ? 'Manage registered MPCS & Milk PCS institutions' : 'View institutions assigned to you'}
+          </Text>
         </View>
 
         {onLogout && (
@@ -217,21 +228,27 @@ export default function MyInstitutionsScreen({
           </TouchableOpacity>
         </View>
 
-        {/* Add Institution CTA — same pale-bg / dark-circle treatment as
-            Save & Continue, so it doesn't stack a third block of maroon
-            directly under the header and the active filter chip. */}
-        <AnimatedContinueButton
-          label="ADD NEW INSTITUTION (MPCS / MILK PCS)"
-          icon="plus"
-          onPress={() => setModalVisible(true)}
-          height={52}
-          fontSize={11}
-        />
+        {/* Add Institution CTA — CI only. ACI/PA cannot add institutions at
+            all (they only ever act on institutions a CI assigned to them),
+            so for those roles this control must not exist in the render
+            tree — not disabled, not hidden, not an empty state. Same
+            pale-bg / dark-circle treatment as Save & Continue, so it
+            doesn't stack a third block of maroon directly under the header
+            and the active filter chip. */}
+        {isCi && (
+          <AnimatedContinueButton
+            label="ADD NEW INSTITUTION (MPCS / MILK PCS)"
+            icon="plus"
+            onPress={() => setModalVisible(true)}
+            height={52}
+            fontSize={11}
+          />
+        )}
 
         {/* List of Registered Institutions */}
         <View style={styles.listSection}>
           <View style={styles.sectionHeaderRow}>
-            <Text style={styles.sectionHeaderTitle}>REGISTERED INSTITUTIONS</Text>
+            <Text style={styles.sectionHeaderTitle}>{isCi ? 'REGISTERED INSTITUTIONS' : 'MY ASSIGNED INSTITUTIONS'}</Text>
             <View style={styles.sectionCountBadge}>
               <Text style={styles.sectionCountText}>{filteredInstitutions.length}</Text>
             </View>
@@ -243,7 +260,11 @@ export default function MyInstitutionsScreen({
                 <MaterialCommunityIcons name="office-building-remove-outline" size={32} color={COLORS.slate400} />
               </View>
               <Text style={styles.emptyTitle}>No Institutions Found</Text>
-              <Text style={styles.emptySub}>Tap the button above to register your first MPCS or Milk PCS unit.</Text>
+              <Text style={styles.emptySub}>
+                {isCi
+                  ? 'Tap the button above to register your first MPCS or Milk PCS unit.'
+                  : 'No institutions have been assigned to you yet. Contact your Cooperative Inspector.'}
+              </Text>
             </View>
           ) : (
             filteredInstitutions.map((item) => (

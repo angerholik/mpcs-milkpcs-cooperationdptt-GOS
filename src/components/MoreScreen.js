@@ -42,6 +42,12 @@ const FONT_FAMILY = Platform.select({
   android: 'Roboto',
 });
 
+const ROLE_LABELS = {
+  CI: 'Cooperative Inspector',
+  ACI: 'Assistant Inspector',
+  PA: 'Project Assistant',
+};
+
 export default function MoreScreen({
   module = 'MILK',
   activeTab = 'more',
@@ -49,7 +55,9 @@ export default function MoreScreen({
   onNavigateScreen,
   onOpenBulletins,
   onSignOut,
-  user
+  user,
+  role,
+  displayName
 }) {
   // Screen keys diverge between the two apps (MPCS prefixes its master data
   // screens with MPCS_; Milk PCS doesn't), so this menu can't use one fixed
@@ -97,8 +105,8 @@ export default function MoreScreen({
     },
   ];
 
-  const initials = user?.fullName 
-    ? user.fullName.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() 
+  const initials = displayName
+    ? displayName.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()
     : 'CI';
 
   return (
@@ -121,9 +129,9 @@ export default function MoreScreen({
             <Text style={styles.avatarText}>{initials}</Text>
           </View>
           <View style={styles.officerMeta}>
-            <Text style={styles.officerName}>{user?.fullName || 'Cooperative Inspector'}</Text>
+            <Text style={styles.officerName}>{displayName || 'Cooperative Inspector'}</Text>
             <Text style={styles.officerRole}>
-              {user?.role === 'ACI' ? 'Assistant Inspector' : 'Cooperative Inspector'}
+              {ROLE_LABELS[role] || 'Cooperative Inspector'}
               {user?.district ? ` • ${user.district}` : ''}
             </Text>
             <View style={styles.statusChip}>
