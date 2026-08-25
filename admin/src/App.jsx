@@ -3891,21 +3891,23 @@ function Dashboard({ onLogout, session }) {
                         const isPaOfficer = role.includes('Project Assistant');
                         return (
                           <tr key={off.id || idx}>
-                            <td>{idx + 1}</td>
-                            <td><strong>{off.name}</strong></td>
-                            <td><span className={isCiOfficer?'badge badge-gold':isPaOfficer?'badge badge-green':'badge badge-purple'}>{role}</span></td>
-                            <td>{assignedCiNames.length > 0 ? assignedCiNames.join(', ') : <span style={{color:'#94A3B8', fontStyle:'italic'}}>Not yet assigned</span>}</td>
-                            <td>
+                            <td style={{verticalAlign:'top', paddingTop:'14px'}}>{idx + 1}</td>
+                            <td style={{verticalAlign:'top', paddingTop:'14px'}}><strong>{off.name}</strong></td>
+                            <td style={{verticalAlign:'top', paddingTop:'14px'}}><span className={isCiOfficer?'badge badge-gold':isPaOfficer?'badge badge-green':'badge badge-purple'}>{role}</span></td>
+                            <td style={{verticalAlign:'top', paddingTop:'14px'}}>{assignedCiNames.length > 0 ? assignedCiNames.join(', ') : <span style={{color:'#94A3B8', fontStyle:'italic'}}>Not yet assigned</span>}</td>
+                            <td style={{verticalAlign:'top', paddingTop:'12px'}}>
                               {assignments.length > 0 ? (
-                                <div style={{display:'flex', flexDirection:'column', gap:'2px'}}>
+                                <div style={{display:'flex', flexWrap:'wrap', gap:'6px'}}>
                                   {assignments.map(a => (
-                                    <span key={`${a.role}_${a.unitName}`} style={{fontSize:'12px', color:'#334155'}}>{a.unitName}</span>
+                                    <span key={`${a.role}_${a.unitName}`} style={{fontSize:'11px', fontWeight:700, color:'#334155', background:'#F1F5F9', border:'1px solid #E2E8F0', borderRadius:'999px', padding:'3px 10px', whiteSpace:'nowrap'}}>
+                                      {a.unitName}
+                                    </span>
                                   ))}
                                 </div>
                               ) : <span style={{color:'#94A3B8', fontStyle:'italic'}}>Not yet assigned</span>}
                             </td>
-                            <td><span className="badge badge-green">ACTIVE</span></td>
-                            <td>
+                            <td style={{verticalAlign:'top', paddingTop:'14px'}}><span className="badge badge-green">ACTIVE</span></td>
+                            <td style={{verticalAlign:'top', paddingTop:'12px'}}>
                               <div style={{display:'flex', flexDirection:'column', gap:'6px', alignItems:'flex-start'}}>
                                 {/* Jurisdiction scope is an Admin-only grant (officer_registry write
                                     stays System-Admin-only in RLS) — hidden for a CI viewer so this
@@ -3916,15 +3918,23 @@ function Dashboard({ onLogout, session }) {
                                     🗺️ Assign Scope{off.assigned_units?.length ? ` (${off.assigned_units.length})` : ''}
                                   </button>
                                 )}
+                                {/* One compact row per assignment: unit name as small muted text
+                                    (already shown as a chip in the previous column, so it isn't
+                                    repeated as a full button label here) plus icon-only reassign/
+                                    revoke — keeps row height proportional to the assignment count
+                                    instead of stacking full-width buttons. */}
                                 {!isCiOfficer && assignments.map(a => (
-                                  <div key={`${a.role}_${a.unitName}`} style={{display:'flex', gap:'4px', alignItems:'center'}}>
-                                    <button type="button" className="btn-ghost" style={{padding:'4px 8px', fontSize:'11px'}} onClick={() => openReassignDelegate(a.unitName, a.role)}>✎ {a.unitName}</button>
-                                    <button type="button" className="btn-ghost" style={{padding:'4px 8px', fontSize:'11px', color:'#B91C1C'}} onClick={() => handleRevokeDelegate(a.unitName, a.role)}>✕</button>
+                                  <div key={`${a.role}_${a.unitName}`} style={{display:'flex', gap:'6px', alignItems:'center', width:'100%'}}>
+                                    <span style={{fontSize:'11px', color:'#64748B', maxWidth:'100px', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap'}} title={a.unitName}>
+                                      {a.unitName}
+                                    </span>
+                                    <button type="button" className="btn-ghost" title="Reassign" style={{width:'22px', height:'22px', padding:0, fontSize:'11px', flexShrink:0}} onClick={() => openReassignDelegate(a.unitName, a.role)}>✎</button>
+                                    <button type="button" className="btn-ghost" title="Revoke" style={{width:'22px', height:'22px', padding:0, fontSize:'11px', color:'#B91C1C', flexShrink:0}} onClick={() => handleRevokeDelegate(a.unitName, a.role)}>✕</button>
                                   </div>
                                 ))}
                                 {!isCiOfficer && (
                                   <button type="button" className="btn-ghost" style={{padding:'4px 8px', fontSize:'11px'}} onClick={() => { setAssignAciPrefillUnit(null); setAssignDelegateRole(isPaOfficer ? 'PA' : 'ACI'); setAssignDelegatePrefillAssignee(off.name); setShowAssignAciModal(true); }}>
-                                    🗺️ Assign {assignments.length > 0 ? 'Another' : ''} Institution
+                                    + Assign {assignments.length > 0 ? 'Another' : ''} Institution
                                   </button>
                                 )}
                               </div>
