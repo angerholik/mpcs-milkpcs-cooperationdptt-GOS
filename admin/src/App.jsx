@@ -3836,15 +3836,19 @@ function Dashboard({ onLogout, session }) {
                           </td>
                         </tr>
                       ) : officers.map((off, idx) => {
-                        // hierarchyMapping holds real unit_assignments delegations — reflects
-                        // an actual assignment when one exists, and says so honestly when it
-                        // doesn't, rather than showing a fabricated unit name for every officer.
-                        // A unit can carry both an ACI and a PA delegation on the same row, so
-                        // this officer could match either column depending on their own role.
-                        const aciAssignment = Object.entries(hierarchyMapping).find(([, m]) => m.aci === off.name);
-                        const paAssignment = Object.entries(hierarchyMapping).find(([, m]) => m.pa === off.name);
-                        const assignment = aciAssignment || paAssignment;
-                        const assignedAsRole = aciAssignment ? 'ACI' : (paAssignment ? 'PA' : null);
+                        // hierarchyMapping holds real unit_assignments delegations. An ACI or PA
+                        // routinely carries more than one MPCS/Milk unit at once, so this collects
+                        // every matching row for this officer rather than just the first — showing
+                        // (or acting on) only one would silently hide the rest of their workload.
+                        const assignments = [
+                          ...Object.entries(hierarchyMapping)
+                            .filter(([, m]) => m.aci === off.name)
+                            .map(([unitName, m]) => ({ unitName, ci: m.ci, role: 'ACI' })),
+                          ...Object.entries(hierarchyMapping)
+                            .filter(([, m]) => m.pa === off.name)
+                            .map(([unitName, m]) => ({ unitName, ci: m.ci, role: 'PA' })),
+                        ];
+                        const assignedCiNames = [...new Set(assignments.map(a => a.ci).filter(Boolean))];
                         const role = off.role || 'ACI / Field Officer';
                         const isCiOfficer = role.includes('Cooperative Inspector');
                         const isPaOfficer = role.includes('Project Assistant');
@@ -3853,11 +3857,19 @@ function Dashboard({ onLogout, session }) {
                             <td>{idx + 1}</td>
                             <td><strong>{off.name}</strong></td>
                             <td><span className={isCiOfficer?'badge badge-gold':isPaOfficer?'badge badge-green':'badge badge-purple'}>{role}</span></td>
-                            <td>{assignment ? assignment[1].ci : <span style={{color:'#94A3B8', fontStyle:'italic'}}>Not yet assigned</span>}</td>
-                            <td>{assignment ? <span style={{fontSize:'12px', color:'#334155'}}>{assignment[0]}</span> : <span style={{color:'#94A3B8', fontStyle:'italic'}}>Not yet assigned</span>}</td>
+                            <td>{assignedCiNames.length > 0 ? assignedCiNames.join(', ') : <span style={{color:'#94A3B8', fontStyle:'italic'}}>Not yet assigned</span>}</td>
+                            <td>
+                              {assignments.length > 0 ? (
+                                <div style={{display:'flex', flexDirection:'column', gap:'2px'}}>
+                                  {assignments.map(a => (
+                                    <span key={`${a.role}_${a.unitName}`} style={{fontSize:'12px', color:'#334155'}}>{a.unitName}</span>
+                                  ))}
+                                </div>
+                              ) : <span style={{color:'#94A3B8', fontStyle:'italic'}}>Not yet assigned</span>}
+                            </td>
                             <td><span className="badge badge-green">ACTIVE</span></td>
                             <td>
-                              <div style={{display:'flex', gap:'6px', flexWrap:'wrap'}}>
+                              <div style={{display:'flex', flexDirection:'column', gap:'6px', alignItems:'flex-start'}}>
                                 {/* Jurisdiction scope is an Admin-only grant (officer_registry write
                                     stays System-Admin-only in RLS) — hidden for a CI viewer so this
                                     tab's now-reachable-by-CI actions don't include a button that would
@@ -3867,15 +3879,15 @@ function Dashboard({ onLogout, session }) {
                                     🗺️ Assign Scope{off.assigned_units?.length ? ` (${off.assigned_units.length})` : ''}
                                   </button>
                                 )}
-                                {!isCiOfficer && assignment && (
-                                  <>
-                                    <button type="button" className="btn-ghost" style={{padding:'4px 8px', fontSize:'11px'}} onClick={() => openReassignDelegate(assignment[0], assignedAsRole)}>✎ Update</button>
-                                    <button type="button" className="btn-ghost" style={{padding:'4px 8px', fontSize:'11px', color:'#B91C1C'}} onClick={() => handleRevokeDelegate(assignment[0], assignedAsRole)}>✕ Revoke</button>
-                                  </>
-                                )}
-                                {!isCiOfficer && !assignment && (
+                                {!isCiOfficer && assignments.map(a => (
+                                  <div key={`${a.role}_${a.unitName}`} style={{display:'flex', gap:'4px', alignItems:'center'}}>
+                                    <button type="button" className="btn-ghost" style={{padding:'4px 8px', fontSize:'11px'}} onClick={() => openReassignDelegate(a.unitName, a.role)}>✎ {a.unitName}</button>
+                                    <button type="button" className="btn-ghost" style={{padding:'4px 8px', fontSize:'11px', color:'#B91C1C'}} onClick={() => handleRevokeDelegate(a.unitName, a.role)}>✕</button>
+                                  </div>
+                                ))}
+                                {!isCiOfficer && (
                                   <button type="button" className="btn-ghost" style={{padding:'4px 8px', fontSize:'11px'}} onClick={() => { setAssignAciPrefillUnit(null); setAssignDelegateRole(isPaOfficer ? 'PA' : 'ACI'); setAssignDelegatePrefillAssignee(off.name); setShowAssignAciModal(true); }}>
-                                    🗺️ Assign Institution
+                                    🗺️ Assign {assignments.length > 0 ? 'Another' : ''} Institution
                                   </button>
                                 )}
                               </div>
