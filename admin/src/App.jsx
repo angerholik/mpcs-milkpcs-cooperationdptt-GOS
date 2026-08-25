@@ -3809,7 +3809,7 @@ function Dashboard({ onLogout, session }) {
 
               {/* Visual Governance Tree View */}
               {showHierarchyTree && (
-                <OfficerHierarchyTree hierarchyMapping={hierarchyMapping} userRole={userRole} onRevoke={(unitName) => handleRevokeDelegate(unitName, 'ACI')} onReassign={(unitName) => openReassignDelegate(unitName, 'ACI')}/>
+                <OfficerHierarchyTree hierarchyMapping={hierarchyMapping} userRole={userRole} onRevoke={handleRevokeDelegate} onReassign={openReassignDelegate}/>
               )}
 
               {/* Officer Directory Table */}
@@ -5090,7 +5090,7 @@ function OfficerHierarchyTree({ hierarchyMapping, userRole, onRevoke, onReassign
     if (!inspectors[ciName]) {
       inspectors[ciName] = { role: 'Cooperative Inspector', jurisdiction: mapping.district || 'Gyalshing District', units: [] };
     }
-    inspectors[ciName].units.push({ unitName, aci: mapping.aci, district: mapping.district });
+    inspectors[ciName].units.push({ unitName, aci: mapping.aci, pa: mapping.pa, district: mapping.district });
   });
 
   return (
@@ -5144,28 +5144,41 @@ function OfficerHierarchyTree({ hierarchyMapping, userRole, onRevoke, onReassign
               {info.units.map(u => (
                 <div key={u.unitName} style={{background:'#F8FAFC', border:'1px solid #E2E8F0', padding:'10px 12px', borderRadius:'4px', display:'flex', flexDirection:'column', gap:'4px'}}>
                   <div style={{fontSize:'12px', fontWeight:800, color:'#7F1D1D'}}>🏛️ {u.unitName}</div>
-                  <div style={{fontSize:'11px', color:'#334155', display:'flex', alignItems:'center', gap:'6px', background:'#EFF6FF', padding:'4px 8px', borderRadius:'2px', border:'1px solid #BFDBFE'}}>
-                    <Icon d={I.user} size={12} color="#1E40AF"/>
-                    <span>Assigned ACI: <strong>{u.aci || 'Unassigned'}</strong></span>
-                  </div>
-                  <div style={{display:'flex', gap:'6px', marginTop:'2px'}}>
-                    <button
-                      type="button"
-                      className="btn-ghost"
-                      style={{flex:1, padding:'4px 8px', fontSize:'10px', fontWeight:700}}
-                      onClick={() => onReassign && onReassign(u.unitName)}
-                    >
-                      ✎ Reassign
-                    </button>
-                    <button
-                      type="button"
-                      className="btn-ghost"
-                      style={{flex:1, padding:'4px 8px', fontSize:'10px', fontWeight:700, color:'#B91C1C'}}
-                      onClick={() => onRevoke && onRevoke(u.unitName)}
-                    >
-                      ✕ Revoke
-                    </button>
-                  </div>
+                  {/* A unit can carry an ACI and a PA delegation independently — showing
+                      only the ACI slot (and saying "Unassigned" whenever it was empty)
+                      used to hide a real PA assignment entirely, and its Reassign/Revoke
+                      buttons always acted on the ACI role regardless of which one was
+                      actually assigned. Each role gets its own row and its own actions now. */}
+                  {!u.aci && !u.pa && (
+                    <div style={{fontSize:'11px', color:'#334155', display:'flex', alignItems:'center', gap:'6px', background:'#EFF6FF', padding:'4px 8px', borderRadius:'2px', border:'1px solid #BFDBFE'}}>
+                      <Icon d={I.user} size={12} color="#1E40AF"/>
+                      <span>Unassigned</span>
+                    </div>
+                  )}
+                  {u.aci && (
+                    <div style={{fontSize:'11px', color:'#334155', display:'flex', alignItems:'center', gap:'6px', background:'#EFF6FF', padding:'4px 8px', borderRadius:'2px', border:'1px solid #BFDBFE'}}>
+                      <Icon d={I.user} size={12} color="#1E40AF"/>
+                      <span>Assigned ACI: <strong>{u.aci}</strong></span>
+                    </div>
+                  )}
+                  {u.aci && (
+                    <div style={{display:'flex', gap:'6px'}}>
+                      <button type="button" className="btn-ghost" style={{flex:1, padding:'4px 8px', fontSize:'10px', fontWeight:700}} onClick={() => onReassign && onReassign(u.unitName, 'ACI')}>✎ Reassign</button>
+                      <button type="button" className="btn-ghost" style={{flex:1, padding:'4px 8px', fontSize:'10px', fontWeight:700, color:'#B91C1C'}} onClick={() => onRevoke && onRevoke(u.unitName, 'ACI')}>✕ Revoke</button>
+                    </div>
+                  )}
+                  {u.pa && (
+                    <div style={{fontSize:'11px', color:'#334155', display:'flex', alignItems:'center', gap:'6px', background:'#F0FDF4', padding:'4px 8px', borderRadius:'2px', border:'1px solid #BBF7D0', marginTop: u.aci ? '4px' : 0}}>
+                      <Icon d={I.user} size={12} color="#166534"/>
+                      <span>Assigned PA: <strong>{u.pa}</strong></span>
+                    </div>
+                  )}
+                  {u.pa && (
+                    <div style={{display:'flex', gap:'6px'}}>
+                      <button type="button" className="btn-ghost" style={{flex:1, padding:'4px 8px', fontSize:'10px', fontWeight:700}} onClick={() => onReassign && onReassign(u.unitName, 'PA')}>✎ Reassign</button>
+                      <button type="button" className="btn-ghost" style={{flex:1, padding:'4px 8px', fontSize:'10px', fontWeight:700, color:'#B91C1C'}} onClick={() => onRevoke && onRevoke(u.unitName, 'PA')}>✕ Revoke</button>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
