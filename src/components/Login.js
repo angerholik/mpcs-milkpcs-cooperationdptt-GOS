@@ -115,13 +115,12 @@ const Login = ({ onLoginSuccess, onRegisterSuccess }) => {
       setLoading(false);
 
       if (!error && data?.user) {
-        const user = {
-          fullName: data.user.user_metadata?.fullName || fullName || (email.includes('aci') ? 'Assistant Inspector' : 'Cooperative Inspector'),
-          email: email.trim(),
-          role: data.user.user_metadata?.role || role,
-          district: 'Gyalshing',
-        };
-        if (onLoginSuccess) onLoginSuccess(user);
+        // Pass the real Supabase auth user through, not a hand-rolled local
+        // shape — App.js reads role/fullName off user_metadata on this
+        // exact object (userProfile), so a reshaped object here silently
+        // broke role-based rendering on first sign-in until the next
+        // reload re-fetched the real session via getSession().
+        if (onLoginSuccess) onLoginSuccess(data.user);
         return;
       }
 
@@ -165,10 +164,11 @@ const Login = ({ onLoginSuccess, onRegisterSuccess }) => {
 
     setLoading(true);
     const roleTitle = role === 'CI' ? 'Cooperative Inspector (CI)' : role === 'ACI' ? 'Assistant CI (ACI)' : 'Project Assistant (PA)';
+    let signedUpUser = null;
 
     try {
       try {
-        const { error: authErr } = await supabase.auth.signUp({
+        const { data: signUpData, error: authErr } = await supabase.auth.signUp({
           email: email.trim(),
           password: password,
           options: {
@@ -192,6 +192,7 @@ const Login = ({ onLoginSuccess, onRegisterSuccess }) => {
           else Alert.alert('Registration Failed', msg);
           return;
         }
+        signedUpUser = signUpData?.user || null;
       } catch (authErr) {
         // Could not reach the auth server at all (offline/no network), not
         // a rejected signup. Let the inspector continue so they aren't
@@ -238,7 +239,13 @@ const Login = ({ onLoginSuccess, onRegisterSuccess }) => {
     }
 
     setLoading(false);
-    const registeredUser = {
+
+    // Prefer the real Supabase auth user (has user_metadata.role/fullName,
+    // which is what App.js's role-based rendering actually reads) — this
+    // hand-rolled shape is only a fallback for the fully-offline signup
+    // path above, where signUp never reached the server and no real user
+    // object exists yet.
+    const registeredUser = signedUpUser || {
       fullName: fullName.trim(),
       email: email.trim(),
       mobile: mobile.trim(),
