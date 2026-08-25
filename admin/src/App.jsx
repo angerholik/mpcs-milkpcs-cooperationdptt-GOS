@@ -2484,6 +2484,41 @@ function Dashboard({ onLogout, session }) {
   const userRole = isSystemAdmin(session) ? 'System Admin' : 'Inspector'; // 'System Admin' | 'Inspector'
   const assignedUnits = userRole === 'System Admin' ? [] : (myOfficerRecord?.assigned_units || []);
 
+  // A CI's view of the officer directory (and the delegation tree/table built
+  // from it) is scoped to: themselves, any ACI/PA currently delegated by
+  // them, and any ACI/PA not yet claimed by anyone (so a first-time
+  // delegation still has a pool to pick from). Other CIs, and ACI/PA already
+  // claimed by a *different* CI, stay hidden — a CI has no legitimate need
+  // to see another CI's roster or delegation tree. System Admin is
+  // unrestricted, as the spec requires.
+  const scopedHierarchyMapping = useMemo(() => {
+    if (userRole === 'System Admin') return hierarchyMapping;
+    const mine = {};
+    Object.entries(hierarchyMapping).forEach(([unitName, m]) => {
+      if ((m.ci || '') === (myOfficerRecord?.name || '')) mine[unitName] = m;
+    });
+    return mine;
+  }, [hierarchyMapping, userRole, myOfficerRecord]);
+
+  const officersClaimedByOtherCis = useMemo(() => {
+    const claimed = new Set();
+    Object.values(hierarchyMapping).forEach(m => {
+      if ((m.ci || '') === (myOfficerRecord?.name || '')) return;
+      if (m.aci) claimed.add(m.aci);
+      if (m.pa) claimed.add(m.pa);
+    });
+    return claimed;
+  }, [hierarchyMapping, myOfficerRecord]);
+
+  const scopedOfficers = useMemo(() => {
+    if (userRole === 'System Admin') return officers;
+    return officers.filter(o => {
+      if (myOfficerRecord && o.email?.toLowerCase() === myOfficerRecord.email?.toLowerCase()) return true;
+      if ((o.role || '').includes('Cooperative Inspector')) return false;
+      return !officersClaimedByOtherCis.has(o.name);
+    });
+  }, [officers, userRole, myOfficerRecord, officersClaimedByOtherCis]);
+
   // 🔍 Scoped Data Calculation based on User Role & Entity Assignments
   const scopedMilkRows = useMemo(() => {
     if (userRole === 'System Admin') return milkRows;
@@ -3406,7 +3441,7 @@ function Dashboard({ onLogout, session }) {
                 <TabBtn id="MPCS" label="MPCS Societies" icon={I.domain} count={scopedMpcsRows.length}/>
                 <TabBtn id="MILK" label="Milk Units" icon={I.litres} count={scopedMilkRows.length}/>
                 <TabBtn id="STATS" label="Benchmarks" icon={I.chart} count={new Set([...scopedMilkRows, ...scopedMpcsRows].map(r=>r.district||r.registration_authority).filter(Boolean)).size}/>
-                <TabBtn id="OFFICERS" label="Official Registry" icon={I.members} count={officers.length}/>
+                <TabBtn id="OFFICERS" label="Official Registry" icon={I.members} count={scopedOfficers.length}/>
               </div>
 
               {/* Dual Analytics Chart Row — both were previously hardcoded
@@ -3552,7 +3587,7 @@ function Dashboard({ onLogout, session }) {
                   <div style={{display:'flex', flexDirection:'column', gap:'8px', fontSize:'13px'}}>
                     <div style={{display:'flex', justifyContent:'space-between', padding:'10px 0', borderBottom:'1px solid #F1F5F9', cursor:'pointer'}} onClick={() => setActiveTab('OFFICERS')}>
                       <span style={{color:'#64748B', fontWeight:600}}>Field Officers Active</span>
-                      <strong style={{color:'#059669', fontWeight:800}}>{officers.length}</strong>
+                      <strong style={{color:'#059669', fontWeight:800}}>{scopedOfficers.length}</strong>
                     </div>
                     <div style={{display:'flex', justifyContent:'space-between', padding:'10px 0', borderBottom:'1px solid #F1F5F9', cursor:'pointer'}} onClick={() => { setActiveFilter(null); setFilterMpcsAuditStatus('No'); setActiveTab('MPCS'); }}>
                       <span style={{color:'#64748B', fontWeight:600}}>Pending Audits</span>
@@ -3709,7 +3744,7 @@ function Dashboard({ onLogout, session }) {
                       { label: 'Audit Status', get: r => r.audit_status },
                     ];
                   } else {
-                    rows = officers;
+                    rows = scopedOfficers;
                     columns = [
                       { label: 'Officer Name', get: r => r.name || '—' },
                       { label: 'Email', get: r => r.email || '—' },
@@ -3809,7 +3844,7 @@ function Dashboard({ onLogout, session }) {
 
               {/* Visual Governance Tree View */}
               {showHierarchyTree && (
-                <OfficerHierarchyTree hierarchyMapping={hierarchyMapping} userRole={userRole} onRevoke={handleRevokeDelegate} onReassign={openReassignDelegate}/>
+                <OfficerHierarchyTree hierarchyMapping={scopedHierarchyMapping} userRole={userRole} onRevoke={handleRevokeDelegate} onReassign={openReassignDelegate}/>
               )}
 
               {/* Officer Directory Table */}
@@ -3829,22 +3864,24 @@ function Dashboard({ onLogout, session }) {
                       </tr>
                     </thead>
                     <tbody>
-                      {officers.length === 0 ? (
+                      {scopedOfficers.length === 0 ? (
                         <tr>
                           <td colSpan={7} style={{textAlign:'center', padding:'32px', color:'#94A3B8'}}>
                             No officers have registered yet. Inspectors appear here once they sign up from the mobile app.
                           </td>
                         </tr>
-                      ) : officers.map((off, idx) => {
-                        // hierarchyMapping holds real unit_assignments delegations. An ACI or PA
-                        // routinely carries more than one MPCS/Milk unit at once, so this collects
-                        // every matching row for this officer rather than just the first — showing
-                        // (or acting on) only one would silently hide the rest of their workload.
+                      ) : scopedOfficers.map((off, idx) => {
+                        // scopedHierarchyMapping is already restricted to this CI's own
+                        // delegations (or everything, for System Admin) — see its definition
+                        // above. An ACI or PA routinely carries more than one MPCS/Milk unit at
+                        // once, so this collects every matching row for this officer rather than
+                        // just the first — showing (or acting on) only one would silently hide
+                        // the rest of their workload.
                         const assignments = [
-                          ...Object.entries(hierarchyMapping)
+                          ...Object.entries(scopedHierarchyMapping)
                             .filter(([, m]) => m.aci === off.name)
                             .map(([unitName, m]) => ({ unitName, ci: m.ci, role: 'ACI' })),
-                          ...Object.entries(hierarchyMapping)
+                          ...Object.entries(scopedHierarchyMapping)
                             .filter(([, m]) => m.pa === off.name)
                             .map(([unitName, m]) => ({ unitName, ci: m.ci, role: 'PA' })),
                         ];
@@ -4454,7 +4491,7 @@ function Dashboard({ onLogout, session }) {
                   </tr>
                 </thead>
                 <tbody>
-                  {officers.map((off, idx) => (
+                  {scopedOfficers.map((off, idx) => (
                     <tr key={off.id || idx}>
                       <td>{idx + 1}</td>
                       <td><strong>{off.name}</strong></td>
@@ -4503,7 +4540,7 @@ function Dashboard({ onLogout, session }) {
         <AssignAciModal
           mpcsRows={mpcsRows}
           milkRows={milkRows}
-          officers={officers}
+          officers={scopedOfficers}
           hierarchyMapping={hierarchyMapping}
           initialUnit={assignAciPrefillUnit}
           assigneeRole={assignDelegateRole}
