@@ -2482,7 +2482,20 @@ function Dashboard({ onLogout, session }) {
     [officers, session]
   );
   const userRole = isSystemAdmin(session) ? 'System Admin' : 'Inspector'; // 'System Admin' | 'Inspector'
-  const assignedUnits = userRole === 'System Admin' ? [] : (myOfficerRecord?.assigned_units || []);
+  // Before officer_registry finishes its first fetch, myOfficerRecord is
+  // undefined for every CI (not just this feature — this is the normal state
+  // on every login until officers loads). `myOfficerRecord?.assigned_units ||
+  // []` as a bare expression allocates a brand-new [] literal on every single
+  // render during that window, which made scopedMilkRows/scopedMpcsRows/
+  // scopedMemberRows below "change" on every render too (they depend on this
+  // reference), each triggering a setState effect and re-render — a
+  // self-sustaining loop that starved the actual fetch from ever completing
+  // (React's "Maximum update depth exceeded"). useMemo caches the same []
+  // reference across renders until userRole/myOfficerRecord genuinely change.
+  const assignedUnits = useMemo(
+    () => (userRole === 'System Admin' ? [] : (myOfficerRecord?.assigned_units || [])),
+    [userRole, myOfficerRecord]
+  );
 
   // A CI's view of the officer directory (and the delegation tree/table built
   // from it) is scoped to: themselves, any ACI/PA currently delegated by
