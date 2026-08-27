@@ -5281,28 +5281,25 @@ function OfficerHierarchyTree({ hierarchyMapping, userRole, onRevoke, onReassign
                       <span>Unassigned</span>
                     </div>
                   )}
+                  {/* Reassign/Revoke as small icon-only buttons folded into the same
+                      pill as the assignee's name, matching the compact style used in
+                      the officer table's "⋮" actions menu below — the previous
+                      full-width button pair underneath each pill looked like a
+                      different, older design bolted onto this one. */}
                   {u.aci && (
-                    <div style={{fontSize:'11px', color:'#334155', display:'flex', alignItems:'center', gap:'6px', background:'#EFF6FF', padding:'4px 8px', borderRadius:'2px', border:'1px solid #BFDBFE'}}>
+                    <div style={{fontSize:'11px', color:'#334155', display:'flex', alignItems:'center', gap:'6px', background:'#EFF6FF', padding:'4px 4px 4px 8px', borderRadius:'2px', border:'1px solid #BFDBFE'}}>
                       <Icon d={I.user} size={12} color="#1E40AF"/>
-                      <span>Assigned ACI: <strong>{u.aci}</strong></span>
-                    </div>
-                  )}
-                  {u.aci && (
-                    <div style={{display:'flex', gap:'6px'}}>
-                      <button type="button" className="btn-ghost" style={{flex:1, padding:'4px 8px', fontSize:'10px', fontWeight:700}} onClick={() => onReassign && onReassign(u.unitName, 'ACI')}>✎ Reassign</button>
-                      <button type="button" className="btn-ghost" style={{flex:1, padding:'4px 8px', fontSize:'10px', fontWeight:700, color:'#B91C1C'}} onClick={() => onRevoke && onRevoke(u.unitName, 'ACI')}>✕ Revoke</button>
+                      <span style={{flex:1}}>Assigned ACI: <strong>{u.aci}</strong></span>
+                      <button type="button" className="btn-ghost" title="Reassign" style={{width:'20px', height:'20px', padding:0, fontSize:'10px', flexShrink:0}} onClick={() => onReassign && onReassign(u.unitName, 'ACI')}>✎</button>
+                      <button type="button" className="btn-ghost" title="Revoke" style={{width:'20px', height:'20px', padding:0, fontSize:'10px', color:'#B91C1C', flexShrink:0}} onClick={() => onRevoke && onRevoke(u.unitName, 'ACI')}>✕</button>
                     </div>
                   )}
                   {u.pa && (
-                    <div style={{fontSize:'11px', color:'#334155', display:'flex', alignItems:'center', gap:'6px', background:'#F0FDF4', padding:'4px 8px', borderRadius:'2px', border:'1px solid #BBF7D0', marginTop: u.aci ? '4px' : 0}}>
+                    <div style={{fontSize:'11px', color:'#334155', display:'flex', alignItems:'center', gap:'6px', background:'#F0FDF4', padding:'4px 4px 4px 8px', borderRadius:'2px', border:'1px solid #BBF7D0', marginTop: u.aci ? '4px' : 0}}>
                       <Icon d={I.user} size={12} color="#166534"/>
-                      <span>Assigned PA: <strong>{u.pa}</strong></span>
-                    </div>
-                  )}
-                  {u.pa && (
-                    <div style={{display:'flex', gap:'6px'}}>
-                      <button type="button" className="btn-ghost" style={{flex:1, padding:'4px 8px', fontSize:'10px', fontWeight:700}} onClick={() => onReassign && onReassign(u.unitName, 'PA')}>✎ Reassign</button>
-                      <button type="button" className="btn-ghost" style={{flex:1, padding:'4px 8px', fontSize:'10px', fontWeight:700, color:'#B91C1C'}} onClick={() => onRevoke && onRevoke(u.unitName, 'PA')}>✕ Revoke</button>
+                      <span style={{flex:1}}>Assigned PA: <strong>{u.pa}</strong></span>
+                      <button type="button" className="btn-ghost" title="Reassign" style={{width:'20px', height:'20px', padding:0, fontSize:'10px', flexShrink:0}} onClick={() => onReassign && onReassign(u.unitName, 'PA')}>✎</button>
+                      <button type="button" className="btn-ghost" title="Revoke" style={{width:'20px', height:'20px', padding:0, fontSize:'10px', color:'#B91C1C', flexShrink:0}} onClick={() => onRevoke && onRevoke(u.unitName, 'PA')}>✕</button>
                     </div>
                   )}
                 </div>
