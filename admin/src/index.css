@@ -87,6 +87,45 @@ button { cursor: pointer; font-family: inherit; border: none; outline: none; tra
 }
 .btn-danger:hover { background: var(--danger); color: #fff; }
 
+/* Borderless dropdown-menu row (Users & Roles' "⋮" actions menu, institution
+   popovers) — .btn-ghost's own border/padding made these look like a stack
+   of separate boxed buttons instead of one cohesive menu. */
+.menu-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 10px;
+  border-radius: 6px;
+  border: none;
+  background: transparent;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-align: left;
+  cursor: pointer;
+}
+.menu-item:hover { background: #F1F5F9; color: var(--text-primary); }
+.menu-item.danger { color: var(--danger); }
+.menu-item.danger:hover { background: #FEF2F2; }
+
+/* Small borderless icon-only button (reassign/revoke pairs) */
+.icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: none;
+  background: transparent;
+  border-radius: 4px;
+  font-size: 12px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.icon-btn:hover { background: #E2E8F0; }
+.icon-btn.danger { color: var(--danger); }
+.icon-btn.danger:hover { background: #FEF2F2; }
+
 /* Badges */
 .badge {
   display: inline-flex; align-items: center;

@@ -3998,19 +3998,19 @@ function Dashboard({ onLogout, session }) {
                                         tab's now-reachable-by-CI actions don't include a menu item that
                                         would just come back as a permission error. */}
                                     {canAssignScope && (
-                                      <button type="button" className="btn-ghost" style={{textAlign:'left', padding:'8px 10px', fontSize:'12px', borderRadius:'4px'}} onClick={() => { setScopeOfficer(off); setOpenOfficerPopover(null); }}>
+                                      <button type="button" className="menu-item" onClick={() => { setScopeOfficer(off); setOpenOfficerPopover(null); }}>
                                         🗺️ Assign Scope{off.assigned_units?.length ? ` (${off.assigned_units.length})` : ''}
                                       </button>
                                     )}
                                     {!isCiOfficer && assignments.map(a => (
-                                      <div key={`${a.role}_${a.unitName}`} style={{display:'flex', alignItems:'center', gap:'4px', padding:'2px 4px'}}>
+                                      <div key={`${a.role}_${a.unitName}`} style={{display:'flex', alignItems:'center', gap:'4px', padding:'4px 10px'}}>
                                         <span style={{fontSize:'11px', color:'#64748B', flex:1, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap'}} title={a.unitName}>{a.unitName}</span>
-                                        <button type="button" className="btn-ghost" title="Reassign" style={{width:'24px', height:'24px', padding:0, fontSize:'11px', flexShrink:0}} onClick={() => { openReassignDelegate(a.unitName, a.role); setOpenOfficerPopover(null); }}>✎</button>
-                                        <button type="button" className="btn-ghost" title="Revoke" style={{width:'24px', height:'24px', padding:0, fontSize:'11px', color:'#B91C1C', flexShrink:0}} onClick={() => { handleRevokeDelegate(a.unitName, a.role); setOpenOfficerPopover(null); }}>✕</button>
+                                        <button type="button" className="icon-btn" title="Reassign" style={{width:'24px', height:'24px'}} onClick={() => { openReassignDelegate(a.unitName, a.role); setOpenOfficerPopover(null); }}>✎</button>
+                                        <button type="button" className="icon-btn danger" title="Revoke" style={{width:'24px', height:'24px'}} onClick={() => { handleRevokeDelegate(a.unitName, a.role); setOpenOfficerPopover(null); }}>✕</button>
                                       </div>
                                     ))}
                                     {!isCiOfficer && (
-                                      <button type="button" className="btn-ghost" style={{textAlign:'left', padding:'8px 10px', fontSize:'12px', borderRadius:'4px'}} onClick={() => { setAssignAciPrefillUnit(null); setAssignDelegateRole(isPaOfficer ? 'PA' : 'ACI'); setAssignDelegatePrefillAssignee(off.name); setShowAssignAciModal(true); setOpenOfficerPopover(null); }}>
+                                      <button type="button" className="menu-item" onClick={() => { setAssignAciPrefillUnit(null); setAssignDelegateRole(isPaOfficer ? 'PA' : 'ACI'); setAssignDelegatePrefillAssignee(off.name); setShowAssignAciModal(true); setOpenOfficerPopover(null); }}>
                                         + Assign {assignments.length > 0 ? 'Another' : ''} Institution
                                       </button>
                                     )}
@@ -5290,16 +5290,16 @@ function OfficerHierarchyTree({ hierarchyMapping, userRole, onRevoke, onReassign
                     <div style={{fontSize:'11px', color:'#334155', display:'flex', alignItems:'center', gap:'6px', background:'#EFF6FF', padding:'4px 4px 4px 8px', borderRadius:'2px', border:'1px solid #BFDBFE'}}>
                       <Icon d={I.user} size={12} color="#1E40AF"/>
                       <span style={{flex:1}}>Assigned ACI: <strong>{u.aci}</strong></span>
-                      <button type="button" className="btn-ghost" title="Reassign" style={{width:'20px', height:'20px', padding:0, fontSize:'10px', flexShrink:0}} onClick={() => onReassign && onReassign(u.unitName, 'ACI')}>✎</button>
-                      <button type="button" className="btn-ghost" title="Revoke" style={{width:'20px', height:'20px', padding:0, fontSize:'10px', color:'#B91C1C', flexShrink:0}} onClick={() => onRevoke && onRevoke(u.unitName, 'ACI')}>✕</button>
+                      <button type="button" className="icon-btn" title="Reassign" style={{width:'20px', height:'20px', fontSize:'10px'}} onClick={() => onReassign && onReassign(u.unitName, 'ACI')}>✎</button>
+                      <button type="button" className="icon-btn danger" title="Revoke" style={{width:'20px', height:'20px', fontSize:'10px'}} onClick={() => onRevoke && onRevoke(u.unitName, 'ACI')}>✕</button>
                     </div>
                   )}
                   {u.pa && (
                     <div style={{fontSize:'11px', color:'#334155', display:'flex', alignItems:'center', gap:'6px', background:'#F0FDF4', padding:'4px 4px 4px 8px', borderRadius:'2px', border:'1px solid #BBF7D0', marginTop: u.aci ? '4px' : 0}}>
                       <Icon d={I.user} size={12} color="#166534"/>
                       <span style={{flex:1}}>Assigned PA: <strong>{u.pa}</strong></span>
-                      <button type="button" className="btn-ghost" title="Reassign" style={{width:'20px', height:'20px', padding:0, fontSize:'10px', flexShrink:0}} onClick={() => onReassign && onReassign(u.unitName, 'PA')}>✎</button>
-                      <button type="button" className="btn-ghost" title="Revoke" style={{width:'20px', height:'20px', padding:0, fontSize:'10px', color:'#B91C1C', flexShrink:0}} onClick={() => onRevoke && onRevoke(u.unitName, 'PA')}>✕</button>
+                      <button type="button" className="icon-btn" title="Reassign" style={{width:'20px', height:'20px', fontSize:'10px'}} onClick={() => onReassign && onReassign(u.unitName, 'PA')}>✎</button>
+                      <button type="button" className="icon-btn danger" title="Revoke" style={{width:'20px', height:'20px', fontSize:'10px'}} onClick={() => onRevoke && onRevoke(u.unitName, 'PA')}>✕</button>
                     </div>
                   )}
                 </div>
