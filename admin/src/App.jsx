@@ -152,6 +152,35 @@ function isYes(val) {
   return typeof val === 'string' && val.trim().toLowerCase().startsWith('yes');
 }
 
+// Officer directory display helpers — initials + a deterministic pastel
+// color (same officer always gets the same color, no state needed) and the
+// short designation code out of the long stored role string.
+const OFFICER_AVATAR_PALETTE = [
+  { bg: '#DBEAFE', color: '#1E40AF' },
+  { bg: '#EDE9FE', color: '#5B21B6' },
+  { bg: '#FCE7F3', color: '#9D174D' },
+  { bg: '#D1FAE5', color: '#065F46' },
+  { bg: '#FEF3C7', color: '#92400E' },
+  { bg: '#E0E7FF', color: '#3730A3' },
+];
+function officerInitials(name) {
+  const parts = (name || '').trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return '—';
+  return (parts[0][0] + (parts[1]?.[0] || '')).toUpperCase();
+}
+function officerAvatarStyle(name) {
+  let hash = 0;
+  for (let i = 0; i < (name || '').length; i++) hash = (hash * 31 + name.charCodeAt(i)) >>> 0;
+  return OFFICER_AVATAR_PALETTE[hash % OFFICER_AVATAR_PALETTE.length];
+}
+function officerRoleCode(role) {
+  if ((role || '').includes('Cooperative Inspector')) return 'CI';
+  if ((role || '').includes('Assistant CI')) return 'ACI';
+  if ((role || '').includes('Project Assistant')) return 'PA';
+  if ((role || '').includes('System Admin')) return 'Admin';
+  return role || '—';
+}
+
 // Helper to parse Milk Audit & AGM details. audit_done/agm_done are stored
 // as "Yes (12 Aug 2026)" / "No" strings (the date is embedded, not its own
 // column) — this pulls the date back out and derives a plain
@@ -2685,6 +2714,9 @@ function Dashboard({ onLogout, session }) {
   const [officerSelected, setOfficerSelected] = useState(null);
   const [showAddOfficer, setShowAddOfficer] = useState(false);
   const [scopeOfficer, setScopeOfficer] = useState(null); // officer row being scoped, or null
+  // Officer table row popovers ("N institutions ▾" / the "⋮" actions menu) —
+  // only one open at a time, closed by clicking the transparent backdrop.
+  const [openOfficerPopover, setOpenOfficerPopover] = useState(null); // { id, type: 'institutions' | 'actions' } | null
 
   const handleUpdateOfficerScope = async (officerId, unitNames) => {
     const { error } = await supabase.from('officer_registry').update({ assigned_units: unitNames }).eq('id', officerId);
@@ -3868,10 +3900,9 @@ function Dashboard({ onLogout, session }) {
                     <thead>
                       <tr>
                         <th>#</th>
-                        <th>Officer Name</th>
+                        <th>Officer</th>
                         <th>Designation / Role</th>
-                        <th>Assigned Inspector (CI)</th>
-                        <th>Assigned MPCS & Milk Units</th>
+                        <th>Assigned Institutions</th>
                         <th>Status</th>
                         <th>Actions</th>
                       </tr>
@@ -3879,7 +3910,7 @@ function Dashboard({ onLogout, session }) {
                     <tbody>
                       {scopedOfficers.length === 0 ? (
                         <tr>
-                          <td colSpan={7} style={{textAlign:'center', padding:'32px', color:'#94A3B8'}}>
+                          <td colSpan={6} style={{textAlign:'center', padding:'32px', color:'#94A3B8'}}>
                             No officers have registered yet. Inspectors appear here once they sign up from the mobile app.
                           </td>
                         </tr>
@@ -3898,59 +3929,94 @@ function Dashboard({ onLogout, session }) {
                             .filter(([, m]) => m.pa === off.name)
                             .map(([unitName, m]) => ({ unitName, ci: m.ci, role: 'PA' })),
                         ];
-                        const assignedCiNames = [...new Set(assignments.map(a => a.ci).filter(Boolean))];
                         const role = off.role || 'ACI / Field Officer';
                         const isCiOfficer = role.includes('Cooperative Inspector');
                         const isPaOfficer = role.includes('Project Assistant');
+                        const avatar = officerAvatarStyle(off.name);
+                        const officerCode = `OF-${String(idx + 1).padStart(3, '0')}`;
+                        const institutionsOpen = openOfficerPopover?.id === (off.id || idx) && openOfficerPopover?.type === 'institutions';
+                        const actionsOpen = openOfficerPopover?.id === (off.id || idx) && openOfficerPopover?.type === 'actions';
+                        const canAssignScope = isCiOfficer && userRole === 'System Admin';
+                        const hasAnyAction = canAssignScope || !isCiOfficer;
                         return (
                           <tr key={off.id || idx}>
                             <td style={{verticalAlign:'top', paddingTop:'14px'}}>{idx + 1}</td>
-                            <td style={{verticalAlign:'top', paddingTop:'14px'}}><strong>{off.name}</strong></td>
-                            <td style={{verticalAlign:'top', paddingTop:'14px'}}><span className={isCiOfficer?'badge badge-gold':isPaOfficer?'badge badge-green':'badge badge-purple'}>{role}</span></td>
-                            <td style={{verticalAlign:'top', paddingTop:'14px'}}>{assignedCiNames.length > 0 ? assignedCiNames.join(', ') : <span style={{color:'#94A3B8', fontStyle:'italic'}}>Not yet assigned</span>}</td>
-                            <td style={{verticalAlign:'top', paddingTop:'12px'}}>
-                              {assignments.length > 0 ? (
-                                <div style={{display:'flex', flexWrap:'wrap', gap:'6px'}}>
-                                  {assignments.map(a => (
-                                    <span key={`${a.role}_${a.unitName}`} style={{fontSize:'11px', fontWeight:700, color:'#334155', background:'#F1F5F9', border:'1px solid #E2E8F0', borderRadius:'999px', padding:'3px 10px', whiteSpace:'nowrap'}}>
-                                      {a.unitName}
-                                    </span>
-                                  ))}
+                            <td style={{verticalAlign:'top', paddingTop:'10px'}}>
+                              <div style={{display:'flex', alignItems:'center', gap:'10px'}}>
+                                <div style={{width:'36px', height:'36px', borderRadius:'50%', background:avatar.bg, color:avatar.color, display:'flex', alignItems:'center', justifyContent:'center', fontSize:'12px', fontWeight:800, flexShrink:0}}>
+                                  {officerInitials(off.name)}
                                 </div>
-                              ) : <span style={{color:'#94A3B8', fontStyle:'italic'}}>Not yet assigned</span>}
+                                <div>
+                                  <div style={{fontWeight:800, color:'#0F172A', fontSize:'13px'}}>{off.name}</div>
+                                  <div style={{fontSize:'11px', color:'#94A3B8'}}>{officerCode}</div>
+                                </div>
+                              </div>
+                            </td>
+                            <td style={{verticalAlign:'top', paddingTop:'14px'}}><span className={isCiOfficer?'badge badge-gold':isPaOfficer?'badge badge-green':'badge badge-purple'}>{officerRoleCode(role)}</span></td>
+                            <td style={{verticalAlign:'top', paddingTop:'14px', position:'relative'}}>
+                              {assignments.length > 0 ? (
+                                <button
+                                  type="button"
+                                  className="btn-ghost"
+                                  style={{padding:'4px 8px', fontSize:'12px', fontWeight:700, display:'inline-flex', alignItems:'center', gap:'4px'}}
+                                  onClick={() => setOpenOfficerPopover(institutionsOpen ? null : { id: off.id || idx, type: 'institutions' })}
+                                >
+                                  {assignments.length} institution{assignments.length > 1 ? 's' : ''} <span style={{fontSize:'10px'}}>▾</span>
+                                </button>
+                              ) : <span style={{color:'#94A3B8', fontStyle:'italic', fontSize:'12px'}}>No institutions assigned</span>}
+                              {institutionsOpen && (
+                                <>
+                                  <div style={{position:'fixed', inset:0, zIndex:40}} onClick={() => setOpenOfficerPopover(null)} />
+                                  <div style={{position:'absolute', top:'100%', left:0, marginTop:'4px', width:'240px', background:'#FFFFFF', border:'1px solid #E2E8F0', borderRadius:'8px', boxShadow:'0 10px 24px rgba(15,23,42,0.12)', zIndex:41, padding:'12px'}}>
+                                    <div style={{fontSize:'11px', fontWeight:800, color:'#0F172A', marginBottom:'8px', textTransform:'uppercase', letterSpacing:'0.4px'}}>Assigned Institutions</div>
+                                    {assignments.map((a, i) => (
+                                      <div key={`${a.role}_${a.unitName}`} style={{display:'flex', gap:'8px', alignItems:'center', padding:'6px 0', borderBottom: i < assignments.length - 1 ? '1px solid #F1F5F9' : 'none'}}>
+                                        <span style={{fontSize:'11px', fontWeight:800, color:'#94A3B8', width:'14px'}}>{i + 1}</span>
+                                        <span style={{fontSize:'12px', color:'#334155', flex:1}}>{a.unitName}</span>
+                                      </div>
+                                    ))}
+                                    <div style={{fontSize:'10px', color:'#94A3B8', marginTop:'8px', paddingTop:'8px', borderTop:'1px solid #F1F5F9'}}>
+                                      Total: {assignments.length} institution{assignments.length > 1 ? 's' : ''}
+                                    </div>
+                                  </div>
+                                </>
+                              )}
                             </td>
                             <td style={{verticalAlign:'top', paddingTop:'14px'}}><span className="badge badge-green">ACTIVE</span></td>
-                            <td style={{verticalAlign:'top', paddingTop:'12px'}}>
-                              <div style={{display:'flex', flexDirection:'column', gap:'6px', alignItems:'flex-start'}}>
-                                {/* Jurisdiction scope is an Admin-only grant (officer_registry write
-                                    stays System-Admin-only in RLS) — hidden for a CI viewer so this
-                                    tab's now-reachable-by-CI actions don't include a button that would
-                                    just come back as a permission error. */}
-                                {isCiOfficer && userRole === 'System Admin' && (
-                                  <button type="button" className="btn-ghost" style={{padding:'4px 8px', fontSize:'11px'}} onClick={() => setScopeOfficer(off)}>
-                                    🗺️ Assign Scope{off.assigned_units?.length ? ` (${off.assigned_units.length})` : ''}
-                                  </button>
-                                )}
-                                {/* One compact row per assignment: unit name as small muted text
-                                    (already shown as a chip in the previous column, so it isn't
-                                    repeated as a full button label here) plus icon-only reassign/
-                                    revoke — keeps row height proportional to the assignment count
-                                    instead of stacking full-width buttons. */}
-                                {!isCiOfficer && assignments.map(a => (
-                                  <div key={`${a.role}_${a.unitName}`} style={{display:'flex', gap:'6px', alignItems:'center', width:'100%'}}>
-                                    <span style={{fontSize:'11px', color:'#64748B', maxWidth:'100px', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap'}} title={a.unitName}>
-                                      {a.unitName}
-                                    </span>
-                                    <button type="button" className="btn-ghost" title="Reassign" style={{width:'22px', height:'22px', padding:0, fontSize:'11px', flexShrink:0}} onClick={() => openReassignDelegate(a.unitName, a.role)}>✎</button>
-                                    <button type="button" className="btn-ghost" title="Revoke" style={{width:'22px', height:'22px', padding:0, fontSize:'11px', color:'#B91C1C', flexShrink:0}} onClick={() => handleRevokeDelegate(a.unitName, a.role)}>✕</button>
+                            <td style={{verticalAlign:'top', paddingTop:'14px', position:'relative'}}>
+                              {hasAnyAction ? (
+                                <button type="button" className="btn-ghost" style={{width:'28px', height:'28px', padding:0, fontSize:'14px', fontWeight:900}} onClick={() => setOpenOfficerPopover(actionsOpen ? null : { id: off.id || idx, type: 'actions' })}>
+                                  ⋮
+                                </button>
+                              ) : <span style={{color:'#CBD5E1', fontSize:'11px'}}>—</span>}
+                              {actionsOpen && (
+                                <>
+                                  <div style={{position:'fixed', inset:0, zIndex:40}} onClick={() => setOpenOfficerPopover(null)} />
+                                  <div style={{position:'absolute', top:'100%', right:0, marginTop:'4px', minWidth:'200px', background:'#FFFFFF', border:'1px solid #E2E8F0', borderRadius:'8px', boxShadow:'0 10px 24px rgba(15,23,42,0.12)', zIndex:41, padding:'6px', display:'flex', flexDirection:'column', gap:'2px'}}>
+                                    {/* Jurisdiction scope is an Admin-only grant (officer_registry write
+                                        stays System-Admin-only in RLS) — hidden for a CI viewer so this
+                                        tab's now-reachable-by-CI actions don't include a menu item that
+                                        would just come back as a permission error. */}
+                                    {canAssignScope && (
+                                      <button type="button" className="btn-ghost" style={{textAlign:'left', padding:'8px 10px', fontSize:'12px', borderRadius:'4px'}} onClick={() => { setScopeOfficer(off); setOpenOfficerPopover(null); }}>
+                                        🗺️ Assign Scope{off.assigned_units?.length ? ` (${off.assigned_units.length})` : ''}
+                                      </button>
+                                    )}
+                                    {!isCiOfficer && assignments.map(a => (
+                                      <div key={`${a.role}_${a.unitName}`} style={{display:'flex', alignItems:'center', gap:'4px', padding:'2px 4px'}}>
+                                        <span style={{fontSize:'11px', color:'#64748B', flex:1, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap'}} title={a.unitName}>{a.unitName}</span>
+                                        <button type="button" className="btn-ghost" title="Reassign" style={{width:'24px', height:'24px', padding:0, fontSize:'11px', flexShrink:0}} onClick={() => { openReassignDelegate(a.unitName, a.role); setOpenOfficerPopover(null); }}>✎</button>
+                                        <button type="button" className="btn-ghost" title="Revoke" style={{width:'24px', height:'24px', padding:0, fontSize:'11px', color:'#B91C1C', flexShrink:0}} onClick={() => { handleRevokeDelegate(a.unitName, a.role); setOpenOfficerPopover(null); }}>✕</button>
+                                      </div>
+                                    ))}
+                                    {!isCiOfficer && (
+                                      <button type="button" className="btn-ghost" style={{textAlign:'left', padding:'8px 10px', fontSize:'12px', borderRadius:'4px'}} onClick={() => { setAssignAciPrefillUnit(null); setAssignDelegateRole(isPaOfficer ? 'PA' : 'ACI'); setAssignDelegatePrefillAssignee(off.name); setShowAssignAciModal(true); setOpenOfficerPopover(null); }}>
+                                        + Assign {assignments.length > 0 ? 'Another' : ''} Institution
+                                      </button>
+                                    )}
                                   </div>
-                                ))}
-                                {!isCiOfficer && (
-                                  <button type="button" className="btn-ghost" style={{padding:'4px 8px', fontSize:'11px'}} onClick={() => { setAssignAciPrefillUnit(null); setAssignDelegateRole(isPaOfficer ? 'PA' : 'ACI'); setAssignDelegatePrefillAssignee(off.name); setShowAssignAciModal(true); }}>
-                                    + Assign {assignments.length > 0 ? 'Another' : ''} Institution
-                                  </button>
-                                )}
-                              </div>
+                                </>
+                              )}
                             </td>
                           </tr>
                         );
