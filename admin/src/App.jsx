@@ -340,6 +340,33 @@ const downloadCSV = (rows, filename) => {
   URL.revokeObjectURL(url);
 };
 
+// Separate from downloadCSV — that helper picks its column set by sniffing
+// `row.society_name` to guess MPCS vs Milk submission shape, which doesn't
+// apply to loan_beneficiaries' own fixed set of columns.
+const downloadLoanBeneficiariesCSV = (rows, filename) => {
+  if (!rows || !rows.length) return;
+  const columns = [
+    ['created_at', 'Date Added'], ['beneficiary_name', 'Beneficiary Name'],
+    ['society_name', 'Society'], ['society_type', 'Type'],
+    ['aadhaar_number', 'Aadhaar No'], ['amount_taken', 'Amount Taken'],
+    ['amount_paid', 'Total Paid'], ['amount_remaining', 'Remaining'],
+  ];
+  const headers = columns.map(([, label]) => label).join(',');
+  const csvBody = rows.map(row => columns.map(([key]) => {
+    let v = row[key];
+    if (v === null || v === undefined) v = '';
+    else if (key === 'created_at') v = new Date(v).toLocaleString('en-IN');
+    return `"${String(v).replace(/"/g, '""')}"`;
+  }).join(',')).join('\n');
+  const blob = new Blob([headers + '\n' + csvBody], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `${filename}_${new Date().toISOString().split('T')[0]}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+};
+
 // Expands MPCS_FIELD_ORDER / MILK_FIELD_ORDER into {label, get} columns —
 // the same complete field set and flattening (form_data spread to fd_X)
 // that downloadCSV uses, so a "Master"/"Directory" report actually means
@@ -2397,6 +2424,13 @@ function Dashboard({ onLogout, session }) {
   const [memberSocietyFilter, setMemberSocietyFilter] = useState('');
   const [memberWardFilter, setMemberWardFilter] = useState('');
 
+  // Loan Beneficiaries state — per-institution loan disbursement roster,
+  // captured from the mobile app's Loan Setup screen (see LoanBeneficiaryListScreen).
+  const [loanBenRows, setLoanBenRows] = useState([]);
+  const [loanBenSearchQ, setLoanBenSearchQ] = useState('');
+  const [loanBenTypeFilter, setLoanBenTypeFilter] = useState('');
+  const [loanBenSocietyFilter, setLoanBenSocietyFilter] = useState('');
+
   // Modal & Interactive states
   const [showAddMilkModal, setShowAddMilkModal] = useState(false);
   const [showAddMpcsModal, setShowAddMpcsModal] = useState(false);
@@ -2586,6 +2620,14 @@ function Dashboard({ onLogout, session }) {
       return assignedUnits.some(u => name.includes(u.toLowerCase()) || u.toLowerCase().includes(name));
     });
   }, [memberRows, userRole, assignedUnits]);
+
+  const scopedLoanBenRows = useMemo(() => {
+    if (userRole === 'System Admin') return loanBenRows;
+    return loanBenRows.filter(r => {
+      const name = (r.society_name || '').toLowerCase();
+      return assignedUnits.some(u => name.includes(u.toLowerCase()) || u.toLowerCase().includes(name));
+    });
+  }, [loanBenRows, userRole, assignedUnits]);
 
   // Derived from the SCOPED rows, not the raw fetch — these used to be
   // computed once in fetchAll from the full district-wide dataset and
@@ -2880,6 +2922,9 @@ function Dashboard({ onLogout, session }) {
     const { data: memberRes } = await supabase.from('member_registry').select('*').order('created_at', { ascending: false });
     if (memberRes) setMemberRows(memberRes);
 
+    const { data: loanBenRes } = await supabase.from('loan_beneficiaries').select('*').order('created_at', { ascending: false });
+    if (loanBenRes) setLoanBenRows(loanBenRes);
+
     const { data: offRes } = await supabase.from('officer_registry').select('*').order('created_at', { ascending: false });
     if (offRes) setOfficers(offRes);
 
@@ -2915,6 +2960,9 @@ function Dashboard({ onLogout, session }) {
         fetchAll(false);
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'member_registry' }, () => {
+        fetchAll(false);
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'loan_beneficiaries' }, () => {
         fetchAll(false);
       })
       .subscribe();
@@ -2989,6 +3037,31 @@ function Dashboard({ onLogout, session }) {
     milk: scopedMemberRows.filter(r => r.society_type === 'MILK').length,
     societies: new Set(scopedMemberRows.map(r => r.society_name).filter(Boolean)).size,
   }), [scopedMemberRows]);
+
+  const loanBenSocietyOptions = [...new Set(scopedLoanBenRows.map(r=>r.society_name).filter(Boolean))].sort();
+
+  const loanBenFiltered = useMemo(() => {
+    let d = [...scopedLoanBenRows];
+    if (loanBenTypeFilter) d = d.filter(r => r.society_type === loanBenTypeFilter);
+    if (loanBenSocietyFilter) d = d.filter(r => r.society_name === loanBenSocietyFilter);
+    const q = loanBenSearchQ.toLowerCase().trim();
+    if (q) d = d.filter(r =>
+      (r.beneficiary_name||'').toLowerCase().includes(q) ||
+      (r.society_name||'').toLowerCase().includes(q) ||
+      (r.aadhaar_number||'').toLowerCase().includes(q)
+    );
+    return d;
+  }, [scopedLoanBenRows, loanBenTypeFilter, loanBenSocietyFilter, loanBenSearchQ]);
+
+  const loanBenStats = useMemo(() => ({
+    total: scopedLoanBenRows.length,
+    mpcs: scopedLoanBenRows.filter(r => r.society_type === 'MPCS').length,
+    milk: scopedLoanBenRows.filter(r => r.society_type === 'MILK').length,
+    societies: new Set(scopedLoanBenRows.map(r => r.society_name).filter(Boolean)).size,
+    totalTaken: scopedLoanBenRows.reduce((s,r)=>s+(parseFloat(r.amount_taken)||0),0),
+    totalPaid: scopedLoanBenRows.reduce((s,r)=>s+(parseFloat(r.amount_paid)||0),0),
+    totalRemaining: scopedLoanBenRows.reduce((s,r)=>s+(parseFloat(r.amount_remaining)||0),0),
+  }), [scopedLoanBenRows]);
 
   // Admin doesn't have first-hand knowledge of whether a member record is a
   // duplicate, fraudulent, or genuinely registered — only the CI who
@@ -3410,6 +3483,7 @@ function Dashboard({ onLogout, session }) {
               { id: 'MPCS', label: 'MPCS Societies', icon: I.domain },
               { id: 'MILK', label: 'Milk Units', icon: I.litres },
               { id: 'MEMBERS', label: 'Member Registry', icon: I.user },
+              { id: 'LOAN_BENEFICIARIES', label: 'Loan Beneficiaries', icon: I.money },
               { id: 'STATS', label: 'Benchmarks', icon: I.chart },
               { id: 'OFFICERS', label: 'Official Registry', icon: I.members },
               { id: 'REPORTS', label: 'Reports', icon: I.download },
@@ -4378,6 +4452,137 @@ function Dashboard({ onLogout, session }) {
                                 </button>
                               )}
                             </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'LOAN_BENEFICIARIES' && (
+            <div className="fade-in">
+              {/* Header Banner */}
+              <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom: '20px', paddingBottom:'16px', borderBottom:'1px solid var(--border)'}}>
+                 <div>
+                    <div style={{fontSize:'11px', fontWeight:800, color:'var(--emerald)', textTransform:'uppercase', letterSpacing:'1px', marginBottom:'4px'}}>Loan Disbursement Records</div>
+                    <div style={{display:'flex', alignItems:'center', gap:'12px'}}>
+                       <h2 style={{fontSize:'22px', fontWeight:900, color: '#0F172A', lineHeight:1}}>Loan Beneficiaries</h2>
+                       <span className="badge badge-green" style={{padding:'4px 10px', fontSize:'11px', fontWeight:800}}>
+                         {loanBenStats.total} Beneficiaries
+                       </span>
+                    </div>
+                 </div>
+                 <div style={{display:'flex', gap: '8px'}}>
+                    <button className="btn-primary" onClick={()=>downloadLoanBeneficiariesCSV(loanBenFiltered, 'Gyalshing_Loan_Beneficiaries')} style={{padding: '8px 14px', fontSize: '12px', height:'38px', display: 'flex', alignItems:'center', gap:'6px'}}>
+                      <Icon d={I.download} size={14} color="#fff"/> Export CSV
+                    </button>
+                 </div>
+              </div>
+
+              {/* KPI Grid */}
+              <div className="kpi-grid" style={{marginBottom:'24px'}}>
+                <StatCard icon={I.user} label="Total Beneficiaries" value={fmt(loanBenStats.total)} color="#1E3A8A" bg="#EFF6FF"/>
+                <StatCard icon={I.domain} label="MPCS Beneficiaries" value={fmt(loanBenStats.mpcs)} color="#991B1B" bg="#FEF2F2"
+                  onClick={() => setLoanBenTypeFilter(loanBenTypeFilter === 'MPCS' ? '' : 'MPCS')} active={loanBenTypeFilter === 'MPCS'}/>
+                <StatCard icon={I.litres} label="Milk Unit Beneficiaries" value={fmt(loanBenStats.milk)} color="#B45309" bg="#FEF3C7"
+                  onClick={() => setLoanBenTypeFilter(loanBenTypeFilter === 'MILK' ? '' : 'MILK')} active={loanBenTypeFilter === 'MILK'}/>
+                <StatCard icon={I.money} label="Total Outstanding (₹)" value={fmt(loanBenStats.totalRemaining)} color="#B91C1C" bg="#FEF2F2"/>
+              </div>
+
+              {/* Structured Filters */}
+              <div className="card" style={{marginBottom:'20px', padding:'16px 20px', background:'#FFFFFF'}}>
+                <div style={{display:'grid', gridTemplateColumns:'2fr 1fr 1fr auto', gap:'12px', alignItems:'end'}}>
+                  <div className="field-group" style={{marginBottom:0}}>
+                    <label className="field-label" style={{fontSize:'10px', fontWeight:800, textTransform:'uppercase', color:'#64748B', marginBottom:'4px'}}>Search Beneficiaries</label>
+                    <div style={{position:'relative'}}>
+                      <span style={{position:'absolute', left:'11px', top:'50%', transform:'translateY(-50%)'}}>
+                        <Icon d={I.search} size={14} color="#9CA3AF"/>
+                      </span>
+                      <input className="field-input" placeholder="Search name, society, Aadhaar..."
+                        value={loanBenSearchQ} onChange={e=>setLoanBenSearchQ(e.target.value)} style={{paddingLeft:'34px', height:'38px', borderRadius:'6px', border:'1px solid #CBD5E1'}}/>
+                    </div>
+                  </div>
+
+                  <div className="field-group" style={{marginBottom:0}}>
+                    <label className="field-label" style={{fontSize:'10px', fontWeight:800, textTransform:'uppercase', color:'#64748B', marginBottom:'4px'}}>Type</label>
+                    <select className="field-input" value={loanBenTypeFilter} onChange={e=>setLoanBenTypeFilter(e.target.value)} style={{height:'38px', borderRadius:'6px', border:'1px solid #CBD5E1'}}>
+                      <option value="">All Types</option>
+                      <option value="MPCS">MPCS</option>
+                      <option value="MILK">Milk Unit</option>
+                    </select>
+                  </div>
+
+                  <div className="field-group" style={{marginBottom:0}}>
+                    <label className="field-label" style={{fontSize:'10px', fontWeight:800, textTransform:'uppercase', color:'#64748B', marginBottom:'4px'}}>Society</label>
+                    <select className="field-input" value={loanBenSocietyFilter} onChange={e=>setLoanBenSocietyFilter(e.target.value)} style={{height:'38px', borderRadius:'6px', border:'1px solid #CBD5E1'}}>
+                      <option value="">All Societies</option>
+                      {loanBenSocietyOptions.map(s=><option key={s} value={s}>{s}</option>)}
+                    </select>
+                  </div>
+
+                  <button className="btn-ghost" onClick={()=>{setLoanBenSearchQ('');setLoanBenTypeFilter('');setLoanBenSocietyFilter('');}} style={{height:'38px', padding:'0 16px', borderRadius:'6px', fontSize:'12px', fontWeight:700}}>
+                    Clear All
+                  </button>
+                </div>
+                {(loanBenSearchQ||loanBenTypeFilter||loanBenSocietyFilter) && (
+                  <div style={{marginTop:'12px', paddingTop:'10px', borderTop:'1px solid #F1F5F9', fontSize:'12px', color:'#047857', fontWeight:700, display:'flex', alignItems:'center', gap:'6px'}}>
+                    🔍 Showing <strong>{loanBenFiltered.length}</strong> of <strong>{scopedLoanBenRows.length}</strong> beneficiaries
+                  </div>
+                )}
+              </div>
+
+              {/* Table Card */}
+              <div className="card" style={{padding:0, overflow:'hidden', borderRadius:'8px', border:'1px solid #E2E8F0', boxShadow:'var(--shadow-subtle)'}}>
+                <div style={{padding:'16px 20px', borderBottom:'1px solid var(--border)', display:'flex', justifyContent:'space-between', alignItems:'center', background:'#FAFAFA'}}>
+                  <div style={{display:'flex', alignItems:'center', gap:'10px'}}>
+                    <Icon d={I.money} size={18} color="var(--emerald)"/>
+                    <h3 style={{fontSize:'15px', fontWeight:800, color:'#0F172A', margin:0}}>Loan Beneficiaries</h3>
+                  </div>
+                  <span className="badge badge-green" style={{fontSize:'11px', fontWeight:800}}>{loanBenFiltered.length} Beneficiaries</span>
+                </div>
+
+                {loading ? (
+                  <div style={{padding:'60px',display:'flex',flexDirection:'column',alignItems:'center',gap:'16px'}}>
+                    <div className="spinner" style={{width:'40px',height:'40px'}}/>
+                    <div style={{fontSize:'13px',color:'#9CA3AF'}}>Loading...</div>
+                  </div>
+                ) : loanBenFiltered.length === 0 ? (
+                  <div style={{padding:'60px',textAlign:'center',color:'#9CA3AF'}}>
+                    <div style={{fontSize:'40px',marginBottom:'12px'}}>💰</div>
+                    <div style={{fontWeight:700}}>No loan beneficiaries found</div>
+                    <div style={{fontSize:'13px',marginTop:'4px'}}>{scopedLoanBenRows.length===0?'No beneficiaries recorded yet — add one from the mobile app\'s Loan Setup → Manage Beneficiaries screen.':'Try adjusting your filters.'}</div>
+                  </div>
+                ) : (
+                  <div style={{overflowX:'auto'}}>
+                    <table className="data-table">
+                      <thead>
+                        <tr>
+                          <th style={{textAlign:'left', width:'110px'}}>Date Added</th>
+                          <th style={{textAlign:'left', minWidth:'160px'}}>Beneficiary Name</th>
+                          <th style={{textAlign:'left', minWidth:'180px'}}>Society</th>
+                          <th style={{textAlign:'center', width:'90px'}}>Type</th>
+                          <th style={{textAlign:'left', width:'150px'}}>Aadhaar No</th>
+                          <th style={{textAlign:'right', width:'130px'}}>Amount Taken</th>
+                          <th style={{textAlign:'right', width:'130px'}}>Total Paid</th>
+                          <th style={{textAlign:'right', width:'130px'}}>Remaining</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {loanBenFiltered.map((b,i)=>(
+                          <tr key={b.id||i}>
+                            <td style={{whiteSpace:'nowrap', fontSize:'12px', color:'#64748B', fontWeight:600}}>{b.created_at?new Date(b.created_at).toLocaleDateString('en-IN'):'—'}</td>
+                            <td style={{fontWeight:800, fontSize:'13px', color:'#0F172A'}}>{b.beneficiary_name||'—'}</td>
+                            <td style={{fontSize:'13px', color:'#334155', fontWeight:600}}>{b.society_name||'—'}</td>
+                            <td style={{textAlign:'center'}}>
+                              <span className={`badge ${b.society_type==='MPCS'?'badge-green':'badge-gold'}`} style={{fontSize:'10px'}}>{b.society_type||'—'}</span>
+                            </td>
+                            <td style={{fontSize:'12px', color:'#475569', fontFamily:'monospace'}}>{b.aadhaar_number ? fmtAadhaar(b.aadhaar_number) : '—'}</td>
+                            <td style={{textAlign:'right', fontSize:'13px', color:'#0F172A', fontWeight:700}}>{fmtRs(b.amount_taken)}</td>
+                            <td style={{textAlign:'right', fontSize:'12px', color:'#047857', fontWeight:600}}>{fmtRs(b.amount_paid)}</td>
+                            <td style={{textAlign:'right', fontSize:'12px', color:'#B91C1C', fontWeight:700}}>{fmtRs(b.amount_remaining)}</td>
                           </tr>
                         ))}
                       </tbody>
