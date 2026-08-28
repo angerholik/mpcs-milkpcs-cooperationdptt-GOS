@@ -506,6 +506,7 @@ const I = {
   info:    'M12 22a10 10 0 100-20 10 10 0 000 20zM12 16v-4M12 8h.01',
   dashboard: 'M3 3h7v7H3zM14 3h7v7h-7zM14 14h7v7h-7zM3 14h7v7H3z',
   gear:    'M12 15a3 3 0 100-6 3 3 0 000 6z M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82A1.65 1.65 0 003 13.09H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z',
+  userX:   'M16 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2M8.5 11a4 4 0 100-8 4 4 0 000 8zM17 8l5 5M22 8l-5 5',
 };
 
 // ─── LoginPage ────────────────────────────────────────────────────────────────
@@ -3967,15 +3968,20 @@ function Dashboard({ onLogout, session }) {
                               {institutionsOpen && (
                                 <>
                                   <div style={{position:'fixed', inset:0, zIndex:40}} onClick={() => setOpenOfficerPopover(null)} />
-                                  <div style={{position:'absolute', top:'100%', left:0, marginTop:'4px', width:'240px', background:'#FFFFFF', border:'1px solid #E2E8F0', borderRadius:'8px', boxShadow:'0 10px 24px rgba(15,23,42,0.12)', zIndex:41, padding:'12px'}}>
-                                    <div style={{fontSize:'11px', fontWeight:800, color:'#0F172A', marginBottom:'8px', textTransform:'uppercase', letterSpacing:'0.4px'}}>Assigned Institutions</div>
+                                  <div style={{position:'absolute', top:'100%', left:0, marginTop:'4px', width:'260px', background:'#FFFFFF', border:'1px solid #E2E8F0', borderRadius:'10px', boxShadow:'0 10px 24px rgba(15,23,42,0.12)', zIndex:41, padding:'14px'}}>
+                                    <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'10px'}}>
+                                      <div style={{fontSize:'13px', fontWeight:800, color:'#0F172A'}}>Assigned Institutions</div>
+                                      <button type="button" className="icon-btn" style={{width:'20px', height:'20px'}} onClick={() => setOpenOfficerPopover(null)}>
+                                        <Icon d={I.close} size={13} color="#64748B"/>
+                                      </button>
+                                    </div>
                                     {assignments.map((a, i) => (
-                                      <div key={`${a.role}_${a.unitName}`} style={{display:'flex', gap:'8px', alignItems:'center', padding:'6px 0', borderBottom: i < assignments.length - 1 ? '1px solid #F1F5F9' : 'none'}}>
-                                        <span style={{fontSize:'11px', fontWeight:800, color:'#94A3B8', width:'14px'}}>{i + 1}</span>
-                                        <span style={{fontSize:'12px', color:'#334155', flex:1}}>{a.unitName}</span>
+                                      <div key={`${a.role}_${a.unitName}`} style={{display:'flex', gap:'10px', alignItems:'center', padding:'7px 0', borderBottom: i < assignments.length - 1 ? '1px solid #F1F5F9' : 'none'}}>
+                                        <div style={{width:'20px', height:'20px', borderRadius:'50%', background:'#DBEAFE', color:'#1E40AF', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'10px', fontWeight:800, flexShrink:0}}>{i + 1}</div>
+                                        <span style={{fontSize:'12px', color:'#334155', fontWeight:600, flex:1}}>{a.unitName}</span>
                                       </div>
                                     ))}
-                                    <div style={{fontSize:'10px', color:'#94A3B8', marginTop:'8px', paddingTop:'8px', borderTop:'1px solid #F1F5F9'}}>
+                                    <div style={{fontSize:'11px', color:'#94A3B8', marginTop:'10px', paddingTop:'8px', borderTop:'1px solid #F1F5F9'}}>
                                       Total: {assignments.length} institution{assignments.length > 1 ? 's' : ''}
                                     </div>
                                   </div>
@@ -3999,21 +4005,24 @@ function Dashboard({ onLogout, session }) {
                                         would just come back as a permission error. */}
                                     {canAssignScope && (
                                       <button type="button" className="menu-item" onClick={() => { setScopeOfficer(off); setOpenOfficerPopover(null); }}>
-                                        🗺️ Assign Scope{off.assigned_units?.length ? ` (${off.assigned_units.length})` : ''}
+                                        <Icon d={I.map} size={14} color="#1E40AF"/> Assign Scope{off.assigned_units?.length ? ` (${off.assigned_units.length})` : ''}
+                                      </button>
+                                    )}
+                                    {!isCiOfficer && (
+                                      <button type="button" className="menu-item" onClick={() => { setAssignAciPrefillUnit(null); setAssignDelegateRole(isPaOfficer ? 'PA' : 'ACI'); setAssignDelegatePrefillAssignee(off.name); setShowAssignAciModal(true); setOpenOfficerPopover(null); }}>
+                                        <Icon d={I.domain} size={14} color="#1E40AF"/> Assign {assignments.length > 0 ? 'another' : ''} institution
                                       </button>
                                     )}
                                     {!isCiOfficer && assignments.map(a => (
-                                      <div key={`${a.role}_${a.unitName}`} style={{display:'flex', alignItems:'center', gap:'4px', padding:'4px 10px'}}>
-                                        <span style={{fontSize:'11px', color:'#64748B', flex:1, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap'}} title={a.unitName}>{a.unitName}</span>
-                                        <button type="button" className="icon-btn" title="Reassign" style={{width:'24px', height:'24px'}} onClick={() => { openReassignDelegate(a.unitName, a.role); setOpenOfficerPopover(null); }}>✎</button>
-                                        <button type="button" className="icon-btn danger" title="Revoke" style={{width:'24px', height:'24px'}} onClick={() => { handleRevokeDelegate(a.unitName, a.role); setOpenOfficerPopover(null); }}>✕</button>
+                                      <div key={`${a.role}_${a.unitName}`}>
+                                        <button type="button" className="menu-item" onClick={() => { openReassignDelegate(a.unitName, a.role); setOpenOfficerPopover(null); }}>
+                                          <Icon d={I.refresh} size={14} color="#334155"/> Reassign Unit{assignments.length > 1 ? `: ${a.unitName}` : ''}
+                                        </button>
+                                        <button type="button" className="menu-item danger" onClick={() => { handleRevokeDelegate(a.unitName, a.role); setOpenOfficerPopover(null); }}>
+                                          <Icon d={I.userX} size={14} color="#DC2626"/> Revoke {a.role}{assignments.length > 1 ? `: ${a.unitName}` : ''}
+                                        </button>
                                       </div>
                                     ))}
-                                    {!isCiOfficer && (
-                                      <button type="button" className="menu-item" onClick={() => { setAssignAciPrefillUnit(null); setAssignDelegateRole(isPaOfficer ? 'PA' : 'ACI'); setAssignDelegatePrefillAssignee(off.name); setShowAssignAciModal(true); setOpenOfficerPopover(null); }}>
-                                        + Assign {assignments.length > 0 ? 'Another' : ''} Institution
-                                      </button>
-                                    )}
                                   </div>
                                 </>
                               )}
