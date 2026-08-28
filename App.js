@@ -42,6 +42,7 @@ import MoreScreen from './src/components/MoreScreen';
 import SyncStatusScreen from './src/components/SyncStatusScreen';
 import MyInstitutionsScreen from './src/components/MyInstitutionsScreen';
 import MemberDataScreen from './src/components/MemberDataScreen';
+import LoanBeneficiaryListScreen from './src/components/LoanBeneficiaryListScreen';
 
 // MPCS Module Screen Components
 import MpcsHomeScreen from './src/components/mpcs/MpcsHomeScreen';
@@ -259,6 +260,7 @@ export default function App() {
   // view step they actually came from. Track which one to return to.
   const [demographicsBackTarget, setDemographicsBackTarget] = useState('LOAN_SETUP');
   const [mpcsLoanBackTarget, setMpcsLoanBackTarget] = useState('MPCS_CSC_DETAILS');
+  const [loanBeneficiariesBackTarget, setLoanBeneficiariesBackTarget] = useState('LOAN_SETUP');
   const [activityItems, setActivityItems] = useState([]);
 
   // Evidence States
@@ -2761,6 +2763,7 @@ export default function App() {
                         }}
                         onNext={() => { setDemographicsBackTarget('LOAN_SETUP'); setCurrentMobileScreen('DEMOGRAPHICS'); }}
                         onBack={() => setCurrentMobileScreen('COMPLIANCE_AUDIT')}
+                        onManageBeneficiaries={() => { setLoanBeneficiariesBackTarget('LOAN_SETUP'); setCurrentMobileScreen('LOAN_BENEFICIARIES'); }}
                       activeTab="home"
                       onTabPress={(tab) => {
                         setActiveBottomTab(tab);
@@ -2797,11 +2800,21 @@ export default function App() {
                         }}
                         onNext={() => { setDemographicsBackTarget('LOAN_SETUP_VIEW'); setCurrentMobileScreen('DEMOGRAPHICS'); }}
                         onBack={() => setCurrentMobileScreen('COMPLIANCE_VIEW')}
+                        onManageBeneficiaries={() => { setLoanBeneficiariesBackTarget('LOAN_SETUP_VIEW'); setCurrentMobileScreen('LOAN_BENEFICIARIES'); }}
                       activeTab={masterDataViewReturnTab}
                       onTabPress={(tab) => {
                         setActiveBottomTab(tab);
                         if (tab === 'home') setCurrentMobileScreen('HOME');
                       }}
+                      />
+                    )}
+
+                    {currentMobileScreen === 'LOAN_BENEFICIARIES' && (
+                      <LoanBeneficiaryListScreen
+                        societyName={selectedSociety?.name || centerName?.trim()}
+                        societyType="MILK"
+                        onBack={() => setCurrentMobileScreen(loanBeneficiariesBackTarget)}
+                        onBeneficiariesChanged={() => stampMasterDataUpdated('loanBeneficiaries')}
                       />
                     )}
 
@@ -3571,11 +3584,21 @@ export default function App() {
                           setCurrentMobileScreen('HOME');
                         }}
                         onBack={() => setCurrentMobileScreen(mpcsLoanBackTarget)}
+                        onManageBeneficiaries={() => { setLoanBeneficiariesBackTarget('MPCS_LOAN'); setCurrentMobileScreen('MPCS_LOAN_BENEFICIARIES'); }}
                       activeTab="home"
                       onTabPress={(tab) => {
                         setActiveBottomTab(tab);
                         if (tab === 'home') setCurrentMobileScreen('HOME');
                       }}
+                      />
+                    )}
+
+                    {currentMobileScreen === 'MPCS_LOAN_BENEFICIARIES' && (
+                      <LoanBeneficiaryListScreen
+                        societyName={selectedSociety?.name || centerName?.trim()}
+                        societyType="MPCS"
+                        onBack={() => setCurrentMobileScreen(loanBeneficiariesBackTarget)}
+                        onBeneficiariesChanged={() => stampMasterDataUpdated('loanBeneficiaries')}
                       />
                     )}
 

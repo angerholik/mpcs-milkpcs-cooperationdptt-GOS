@@ -74,6 +74,7 @@ export default function LoanSetupScreen({
   onSaveLoan,
   onNext,
   onBack,
+  onManageBeneficiaries,
   activeTab,
   onTabPress
 }) {
@@ -245,6 +246,18 @@ export default function LoanSetupScreen({
                   <Text style={styles.infoValue}>{loanExtended || "-"}</Text>
                 </View>
               </View>
+
+              {onManageBeneficiaries && (
+                <TouchableOpacity
+                  style={styles.manageBeneficiariesBtn}
+                  onPress={() => { handleSave(); onManageBeneficiaries(); }}
+                  activeOpacity={0.7}
+                >
+                  <MaterialCommunityIcons name="account-cash-outline" size={16} color={COLORS.primary} />
+                  <Text style={styles.manageBeneficiariesBtnText}>Manage Beneficiaries</Text>
+                  <MaterialCommunityIcons name="chevron-right" size={16} color={COLORS.primary} style={{ marginLeft: 'auto' }} />
+                </TouchableOpacity>
+              )}
             </>
           ) : (
             <View style={{ paddingVertical: 14, alignItems: 'center', gap: 4 }}>
@@ -450,6 +463,11 @@ const styles = StyleSheet.create({
   infoCol: { flex: 1 },
   infoLabel: { fontFamily: FONT_FAMILY, fontSize: 8, fontWeight: '800', color: COLORS.slate400, letterSpacing: 1.2, marginBottom: 2 },
   infoValue: { fontFamily: FONT_FAMILY, fontSize: 13, fontWeight: '600', color: COLORS.slate800 },
+  manageBeneficiariesBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 14, paddingTop: 14,
+    borderTopWidth: 1, borderTopColor: COLORS.slate100,
+  },
+  manageBeneficiariesBtnText: { fontFamily: FONT_FAMILY, fontSize: 13, fontWeight: '700', color: COLORS.primary },
   btnWrapper: {
     borderRadius: 16, shadowColor: COLORS.primary, shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.2, shadowRadius: 8, elevation: 4, overflow: 'hidden',

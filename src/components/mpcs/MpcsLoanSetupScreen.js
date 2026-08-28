@@ -72,6 +72,7 @@ export default function MpcsLoanSetupScreen({
   onSaveLoan,
   onNext,
   onBack,
+  onManageBeneficiaries,
   activeTab,
   onTabPress
 }) {
@@ -254,6 +255,18 @@ export default function MpcsLoanSetupScreen({
                   <Text style={styles.infoValue}>{loanExtended || "-"}</Text>
                 </View>
               </View>
+
+              {onManageBeneficiaries && (
+                <TouchableOpacity
+                  style={styles.manageBeneficiariesBtn}
+                  onPress={() => { handleSave(); onManageBeneficiaries(); }}
+                  activeOpacity={0.7}
+                >
+                  <MaterialCommunityIcons name="account-cash-outline" size={16} color={COLORS.primary} />
+                  <Text style={styles.manageBeneficiariesBtnText}>Manage Beneficiaries</Text>
+                  <MaterialCommunityIcons name="chevron-right" size={16} color={COLORS.primary} style={{ marginLeft: 'auto' }} />
+                </TouchableOpacity>
+              )}
             </>
           ) : (
             <View style={{ paddingVertical: 14, alignItems: 'center', gap: 4 }}>
@@ -604,6 +617,11 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: COLORS.slate800,
   },
+  manageBeneficiariesBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 14, paddingTop: 14,
+    borderTopWidth: 1, borderTopColor: COLORS.slate100,
+  },
+  manageBeneficiariesBtnText: { fontFamily: FONT_FAMILY, fontSize: 13, fontWeight: '700', color: COLORS.primary },
   btnWrapper: {
     borderRadius: 16,
     shadowColor: COLORS.primary,

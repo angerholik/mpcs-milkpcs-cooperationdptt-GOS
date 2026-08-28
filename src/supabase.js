@@ -415,3 +415,64 @@ export async function deleteMember(memberId) {
   if (error) console.error('[CORE] deleteMember failed:', error.message);
   return { error };
 }
+
+// ─── Loan Beneficiaries (per-institution loan disbursement roster) ───────────
+// Scoped the same way member_registry is — society_name + society_type — so a
+// beneficiary added while the CI has Dentam MPCS open can never land against
+// any other institution. Aadhaar is stored raw here, matching member_registry's
+// aadhaar_number column (not its hash), per explicit product decision — no
+// hashing needed for loan records.
+export async function fetchLoanBeneficiaries(societyName, societyType) {
+  if (!societyName || !societyType) return { data: [], error: null };
+  const { data, error } = await supabase
+    .from('loan_beneficiaries')
+    .select('id, beneficiary_name, aadhaar_number, amount_taken, amount_paid, amount_remaining, created_at')
+    .eq('society_type', societyType)
+    .ilike('society_name', societyName.trim())
+    .order('created_at', { ascending: false });
+  if (error) console.error('[CORE] fetchLoanBeneficiaries failed:', error.message);
+  return { data: data || [], error };
+}
+
+export async function saveLoanBeneficiary({ societyName, societyType, beneficiaryName, aadhaarNumber, amountTaken, amountPaid, amountRemaining }) {
+  try {
+    const { data, error } = await supabase.from('loan_beneficiaries').insert([{
+      society_name: societyName,
+      society_type: societyType,
+      beneficiary_name: beneficiaryName,
+      aadhaar_number: aadhaarNumber || null,
+      amount_taken: amountTaken !== '' && amountTaken != null ? parseFloat(amountTaken) : null,
+      amount_paid: amountPaid !== '' && amountPaid != null ? parseFloat(amountPaid) : 0,
+      amount_remaining: amountRemaining !== '' && amountRemaining != null ? parseFloat(amountRemaining) : null,
+    }]).select();
+    if (error) console.error('[CORE] saveLoanBeneficiary failed:', error.message);
+    return { data, error };
+  } catch (err) {
+    console.error('[CORE] saveLoanBeneficiary exception:', err);
+    return { data: null, error: err };
+  }
+}
+
+export async function updateLoanBeneficiary(beneficiaryId, { beneficiaryName, aadhaarNumber, amountTaken, amountPaid, amountRemaining }) {
+  try {
+    const { data, error } = await supabase.from('loan_beneficiaries').update({
+      beneficiary_name: beneficiaryName,
+      aadhaar_number: aadhaarNumber || null,
+      amount_taken: amountTaken !== '' && amountTaken != null ? parseFloat(amountTaken) : null,
+      amount_paid: amountPaid !== '' && amountPaid != null ? parseFloat(amountPaid) : 0,
+      amount_remaining: amountRemaining !== '' && amountRemaining != null ? parseFloat(amountRemaining) : null,
+      updated_at: new Date().toISOString(),
+    }).eq('id', beneficiaryId).select();
+    if (error) console.error('[CORE] updateLoanBeneficiary failed:', error.message);
+    return { data, error };
+  } catch (err) {
+    console.error('[CORE] updateLoanBeneficiary exception:', err);
+    return { data: null, error: err };
+  }
+}
+
+export async function deleteLoanBeneficiary(beneficiaryId) {
+  const { error } = await supabase.from('loan_beneficiaries').delete().eq('id', beneficiaryId);
+  if (error) console.error('[CORE] deleteLoanBeneficiary failed:', error.message);
+  return { error };
+}
