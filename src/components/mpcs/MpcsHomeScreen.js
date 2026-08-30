@@ -83,6 +83,7 @@ export default function HomeScreen({
   onManageInstitutions,
   onNavigateScreen,
   hasSubmittedMonthlyParams = false,
+  onNotifyPress,
   activeTab = 'home',
   onTabPress
 }) {
@@ -107,7 +108,7 @@ export default function HomeScreen({
             <Text style={styles.societySelectorText}>{selectedSociety?.name || societyName || 'Select Society'}</Text>
             <MaterialCommunityIcons name="chevron-down" size={16} color="rgba(255,255,255,0.7)" />
           </TouchableOpacity>
-          <TouchableOpacity style={styles.notifyBtn}>
+          <TouchableOpacity style={styles.notifyBtn} onPress={onNotifyPress} activeOpacity={0.7}>
             <MaterialCommunityIcons name="bell-outline" size={20} color="rgba(255,255,255,0.9)" />
             <View style={styles.notifyDot} />
           </TouchableOpacity>

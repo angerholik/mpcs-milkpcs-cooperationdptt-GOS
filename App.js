@@ -2524,6 +2524,7 @@ export default function App() {
                           setReturnMobileScreen('HOME');
                           setCurrentMobileScreen('REVIEW');
                         }}
+                        onNotifyPress={() => setShowHistory(true)}
                         activeTab={activeBottomTab}
                         onTabPress={(tab) => setActiveBottomTab(tab)}
                       />
@@ -3063,6 +3064,7 @@ export default function App() {
                         onManageInstitutions={() => setCurrentMobileScreen('MY_INSTITUTIONS')}
                         onNavigateScreen={(scr) => { setMasterDataViewReturnTab('home'); setCurrentMobileScreen(scr); }}
                         onReviewSubmit={() => setCurrentMobileScreen('MPCS_REVIEW')}
+                        onNotifyPress={() => setShowHistory(true)}
                         activeTab={activeBottomTab}
                         onTabPress={(tab) => setActiveBottomTab(tab)}
                       />
