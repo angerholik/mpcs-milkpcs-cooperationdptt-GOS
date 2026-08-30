@@ -631,6 +631,61 @@ function LoginPage() {
   );
 }
 
+// ─── Pagination ───────────────────────────────────────────────────────────────
+// Slices `list` for the given page/pageSize, clamping page to the valid range
+// so a filter change that shrinks the list (or a stale page from before a
+// refetch) never leaves the table pointed at a page that no longer exists.
+function paginate(list, page, pageSize) {
+  const totalPages = Math.max(1, Math.ceil(list.length / pageSize));
+  const clampedPage = Math.min(Math.max(1, page), totalPages);
+  const start = (clampedPage - 1) * pageSize;
+  return { pageItems: list.slice(start, start + pageSize), totalPages, clampedPage };
+}
+
+function Pagination({ page, totalPages, total, pageSize, onPageChange, onPageSizeChange, pageSizeOptions = [10, 25, 50] }) {
+  if (total === 0) return null;
+  const start = (page - 1) * pageSize + 1;
+  const end = Math.min(page * pageSize, total);
+  return (
+    <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', flexWrap:'wrap', gap:'12px', padding:'14px 4px 0'}}>
+      <div style={{fontSize:'13px', color:'#64748B'}}>
+        Showing {start} to {end} of {total} entries
+      </div>
+      <div style={{display:'flex', alignItems:'center', gap:'8px'}}>
+        <button type="button" className="btn-ghost" disabled={page <= 1}
+          onClick={() => onPageChange(Math.max(1, page - 1))}
+          style={{width:'32px', height:'32px', padding:0, borderRadius:'8px', border:'1px solid #E2E8F0', fontSize:'14px', opacity: page <= 1 ? 0.4 : 1}}>
+          ‹
+        </button>
+        {Array.from({ length: totalPages }, (_, i) => i + 1).map(p => (
+          <button key={p} type="button" onClick={() => onPageChange(p)}
+            style={{
+              width:'32px', height:'32px', borderRadius:'8px', fontSize:'13px', fontWeight:800,
+              border: p === page ? 'none' : '1px solid #E2E8F0',
+              background: p === page ? 'var(--brand-burgundy)' : '#FFFFFF',
+              color: p === page ? '#FFFFFF' : '#334155',
+              cursor:'pointer',
+            }}>
+            {p}
+          </button>
+        ))}
+        <button type="button" className="btn-ghost" disabled={page >= totalPages}
+          onClick={() => onPageChange(Math.min(totalPages, page + 1))}
+          style={{width:'32px', height:'32px', padding:0, borderRadius:'8px', border:'1px solid #E2E8F0', fontSize:'14px', opacity: page >= totalPages ? 0.4 : 1}}>
+          ›
+        </button>
+        <select
+          value={pageSize}
+          onChange={(e) => onPageSizeChange(Number(e.target.value))}
+          style={{height:'32px', borderRadius:'8px', border:'1px solid #E2E8F0', fontSize:'12px', fontWeight:700, color:'#334155', padding:'0 8px', background:'#FFFFFF'}}
+        >
+          {pageSizeOptions.map(n => <option key={n} value={n}>{n} / page</option>)}
+        </select>
+      </div>
+    </div>
+  );
+}
+
 // ─── StatCard ─────────────────────────────────────────────────────────────────
 function StatCard({ icon, label, value, color='#7F1D1D', bg='#FEF2F2', sub, onClick, active, breakdown, popoverAlign='left', entityLabel='MPCS', entityNoun='society', entityNounPlural='societies' }) {
   const [hovered, setHovered] = useState(false);
@@ -2598,15 +2653,19 @@ function Dashboard({ onLogout, session }) {
 
   const [officersPage, setOfficersPage] = useState(1);
   const [officersPageSize, setOfficersPageSize] = useState(10);
-  const officersTotalPages = Math.max(1, Math.ceil(scopedOfficers.length / officersPageSize));
+  const [mpcsPage, setMpcsPage] = useState(1);
+  const [mpcsPageSize, setMpcsPageSize] = useState(10);
+  const [milkPage, setMilkPage] = useState(1);
+  const [milkPageSize, setMilkPageSize] = useState(10);
+  const [memberPage, setMemberPage] = useState(1);
+  const [memberPageSize, setMemberPageSize] = useState(10);
+  const [loanBenPage, setLoanBenPage] = useState(1);
+  const [loanBenPageSize, setLoanBenPageSize] = useState(10);
   // Clamp rather than reset to 1 outright — keeps the user's page position
   // stable across the frequent silent refetches (10s poll + realtime sync)
   // instead of yanking them back to page 1 every time officers reloads.
-  const officersPageClamped = Math.min(officersPage, officersTotalPages);
-  const officersPaged = useMemo(() => {
-    const start = (officersPageClamped - 1) * officersPageSize;
-    return scopedOfficers.slice(start, start + officersPageSize);
-  }, [scopedOfficers, officersPageClamped, officersPageSize]);
+  const { pageItems: officersPaged, totalPages: officersTotalPages, clampedPage: officersPageClamped } =
+    useMemo(() => paginate(scopedOfficers, officersPage, officersPageSize), [scopedOfficers, officersPage, officersPageSize]);
 
   // 🔍 Scoped Data Calculation based on User Role & Entity Assignments
   const scopedMilkRows = useMemo(() => {
@@ -3064,6 +3123,15 @@ function Dashboard({ onLogout, session }) {
     );
     return d;
   }, [scopedLoanBenRows, loanBenTypeFilter, loanBenSocietyFilter, loanBenSearchQ]);
+
+  const { pageItems: mpcsPaged, totalPages: mpcsTotalPages, clampedPage: mpcsPageClamped } =
+    useMemo(() => paginate(mpcsFiltered, mpcsPage, mpcsPageSize), [mpcsFiltered, mpcsPage, mpcsPageSize]);
+  const { pageItems: milkPaged, totalPages: milkTotalPages, clampedPage: milkPageClamped } =
+    useMemo(() => paginate(milkFiltered, milkPage, milkPageSize), [milkFiltered, milkPage, milkPageSize]);
+  const { pageItems: memberPaged, totalPages: memberTotalPages, clampedPage: memberPageClamped } =
+    useMemo(() => paginate(memberFiltered, memberPage, memberPageSize), [memberFiltered, memberPage, memberPageSize]);
+  const { pageItems: loanBenPaged, totalPages: loanBenTotalPages, clampedPage: loanBenPageClamped } =
+    useMemo(() => paginate(loanBenFiltered, loanBenPage, loanBenPageSize), [loanBenFiltered, loanBenPage, loanBenPageSize]);
 
   const loanBenStats = useMemo(() => ({
     total: scopedLoanBenRows.length,
@@ -4120,44 +4188,9 @@ function Dashboard({ onLogout, session }) {
                     </tbody>
                   </table>
                 </div>
-                {scopedOfficers.length > 0 && (
-                  <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', flexWrap:'wrap', gap:'12px', padding:'14px 4px 0'}}>
-                    <div style={{fontSize:'13px', color:'#64748B'}}>
-                      Showing {(officersPageClamped - 1) * officersPageSize + 1} to {Math.min(officersPageClamped * officersPageSize, scopedOfficers.length)} of {scopedOfficers.length} entries
-                    </div>
-                    <div style={{display:'flex', alignItems:'center', gap:'8px'}}>
-                      <button type="button" className="btn-ghost" disabled={officersPageClamped <= 1}
-                        onClick={() => setOfficersPage(p => Math.max(1, p - 1))}
-                        style={{width:'32px', height:'32px', padding:0, borderRadius:'8px', border:'1px solid #E2E8F0', fontSize:'14px', opacity: officersPageClamped <= 1 ? 0.4 : 1}}>
-                        ‹
-                      </button>
-                      {Array.from({ length: officersTotalPages }, (_, i) => i + 1).map(p => (
-                        <button key={p} type="button" onClick={() => setOfficersPage(p)}
-                          style={{
-                            width:'32px', height:'32px', borderRadius:'8px', fontSize:'13px', fontWeight:800,
-                            border: p === officersPageClamped ? 'none' : '1px solid #E2E8F0',
-                            background: p === officersPageClamped ? 'var(--brand-burgundy)' : '#FFFFFF',
-                            color: p === officersPageClamped ? '#FFFFFF' : '#334155',
-                            cursor:'pointer',
-                          }}>
-                          {p}
-                        </button>
-                      ))}
-                      <button type="button" className="btn-ghost" disabled={officersPageClamped >= officersTotalPages}
-                        onClick={() => setOfficersPage(p => Math.min(officersTotalPages, p + 1))}
-                        style={{width:'32px', height:'32px', padding:0, borderRadius:'8px', border:'1px solid #E2E8F0', fontSize:'14px', opacity: officersPageClamped >= officersTotalPages ? 0.4 : 1}}>
-                        ›
-                      </button>
-                      <select
-                        value={officersPageSize}
-                        onChange={(e) => { setOfficersPageSize(Number(e.target.value)); setOfficersPage(1); }}
-                        style={{height:'32px', borderRadius:'8px', border:'1px solid #E2E8F0', fontSize:'12px', fontWeight:700, color:'#334155', padding:'0 8px', background:'#FFFFFF'}}
-                      >
-                        {[10, 25, 50].map(n => <option key={n} value={n}>{n} / page</option>)}
-                      </select>
-                    </div>
-                  </div>
-                )}
+                <Pagination page={officersPageClamped} totalPages={officersTotalPages} total={scopedOfficers.length}
+                  pageSize={officersPageSize} onPageChange={setOfficersPage}
+                  onPageSizeChange={(n) => { setOfficersPageSize(n); setOfficersPage(1); }} />
               </div>
             </div>
           )}
@@ -4299,7 +4332,7 @@ function Dashboard({ onLogout, session }) {
                         </tr>
                       </thead>
                       <tbody>
-                        {milkFiltered.map((row,i)=>{
+                        {milkPaged.map((row,i)=>{
                           const mAuditAgm = getMilkAuditAgm(row);
                           return (
                             <tr key={row.id||i} onClick={()=>setMilkSelected(row)} style={{cursor:'pointer', transition:'background 0.15s ease'}}>
@@ -4341,6 +4374,9 @@ function Dashboard({ onLogout, session }) {
                     </table>
                   </div>
                 )}
+                <Pagination page={milkPageClamped} totalPages={milkTotalPages} total={milkFiltered.length}
+                  pageSize={milkPageSize} onPageChange={setMilkPage}
+                  onPageSizeChange={(n) => { setMilkPageSize(n); setMilkPage(1); }} />
               </div>
             </div>
           )}
@@ -4464,7 +4500,7 @@ function Dashboard({ onLogout, session }) {
                         </tr>
                       </thead>
                       <tbody>
-                        {memberFiltered.map((m,i)=>(
+                        {memberPaged.map((m,i)=>(
                           <tr key={m.id||i} style={m.flagged ? {background:'#FFFBEB'} : undefined}>
                             <td style={{whiteSpace:'nowrap', fontSize:'12px', color:'#64748B', fontWeight:600}}>{m.created_at?new Date(m.created_at).toLocaleDateString('en-IN'):'—'}</td>
                             <td style={{fontWeight:800, fontSize:'13px', color:'#0F172A'}}>
@@ -4509,6 +4545,9 @@ function Dashboard({ onLogout, session }) {
                     </table>
                   </div>
                 )}
+                <Pagination page={memberPageClamped} totalPages={memberTotalPages} total={memberFiltered.length}
+                  pageSize={memberPageSize} onPageChange={setMemberPage}
+                  onPageSizeChange={(n) => { setMemberPageSize(n); setMemberPage(1); }} />
               </div>
             </div>
           )}
@@ -4622,7 +4661,7 @@ function Dashboard({ onLogout, session }) {
                         </tr>
                       </thead>
                       <tbody>
-                        {loanBenFiltered.map((b,i)=>(
+                        {loanBenPaged.map((b,i)=>(
                           <tr key={b.id||i}>
                             <td style={{whiteSpace:'nowrap', fontSize:'12px', color:'#64748B', fontWeight:600}}>{b.created_at?new Date(b.created_at).toLocaleDateString('en-IN'):'—'}</td>
                             <td style={{fontWeight:800, fontSize:'13px', color:'#0F172A'}}>{b.beneficiary_name||'—'}</td>
@@ -4640,6 +4679,9 @@ function Dashboard({ onLogout, session }) {
                     </table>
                   </div>
                 )}
+                <Pagination page={loanBenPageClamped} totalPages={loanBenTotalPages} total={loanBenFiltered.length}
+                  pageSize={loanBenPageSize} onPageChange={setLoanBenPage}
+                  onPageSizeChange={(n) => { setLoanBenPageSize(n); setLoanBenPage(1); }} />
               </div>
             </div>
           )}
@@ -4779,7 +4821,7 @@ function Dashboard({ onLogout, session }) {
                       <th style={{textAlign:'center', width:'100px'}}>Loan</th>
                     </tr></thead>
                     <tbody>
-                      {mpcsFiltered.map((row,i)=>{
+                      {mpcsPaged.map((row,i)=>{
                         const auditAgm = getMpcsAuditAgm(row);
                         return (
                           <tr key={row.id||i} onClick={()=>setMpcsSelected(row)} style={{cursor:'pointer', transition:'background 0.15s ease'}}>
@@ -4820,6 +4862,9 @@ function Dashboard({ onLogout, session }) {
                   </table>
                 </div>
               )}
+              <Pagination page={mpcsPageClamped} totalPages={mpcsTotalPages} total={mpcsFiltered.length}
+                pageSize={mpcsPageSize} onPageChange={setMpcsPage}
+                onPageSizeChange={(n) => { setMpcsPageSize(n); setMpcsPage(1); }} />
             </div>
           </div>
         )}
