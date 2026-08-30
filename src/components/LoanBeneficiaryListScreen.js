@@ -54,6 +54,18 @@ const notify = (title, message) => {
   }
 };
 
+// Supabase surfaces a blocked RLS write as a raw Postgres error ("new row
+// violates row-level security policy for table..."), which means nothing to
+// a field officer and exposes internal schema details. Only a permission
+// gap produces this specific error, so it can be swapped for plain language
+// without masking any other real failure (network, validation, etc.).
+const friendlyErrorMessage = (error, fallback) => {
+  if (error?.code === '42501' || /row-level security policy/i.test(error?.message || '')) {
+    return "You don't have access to do this for this institution — only the Cooperative Inspector or an ACI/PA assigned here can.";
+  }
+  return error?.message || fallback;
+};
+
 // Per-institution loan beneficiary roster — mirrors MemberDataScreen's shape
 // (society_name + society_type scoping, same add/edit/review/delete flow) but
 // for who actually received loan money against this society's active loan,
@@ -114,7 +126,7 @@ export default function LoanBeneficiaryListScreen({
     setSaving(false);
     if (error) {
       console.error('[CORE] saveLoanBeneficiary failed:', error);
-      notify('Save Failed', error.message || 'Could not save beneficiary. Please try again.');
+      notify('Save Failed', friendlyErrorMessage(error, 'Could not save beneficiary. Please try again.'));
       return;
     }
     setForm(emptyForm);
@@ -146,7 +158,7 @@ export default function LoanBeneficiaryListScreen({
       const { error } = await deleteLoanBeneficiary(b.id);
       if (error) {
         console.error('[CORE] deleteLoanBeneficiary failed:', error);
-        notify('Delete Failed', error.message || 'Could not delete beneficiary.');
+        notify('Delete Failed', friendlyErrorMessage(error, 'Could not delete beneficiary.'));
         return;
       }
       setBeneficiaries(prev => prev.filter(x => x.id !== b.id));
