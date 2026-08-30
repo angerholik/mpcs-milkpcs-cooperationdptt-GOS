@@ -56,7 +56,13 @@ export default function MoreScreen({
   onSignOut,
   user,
   role,
-  displayName
+  displayName,
+  activeModule = 'MILK',
+  selectedSociety,
+  institutionsList = [],
+  onSelectSociety,
+  onManageInstitutions,
+  onSwitchModule
 }) {
   // Screen keys diverge between the two apps (MPCS prefixes its master data
   // screens with MPCS_; Milk PCS doesn't), so this menu can't use one fixed
@@ -94,7 +100,14 @@ export default function MoreScreen({
 
   return (
     <View style={styles.container}>
-      <HeaderNav />
+      <HeaderNav
+        activeModule={activeModule}
+        selectedSociety={selectedSociety}
+        institutionsList={institutionsList}
+        onSelectSociety={onSelectSociety}
+        onManageInstitutions={onManageInstitutions}
+        onSwitchModule={onSwitchModule}
+      />
 
       {/* Ambient Decorative Background Blobs (Matches Dashboard Overview) */}
       <View style={styles.bgBlobTop} pointerEvents="none" />

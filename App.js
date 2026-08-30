@@ -2404,6 +2404,14 @@ export default function App() {
                     activeTab="records"
                     userProfile={userProfile}
                     reportType="MILK"
+                    activeModule="MILK"
+                    selectedSociety={selectedSociety}
+                    institutionsList={institutionsList}
+                    onSelectSociety={handleSelectSociety}
+                    onManageInstitutions={() => setCurrentMobileScreen('MY_INSTITUTIONS')}
+                    onSwitchModule={(mod) => {
+                      if (mod === 'MPCS') setActiveView('MPCS');
+                    }}
                     onTabPress={(tab) => {
                       setActiveBottomTab(tab);
                       if (tab === 'home') setCurrentMobileScreen('HOME');
@@ -2416,6 +2424,14 @@ export default function App() {
                     user={userProfile}
                     role={getUserRole()}
                     displayName={getUserDisplayName()}
+                    activeModule="MILK"
+                    selectedSociety={selectedSociety}
+                    institutionsList={institutionsList}
+                    onSelectSociety={handleSelectSociety}
+                    onManageInstitutions={() => setCurrentMobileScreen('MY_INSTITUTIONS')}
+                    onSwitchModule={(mod) => {
+                      if (mod === 'MPCS') setActiveView('MPCS');
+                    }}
                     onTabPress={(tab) => {
                       setActiveBottomTab(tab);
                       if (tab === 'home') setCurrentMobileScreen('HOME');
@@ -2925,6 +2941,14 @@ export default function App() {
                     activeTab="records"
                     userProfile={userProfile}
                     reportType="MPCS"
+                    activeModule="MPCS"
+                    selectedSociety={selectedSociety}
+                    institutionsList={institutionsList}
+                    onSelectSociety={handleSelectSociety}
+                    onManageInstitutions={() => setCurrentMobileScreen('MY_INSTITUTIONS')}
+                    onSwitchModule={(mod) => {
+                      if (mod === 'MILK') setActiveView('MAIN');
+                    }}
                     onTabPress={(tab) => {
                       setActiveBottomTab(tab);
                       if (tab === 'home') setCurrentMobileScreen('HOME');
@@ -2966,6 +2990,14 @@ export default function App() {
                     user={userProfile}
                     role={getUserRole()}
                     displayName={getUserDisplayName()}
+                    activeModule="MPCS"
+                    selectedSociety={selectedSociety}
+                    institutionsList={institutionsList}
+                    onSelectSociety={handleSelectSociety}
+                    onManageInstitutions={() => setCurrentMobileScreen('MY_INSTITUTIONS')}
+                    onSwitchModule={(mod) => {
+                      if (mod === 'MILK') setActiveView('MAIN');
+                    }}
                     onTabPress={(tab) => {
                       setActiveBottomTab(tab);
                       if (tab === 'home') setCurrentMobileScreen('HOME');

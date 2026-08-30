@@ -36,7 +36,13 @@ export default function RecordsScreen({
   onNavigateHome,
   userProfile = null,
   records = [],
-  reportType = null
+  reportType = null,
+  activeModule = 'MILK',
+  selectedSociety,
+  institutionsList = [],
+  onSelectSociety,
+  onManageInstitutions,
+  onSwitchModule
 }) {
   const [searchQ, setSearchQ] = useState('');
   const [dbRecords, setDbRecords] = useState([]);
@@ -269,7 +275,14 @@ export default function RecordsScreen({
 
   return (
     <View style={styles.container}>
-      <HeaderNav />
+      <HeaderNav
+        activeModule={activeModule}
+        selectedSociety={selectedSociety}
+        institutionsList={institutionsList}
+        onSelectSociety={onSelectSociety}
+        onManageInstitutions={onManageInstitutions}
+        onSwitchModule={onSwitchModule}
+      />
 
       <ScrollView style={styles.scrollContent} contentContainerStyle={[styles.scrollInner, webCapWidth]}>
         {/* Screen Title */}
