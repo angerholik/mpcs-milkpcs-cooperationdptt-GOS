@@ -2412,7 +2412,6 @@ export default function App() {
                   />
                 ) : activeBottomTab === 'more' ? (
                   <MoreScreen
-                    module="MILK"
                     activeTab="more"
                     user={userProfile}
                     role={getUserRole()}
@@ -2963,7 +2962,6 @@ export default function App() {
                   />
                 ) : activeBottomTab === 'more' ? (
                   <MoreScreen
-                    module="MPCS"
                     activeTab="more"
                     user={userProfile}
                     role={getUserRole()}

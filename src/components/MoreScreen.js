@@ -49,7 +49,6 @@ const ROLE_LABELS = {
 };
 
 export default function MoreScreen({
-  module = 'MILK',
   activeTab = 'more',
   onTabPress,
   onNavigateScreen,
@@ -63,30 +62,14 @@ export default function MoreScreen({
   // screens with MPCS_; Milk PCS doesn't), so this menu can't use one fixed
   // set of ids for both — navigating with the wrong id sets
   // currentMobileScreen to a key nothing renders, producing a blank screen.
-  const isMpcs = module === 'MPCS';
   const menuOptions = [
-    // Institutional Profile used to be listed here too, opening the same
-    // screen as the Profile tab and Master Data's entry — three separate
-    // places doing the same thing, which is exactly what let their
-    // navigation wiring drift out of sync with each other over time. The
-    // Profile tab now covers this (a summary card with a link into Master
-    // Data to actually edit), so it's dropped from this menu entirely.
-    {
-      id: isMpcs ? 'MPCS_DEMOGRAPHICS_VIEW' : 'DEMOGRAPHICS',
-      label: 'Demographics Breakdown',
-      sub: 'SC/ST/OBC/GEN registered member counts',
-      icon: 'account-group-outline',
-      color: '#7c3aed',
-      bgColor: '#f5f3ff',
-    },
-    {
-      id: isMpcs ? 'MPCS_COMPLIANCE_VIEW' : 'COMPLIANCE_VIEW',
-      label: 'Compliance & Audit Details',
-      sub: 'Audit date, AGM records & active loan status',
-      icon: 'shield-check-outline',
-      color: '#047857',
-      bgColor: '#ecfdf5',
-    },
+    // Institutional Profile, Demographics Breakdown, and Compliance & Audit
+    // Details used to be listed here too, each opening the exact same screen
+    // Master Data's own directory already links to — three+ separate
+    // doorways into one screen, which is exactly what let their navigation
+    // wiring drift out of sync with each other over time. All three are
+    // dropped from this menu entirely; Master Data Directory is the one
+    // place to reach them now.
     {
       id: 'BULLETINS',
       label: 'Departmental Bulletins',
