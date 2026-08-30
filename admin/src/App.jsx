@@ -654,7 +654,7 @@ function Pagination({ page, totalPages, total, pageSize, onPageChange, onPageSiz
       <div style={{display:'flex', alignItems:'center', gap:'8px'}}>
         <button type="button" className="btn-ghost" disabled={page <= 1}
           onClick={() => onPageChange(Math.max(1, page - 1))}
-          style={{width:'32px', height:'32px', padding:0, borderRadius:'8px', border:'1px solid #E2E8F0', fontSize:'14px', opacity: page <= 1 ? 0.4 : 1}}>
+          style={{width:'32px', height:'32px', padding:0, borderRadius:'8px', border:'1px solid #E2E8F0', fontSize:'14px', display:'inline-flex', alignItems:'center', justifyContent:'center', opacity: page <= 1 ? 0.4 : 1}}>
           ‹
         </button>
         {Array.from({ length: totalPages }, (_, i) => i + 1).map(p => (
@@ -671,7 +671,7 @@ function Pagination({ page, totalPages, total, pageSize, onPageChange, onPageSiz
         ))}
         <button type="button" className="btn-ghost" disabled={page >= totalPages}
           onClick={() => onPageChange(Math.min(totalPages, page + 1))}
-          style={{width:'32px', height:'32px', padding:0, borderRadius:'8px', border:'1px solid #E2E8F0', fontSize:'14px', opacity: page >= totalPages ? 0.4 : 1}}>
+          style={{width:'32px', height:'32px', padding:0, borderRadius:'8px', border:'1px solid #E2E8F0', fontSize:'14px', display:'inline-flex', alignItems:'center', justifyContent:'center', opacity: page >= totalPages ? 0.4 : 1}}>
           ›
         </button>
         <select
@@ -2198,6 +2198,8 @@ function AuditOverview({ mpcsRows, onSelectSociety }) {
   const [filterGrade, setFilterGrade]   = useState('');
   const [filterYear, setFilterYear]     = useState('');
   const [searchQ, setSearchQ]           = useState('');
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
 
   const stats = useMemo(() => {
     const total = mpcsRows.length;
@@ -2228,6 +2230,9 @@ function AuditOverview({ mpcsRows, onSelectSociety }) {
       return true;
     });
   }, [mpcsRows, filterStatus, filterGrade, filterYear, searchQ]);
+
+  const { pageItems: paged, totalPages, clampedPage } =
+    useMemo(() => paginate(filtered, page, pageSize), [filtered, page, pageSize]);
 
   const gradeChartData = useMemo(() => {
     return [
@@ -2386,7 +2391,7 @@ function AuditOverview({ mpcsRows, onSelectSociety }) {
                   </td>
                 </tr>
               ) : (
-                filtered.map((row, idx) => {
+                paged.map((row, idx) => {
                   const isAudited = isYes(row.audit_done);
                   const grade = row.audit_category || 'N/A';
                   const gradeColor = grade === 'A' ? '#047857' : grade === 'B' ? '#1D4ED8' : grade === 'C' ? '#D97706' : grade === 'D' ? '#B91C1C' : '#64748B';
@@ -2424,6 +2429,9 @@ function AuditOverview({ mpcsRows, onSelectSociety }) {
             </tbody>
           </table>
         </div>
+        <Pagination page={clampedPage} totalPages={totalPages} total={filtered.length}
+          pageSize={pageSize} onPageChange={setPage}
+          onPageSizeChange={(n) => { setPageSize(n); setPage(1); }} />
       </div>
     </div>
   );
@@ -2867,6 +2875,8 @@ function Dashboard({ onLogout, session }) {
   const [reportEndDate, setReportEndDate] = useState(new Date().toISOString().slice(0, 10));
   const [reportEntity, setReportEntity] = useState(''); // '' = all societies/centers
   const [generatedReport, setGeneratedReport] = useState(null); // { title, columns, rows } | null
+  const [reportPage, setReportPage] = useState(1);
+  const [reportPageSize, setReportPageSize] = useState(10);
 
   // Which society/center names to offer depends on the report category —
   // an MPCS report should only list MPCS societies, a Milk report only
@@ -3132,6 +3142,8 @@ function Dashboard({ onLogout, session }) {
     useMemo(() => paginate(memberFiltered, memberPage, memberPageSize), [memberFiltered, memberPage, memberPageSize]);
   const { pageItems: loanBenPaged, totalPages: loanBenTotalPages, clampedPage: loanBenPageClamped } =
     useMemo(() => paginate(loanBenFiltered, loanBenPage, loanBenPageSize), [loanBenFiltered, loanBenPage, loanBenPageSize]);
+  const { pageItems: reportPaged, totalPages: reportTotalPages, clampedPage: reportPageClamped } =
+    useMemo(() => paginate(generatedReport?.rows || [], reportPage, reportPageSize), [generatedReport, reportPage, reportPageSize]);
 
   const loanBenStats = useMemo(() => ({
     total: scopedLoanBenRows.length,
@@ -3953,6 +3965,7 @@ function Dashboard({ onLogout, session }) {
                     ];
                   }
                   setGeneratedReport({ title: reportCategory, columns, rows });
+                  setReportPage(1);
                 }}
               >
                 Generate Report
@@ -3993,7 +4006,7 @@ function Dashboard({ onLogout, session }) {
                           <tr>{generatedReport.columns.map(c => <th key={c.label}>{c.label}</th>)}</tr>
                         </thead>
                         <tbody>
-                          {generatedReport.rows.map((r, i) => (
+                          {reportPaged.map((r, i) => (
                             <tr key={r.id || i}>
                               {generatedReport.columns.map(c => {
                                 const val = c.get(r);
@@ -4013,6 +4026,9 @@ function Dashboard({ onLogout, session }) {
                       </table>
                     </div>
                   )}
+                  <Pagination page={reportPageClamped} totalPages={reportTotalPages} total={generatedReport.rows.length}
+                    pageSize={reportPageSize} onPageChange={setReportPage}
+                    onPageSizeChange={(n) => { setReportPageSize(n); setReportPage(1); }} />
                 </div>
               )}
             </div>
@@ -4890,17 +4906,23 @@ function Dashboard({ onLogout, session }) {
                   </tr>
                 </thead>
                 <tbody>
-                  {scopedOfficers.map((off, idx) => (
-                    <tr key={off.id || idx}>
-                      <td>{idx + 1}</td>
-                      <td><strong>{off.name}</strong></td>
-                      <td>{off.email}</td>
-                      <td>{off.subdivision || off.mobile || off.phone || '—'}</td>
-                      <td><span className="badge badge-gold">{off.role || 'Inspector'}</span></td>
-                    </tr>
-                  ))}
+                  {officersPaged.map((off, pageIdx) => {
+                    const idx = (officersPageClamped - 1) * officersPageSize + pageIdx;
+                    return (
+                      <tr key={off.id || idx}>
+                        <td>{idx + 1}</td>
+                        <td><strong>{off.name}</strong></td>
+                        <td>{off.email}</td>
+                        <td>{off.subdivision || off.mobile || off.phone || '—'}</td>
+                        <td><span className="badge badge-gold">{off.role || 'Inspector'}</span></td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
+              <Pagination page={officersPageClamped} totalPages={officersTotalPages} total={scopedOfficers.length}
+                pageSize={officersPageSize} onPageChange={setOfficersPage}
+                onPageSizeChange={(n) => { setOfficersPageSize(n); setOfficersPage(1); }} />
             </div>
           </div>
         )}
