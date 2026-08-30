@@ -647,7 +647,7 @@ function Pagination({ page, totalPages, total, pageSize, onPageChange, onPageSiz
   const start = (page - 1) * pageSize + 1;
   const end = Math.min(page * pageSize, total);
   return (
-    <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', flexWrap:'wrap', gap:'12px', padding:'14px 4px 0'}}>
+    <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', flexWrap:'wrap', gap:'12px', padding:'16px 20px', borderTop:'1px solid var(--border)'}}>
       <div style={{fontSize:'13px', color:'#64748B'}}>
         Showing {start} to {end} of {total} entries
       </div>
