@@ -2596,6 +2596,18 @@ function Dashboard({ onLogout, session }) {
     });
   }, [officers, userRole, myOfficerRecord, officersClaimedByOtherCis]);
 
+  const [officersPage, setOfficersPage] = useState(1);
+  const [officersPageSize, setOfficersPageSize] = useState(10);
+  const officersTotalPages = Math.max(1, Math.ceil(scopedOfficers.length / officersPageSize));
+  // Clamp rather than reset to 1 outright — keeps the user's page position
+  // stable across the frequent silent refetches (10s poll + realtime sync)
+  // instead of yanking them back to page 1 every time officers reloads.
+  const officersPageClamped = Math.min(officersPage, officersTotalPages);
+  const officersPaged = useMemo(() => {
+    const start = (officersPageClamped - 1) * officersPageSize;
+    return scopedOfficers.slice(start, start + officersPageSize);
+  }, [scopedOfficers, officersPageClamped, officersPageSize]);
+
   // 🔍 Scoped Data Calculation based on User Role & Entity Assignments
   const scopedMilkRows = useMemo(() => {
     if (userRole === 'System Admin') return milkRows;
@@ -3979,7 +3991,7 @@ function Dashboard({ onLogout, session }) {
                         <th>Designation / Role</th>
                         <th>Assigned Institutions</th>
                         <th>Status</th>
-                        <th>Actions</th>
+                        <th style={{textAlign:'center'}}>Actions</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -3989,7 +4001,8 @@ function Dashboard({ onLogout, session }) {
                             No officers have registered yet. Inspectors appear here once they sign up from the mobile app.
                           </td>
                         </tr>
-                      ) : scopedOfficers.map((off, idx) => {
+                      ) : officersPaged.map((off, pageIdx) => {
+                        const idx = (officersPageClamped - 1) * officersPageSize + pageIdx;
                         // scopedHierarchyMapping is already restricted to this CI's own
                         // delegations (or everything, for System Admin) — see its definition
                         // above. An ACI or PA routinely carries more than one MPCS/Milk unit at
@@ -4063,9 +4076,9 @@ function Dashboard({ onLogout, session }) {
                               )}
                             </td>
                             <td style={{verticalAlign:'top', paddingTop:'14px'}}><span className="badge badge-green">ACTIVE</span></td>
-                            <td style={{verticalAlign:'top', paddingTop:'14px', position:'relative'}}>
+                            <td style={{verticalAlign:'top', paddingTop:'14px', position:'relative', textAlign:'center'}}>
                               {hasAnyAction ? (
-                                <button type="button" className="btn-ghost" style={{width:'28px', height:'28px', padding:0, fontSize:'14px', fontWeight:900}} onClick={() => setOpenOfficerPopover(actionsOpen ? null : { id: off.id || idx, type: 'actions' })}>
+                                <button type="button" className="btn-ghost" style={{width:'28px', height:'28px', padding:0, fontSize:'14px', fontWeight:900, display:'inline-flex', alignItems:'center', justifyContent:'center'}} onClick={() => setOpenOfficerPopover(actionsOpen ? null : { id: off.id || idx, type: 'actions' })}>
                                   ⋮
                                 </button>
                               ) : <span style={{color:'#CBD5E1', fontSize:'11px'}}>—</span>}
@@ -4107,6 +4120,44 @@ function Dashboard({ onLogout, session }) {
                     </tbody>
                   </table>
                 </div>
+                {scopedOfficers.length > 0 && (
+                  <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', flexWrap:'wrap', gap:'12px', padding:'14px 4px 0'}}>
+                    <div style={{fontSize:'13px', color:'#64748B'}}>
+                      Showing {(officersPageClamped - 1) * officersPageSize + 1} to {Math.min(officersPageClamped * officersPageSize, scopedOfficers.length)} of {scopedOfficers.length} entries
+                    </div>
+                    <div style={{display:'flex', alignItems:'center', gap:'8px'}}>
+                      <button type="button" className="btn-ghost" disabled={officersPageClamped <= 1}
+                        onClick={() => setOfficersPage(p => Math.max(1, p - 1))}
+                        style={{width:'32px', height:'32px', padding:0, borderRadius:'8px', border:'1px solid #E2E8F0', fontSize:'14px', opacity: officersPageClamped <= 1 ? 0.4 : 1}}>
+                        ‹
+                      </button>
+                      {Array.from({ length: officersTotalPages }, (_, i) => i + 1).map(p => (
+                        <button key={p} type="button" onClick={() => setOfficersPage(p)}
+                          style={{
+                            width:'32px', height:'32px', borderRadius:'8px', fontSize:'13px', fontWeight:800,
+                            border: p === officersPageClamped ? 'none' : '1px solid #E2E8F0',
+                            background: p === officersPageClamped ? 'var(--brand-burgundy)' : '#FFFFFF',
+                            color: p === officersPageClamped ? '#FFFFFF' : '#334155',
+                            cursor:'pointer',
+                          }}>
+                          {p}
+                        </button>
+                      ))}
+                      <button type="button" className="btn-ghost" disabled={officersPageClamped >= officersTotalPages}
+                        onClick={() => setOfficersPage(p => Math.min(officersTotalPages, p + 1))}
+                        style={{width:'32px', height:'32px', padding:0, borderRadius:'8px', border:'1px solid #E2E8F0', fontSize:'14px', opacity: officersPageClamped >= officersTotalPages ? 0.4 : 1}}>
+                        ›
+                      </button>
+                      <select
+                        value={officersPageSize}
+                        onChange={(e) => { setOfficersPageSize(Number(e.target.value)); setOfficersPage(1); }}
+                        style={{height:'32px', borderRadius:'8px', border:'1px solid #E2E8F0', fontSize:'12px', fontWeight:700, color:'#334155', padding:'0 8px', background:'#FFFFFF'}}
+                      >
+                        {[10, 25, 50].map(n => <option key={n} value={n}>{n} / page</option>)}
+                      </select>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           )}
