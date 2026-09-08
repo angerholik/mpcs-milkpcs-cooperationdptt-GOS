@@ -2438,7 +2438,7 @@ function AuditOverview({ mpcsRows, onSelectSociety }) {
 }
 
 // ─── Dashboard ────────────────────────────────────────────────────────────────
-function Dashboard({ onLogout, session }) {
+function Dashboard({ onLogout, session, officerRole }) {
   const [activeTab, setActiveTab] = useState('DASHBOARD'); // 'DASHBOARD' | 'MILK' | 'MPCS' | 'AUDIT' | 'STATS' | 'OFFICERS'
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => localStorage.getItem('mpcs_admin_sidebar_collapsed') === 'true');
@@ -2608,7 +2608,7 @@ function Dashboard({ onLogout, session }) {
     () => officers.find(o => (o.email || '').toLowerCase() === (session?.user?.email || '').toLowerCase()),
     [officers, session]
   );
-  const userRole = isSystemAdmin(session) ? 'System Admin' : 'Inspector'; // 'System Admin' | 'Inspector'
+  const userRole = isSystemAdmin(officerRole) ? 'System Admin' : 'Inspector'; // 'System Admin' | 'Inspector'
   // Before officer_registry finishes its first fetch, myOfficerRecord is
   // undefined for every CI (not just this feature — this is the normal state
   // on every login until officers loads). `myOfficerRecord?.assigned_units ||
@@ -5707,14 +5707,19 @@ function AddOfficerModal({ onClose, onSave }) {
 // via Supabase Auth (the mobile app registers CI/ACI/PA accounts the same
 // way), so without this check every field inspector could open the admin
 // dashboard too.
-const isSystemAdmin = (session) => session?.user?.user_metadata?.role === 'System Admin';
-// A real CI account (registered via the mobile app's Register Inspector
-// screen, which stores the short code 'CI' in user_metadata.role) also gets
-// in, but scoped to only the MPCS/Milk units an admin has assigned them —
-// see the RBAC state derivation in Dashboard. ACI/PA accounts are not
-// granted dashboard access.
-const isCiUser = (session) => session?.user?.user_metadata?.role === 'CI';
-const canAccessDashboard = (session) => isSystemAdmin(session) || isCiUser(session);
+//
+// This checks officer_registry.role (fetched server-side, see officerRole
+// state in App below), not session.user.user_metadata.role — that JWT claim
+// is editable by the end user via supabase.auth.updateUser() and must never
+// gate access. officer_registry.role is what RLS itself is keyed off (see
+// current_officer_role_code() in the DB), so this keeps the UI gate and the
+// actual data-access boundary consistent.
+const isSystemAdmin = (officerRole) => officerRoleCode(officerRole) === 'Admin';
+// A real CI account also gets in, but scoped to only the MPCS/Milk units an
+// admin has assigned them — see the RBAC state derivation in Dashboard.
+// ACI/PA accounts are not granted dashboard access.
+const isCiUser = (officerRole) => officerRoleCode(officerRole) === 'CI';
+const canAccessDashboard = (officerRole) => isSystemAdmin(officerRole) || isCiUser(officerRole);
 
 // ─── AccessDenied ─────────────────────────────────────────────────────────────
 function AccessDenied({ email, onLogout }) {
@@ -5740,6 +5745,11 @@ function AccessDenied({ email, onLogout }) {
 export default function App() {
   const [session, setSession] = useState(null);
   const [loading, setLoading] = useState(true);
+  // The authoritative role, fetched from officer_registry — never trust
+  // session.user.user_metadata.role for access decisions, see isSystemAdmin.
+  // undefined = not yet resolved for this session; null = resolved, no
+  // matching officer_registry row.
+  const [officerRole, setOfficerRole] = useState(undefined);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -5754,6 +5764,16 @@ export default function App() {
     return () => subscription.unsubscribe();
   }, []);
 
+  useEffect(() => {
+    const email = session?.user?.email;
+    if (!email) { setOfficerRole(undefined); return; }
+    let cancelled = false;
+    setOfficerRole(undefined);
+    supabase.from('officer_registry').select('role').eq('email', email).maybeSingle()
+      .then(({ data }) => { if (!cancelled) setOfficerRole(data?.role || null); });
+    return () => { cancelled = true; };
+  }, [session?.user?.email]);
+
   const handleLogout = () => supabase.auth.signOut();
 
   if (loading) {
@@ -5765,6 +5785,13 @@ export default function App() {
   }
 
   if (!session) return <LoginPage />;
-  if (!canAccessDashboard(session)) return <AccessDenied email={session.user.email} onLogout={handleLogout}/>;
-  return <Dashboard onLogout={handleLogout} session={session}/>;
+  if (officerRole === undefined) {
+    return (
+      <div style={{minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center', background:'#F8FAFC'}}>
+        <div className="spinner" style={{width:'40px',height:'40px'}}/>
+      </div>
+    );
+  }
+  if (!canAccessDashboard(officerRole)) return <AccessDenied email={session.user.email} onLogout={handleLogout}/>;
+  return <Dashboard onLogout={handleLogout} session={session} officerRole={officerRole}/>;
 }
