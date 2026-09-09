@@ -1551,6 +1551,12 @@ export default function App() {
       try { recordFormData = JSON.parse(recordFormData); } catch (e) { recordFormData = null; }
     }
 
+    // Declared here (rather than down near the census fields, where this
+    // used to live) so the activities-derivation block below — which also
+    // needs to distinguish MPCS from Milk PCS — can reference it without a
+    // TDZ crash.
+    const isMilk = selectedSociety?.type === 'MILK' || recordItem?.society_type === 'MILK';
+
     const activeDistrict = recordOverride
       ? (recordItem?.district || recordFormData?.district || recordFormData?.gpu || 'Sikkim')
       : (selectedSociety?.district || userProfile?.district || district?.trim() || 'Sikkim');
@@ -1573,8 +1579,16 @@ export default function App() {
       activities = actsData.activityList.length > 0
         ? actsData.activityList.map((a, i) => `${i + 1}. ${a.title || JSON.stringify(a)}`).join('\n')
         : '';
+    } else if (recordOverride && !isMilk && Array.isArray(recordFormData?.activityItems) && recordFormData.activityItems.length > 0) {
+      // Milk PCS stores this as a real `activities` column (recordItem?.activities
+      // below); MPCS has none — its structured log lives inside
+      // form_data.activityItems, written by MpcsActivitiesLogScreen (see
+      // submissionData further down), which the record-view path never checked.
+      activities = recordFormData.activityItems.map((a, i) => `${i + 1}. ${a.text || a.description || a.title || JSON.stringify(a)}`).join('\n');
     } else if (recordItem?.activities) {
       activities = typeof recordItem.activities === 'string' ? recordItem.activities : JSON.stringify(recordItem.activities);
+    } else if (recordOverride && !isMilk && recordFormData?.activities) {
+      activities = typeof recordFormData.activities === 'string' ? recordFormData.activities : JSON.stringify(recordFormData.activities);
     } else {
       activities = activityItems.length > 0
         ? activityItems.map((a, i) => `${i + 1}. ${a.text || a.description || a.title || JSON.stringify(a)}`).join('\n')
@@ -1629,21 +1643,32 @@ export default function App() {
           ? `data:image/jpeg;base64,${evData.imageBase64}`
           : (evData?.imageUri || (imageBase64 ? `data:image/jpeg;base64,${imageBase64}` : null)));
 
-    const isMilk = selectedSociety?.type === 'MILK' || recordItem?.society_type === 'MILK';
+    // MPCS's actual member census is Master Data, held in the
+    // demographicsData array ({category, male, female, total} per SC/ST/
+    // OBC/Others) — the flat mSc/fSc/... fields below are Milk PCS's own
+    // shape and are never populated for MPCS (confirmed empty in every real
+    // MPCS submission), so reading them here always printed zero regardless
+    // of what Master Data actually held, live or historical.
+    const findDemoCategory = (arr, ...names) =>
+      (Array.isArray(arr) ? arr : []).find(d => names.includes((d.category || '').trim().toUpperCase())) || {};
+    const activeDemographics = recordOverride ? (recordFormData?.demographicsData || []) : demographicsData;
+    const mpcsSc = findDemoCategory(activeDemographics, 'SC');
+    const mpcsSt = findDemoCategory(activeDemographics, 'ST');
+    const mpcsObc = findDemoCategory(activeDemographics, 'OBC');
+    const mpcsGen = findDemoCategory(activeDemographics, 'GEN', 'GENERAL', 'OTHERS');
 
-    // Census figures must come from the record actually being viewed, not
-    // whatever's currently in live form state — same class of bug as
-    // locText/pdfImageSrc above. Milk PCS stores these as dedicated columns
-    // (m_sc, f_sc, ...); MPCS has no such columns, only the mSc/fSc/... keys
-    // inside form_data (see submissionData in the Compile & Seal step below).
-    const pdfMSc = recordOverride ? parseInt(isMilk ? recordItem?.m_sc : recordFormData?.mSc) || 0 : parseInt(mSc) || 0;
-    const pdfFSc = recordOverride ? parseInt(isMilk ? recordItem?.f_sc : recordFormData?.fSc) || 0 : parseInt(fSc) || 0;
-    const pdfMSt = recordOverride ? parseInt(isMilk ? recordItem?.m_st : recordFormData?.mSt) || 0 : parseInt(mSt) || 0;
-    const pdfFSt = recordOverride ? parseInt(isMilk ? recordItem?.f_st : recordFormData?.fSt) || 0 : parseInt(fSt) || 0;
-    const pdfMObc = recordOverride ? parseInt(isMilk ? recordItem?.m_obc : recordFormData?.mObc) || 0 : parseInt(mObc) || 0;
-    const pdfFObc = recordOverride ? parseInt(isMilk ? recordItem?.f_obc : recordFormData?.fObc) || 0 : parseInt(fObc) || 0;
-    const pdfMGen = recordOverride ? parseInt(isMilk ? recordItem?.m_gen : recordFormData?.mGen) || 0 : parseInt(mGen) || 0;
-    const pdfFGen = recordOverride ? parseInt(isMilk ? recordItem?.f_gen : recordFormData?.fGen) || 0 : parseInt(fGen) || 0;
+    // Milk PCS census figures must come from the record actually being
+    // viewed, not whatever's currently in live form state — same class of
+    // bug as locText/pdfImageSrc above. Milk PCS stores these as dedicated
+    // columns (m_sc, f_sc, ...).
+    const pdfMSc = isMilk ? (recordOverride ? parseInt(recordItem?.m_sc) || 0 : parseInt(mSc) || 0) : parseInt(mpcsSc.male) || 0;
+    const pdfFSc = isMilk ? (recordOverride ? parseInt(recordItem?.f_sc) || 0 : parseInt(fSc) || 0) : parseInt(mpcsSc.female) || 0;
+    const pdfMSt = isMilk ? (recordOverride ? parseInt(recordItem?.m_st) || 0 : parseInt(mSt) || 0) : parseInt(mpcsSt.male) || 0;
+    const pdfFSt = isMilk ? (recordOverride ? parseInt(recordItem?.f_st) || 0 : parseInt(fSt) || 0) : parseInt(mpcsSt.female) || 0;
+    const pdfMObc = isMilk ? (recordOverride ? parseInt(recordItem?.m_obc) || 0 : parseInt(mObc) || 0) : parseInt(mpcsObc.male) || 0;
+    const pdfFObc = isMilk ? (recordOverride ? parseInt(recordItem?.f_obc) || 0 : parseInt(fObc) || 0) : parseInt(mpcsObc.female) || 0;
+    const pdfMGen = isMilk ? (recordOverride ? parseInt(recordItem?.m_gen) || 0 : parseInt(mGen) || 0) : parseInt(mpcsGen.male) || 0;
+    const pdfFGen = isMilk ? (recordOverride ? parseInt(recordItem?.f_gen) || 0 : parseInt(fGen) || 0) : parseInt(mpcsGen.female) || 0;
 
     const pdfTotalMale = pdfMSc + pdfMSt + pdfMObc + pdfMGen;
     const pdfTotalFemale = pdfFSc + pdfFSt + pdfFObc + pdfFGen;
