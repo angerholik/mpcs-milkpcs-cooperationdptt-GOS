@@ -1694,7 +1694,7 @@ export default function App() {
           { label: 'Closing Balance', value: `₹ ${parseFloat(activeBalance || 0).toLocaleString('en-IN')}` },
         ]
       : [
-          { label: 'Annual Turnover', value: `₹ ${parseFloat(activeWithdrawal || 0).toLocaleString('en-IN')}` },
+          { label: 'Monthly Turnover', value: `₹ ${parseFloat(activeWithdrawal || 0).toLocaleString('en-IN')}` },
           { label: 'Bank Balance', value: `₹ ${parseFloat(activeBalance || 0).toLocaleString('en-IN')}` },
         ];
     financialRows.push({ label: 'Audit Conducted', value: `${pdfAuditDate || 'N/A'}${pdfAuditYear ? ` (Year: ${pdfAuditYear})` : ''}` });
@@ -1703,6 +1703,27 @@ export default function App() {
       financialRows.push({ label: 'Loan Scheme', value: pdfLoanName || 'N/A' });
       financialRows.push({ label: 'Loan Disbursed', value: `₹ ${parseFloat(pdfLoanAmount || 0).toLocaleString('en-IN')}` });
       financialRows.push({ label: 'Outstanding Loan', value: `₹ ${parseFloat(pdfRemainingDue || 0).toLocaleString('en-IN')}` });
+    }
+    // Business Performance is an MPCS-only screen (businessPerformanceData is
+    // never populated for Milk PCS) — surface it on the certificate only when
+    // the inspector actually filled it in, so a society that skipped it
+    // doesn't get blank rows.
+    if (!isMilk) {
+      const activeBusinessPerf = recordOverride
+        ? (recordFormData?.businessPerformanceData || {})
+        : (businessPerformanceData || {});
+      if (activeBusinessPerf.totalIncome) {
+        financialRows.push({ label: 'Total Income', value: `₹ ${parseFloat(activeBusinessPerf.totalIncome || 0).toLocaleString('en-IN')}` });
+      }
+      if (activeBusinessPerf.totalExpenses) {
+        financialRows.push({ label: 'Total Expenses', value: `₹ ${parseFloat(activeBusinessPerf.totalExpenses || 0).toLocaleString('en-IN')}` });
+      }
+      if (activeBusinessPerf.netSurplusDeficit) {
+        financialRows.push({ label: 'Net Surplus / Deficit', value: `₹ ${parseFloat(activeBusinessPerf.netSurplusDeficit || 0).toLocaleString('en-IN')}` });
+      }
+      if (activeBusinessPerf.remarks) {
+        financialRows.push({ label: 'Business Performance Remarks', value: activeBusinessPerf.remarks });
+      }
     }
 
     const renderInfoRows = (rows) => rows.map(r => `<tr class="data-row"><td class="data-label">${escapeHtml(r.label)}</td><td class="data-value">${escapeHtml(r.value)}</td></tr>`).join('');
@@ -1970,17 +1991,6 @@ export default function App() {
                 <div class="row"><div class="k">Designation</div><div class="v">:&nbsp; Cooperative Inspector (CI)</div></div>
                 <div class="row"><div class="k">Date &amp; Time</div><div class="v">:&nbsp; ${escapeHtml(pdfTimestamp)}</div></div>
               </div>
-              <div class="sign-col">
-                <div class="heading">Verified By</div>
-                <div class="row"><div class="k">Name</div><div class="v">:&nbsp; ARCS Official</div></div>
-                <div class="row"><div class="k">Designation</div><div class="v">:&nbsp; Assistant Registrar, Coop. Societies</div></div>
-                <div class="row"><div class="k">Date &amp; Time</div><div class="v">:&nbsp; &nbsp;</div></div>
-              </div>
-            </div>
-
-            <div class="closing-divider">
-              <div class="stamp"><b>Signed by ARCS</b>Department of Cooperation<br/>Government of Sikkim</div>
-              <div class="stamp"><b>Signed by CI</b>Department of Cooperation<br/>Government of Sikkim</div>
             </div>
           </div>
         </body>
