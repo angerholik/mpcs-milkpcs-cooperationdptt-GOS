@@ -3141,13 +3141,16 @@ export default function App() {
                         setDeposit={setBalance}
                         totalMembers={totalMembers}
                         setTotalMembers={setTotalMembers}
+                        remarks={businessPerformanceData?.remarks || ''}
+                        setRemarks={(val) => setBusinessPerformanceData(prev => ({ ...prev, remarks: val }))}
                         onSaveNext={() => {
                           saveMasterStateToStorage({
                             sales: withdrawal,
                             withdrawal,
                             deposit: balance,
                             balance,
-                            totalMembers
+                            totalMembers,
+                            businessPerformanceData
                           });
                           updateSectionState('sales', { status: 'COMPLETED ✓' });
                           setCurrentMobileScreen('MPCS_REVIEW');
