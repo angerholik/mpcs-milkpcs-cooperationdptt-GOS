@@ -104,6 +104,7 @@ export default function RecordsScreen({
 
             list.push({
               id: r.id,
+              type: 'MILK',
               month: r.reporting_month || 'Monthly',
               center: r.center_name,
               code: r.center_id || r.registration_number || 'MILK-PCS',
@@ -138,6 +139,7 @@ export default function RecordsScreen({
 
             list.push({
               id: r.id,
+              type: 'MPCS',
               month: r.reporting_month || 'Monthly',
               center: r.society_name || r.center_name,
               code: r.registration_number || 'MPCS',
@@ -365,11 +367,11 @@ export default function RecordsScreen({
 
             <View style={styles.statsGrid}>
               <View style={styles.statCol}>
-                <Text style={styles.statLabel}>Litres Collected</Text>
+                <Text style={styles.statLabel}>{item.type === 'MPCS' ? 'Total Members' : 'Litres Collected'}</Text>
                 <Text style={[styles.statValue, { color: '#1E40AF' }]}>{item.litres}</Text>
               </View>
               <View style={styles.statCol}>
-                <Text style={styles.statLabel}>Total Withdrawal</Text>
+                <Text style={styles.statLabel}>{item.type === 'MPCS' ? 'Annual Turnover' : 'Total Withdrawal'}</Text>
                 <Text style={[styles.statValue, { color: '#C2410C' }]}>{item.withdrawal}</Text>
               </View>
               <View style={styles.statCol}>

@@ -221,10 +221,16 @@ export async function saveMilkPcsSubmission(params) {
 // ─── Save MPCS submission ─────────────────────────────────────────────────────
 export async function saveMpcsSubmission(formData) {
   try {
-    let photoUrl = null;
+    // App.js's Compile & Seal flow already uploads the captured photo itself
+    // (via uploadPhoto()) and passes the resulting URL here as formData.photoUrl
+    // — this was previously ignored entirely, and the fallback re-upload below
+    // read formData.evidence_image_base64/imageBase64, fields App.js never
+    // actually populates, so no MPCS submission ever got a photo_url written
+    // into form_data regardless of what the inspector captured.
+    let photoUrl = formData.photoUrl || null;
     const socName = formData.societyName || formData.centerName || formData['1.1'] || 'MPCS Society';
 
-    if (formData.evidence_image_base64 || formData.imageBase64) {
+    if (!photoUrl && (formData.evidence_image_base64 || formData.imageBase64)) {
       try {
         photoUrl = await uploadEvidence(formData.evidence_image_base64 || formData.imageBase64, socName);
       } catch (e) {
