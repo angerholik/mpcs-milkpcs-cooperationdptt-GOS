@@ -543,12 +543,19 @@ function LoginPage() {
   const [err, setErr]       = useState('');
   const [loading, setLoading] = useState(false);
 
+  // Forgot-password mode: the dashboard previously had no path to recover a
+  // forgotten password at all — no link, no form, nothing.
+  const [mode, setMode] = useState('signin'); // 'signin' | 'forgot'
+  const [resetErr, setResetErr] = useState('');
+  const [resetMsg, setResetMsg] = useState('');
+  const [resetLoading, setResetLoading] = useState(false);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!email || !pw) { setErr('Email and password required.'); return; }
     setLoading(true);
     setErr('');
-    
+
     const { error } = await supabase.auth.signInWithPassword({
       email: email.trim(),
       password: pw
@@ -559,6 +566,20 @@ function LoginPage() {
       setLoading(false);
     }
     // Session listener in App will handle the UI switch
+  };
+
+  const handleForgotSubmit = async (e) => {
+    e.preventDefault();
+    if (!email) { setResetErr('Please enter your officer email.'); return; }
+    setResetLoading(true);
+    setResetErr('');
+    setResetMsg('');
+    const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+      redirectTo: window.location.origin,
+    });
+    setResetLoading(false);
+    if (error) setResetErr(error.message);
+    else setResetMsg('✅ Password recovery email sent. Check your inbox.');
   };
 
   return (
@@ -587,10 +608,42 @@ function LoginPage() {
           <p style={{fontSize:'9px',color:'var(--gold-light)',letterSpacing:'1px',fontWeight:800,margin:0}}>
             DEPARTMENT OF COOPERATION • GOVERNMENT OF SIKKIM</p>
         </div>
+        {mode === 'forgot' ? (
+          <form onSubmit={handleForgotSubmit} style={{padding:'32px 36px'}}>
+            <div style={{marginBottom:'8px',fontSize:'13px',color:'#6B7280',textAlign:'center'}}>
+              Enter your officer email to receive a password reset link.</div>
+
+            <div className="field-group" style={{marginTop:'24px',marginBottom:'20px'}}>
+              <label className="field-label">Officer Email</label>
+              <div style={{position:'relative'}}>
+                <div style={{position:'absolute',left:'12px',top:'50%',transform:'translateY(-50%)',color:'var(--emerald)',opacity:0.6}}>
+                  <Icon d={I.user} size={16}/>
+                </div>
+                <input type="email" className="field-input"
+                  placeholder="officer@sikkim.gov.in" value={email}
+                  onChange={e=>{setEmail(e.target.value);setResetErr('');}}
+                  style={{fontSize:'14px', paddingLeft:'40px'}}/>
+              </div>
+              {resetMsg && <div style={{fontSize:'12px',color:'#047857',marginTop:'8px',background:'#ECFDF5',padding:'8px',borderRadius:'8px',border:'1px solid #A7F3D0'}}>{resetMsg}</div>}
+              {resetErr && <div style={{fontSize:'12px',color:'#EF4444',marginTop:'8px',background:'#FEF2F2',padding:'8px',borderRadius:'8px',border:'1px solid #FECACA'}}>⚠️ {resetErr}</div>}
+            </div>
+
+            <button type="submit" className="btn-primary" disabled={resetLoading}
+              style={{width:'100%',padding:'13px',fontSize:'14px',display:'flex',alignItems:'center',justifyContent:'center',gap:'8px'}}>
+              {resetLoading ? <div className="spinner" style={{width:'18px',height:'18px',borderWidth:'2px'}}/> : null}
+              {resetLoading ? 'Sending...' : 'Send Reset Email'}
+            </button>
+
+            <button type="button" onClick={()=>{setMode('signin');setResetErr('');setResetMsg('');}}
+              style={{width:'100%',background:'none',border:'none',cursor:'pointer',marginTop:'16px',fontSize:'12px',fontWeight:800,color:'var(--brand-burgundy)'}}>
+              ← Back to Sign In
+            </button>
+          </form>
+        ) : (
         <form onSubmit={handleSubmit} style={{padding:'32px 36px'}}>
           <div style={{marginBottom:'8px',fontSize:'13px',color:'#6B7280',textAlign:'center'}}>
             Official Gatekeeper Portal. Authorised personnel only.</div>
-          
+
           <div className="field-group" style={{marginTop:'24px',marginBottom:'16px'}}>
             <label className="field-label">Officer Email</label>
             <div style={{position:'relative'}}>
@@ -604,7 +657,7 @@ function LoginPage() {
             </div>
           </div>
 
-          <div className="field-group" style={{marginBottom:'20px'}}>
+          <div className="field-group" style={{marginBottom:'12px'}}>
             <label className="field-label">Access Key</label>
             <div style={{position:'relative'}}>
               <div style={{position:'absolute',left:'12px',top:'50%',transform:'translateY(-50%)',color:'var(--emerald)',opacity:0.6}}>
@@ -617,15 +670,22 @@ function LoginPage() {
             </div>
             {err && <div style={{fontSize:'12px',color:'#EF4444',marginTop:'8px',background:'#FEF2F2',padding:'8px',borderRadius:'8px',border:'1px solid #FECACA'}}>⚠️ {err}</div>}
           </div>
+
+          <button type="button" onClick={()=>{setMode('forgot');setErr('');}}
+            style={{background:'none',border:'none',cursor:'pointer',display:'block',marginLeft:'auto',marginBottom:'20px',fontSize:'12px',fontWeight:700,color:'var(--brand-burgundy)'}}>
+            Forgot Password?
+          </button>
+
           <button id="login-submit" type="submit" className="btn-primary" disabled={loading}
             style={{width:'100%',padding:'13px',fontSize:'14px',display:'flex',alignItems:'center',justifyContent:'center',gap:'8px'}}>
             {loading ? <div className="spinner" style={{width:'18px',height:'18px',borderWidth:'2px'}}/> : null}
             {loading ? 'Verifying...' : 'Access Dashboard →'}
           </button>
-          
+
           <p style={{fontSize:'11px',color:'#9CA3AF',textAlign:'center',marginTop:'20px'}}>
             FOR OFFICIAL USE ONLY • UNAUTHORIZED ACCESS PROHIBITED • v2.0.4-beta</p>
         </form>
+        )}
       </div>
     </div>
   );
@@ -5721,6 +5781,74 @@ const isSystemAdmin = (officerRole) => officerRoleCode(officerRole) === 'Admin';
 const isCiUser = (officerRole) => officerRoleCode(officerRole) === 'CI';
 const canAccessDashboard = (officerRole) => isSystemAdmin(officerRole) || isCiUser(officerRole);
 
+// ─── ResetPasswordForm ────────────────────────────────────────────────────────
+// Rendered instead of LoginPage/Dashboard when the app detects a Supabase
+// password-recovery session (the user arrived via the "reset your password"
+// email link). Without this, resetPasswordForEmail() sent an email whose
+// link had nowhere to land — no code anywhere called auth.updateUser().
+function ResetPasswordForm({ onDone }) {
+  const [pw, setPw] = useState('');
+  const [confirmPw, setConfirmPw] = useState('');
+  const [err, setErr] = useState('');
+  const [msg, setMsg] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setErr('');
+    if (!pw || !confirmPw) { setErr('Please fill out both fields.'); return; }
+    if (pw.length < 8) { setErr('Password must be at least 8 characters.'); return; }
+    if (pw !== confirmPw) { setErr('Passwords do not match.'); return; }
+    setLoading(true);
+    const { error } = await supabase.auth.updateUser({ password: pw });
+    setLoading(false);
+    if (error) { setErr(error.message); return; }
+    setMsg('✅ Password updated. Please sign in with your new password.');
+    setTimeout(() => onDone && onDone(), 1800);
+  };
+
+  return (
+    <div style={{
+      minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center',
+      background: 'linear-gradient(135deg, #7F1D1D 0%, #450A0A 100%)', padding:'20px'
+    }}>
+      <div className="fade-in" style={{
+        width:'100%', maxWidth:'420px',
+        background:'rgba(255,255,255,0.97)', borderRadius:'24px',
+        boxShadow:'0 30px 80px rgba(0,0,0,0.25)', overflow:'hidden',
+      }}>
+        <div style={{background:'linear-gradient(135deg,#7F1D1D,#450A0A)',padding:'32px 36px 28px',textAlign:'center'}}>
+          <h1 style={{fontFamily:'Cinzel,serif',fontSize:'22px',color:'#fff',letterSpacing:'2px',fontWeight:900,margin:'0 0 4px'}}>
+            SET NEW PASSWORD</h1>
+          <p style={{fontSize:'10px',color:'rgba(255,255,255,0.7)',margin:0,letterSpacing:'1.5px',fontWeight:700}}>
+            CORE ADMIN PORTAL</p>
+        </div>
+        <form onSubmit={handleSubmit} style={{padding:'32px 36px'}}>
+          <div className="field-group" style={{marginBottom:'16px'}}>
+            <label className="field-label">New Password</label>
+            <input type="password" className="field-input" placeholder="Minimum 8 characters"
+              value={pw} onChange={e=>{setPw(e.target.value);setErr('');}}
+              style={{fontSize:'14px'}}/>
+          </div>
+          <div className="field-group" style={{marginBottom:'20px'}}>
+            <label className="field-label">Confirm New Password</label>
+            <input type="password" className="field-input" placeholder="Re-enter password"
+              value={confirmPw} onChange={e=>{setConfirmPw(e.target.value);setErr('');}}
+              style={{fontSize:'14px'}}/>
+            {msg && <div style={{fontSize:'12px',color:'#047857',marginTop:'8px',background:'#ECFDF5',padding:'8px',borderRadius:'8px',border:'1px solid #A7F3D0'}}>{msg}</div>}
+            {err && <div style={{fontSize:'12px',color:'#EF4444',marginTop:'8px',background:'#FEF2F2',padding:'8px',borderRadius:'8px',border:'1px solid #FECACA'}}>⚠️ {err}</div>}
+          </div>
+          <button type="submit" className="btn-primary" disabled={loading || !!msg}
+            style={{width:'100%',padding:'13px',fontSize:'14px',display:'flex',alignItems:'center',justifyContent:'center',gap:'8px'}}>
+            {loading ? <div className="spinner" style={{width:'18px',height:'18px',borderWidth:'2px'}}/> : null}
+            {loading ? 'Updating...' : 'Update Password'}
+          </button>
+        </form>
+      </div>
+    </div>
+  );
+}
+
 // ─── AccessDenied ─────────────────────────────────────────────────────────────
 function AccessDenied({ email, onLogout }) {
   return (
@@ -5750,6 +5878,15 @@ export default function App() {
   // undefined = not yet resolved for this session; null = resolved, no
   // matching officer_registry row.
   const [officerRole, setOfficerRole] = useState(undefined);
+  // True when the user arrived via a password-recovery email link — show
+  // ResetPasswordForm instead of routing the recovery session into the
+  // dashboard. A ref because the onAuthStateChange closure below is created
+  // once and would otherwise only ever see its initial value.
+  const passwordRecoveryRef = useRef(
+    typeof window !== 'undefined' &&
+    (window.location.hash.includes('type=recovery') || window.location.search.includes('type=recovery'))
+  );
+  const [passwordRecoveryActive, setPasswordRecoveryActive] = useState(passwordRecoveryRef.current);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -5757,7 +5894,11 @@ export default function App() {
       setLoading(false);
     });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'PASSWORD_RECOVERY') {
+        passwordRecoveryRef.current = true;
+        setPasswordRecoveryActive(true);
+      }
       setSession(session);
     });
 
@@ -5784,6 +5925,17 @@ export default function App() {
     );
   }
 
+  if (passwordRecoveryActive) {
+    return (
+      <ResetPasswordForm
+        onDone={() => {
+          passwordRecoveryRef.current = false;
+          setPasswordRecoveryActive(false);
+          supabase.auth.signOut();
+        }}
+      />
+    );
+  }
   if (!session) return <LoginPage />;
   if (officerRole === undefined) {
     return (

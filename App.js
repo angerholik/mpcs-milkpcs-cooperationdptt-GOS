@@ -25,6 +25,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { MaterialIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import Login from './src/components/Login';
+import ResetPasswordScreen from './src/components/ResetPasswordScreen';
 import ErrorBoundary from './src/components/ErrorBoundary';
 import HomeScreen from './src/components/HomeScreen';
 import DigitalEvidenceScreen from './src/components/DigitalEvidenceScreen';
@@ -410,6 +411,17 @@ export default function App() {
   // Auth & Session State
   const [session, setSession] = useState(null);
   const [authLoading, setAuthLoading] = useState(true);
+  // True while the app is showing the "set new password" screen instead of
+  // the normal login/dashboard flow, because the user arrived via a
+  // password-recovery email link. A ref (not just state) because the
+  // onAuthStateChange closure below is created once on mount and would
+  // otherwise always see the stale initial value.
+  const passwordRecoveryRef = React.useRef(
+    Platform.OS === 'web' && typeof window !== 'undefined'
+      ? (window.location.hash.includes('type=recovery') || window.location.search.includes('type=recovery'))
+      : false
+  );
+  const [passwordRecoveryActive, setPasswordRecoveryActive] = useState(passwordRecoveryRef.current);
 
   // Sync & Network State
   const [isSyncing, setIsSyncing] = useState(false);
@@ -1316,7 +1328,10 @@ export default function App() {
     supabase.auth.getSession()
       .then(({ data: { session: sbSession } }) => {
         clearTimeout(authTimeout);
-        if (sbSession?.user) {
+        // A recovery-link visit already has a (temporary) session by the
+        // time this resolves — skip the normal auto-login so the user lands
+        // on the "set new password" screen instead of straight into the app.
+        if (sbSession?.user && !passwordRecoveryRef.current) {
           handleUserAuthSuccess(sbSession.user);
         }
         setAuthLoading(false);
@@ -1327,15 +1342,24 @@ export default function App() {
       });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, sbSession) => {
+      // Fires when Supabase parses a password-recovery link's token out of
+      // the URL. Show the reset screen instead of treating this as a login.
+      if (event === 'PASSWORD_RECOVERY') {
+        passwordRecoveryRef.current = true;
+        setPasswordRecoveryActive(true);
+        return;
+      }
       // Only re-run the full auth-success flow (which navigates to
       // MY_INSTITUTIONS) on a genuine new sign-in. Supabase fires this same
       // listener with a valid session for TOKEN_REFRESHED too — which
       // happens silently whenever the tab/app regains focus — and without
       // this guard every tab switch was yanking the user back to "Add New
       // Institution" mid-task, regardless of what screen they were on.
-      if (sbSession?.user && event === 'SIGNED_IN') {
+      if (sbSession?.user && event === 'SIGNED_IN' && !passwordRecoveryRef.current) {
         handleUserAuthSuccess(sbSession.user);
       } else if (event === 'SIGNED_OUT') {
+        passwordRecoveryRef.current = false;
+        setPasswordRecoveryActive(false);
         setSession(null);
         setUserProfile(null);
         setInstitutionsList([]);
@@ -2261,10 +2285,20 @@ export default function App() {
     return (
       <View style={styles.mobileShellWrapper}>
         <View style={styles.mobileDeviceFrame}>
-          <Login
-            onLoginSuccess={(usr) => handleUserAuthSuccess(usr)}
-            onRegisterSuccess={(usr) => handleUserAuthSuccess(usr)}
-          />
+          {passwordRecoveryActive ? (
+            <ResetPasswordScreen
+              onDone={() => {
+                passwordRecoveryRef.current = false;
+                setPasswordRecoveryActive(false);
+                supabase.auth.signOut();
+              }}
+            />
+          ) : (
+            <Login
+              onLoginSuccess={(usr) => handleUserAuthSuccess(usr)}
+              onRegisterSuccess={(usr) => handleUserAuthSuccess(usr)}
+            />
+          )}
         </View>
       </View>
     );

@@ -84,7 +84,12 @@ const Login = ({ onLoginSuccess, onRegisterSuccess }) => {
     setResetErr('');
     setResetMsg('');
     try {
-      const { error } = await supabase.auth.resetPasswordForEmail(resetEmail.trim());
+      const { error } = await supabase.auth.resetPasswordForEmail(resetEmail.trim(), {
+        // Without this, Supabase falls back to the project's default Site
+        // URL, which may not point at this app at all — the reset link
+        // would land somewhere with no code to handle it.
+        redirectTo: Platform.OS === 'web' && typeof window !== 'undefined' ? window.location.origin : undefined,
+      });
       setResetLoading(false);
       if (error) {
         setResetErr(error.message);
