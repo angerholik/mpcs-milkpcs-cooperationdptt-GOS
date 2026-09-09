@@ -45,7 +45,6 @@ export default function MpcsSalesDepositScreen({
   deposit = "",
   setDeposit,
   totalMembers = "",
-  setTotalMembers,
   remarks = "",
   setRemarks,
   onSaveNext,
@@ -158,19 +157,19 @@ export default function MpcsSalesDepositScreen({
             </View>
           </View>
 
-          {/* Field 3: Total Members */}
-          <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>Total Active Members</Text>
-            <View style={styles.inputBox}>
-              <MaterialCommunityIcons name="account-group-outline" size={16} color={COLORS.slate400} style={{ marginRight: 6 }} />
-              <TextInput
-                style={styles.textInput}
-                value={totalMembers}
-                onChangeText={setTotalMembers}
-                placeholder="e.g. 245"
-                placeholderTextColor={COLORS.slate300}
-                keyboardType="numeric"
-              />
+          {/* Field 3: Total Members — read-only, sourced from Registered
+              Demographics (Master Data). Previously a free-typed number
+              here could (and did) drift from the actual demographic
+              breakdown; there is exactly one place membership counts are
+              entered now. */}
+          <View style={styles.summaryStrip}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.summaryLabel}>TOTAL ACTIVE MEMBERS (FROM DEMOGRAPHICS)</Text>
+              <Text style={styles.summaryValue}>{totalMembers || '0'}</Text>
+            </View>
+            <View style={styles.autoBadge}>
+              <MaterialCommunityIcons name="account-group-outline" size={14} color={COLORS.emerald700} />
+              <Text style={styles.autoBadgeText}>AUTO</Text>
             </View>
           </View>
 

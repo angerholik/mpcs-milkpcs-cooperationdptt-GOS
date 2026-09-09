@@ -2042,8 +2042,18 @@ export default function App() {
     }
 
     // ─── Step 1: Prepare Submission Data ───────────────────────────
-    const totalMaleCalc = [mSc, mSt, mObc, mGen].reduce((s, v) => s + (parseInt(v) || 0), 0);
-    const totalFemaleCalc = [fSc, fSt, fObc, fGen].reduce((s, v) => s + (parseInt(v) || 0), 0);
+    // MPCS's membership count is Registered Demographics (Master Data), not
+    // the flat mSc/mSt/mObc/mGen fields — those are Milk PCS's own shape and
+    // are never populated by any MPCS screen (see the census-figure fix
+    // above generatePDF's certificate rendering). Using them here silently
+    // wrote total_members as 0 for every real MPCS submission regardless of
+    // what Registered Demographics actually held.
+    const totalMaleCalc = isMilk
+      ? [mSc, mSt, mObc, mGen].reduce((s, v) => s + (parseInt(v) || 0), 0)
+      : (Array.isArray(demographicsData) ? demographicsData.reduce((s, d) => s + (parseInt(d.male) || 0), 0) : 0);
+    const totalFemaleCalc = isMilk
+      ? [fSc, fSt, fObc, fGen].reduce((s, v) => s + (parseInt(v) || 0), 0)
+      : (Array.isArray(demographicsData) ? demographicsData.reduce((s, d) => s + (parseInt(d.female) || 0), 0) : 0);
     const totalMembersCalc = totalMaleCalc + totalFemaleCalc;
 
     const submissionData = {
@@ -3176,8 +3186,11 @@ export default function App() {
                         setSales={setWithdrawal}
                         deposit={balance}
                         setDeposit={setBalance}
-                        totalMembers={totalMembers}
-                        setTotalMembers={setTotalMembers}
+                        totalMembers={
+                          Array.isArray(demographicsData)
+                            ? demographicsData.reduce((s, d) => s + (parseInt(d.male || 0) + parseInt(d.female || 0)), 0)
+                            : 0
+                        }
                         remarks={businessPerformanceData?.remarks || ''}
                         setRemarks={(val) => setBusinessPerformanceData(prev => ({ ...prev, remarks: val }))}
                         onSaveNext={() => {
@@ -3186,7 +3199,6 @@ export default function App() {
                             withdrawal,
                             deposit: balance,
                             balance,
-                            totalMembers,
                             businessPerformanceData
                           });
                           updateSectionState('sales', { status: 'COMPLETED ✓' });
@@ -3212,11 +3224,11 @@ export default function App() {
                         setTotalExpenses={(val) => {
                           setBusinessPerformanceData(prev => ({ ...prev, totalExpenses: val }));
                         }}
-                        totalMembers={businessPerformanceData?.totalMembers || totalMembers || ''}
-                        setTotalMembers={(val) => {
-                          setTotalMembers(val);
-                          setBusinessPerformanceData(prev => ({ ...prev, totalMembers: val }));
-                        }}
+                        totalMembers={
+                          Array.isArray(demographicsData)
+                            ? demographicsData.reduce((s, d) => s + (parseInt(d.male || 0) + parseInt(d.female || 0)), 0)
+                            : 0
+                        }
                         remarks={businessPerformanceData?.remarks || ''}
                         setRemarks={(val) => {
                           setBusinessPerformanceData(prev => ({ ...prev, remarks: val }));
@@ -3228,7 +3240,6 @@ export default function App() {
                           const updated = {
                             ...businessPerformanceData,
                             netSurplusDeficit: diff,
-                            totalMembers: businessPerformanceData?.totalMembers || totalMembers
                           };
                           setBusinessPerformanceData(updated);
                           saveMasterStateToStorage({
@@ -3236,7 +3247,6 @@ export default function App() {
                             totalIncome: businessPerformanceData?.totalIncome,
                             totalExpenses: businessPerformanceData?.totalExpenses,
                             netSurplusDeficit: diff,
-                            totalMembers: updated.totalMembers
                           });
                           updateSectionState('business', { status: 'COMPLETED ✓' });
                           setCurrentMobileScreen('MPCS_REVIEW');

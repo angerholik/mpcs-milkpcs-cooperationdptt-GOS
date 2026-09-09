@@ -46,7 +46,6 @@ export default function MpcsBusinessPerformanceScreen({
   totalExpenses = "",
   setTotalExpenses,
   totalMembers = "",
-  setTotalMembers,
   remarks = "",
   setRemarks,
   onSaveNext,
@@ -192,19 +191,18 @@ export default function MpcsBusinessPerformanceScreen({
             </View>
           </View>
 
-          {/* Field 3: Total Active Members */}
-          <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>Total Active Members</Text>
-            <View style={styles.inputBox}>
-              <MaterialCommunityIcons name="account-group-outline" size={16} color={COLORS.slate400} style={{ marginRight: 6 }} />
-              <TextInput
-                style={styles.textInput}
-                value={totalMembers}
-                onChangeText={setTotalMembers}
-                placeholder="e.g. 245"
-                placeholderTextColor={COLORS.slate300}
-                keyboardType="numeric"
-              />
+          {/* Field 3: Total Active Members — read-only, sourced from
+              Registered Demographics (Master Data). A free-typed number here
+              previously drifted from the actual demographic breakdown; there
+              is exactly one place membership counts are entered now. */}
+          <View style={[styles.autoCalcCard, { backgroundColor: COLORS.slate50, borderColor: COLORS.slate200 }]}>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.autoCalcLabel, { color: COLORS.slate500 }]}>TOTAL ACTIVE MEMBERS (FROM DEMOGRAPHICS)</Text>
+              <Text style={[styles.autoCalcValue, { color: COLORS.slate700 }]}>{totalMembers || '0'}</Text>
+            </View>
+            <View style={[styles.autoBadge, { backgroundColor: COLORS.slate100 }]}>
+              <MaterialCommunityIcons name="account-group-outline" size={14} color={COLORS.slate600} />
+              <Text style={[styles.autoBadgeText, { color: COLORS.slate600 }]}>AUTO</Text>
             </View>
           </View>
 
