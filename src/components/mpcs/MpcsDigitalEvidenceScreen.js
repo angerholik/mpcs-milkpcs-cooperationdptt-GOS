@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import * as ImagePicker from 'expo-image-picker';
 import * as Location from 'expo-location';
 import {
-  View, Text, StyleSheet, TouchableOpacity, Image, TextInput,
+  View, Text, StyleSheet, TouchableOpacity, Image,
   ScrollView, Platform, Pressable
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -45,8 +45,6 @@ export default function MpcsDigitalEvidenceScreen({
   setLatitude,
   longitude = "",
   setLongitude,
-  notes = "",
-  setNotes,
   onSaveNext,
   onBack,
   activeTab,
@@ -249,22 +247,6 @@ export default function MpcsDigitalEvidenceScreen({
             <View style={{ flex: 1, marginLeft: 8 }}>
               <Text style={styles.timestampLabel}>Captured Timestamp</Text>
               <Text style={styles.timestampValue}>{timestamp || "Not captured yet"}</Text>
-            </View>
-          </View>
-
-          {/* Notes Input */}
-          <View style={{ gap: 5, marginTop: 4 }}>
-            <Text style={styles.inputLabel}>Additional Notes (Optional)</Text>
-            <View style={[styles.inputBox, { height: 74, alignItems: 'flex-start', paddingTop: 10 }]}>
-              <MaterialCommunityIcons name="notebook-outline" size={15} color={COLORS.slate400} style={{ marginRight: 6, marginTop: 2 }} />
-              <TextInput
-                style={[styles.textInput, { height: '100%' }]}
-                value={notes}
-                onChangeText={setNotes}
-                placeholder="Add any operational remarks or evidence description..."
-                placeholderTextColor={COLORS.slate300}
-                multiline
-              />
             </View>
           </View>
         </View>
