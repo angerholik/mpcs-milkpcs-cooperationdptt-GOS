@@ -1629,21 +1629,25 @@ export default function App() {
           ? `data:image/jpeg;base64,${evData.imageBase64}`
           : (evData?.imageUri || (imageBase64 ? `data:image/jpeg;base64,${imageBase64}` : null)));
 
-    // Robust internal calculation for totals
-    const pdfMSc = parseInt(mSc) || 0;
-    const pdfFSc = parseInt(fSc) || 0;
-    const pdfMSt = parseInt(mSt) || 0;
-    const pdfFSt = parseInt(fSt) || 0;
-    const pdfMObc = parseInt(mObc) || 0;
-    const pdfFObc = parseInt(fObc) || 0;
-    const pdfMGen = parseInt(mGen) || 0;
-    const pdfFGen = parseInt(fGen) || 0;
+    const isMilk = selectedSociety?.type === 'MILK' || recordItem?.society_type === 'MILK';
+
+    // Census figures must come from the record actually being viewed, not
+    // whatever's currently in live form state — same class of bug as
+    // locText/pdfImageSrc above. Milk PCS stores these as dedicated columns
+    // (m_sc, f_sc, ...); MPCS has no such columns, only the mSc/fSc/... keys
+    // inside form_data (see submissionData in the Compile & Seal step below).
+    const pdfMSc = recordOverride ? parseInt(isMilk ? recordItem?.m_sc : recordFormData?.mSc) || 0 : parseInt(mSc) || 0;
+    const pdfFSc = recordOverride ? parseInt(isMilk ? recordItem?.f_sc : recordFormData?.fSc) || 0 : parseInt(fSc) || 0;
+    const pdfMSt = recordOverride ? parseInt(isMilk ? recordItem?.m_st : recordFormData?.mSt) || 0 : parseInt(mSt) || 0;
+    const pdfFSt = recordOverride ? parseInt(isMilk ? recordItem?.f_st : recordFormData?.fSt) || 0 : parseInt(fSt) || 0;
+    const pdfMObc = recordOverride ? parseInt(isMilk ? recordItem?.m_obc : recordFormData?.mObc) || 0 : parseInt(mObc) || 0;
+    const pdfFObc = recordOverride ? parseInt(isMilk ? recordItem?.f_obc : recordFormData?.fObc) || 0 : parseInt(fObc) || 0;
+    const pdfMGen = recordOverride ? parseInt(isMilk ? recordItem?.m_gen : recordFormData?.mGen) || 0 : parseInt(mGen) || 0;
+    const pdfFGen = recordOverride ? parseInt(isMilk ? recordItem?.f_gen : recordFormData?.fGen) || 0 : parseInt(fGen) || 0;
 
     const pdfTotalMale = pdfMSc + pdfMSt + pdfMObc + pdfMGen;
     const pdfTotalFemale = pdfFSc + pdfFSt + pdfFObc + pdfFGen;
     const pdfGrandTotal = pdfTotalMale + pdfTotalFemale;
-
-    const isMilk = selectedSociety?.type === 'MILK' || recordItem?.society_type === 'MILK';
 
     // Values printed on the sealed document. For Milk PCS, Audit/AGM/loan-setup are
     // now Master Data (set once on Institutional Profile) rather than monthly entries,
@@ -1961,8 +1965,7 @@ export default function App() {
               </div>
             </div>
 
-            ${isMilk ? '' : `
-            <div class="section-title">3. Membership &amp; Governance</div>
+            <div class="section-title">3. Membership Details</div>
             <div class="stat-row">
               <div class="stat-box"><div class="num">${pdfGrandTotal}</div><div class="lbl">Total Members</div></div>
               <div class="stat-box"><div class="num">${pdfTotalMale}</div><div class="lbl">Male</div></div>
@@ -1976,12 +1979,11 @@ export default function App() {
               <tr class="census-row"><td>GEN Members</td><td>${pdfMGen}</td><td>${pdfFGen}</td><td>${pdfMGen + pdfFGen}</td></tr>
               <tr class="census-total-row"><td>Grand Total</td><td>${pdfTotalMale}</td><td>${pdfTotalFemale}</td><td>${pdfGrandTotal}</td></tr>
             </table>
-            `}
 
-            <div class="section-title">${isMilk ? '3' : '4'}. Financial Summary (This Month)</div>
+            <div class="section-title">4. Financial Summary (This Month)</div>
             <table class="data-table">${renderInfoRows(financialRows)}</table>
 
-            <div class="section-title">${isMilk ? '4' : '5'}. Activities &amp; Remarks</div>
+            <div class="section-title">5. Activities &amp; Remarks</div>
             <div class="remarks-box">${escapeHtml(activities) || 'No special activities recorded for this period.'}</div>
 
             <div class="footer-authority">
