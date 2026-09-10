@@ -299,16 +299,17 @@ const Login = ({ onLoginSuccess, onRegisterSuccess }) => {
 
   return (
     <View style={styles.container}>
-      {/* Base maroon gradient */}
-      <LinearGradient
-        colors={[COLORS.maroon, COLORS.maroonDark]}
-        start={{ x: 0.5, y: 0 }}
-        end={{ x: 0.5, y: 1 }}
-        style={styles.background}
-      />
+      {/* Flat single-color base — not a top-to-bottom gradient. The photo
+          panels below fade to/from this exact color at their own edges, and
+          a gradient's color shifts with total page height, so on a tall
+          (desktop web) viewport the mountain/flower panels' fixed-height
+          fade endpoints didn't line up with the gradient's color at that
+          y-position, leaving a visible seam (same bug fixed on the admin
+          dashboard's login — see admin/src/App.jsx). */}
+      <View style={[styles.background, { backgroundColor: COLORS.maroonDark }]} />
 
       {/* Kanchenjunga photo behind the header, duotone-treated and faded
-          into the maroon background toward the card. */}
+          into the flat background toward the card. */}
       <View style={styles.mountainPhotoWrap} pointerEvents="none">
         <Image
           source={require('../../assets/core/kanchenjunga.jpg')}
@@ -317,7 +318,7 @@ const Login = ({ onLoginSuccess, onRegisterSuccess }) => {
         />
         <View style={styles.mountainTint} />
         <LinearGradient
-          colors={['transparent', COLORS.maroon]}
+          colors={['transparent', COLORS.maroonDark]}
           start={{ x: 0.5, y: 0.55 }}
           end={{ x: 0.5, y: 1 }}
           style={StyleSheet.absoluteFillObject}
@@ -344,7 +345,7 @@ const Login = ({ onLoginSuccess, onRegisterSuccess }) => {
           <View style={styles.bottomPhotoTint} />
         </View>
         <LinearGradient
-          colors={[COLORS.maroon, 'transparent']}
+          colors={[COLORS.maroonDark, 'transparent']}
           start={{ x: 0.5, y: 0 }}
           end={{ x: 0.5, y: 0.5 }}
           style={StyleSheet.absoluteFillObject}
