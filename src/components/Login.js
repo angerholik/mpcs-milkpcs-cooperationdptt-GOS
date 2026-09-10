@@ -17,36 +17,30 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialIcons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { supabase } from '../supabase';
-import { MountainSilhouette, RhododendronCluster, PagodaSilhouette } from './LoginBackgroundArt';
 
 const { width } = Dimensions.get('window');
 
-// Design tokens pinned to the exact hex values in the design spec, not the
-// nearest Tailwind slate shade — this screen is meant to match a specific
-// mockup pixel-for-pixel, unlike the rest of the app's screens.
+// STITCH Design Tokens (Matching Dashboard Overview)
 const COLORS = {
   bgStart: "#3b080b",
-  bgMid: "#7D2427",       // Secondary
-  bgMid2: "#6D0F14",      // Primary Maroon
+  bgMid: "#7a1a1f",
+  bgMid2: "#4a1017",
   bgEnd: "#1c0406",
-  gold: "#F4E1B5",        // Gold Accent
+  gold: "#fde68a",
   goldDark: "#b45309",
-  surface: "#FFFFFF",     // Card Background
-  onSurface: "#1F1F1F",   // Primary Text
+  surface: "#ffffff",
+  onSurface: "#1b1b1d",
   slate800: "#1e293b",
   slate700: "#334155",
   slate600: "#475569",
-  slate500: "#6B7280",    // Secondary Text
-  slate400: "#9CA3AF",    // Placeholder
+  slate500: "#64748b",
+  slate400: "#94a3b8",
   slate300: "#cbd5e1",
   slate200: "#e2e8f0",
   slate100: "#f1f5f9",
-  slate50: "#F8F9FB",     // Input Background
-  primary: "#6D0F14",     // Primary Maroon
-  primaryHover: "#A31D24",// Button Hover
-  primaryDark: "#4a0d10",
-  secondary: "#7D2427",
-  linkAccent: "#DC2626",  // Link / Accent
+  slate50: "#f8fafc",
+  primary: "#7a1a1f",
+  primaryDark: "#4a1017",
 };
 
 const FONT_FAMILY = Platform.select({
@@ -74,8 +68,6 @@ const Login = ({ onLoginSuccess, onRegisterSuccess }) => {
   const [mobile, setMobile] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
-
-  const [showPassword, setShowPassword] = useState(false);
 
   const [forgotMode, setForgotMode] = useState(false);
   const [resetEmail, setResetEmail] = useState('');
@@ -285,18 +277,6 @@ const Login = ({ onLoginSuccess, onRegisterSuccess }) => {
       <View style={styles.bgBlobBottomLeft} pointerEvents="none" />
       <View style={styles.bgBlobBottomRight} pointerEvents="none" />
 
-      {/* Mountain range up top, per the design spec's "Assets You'll Need"
-          list — sits behind the header, which is always at the top of the
-          scroll content so a fixed absolute position works here. The
-          rhododendron/pagoda motifs are NOT fixed the same way: this screen's
-          content (especially the Register tab) is often taller than the
-          viewport, and an absolutely-positioned "bottom" would land mid-scroll
-          under the white card instead of at the true bottom of the page — so
-          those render inline at the end of the ScrollView content instead. */}
-      <View style={styles.mountainArt} pointerEvents="none">
-        <MountainSilhouette />
-      </View>
-
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={styles.content}
@@ -304,35 +284,38 @@ const Login = ({ onLoginSuccess, onRegisterSuccess }) => {
         <ScrollView contentContainerStyle={styles.scrollInner} showsVerticalScrollIndicator={false}>
           {/* Header Section */}
           <View style={styles.headerArea}>
-            <View style={styles.headerTopRow}>
-              <View style={styles.headerSideCol}>
-                <Text style={styles.headerTagline}>People</Text>
-                <Text style={styles.headerTagline}>Cooperation</Text>
-                <Text style={styles.headerTagline}>Progress</Text>
-              </View>
-
-              <View style={styles.headerCenterCol}>
-                <View style={styles.emblemContainer}>
-                  <SikkimEmblem />
-                </View>
-                <Text style={styles.govTitle}>CORE</Text>
-              </View>
-
-              <View style={[styles.headerSideCol, styles.headerSideColRight]}>
-                <Text style={[styles.headerTagline, styles.headerTaglineItalic]}>Stronger</Text>
-                <Text style={[styles.headerTagline, styles.headerTaglineItalic]}>Cooperatives</Text>
-                <Text style={[styles.headerTagline, styles.headerTaglineItalic, styles.headerTaglineUnderline]}>A Brighter Sikkim</Text>
-              </View>
+            <View style={styles.emblemContainer}>
+              <SikkimEmblem />
             </View>
 
-            <Text style={styles.fullNameSub}>Cooperative Oversight & Reporting Engine</Text>
-            <View style={styles.headerGoldDivider} />
-            <Text style={styles.deptSubtitle}>Department of Cooperation</Text>
-            <Text style={styles.govSubtitle}>Government of Sikkim</Text>
+            <Text style={styles.govTitle}>CORE</Text>
+            <Text style={styles.fullNameSub}>COOPERATIVE OVERSIGHT & REPORTING ENGINE</Text>
+            <Text style={styles.deptSubtitle}>DEPARTMENT OF COOPERATION • GOVERNMENT OF SIKKIM</Text>
           </View>
 
           {/* Form Card Container */}
           <View style={styles.cardWrapper}>
+            {/* Top Tab Bar */}
+            <View style={styles.tabContainer}>
+              <TouchableOpacity
+                style={[styles.tabBtn, tab === 'signin' && styles.activeTabBtn]}
+                onPress={() => setTab('signin')}
+                activeOpacity={0.85}
+              >
+                <Text style={[styles.tabBtnText, tab === 'signin' && styles.activeTabText]}>SIGN IN</Text>
+                {tab === 'signin' && <View style={styles.activeTabIndicator} />}
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.tabBtn, tab === 'register' && styles.activeTabBtn]}
+                onPress={() => setTab('register')}
+                activeOpacity={0.85}
+              >
+                <Text style={[styles.tabBtnText, tab === 'register' && styles.activeTabText]}>REGISTER INSPECTOR</Text>
+                {tab === 'register' && <View style={styles.activeTabIndicator} />}
+              </TouchableOpacity>
+            </View>
+
             {/* White Form Card Body */}
             <View style={styles.whiteFormCard}>
               {tab === 'register' ? (
@@ -352,7 +335,7 @@ const Login = ({ onLoginSuccess, onRegisterSuccess }) => {
                       >
                         {role === 'CI' ? (
                           <LinearGradient
-                            colors={[COLORS.primary, COLORS.primaryDark]}
+                            colors={['#7a1a1f', '#4a1017']}
                             start={{ x: 0, y: 0 }}
                             end={{ x: 1, y: 0 }}
                             style={styles.activeRoleGradient}
@@ -375,7 +358,7 @@ const Login = ({ onLoginSuccess, onRegisterSuccess }) => {
                       >
                         {role === 'ACI' ? (
                           <LinearGradient
-                            colors={[COLORS.primary, COLORS.primaryDark]}
+                            colors={['#7a1a1f', '#4a1017']}
                             start={{ x: 0, y: 0 }}
                             end={{ x: 1, y: 0 }}
                             style={styles.activeRoleGradient}
@@ -398,7 +381,7 @@ const Login = ({ onLoginSuccess, onRegisterSuccess }) => {
                       >
                         {role === 'PA' ? (
                           <LinearGradient
-                            colors={[COLORS.primary, COLORS.primaryDark]}
+                            colors={['#7a1a1f', '#4a1017']}
                             start={{ x: 0, y: 0 }}
                             end={{ x: 1, y: 0 }}
                             style={styles.activeRoleGradient}
@@ -499,7 +482,7 @@ const Login = ({ onLoginSuccess, onRegisterSuccess }) => {
                   >
                     {({ hovered }) => (
                       <LinearGradient
-                        colors={[COLORS.primary, COLORS.primaryDark]}
+                        colors={['#7a1a1f', '#4a1017']}
                         start={{ x: 0, y: 0 }}
                         end={{ x: 1, y: 0 }}
                         style={[
@@ -523,14 +506,6 @@ const Login = ({ onLoginSuccess, onRegisterSuccess }) => {
                       </LinearGradient>
                     )}
                   </Pressable>
-
-                  <View style={styles.switchModeDivider} />
-                  <View style={styles.switchModeRow}>
-                    <Text style={styles.switchModeText}>Already registered? </Text>
-                    <TouchableOpacity onPress={() => setTab('signin')} activeOpacity={0.7}>
-                      <Text style={styles.switchModeLink}>Sign in →</Text>
-                    </TouchableOpacity>
-                  </View>
                 </>
               ) : forgotMode ? (
                 <>
@@ -583,7 +558,7 @@ const Login = ({ onLoginSuccess, onRegisterSuccess }) => {
                   >
                     {({ hovered }) => (
                       <LinearGradient
-                        colors={[COLORS.primary, COLORS.primaryDark]}
+                        colors={['#7a1a1f', '#4a1017']}
                         start={{ x: 0, y: 0 }}
                         end={{ x: 1, y: 0 }}
                         style={[
@@ -619,7 +594,6 @@ const Login = ({ onLoginSuccess, onRegisterSuccess }) => {
                 </>
               ) : (
                 <>
-                  <Text style={styles.welcomeHeading}>Welcome back</Text>
                   <Text style={styles.cardSubtitle}>
                     Sign in to access the Cooperative Portal
                   </Text>
@@ -638,15 +612,6 @@ const Login = ({ onLoginSuccess, onRegisterSuccess }) => {
                         autoCapitalize="none"
                         keyboardType="email-address"
                       />
-                      {email ? (
-                        <TouchableOpacity
-                          style={styles.inputClearBtn}
-                          onPress={() => { setEmail(''); setResetEmail(''); }}
-                          activeOpacity={0.7}
-                        >
-                          <MaterialCommunityIcons name="close" size={13} color="#FFFFFF" />
-                        </TouchableOpacity>
-                      ) : null}
                     </View>
                   </View>
 
@@ -661,25 +626,25 @@ const Login = ({ onLoginSuccess, onRegisterSuccess }) => {
                         placeholderTextColor={COLORS.slate400}
                         value={password}
                         onChangeText={setPassword}
-                        secureTextEntry={!showPassword}
+                        secureTextEntry
                       />
-                      <TouchableOpacity
-                        style={styles.eyeToggleBtn}
-                        onPress={() => setShowPassword((v) => !v)}
-                        activeOpacity={0.7}
-                      >
-                        <MaterialCommunityIcons name={showPassword ? 'eye-off-outline' : 'eye-outline'} size={18} color={COLORS.slate500} />
-                      </TouchableOpacity>
                     </View>
                   </View>
 
-                  <TouchableOpacity
-                    style={styles.forgotBtn}
+                  <TouchableOpacity 
+                    style={styles.forgotBtn} 
                     onPress={() => { setForgotMode(true); setResetEmail(email); setResetMsg(''); setResetErr(''); }}
                     activeOpacity={0.7}
                   >
                     <Text style={styles.forgotText}>Forgot Password?</Text>
                   </TouchableOpacity>
+
+                  {/* PROCEED Divider */}
+                  <View style={styles.proceedDividerRow}>
+                    <View style={styles.dividerLine} />
+                    <Text style={styles.dividerText}>PROCEED</Text>
+                    <View style={styles.dividerLine} />
+                  </View>
 
                   {/* Sign In CTA Button */}
                   <Pressable
@@ -693,7 +658,7 @@ const Login = ({ onLoginSuccess, onRegisterSuccess }) => {
                   >
                     {({ hovered }) => (
                       <LinearGradient
-                        colors={[COLORS.primary, COLORS.primaryDark]}
+                        colors={['#7a1a1f', '#4a1017']}
                         start={{ x: 0, y: 0 }}
                         end={{ x: 1, y: 0 }}
                         style={[
@@ -705,11 +670,11 @@ const Login = ({ onLoginSuccess, onRegisterSuccess }) => {
                           <ActivityIndicator color="#FFFFFF" size="small" />
                         ) : (
                           <>
-                            <Text style={styles.ctaText}>SIGN IN</Text>
-                            <MaterialCommunityIcons
-                              name="arrow-right"
-                              size={18}
-                              color="#FFFFFF"
+                            <Text style={styles.ctaText}>SIGN IN TO PORTAL</Text>
+                            <MaterialCommunityIcons 
+                              name="arrow-right" 
+                              size={18} 
+                              color="#FFFFFF" 
                               style={hovered && Platform.OS === 'web' ? { transform: [{ translateX: 4 }] } : null}
                             />
                           </>
@@ -717,14 +682,6 @@ const Login = ({ onLoginSuccess, onRegisterSuccess }) => {
                       </LinearGradient>
                     )}
                   </Pressable>
-
-                  <View style={styles.switchModeDivider} />
-                  <View style={styles.switchModeRow}>
-                    <Text style={styles.switchModeText}>New Inspector? </Text>
-                    <TouchableOpacity onPress={() => setTab('register')} activeOpacity={0.7}>
-                      <Text style={styles.switchModeLink}>Register here →</Text>
-                    </TouchableOpacity>
-                  </View>
                 </>
               )}
             </View>
@@ -732,42 +689,8 @@ const Login = ({ onLoginSuccess, onRegisterSuccess }) => {
 
           {/* Footer */}
           <View style={styles.footer}>
-            <View style={styles.footerIconRow}>
-              <View style={styles.footerIconItem}>
-                <View style={styles.footerIconCircle}>
-                  <MaterialCommunityIcons name="shield-check-outline" size={26} color={COLORS.gold} />
-                </View>
-                <Text style={styles.footerIconLabel}>Secure{'\n'}Access</Text>
-              </View>
-              <View style={styles.footerIconItem}>
-                <View style={styles.footerIconCircle}>
-                  <MaterialCommunityIcons name="account-group-outline" size={26} color={COLORS.gold} />
-                </View>
-                <Text style={styles.footerIconLabel}>For a Stronger{'\n'}Cooperative Ecosystem</Text>
-              </View>
-              <View style={styles.footerIconItem}>
-                <View style={styles.footerIconCircle}>
-                  <MaterialCommunityIcons name="leaf" size={26} color={COLORS.gold} />
-                </View>
-                <Text style={styles.footerIconLabel}>Government{'\n'}of Sikkim</Text>
-              </View>
-            </View>
-
-            <View style={styles.footerDivider} />
-
-            <View style={styles.footerVersionRow}>
-              <Text style={styles.footerVersionText}>Version 2.0.4</Text>
-              <MaterialCommunityIcons name="lock-outline" size={11} color="rgba(255,255,255,0.4)" style={{ marginHorizontal: 6 }} />
-              <Text style={styles.footerVersionText}>Secure government system</Text>
-            </View>
-          </View>
-
-          {/* Rhododendron / monastery motifs — see the comment above the
-              mountain art for why these live in the scroll flow instead of
-              as a fixed absolute background layer. */}
-          <View style={styles.bottomArtRow} pointerEvents="none">
-            <RhododendronCluster size={100} />
-            <PagodaSilhouette width={72} height={72} />
+            <Text style={styles.footerText}>SECURE GOVERNMENT ASSETS • v2.0.4-beta</Text>
+            <Text style={styles.footerSubtext}>System generated access tokens are cryptographically monitored.</Text>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -816,23 +739,6 @@ const styles = StyleSheet.create({
     zIndex: -1,
   },
 
-  // Decorative Sikkim Motifs
-  mountainArt: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    height: 160,
-  },
-  bottomArtRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-end',
-    width: '100%',
-    maxWidth: 540,
-    marginTop: 24,
-  },
-
   content: { flex: 1 },
   scrollInner: {
     paddingHorizontal: 16,
@@ -847,16 +753,16 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   emblemContainer: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
+    width: 76,
+    height: 76,
+    borderRadius: 38,
     backgroundColor: 'rgba(255, 255, 255, 0.12)',
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1.5,
-    borderColor: 'rgba(244, 225, 181, 0.4)',
-    padding: 12,
-    marginBottom: 12,
+    borderColor: 'rgba(253, 230, 138, 0.4)',
+    padding: 14,
+    marginBottom: 16,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.4,
@@ -869,39 +775,6 @@ const styles = StyleSheet.create({
     tintColor: '#FFFFFF',
   },
 
-  headerTopRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    width: '100%',
-    marginBottom: 12,
-  },
-  headerSideCol: {
-    width: 78,
-    alignItems: 'flex-start',
-  },
-  headerSideColRight: {
-    alignItems: 'flex-end',
-  },
-  headerTagline: {
-    fontFamily: FONT_FAMILY,
-    fontSize: 11,
-    fontWeight: '500',
-    color: 'rgba(255, 255, 255, 0.55)',
-    lineHeight: 15,
-  },
-  headerTaglineItalic: {
-    fontStyle: 'italic',
-    color: 'rgba(253, 230, 138, 0.75)',
-  },
-  headerTaglineUnderline: {
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.gold,
-    paddingBottom: 3,
-  },
-  headerCenterCol: {
-    alignItems: 'center',
-  },
   govTitle: {
     fontFamily: FONT_FAMILY,
     fontSize: 32,
@@ -909,50 +782,86 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     letterSpacing: 8,
     textAlign: 'center',
+    marginBottom: 4,
   },
   fullNameSub: {
     fontFamily: FONT_FAMILY,
-    fontSize: 13,
-    fontWeight: '500',
-    color: 'rgba(255, 255, 255, 0.75)',
+    fontSize: 9.5,
+    fontWeight: '700',
+    color: 'rgba(255, 255, 255, 0.7)',
+    letterSpacing: 2,
+    textTransform: 'uppercase',
     textAlign: 'center',
-    marginBottom: 10,
-  },
-  headerGoldDivider: {
-    width: 48,
-    height: 1.5,
-    backgroundColor: COLORS.gold,
-    marginBottom: 10,
+    marginBottom: 4,
   },
   deptSubtitle: {
     fontFamily: FONT_FAMILY,
-    fontSize: 13,
+    fontSize: 9,
     fontWeight: '800',
     color: COLORS.gold,
+    letterSpacing: 1.5,
+    textTransform: 'uppercase',
     textAlign: 'center',
-  },
-  govSubtitle: {
-    fontFamily: FONT_FAMILY,
-    fontSize: 13,
-    fontWeight: '500',
-    color: 'rgba(255, 255, 255, 0.85)',
-    textAlign: 'center',
-    marginTop: 2,
   },
 
-  // Card Container
+  // Card & Tabs Container
   cardWrapper: {
     width: '100%',
     maxWidth: 540,
-    marginTop: 32,
+    marginTop: 8,
+  },
+
+  // Tabs Header
+  tabContainer: {
+    flexDirection: 'row',
+    backgroundColor: 'rgba(28, 4, 6, 0.65)',
+    borderTopLeftRadius: 18,
+    borderTopRightRadius: 18,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.12)',
+    borderBottomWidth: 0,
+    overflow: 'hidden',
+  },
+  tabBtn: {
+    flex: 1,
+    paddingVertical: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'relative',
+  },
+  activeTabBtn: {
+    backgroundColor: 'rgba(122, 26, 31, 0.25)',
+  },
+  tabBtnText: {
+    fontFamily: FONT_FAMILY,
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 1.5,
+    color: 'rgba(255, 255, 255, 0.5)',
+    textTransform: 'uppercase',
+  },
+  activeTabText: {
+    color: '#ffffff',
+  },
+  activeTabIndicator: {
+    position: 'absolute',
+    bottom: 0,
+    left: 20,
+    right: 20,
+    height: 3,
+    backgroundColor: COLORS.gold,
+    borderTopLeftRadius: 2,
+    borderTopRightRadius: 2,
   },
 
   // White Form Body
   whiteFormCard: {
     backgroundColor: COLORS.surface,
-    borderRadius: 20,
-    paddingHorizontal: 24,
-    paddingTop: 28,
+    borderBottomLeftRadius: 20,
+    borderBottomRightRadius: 20,
+    borderTopRightRadius: 20,
+    paddingHorizontal: 20,
+    paddingTop: 24,
     paddingBottom: 28,
     borderWidth: 1,
     borderColor: COLORS.slate200,
@@ -962,23 +871,14 @@ const styles = StyleSheet.create({
     shadowRadius: 32,
     elevation: 12,
   },
-  welcomeHeading: {
-    fontFamily: FONT_FAMILY,
-    fontSize: 26,
-    fontWeight: '800',
-    color: COLORS.onSurface,
-    textAlign: 'center',
-    marginBottom: 6,
-    letterSpacing: -0.3,
-  },
   cardSubtitle: {
     fontFamily: FONT_FAMILY,
-    fontSize: 14,
+    fontSize: 12,
     color: COLORS.slate500,
     textAlign: 'center',
     marginBottom: 20,
-    lineHeight: 20,
-    fontWeight: '400',
+    lineHeight: 18,
+    fontWeight: '500',
   },
 
   fieldGroup: {
@@ -986,10 +886,10 @@ const styles = StyleSheet.create({
   },
   fieldLabel: {
     fontFamily: FONT_FAMILY,
-    fontSize: 12,
-    fontWeight: '600',
+    fontSize: 10,
+    fontWeight: '800',
     color: COLORS.slate700,
-    letterSpacing: 0.5,
+    letterSpacing: 1.2,
     textTransform: 'uppercase',
     marginBottom: 6,
   },
@@ -1054,7 +954,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: COLORS.slate200,
     paddingHorizontal: 14,
-    height: 52,
+    height: 46,
   },
   inputIcon: {
     marginRight: 10,
@@ -1066,19 +966,6 @@ const styles = StyleSheet.create({
     color: COLORS.onSurface,
     outlineStyle: 'none',
   },
-  inputClearBtn: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    backgroundColor: COLORS.slate400,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginLeft: 8,
-  },
-  eyeToggleBtn: {
-    padding: 4,
-    marginLeft: 4,
-  },
 
   forgotBtn: {
     alignSelf: 'flex-end',
@@ -1087,9 +974,9 @@ const styles = StyleSheet.create({
   },
   forgotText: {
     fontFamily: FONT_FAMILY,
-    fontSize: 14,
-    color: COLORS.linkAccent,
-    fontWeight: '500',
+    fontSize: 11,
+    color: COLORS.primary,
+    fontWeight: '700',
   },
 
   // PROCEED Divider
@@ -1119,8 +1006,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: 52,
-    paddingVertical: 14,
+    paddingVertical: 15,
     borderRadius: 14,
     gap: 8,
     shadowColor: COLORS.primary,
@@ -1131,90 +1017,32 @@ const styles = StyleSheet.create({
   },
   ctaText: {
     fontFamily: FONT_FAMILY,
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: 12,
+    fontWeight: '800',
     color: '#FFFFFF',
-    letterSpacing: 0.4,
-  },
-
-  // Switch Mode (sign in ↔ register), replaces the old top tab bar
-  switchModeDivider: {
-    height: 1,
-    backgroundColor: COLORS.slate200,
-    marginTop: 22,
-    marginBottom: 16,
-  },
-  switchModeRow: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  switchModeText: {
-    fontFamily: FONT_FAMILY,
-    fontSize: 14,
-    fontWeight: '500',
-    color: COLORS.slate500,
-  },
-  switchModeLink: {
-    fontFamily: FONT_FAMILY,
-    fontSize: 14,
-    fontWeight: '600',
-    color: COLORS.linkAccent,
+    letterSpacing: 0.8,
   },
 
   // Footer
   footer: {
-    marginTop: 28,
+    marginTop: 24,
     alignItems: 'center',
-    width: '100%',
-    maxWidth: 540,
   },
-  footerIconRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    width: '100%',
-  },
-  footerIconItem: {
-    alignItems: 'center',
-    flex: 1,
-    paddingHorizontal: 4,
-  },
-  footerIconCircle: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    borderWidth: 1,
-    borderColor: 'rgba(244, 225, 181, 0.4)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 8,
-  },
-  footerIconLabel: {
+  footerText: {
     fontFamily: FONT_FAMILY,
-    fontSize: 12,
-    fontWeight: '600',
-    color: 'rgba(255, 255, 255, 0.7)',
+    color: 'rgba(255, 255, 255, 0.5)',
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 1.2,
+  },
+  footerSubtext: {
+    fontFamily: FONT_FAMILY,
+    color: 'rgba(255, 255, 255, 0.3)',
+    fontSize: 9,
     textAlign: 'center',
-    lineHeight: 15,
-  },
-  footerDivider: {
-    height: 1,
-    backgroundColor: 'rgba(255, 255, 255, 0.12)',
-    width: '80%',
-    marginTop: 20,
-    marginBottom: 14,
-  },
-  footerVersionRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  footerVersionText: {
-    fontFamily: FONT_FAMILY,
-    color: 'rgba(255, 255, 255, 0.4)',
-    fontSize: 10.5,
-    fontWeight: '600',
-  },
+    marginTop: 4,
+    paddingHorizontal: 40,
+  }
 });
 
 export default Login;
