@@ -9,6 +9,7 @@ import {
 import { MaterialCommunityIcons, MaterialIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import BottomNav from './BottomNav';
+import LiveCameraCapture from './LiveCameraCapture';
 import { webCapWidth } from '../utils/webStyles';
 
 const COLORS = {
@@ -54,6 +55,7 @@ export default function DigitalEvidenceScreen({
   const [reportedBy, setReportedBy] = useState("");
   const [isCapturing, setIsCapturing] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
+  const [showLiveCamera, setShowLiveCamera] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -68,7 +70,47 @@ export default function DigitalEvidenceScreen({
     })();
   }, [societyName, reportingMonth]);
 
+  const applyCaptureResult = async (result) => {
+    if (result.canceled) return;
+    setImageUri(result.assets[0].uri);
+    setImageBase64(result.assets[0].base64);
+
+    const now = new Date();
+    const formattedTime = now.toLocaleDateString('en-IN', {
+      day: 'numeric', month: 'long', year: 'numeric',
+      hour: '2-digit', minute: '2-digit'
+    });
+    setTimestamp(formattedTime);
+
+    let { status } = await Location.requestForegroundPermissionsAsync();
+    if (status === 'granted') {
+      // getCurrentPositionAsync returns {coords: {latitude, longitude, ...},
+      // timestamp}, not a flat {latitude, longitude} object. Storing it
+      // as-is meant this screen's own display (which defensively checks
+      // both location.latitude and location.coords?.latitude) showed the
+      // real coordinates just fine, but every downstream reader — the
+      // sealed PDF, the background cloud sync, the admin dashboard —
+      // expects flat location.latitude and silently got undefined,
+      // showing "Not captured" despite GPS having genuinely been read.
+      let loc = await Location.getCurrentPositionAsync({});
+      setLocation({ latitude: loc.coords.latitude, longitude: loc.coords.longitude });
+    } else {
+      // Don't fabricate a location when permission is denied — leave it
+      // unset so the evidence honestly shows "not captured" rather than
+      // a fixed, fake coordinate pretending to be a real GPS reading.
+      setLocation(null);
+    }
+  };
+
   const handleCapturePhoto = async () => {
+    // On web, expo-image-picker hands off to the OS camera app via a hidden
+    // file input — on many Android devices that backgrounds the browser tab
+    // long enough for Chrome to reclaim/reload it, wiping all in-memory app
+    // state. A live in-page camera keeps the tab foregrounded the whole time.
+    if (Platform.OS === 'web') {
+      setShowLiveCamera(true);
+      return;
+    }
     setIsCapturing(true);
     try {
       let result = await ImagePicker.launchCameraAsync({
@@ -77,41 +119,16 @@ export default function DigitalEvidenceScreen({
         quality: 0.8,
         base64: true,
       });
-
-      if (!result.canceled) {
-        setImageUri(result.assets[0].uri);
-        setImageBase64(result.assets[0].base64);
-
-        const now = new Date();
-        const formattedTime = now.toLocaleDateString('en-IN', {
-          day: 'numeric', month: 'long', year: 'numeric',
-          hour: '2-digit', minute: '2-digit'
-        });
-        setTimestamp(formattedTime);
-
-        let { status } = await Location.requestForegroundPermissionsAsync();
-        if (status === 'granted') {
-          // getCurrentPositionAsync returns {coords: {latitude, longitude, ...},
-          // timestamp}, not a flat {latitude, longitude} object. Storing it
-          // as-is meant this screen's own display (which defensively checks
-          // both location.latitude and location.coords?.latitude) showed the
-          // real coordinates just fine, but every downstream reader — the
-          // sealed PDF, the background cloud sync, the admin dashboard —
-          // expects flat location.latitude and silently got undefined,
-          // showing "Not captured" despite GPS having genuinely been read.
-          let loc = await Location.getCurrentPositionAsync({});
-          setLocation({ latitude: loc.coords.latitude, longitude: loc.coords.longitude });
-        } else {
-          // Don't fabricate a location when permission is denied — leave it
-          // unset so the evidence honestly shows "not captured" rather than
-          // a fixed, fake coordinate pretending to be a real GPS reading.
-          setLocation(null);
-        }
-      }
+      await applyCaptureResult(result);
     } catch (e) {
       console.warn("Camera failed:", e);
     }
     setIsCapturing(false);
+  };
+
+  const handleLiveCameraCapture = async ({ uri, base64 }) => {
+    setShowLiveCamera(false);
+    await applyCaptureResult({ canceled: false, assets: [{ uri, base64 }] });
   };
 
   const handleSave = async () => {
@@ -146,6 +163,11 @@ export default function DigitalEvidenceScreen({
 
   return (
     <View style={styles.container}>
+      <LiveCameraCapture
+        visible={showLiveCamera}
+        onCapture={handleLiveCameraCapture}
+        onClose={() => setShowLiveCamera(false)}
+      />
       {/* ── Top Header ── */}
       <View style={styles.topBar}>
         <LinearGradient

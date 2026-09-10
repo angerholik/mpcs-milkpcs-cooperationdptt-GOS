@@ -8,6 +8,7 @@ import {
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import BottomNav from '../BottomNav';
+import LiveCameraCapture from '../LiveCameraCapture';
 import { webCapWidth } from '../../utils/webStyles';
 
 const COLORS = {
@@ -51,6 +52,7 @@ export default function MpcsDigitalEvidenceScreen({
   onTabPress
 }) {
   const [isCapturing, setIsCapturing] = useState(false);
+  const [showLiveCamera, setShowLiveCamera] = useState(false);
 
   // Real camera + GPS capture, matching the Milk PCS Digital Evidence
   // screen — this previously just set a hardcoded stock photo URL and fake
@@ -85,6 +87,14 @@ export default function MpcsDigitalEvidenceScreen({
   };
 
   const handleCapturePhoto = async () => {
+    // On web, expo-image-picker hands off to the OS camera app via a hidden
+    // file input — on many Android devices that backgrounds the browser tab
+    // long enough for Chrome to reclaim/reload it, wiping all in-memory app
+    // state. A live in-page camera keeps the tab foregrounded the whole time.
+    if (Platform.OS === 'web') {
+      setShowLiveCamera(true);
+      return;
+    }
     setIsCapturing(true);
     try {
       const result = await ImagePicker.launchCameraAsync({
@@ -100,6 +110,11 @@ export default function MpcsDigitalEvidenceScreen({
     setIsCapturing(false);
   };
 
+  const handleLiveCameraCapture = async ({ uri, base64 }) => {
+    setShowLiveCamera(false);
+    await applyCaptureResult({ canceled: false, assets: [{ uri, base64 }] });
+  };
+
   // Previously the button wired directly to `onPress={onSaveNext}`, so the
   // press event object (not a real date) was what App.js received as
   // `validUntil` — comparing "now < new Date(pressEvent)" is always false,
@@ -113,6 +128,11 @@ export default function MpcsDigitalEvidenceScreen({
 
   return (
     <View style={styles.container}>
+      <LiveCameraCapture
+        visible={showLiveCamera}
+        onCapture={handleLiveCameraCapture}
+        onClose={() => setShowLiveCamera(false)}
+      />
       {/* ── Top Header ── */}
       <View style={styles.topBar}>
         <LinearGradient
