@@ -90,6 +90,14 @@ export default function HomeScreen({
   const [internalTab, setInternalTab] = useState('monthly');
   const [alertVisible, setAlertVisible] = useState(true);
 
+  const nextAction = (!isEvidenceCaptured(evidenceStatus) && !evidenceStatus?.includes('Valid'))
+    ? { icon: 'image-outline', title: 'Digital Evidence (Live Visit)', desc: 'Capture a live visit photo & GPS coordinates.', screen: 'MPCS_EVIDENCE' }
+    : !salesStatus?.startsWith('COMPLETED')
+      ? { icon: 'wallet-outline', title: 'Monthly Sales / Deposit', desc: 'Record daily sales and verify bank deposits.', screen: 'MPCS_SALES' }
+      : (activitiesStatus === '0 ENTRIES' || activitiesStatus === 'NOT COMPLETED')
+        ? { icon: 'calendar-check-outline', title: 'Activities & Events Log (Live Visit)', desc: 'Record your field visit and activities for today.', screen: 'MPCS_ACTIVITIES' }
+        : { icon: 'file-check-outline', title: 'Review & Submit Return', desc: 'All monthly parameters are ready for final submission.', screen: 'MPCS_REVIEW' };
+
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor={COLORS.primary} />
@@ -170,47 +178,44 @@ export default function HomeScreen({
         {/* Current Reporting Period */}
         <View style={styles.reportCard}>
           <View style={styles.reportHeader}>
-            <Text style={styles.reportTitle}>Current Reporting Period</Text>
-            <View style={styles.monthBadge}>
-              <Text style={styles.monthBadgeText}>{reportingMonth || 'Current Month'}</Text>
+            <View style={{flex: 1}}>
+              <Text style={styles.reportTitle}>Current Reporting Period</Text>
+              <Text style={styles.reportSubtitle}>{reportingMonth || 'Current Month'}</Text>
+            </View>
+            <View style={styles.percentBadge}>
+              <Text style={styles.percentBadgeText}>{progressPercent}%</Text>
             </View>
           </View>
-          
+
           <View style={styles.progressContainer}>
             <View style={styles.progressLabelRow}>
               <Text style={styles.progressLabel}>
-                {reportStatus === 'MONTHLY PARAMS OK' ? 'MONTHLY PARAMS SUBMITTED (80% BASE)' : 'OVERALL COMPLETION'}
+                {reportStatus === 'MONTHLY PARAMS OK'
+                  ? `MONTHLY PARAMETERS SUBMITTED (${progressPercent}% OF BASE)`
+                  : 'OVERALL COMPLETION'}
               </Text>
-              <Text style={styles.progressPercent}>{progressPercent}%</Text>
             </View>
             <View style={styles.progressBarBg}>
               <View style={[
-                styles.progressBarFill, 
+                styles.progressBarFill,
                 { width: `${progressPercent}%`, backgroundColor: '#dc2626' },
                 Platform.OS === 'web' && { filter: 'drop-shadow(0 0 8px rgba(122,26,31,0.5))', backgroundImage: 'linear-gradient(to right, #dc2626, #be123c, #7a1a1f)' }
               ]} />
             </View>
+            <View style={styles.progressFooterRow}>
+              <Text style={styles.progressFooterText}>{completedCount} of {totalCount} parameters submitted</Text>
+              <Text style={styles.progressFooterText}>{Math.max(totalCount - completedCount, 0)} pending</Text>
+            </View>
           </View>
         </View>
 
-        <Pressable 
+        <Pressable
           style={({ hovered, pressed }) => [
-            styles.nextStepBtnWrapper,
+            styles.nextActionWrapper,
             pressed && { transform: [{ scale: 0.98 }] },
             hovered && { opacity: 0.95 }
           ]}
-          onPress={() => {
-            if (!onNavigateScreen) return;
-            if (!isEvidenceCaptured(evidenceStatus) && !evidenceStatus?.includes('Valid')) {
-              onNavigateScreen('MPCS_EVIDENCE');
-            } else if (!salesStatus?.startsWith('COMPLETED')) {
-              onNavigateScreen('MPCS_SALES');
-            } else if (activitiesStatus === '0 ENTRIES' || activitiesStatus === 'NOT COMPLETED') {
-              onNavigateScreen('MPCS_ACTIVITIES');
-            } else {
-              onNavigateScreen('MPCS_REVIEW');
-            }
-          }}
+          onPress={() => onNavigateScreen && onNavigateScreen(nextAction.screen)}
         >
           {({ hovered }) => (
             <LinearGradient
@@ -218,25 +223,23 @@ export default function HomeScreen({
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}
               style={[
-                styles.nextStepBtn,
+                styles.nextActionCard,
                 hovered && { shadowOpacity: 0.2, shadowRadius: 12, elevation: 8 }
               ]}
             >
-              <Text style={styles.nextStepBtnText}>
-                {(!isEvidenceCaptured(evidenceStatus) && !evidenceStatus?.includes('Valid'))
-                  ? 'Next Step: Digital Evidence (Live Visit)'
-                  : !salesStatus?.startsWith('COMPLETED')
-                    ? 'Next Step: Monthly Sales / Deposit'
-                    : activitiesStatus === '0 ENTRIES' || activitiesStatus === 'NOT COMPLETED'
-                      ? 'Next Step: Activities & Events Log (Live Visit)'
-                      : 'Next Step: Review & Submit Return'}
-              </Text>
-              <MaterialCommunityIcons 
-                name="arrow-right" 
-                size={18} 
-                color="#ffffff" 
-                style={hovered && { transform: [{ translateX: 4 }] }} 
-              />
+              <Text style={styles.nextActionLabel}>NEXT REQUIRED ACTION</Text>
+              <View style={styles.nextActionRow}>
+                <View style={styles.nextActionIconBox}>
+                  <MaterialCommunityIcons name={nextAction.icon} size={22} color="#ffffff" />
+                </View>
+                <View style={styles.nextActionTextCol}>
+                  <Text style={styles.nextActionTitle}>{nextAction.title}</Text>
+                  <Text style={styles.nextActionDesc}>{nextAction.desc}</Text>
+                </View>
+                <View style={[styles.nextActionArrowBtn, hovered && { transform: [{ translateX: 2 }] }]}>
+                  <MaterialCommunityIcons name="arrow-right" size={18} color={COLORS.primary} />
+                </View>
+              </View>
             </LinearGradient>
           )}
         </Pressable>
@@ -278,146 +281,108 @@ export default function HomeScreen({
 
         {/* Monthly Data Section */}
         {internalTab === 'monthly' && (
-          <View style={styles.sectionContainer}>
-            <Text style={styles.sectionTitle}>Monthly Data Entries</Text>
-            
-            <View style={styles.monthlyGrid}>
-              {/* Digital Evidence */}
-              <Pressable 
-                style={({ hovered }) => [
-                  styles.moduleCard,
-                  Platform.OS === 'web' && { transition: 'all 0.3s' },
-                  hovered && { borderColor: '#cbd5e1', shadowOpacity: 0.08, elevation: 4 }
-                ]}
-                onPress={() => onNavigateScreen && onNavigateScreen('MPCS_EVIDENCE')}
-              >
-                {({ hovered }) => (
-                  <>
-                    <View style={styles.moduleCardHeader}>
-                      <View style={[
-                        styles.moduleIconBox, 
-                        {backgroundColor: isEvidenceCaptured(evidenceStatus) ? COLORS.emerald50 : COLORS.slate50, borderColor: isEvidenceCaptured(evidenceStatus) ? '#a7f3d0' : COLORS.slate100},
-                        Platform.OS === 'web' && { transition: 'all 0.3s' },
-                        hovered && { backgroundColor: '#fef2f2', borderColor: '#fee2e2' }
-                      ]}>
-                        <MaterialCommunityIcons name="image-outline" size={24} color={isEvidenceCaptured(evidenceStatus) ? COLORS.emerald700 : hovered ? '#7a1a1f' : COLORS.slate400} />
-                      </View>
-                      <View style={[styles.statusPill, {backgroundColor: isEvidenceCaptured(evidenceStatus) ? COLORS.emerald50 : COLORS.slate100, borderColor: isEvidenceCaptured(evidenceStatus) ? 'rgba(16,185,129,0.3)' : 'rgba(226,232,240,0.5)'}]}>
-                        <Text style={[styles.statusPillText, {color: isEvidenceCaptured(evidenceStatus) ? COLORS.emerald700 : COLORS.slate500}]}>
-                          {evidenceStatus || 'NOT CAPTURED'}
-                        </Text>
-                      </View>
+          <>
+            {/* Quick Actions — surfaces the two anytime ledgers (CSC / Daily
+                Transactions) directly on Home, without requiring a tab
+                switch to Quick Access. */}
+            <View style={styles.sectionContainer}>
+              <Text style={styles.sectionTitle}>Quick Actions</Text>
+              <Text style={styles.sectionSubtitle}>Get started with your most common tasks</Text>
+              <View style={styles.quickActionsGrid}>
+                <Pressable
+                  style={({ hovered }) => [
+                    styles.quickActionCard,
+                    Platform.OS === 'web' && { transition: 'all 0.3s' },
+                    hovered && { borderColor: '#cbd5e1', shadowOpacity: 0.08, elevation: 4 }
+                  ]}
+                  onPress={() => onNavigateScreen && onNavigateScreen('MPCS_DAILY_TRANS')}
+                >
+                  <View style={styles.quickActionTopRow}>
+                    <View style={[styles.quickActionIconBox, { backgroundColor: COLORS.red50 }]}>
+                      <MaterialCommunityIcons name="notebook-outline" size={22} color={COLORS.primary} />
                     </View>
-                    <Text style={[styles.moduleCardTitle, Platform.OS === 'web' && { transition: 'all 0.3s' }, hovered && { color: '#7a1a1f' }]}>Digital Evidence</Text>
-                    <Text style={styles.moduleCardDesc}>Live visit evidence: photo &amp; GPS coordinates.</Text>
-                  </>
-                )}
-              </Pressable>
-
-              {/* Sales & Deposit */}
-              <Pressable 
-                style={({ hovered }) => [
-                  styles.moduleCard,
-                  Platform.OS === 'web' && { transition: 'all 0.3s' },
-                  hovered && { borderColor: '#cbd5e1', shadowOpacity: 0.08, elevation: 4 }
-                ]}
-                onPress={() => onNavigateScreen && onNavigateScreen('MPCS_SALES')}
-              >
-                {({ hovered }) => (
-                  <>
-                    <View style={styles.moduleCardHeader}>
-                      <View style={[
-                        styles.moduleIconBox, 
-                        {backgroundColor: salesStatus?.startsWith('COMPLETED') ? COLORS.emerald50 : COLORS.amber50, borderColor: salesStatus?.startsWith('COMPLETED') ? '#a7f3d0' : 'rgba(254,243,199,0.5)'},
-                        Platform.OS === 'web' && { transition: 'all 0.3s' },
-                        hovered && { backgroundColor: '#fef3c7', borderColor: '#fde68a' }
-                      ]}>
-                        <MaterialCommunityIcons name="wallet-outline" size={24} color={salesStatus?.startsWith('COMPLETED') ? COLORS.emerald700 : COLORS.amber600} />
-                      </View>
-                      <View style={[styles.statusPill, {backgroundColor: salesStatus?.startsWith('COMPLETED') ? COLORS.emerald50 : COLORS.amber50, borderColor: salesStatus?.startsWith('COMPLETED') ? 'rgba(16,185,129,0.3)' : 'rgba(254,243,199,0.5)'}]}>
-                        <Text style={[styles.statusPillText, {color: salesStatus?.startsWith('COMPLETED') ? COLORS.emerald700 : COLORS.amber700}]}>
-                          {salesStatus}
-                        </Text>
-                      </View>
+                    <View style={styles.quickActionArrowBtn}>
+                      <MaterialCommunityIcons name="arrow-right" size={16} color={COLORS.slate800} />
                     </View>
-                    <Text style={[styles.moduleCardTitle, Platform.OS === 'web' && { transition: 'all 0.3s' }, hovered && { color: '#7a1a1f' }]}>Sales &amp; Deposit</Text>
-                    <Text style={styles.moduleCardDesc}>
-                      {salesStatus?.startsWith('COMPLETED') ? 'Monthly parameter saved.' : 'Record daily sales and verify bank deposits.'}
-                    </Text>
-                  </>
-                )}
-              </Pressable>
+                  </View>
+                  <Text style={styles.quickActionTitle}>MPCS Daily Transactions</Text>
+                  <Text style={styles.quickActionDesc}>Record today's cash-book entries as they happen.</Text>
+                </Pressable>
 
-              {/* Business Performance */}
-              <Pressable 
-                style={({ hovered }) => [
-                  styles.moduleCard,
-                  Platform.OS === 'web' && { transition: 'all 0.3s' },
-                  hovered && { borderColor: '#cbd5e1', shadowOpacity: 0.08, elevation: 4 }
-                ]}
-                onPress={() => onNavigateScreen && onNavigateScreen('MPCS_BUSINESS')}
-              >
-                {({ hovered }) => (
-                  <>
-                    <View style={styles.moduleCardHeader}>
-                      <View style={[
-                        styles.moduleIconBox, 
-                        {backgroundColor: businessStatus?.startsWith('COMPLETED') ? COLORS.emerald50 : COLORS.slate50, borderColor: businessStatus?.startsWith('COMPLETED') ? '#a7f3d0' : COLORS.slate100},
-                        Platform.OS === 'web' && { transition: 'all 0.3s' },
-                        hovered && { backgroundColor: '#fef2f2', borderColor: '#fee2e2' }
-                      ]}>
-                        <MaterialCommunityIcons name="chart-bar" size={24} color={businessStatus?.startsWith('COMPLETED') ? COLORS.emerald700 : hovered ? '#7a1a1f' : COLORS.slate400} />
-                      </View>
-                      <View style={[styles.statusPill, {backgroundColor: businessStatus?.startsWith('COMPLETED') ? COLORS.emerald50 : COLORS.slate100, borderColor: businessStatus?.startsWith('COMPLETED') ? 'rgba(16,185,129,0.3)' : 'rgba(226,232,240,0.5)'}]}>
-                        <Text style={[styles.statusPillText, {color: businessStatus?.startsWith('COMPLETED') ? COLORS.emerald700 : COLORS.slate500}]}>
-                          {businessStatus}
-                        </Text>
-                      </View>
+                <Pressable
+                  style={({ hovered }) => [
+                    styles.quickActionCard,
+                    Platform.OS === 'web' && { transition: 'all 0.3s' },
+                    hovered && { borderColor: '#cbd5e1', shadowOpacity: 0.08, elevation: 4 }
+                  ]}
+                  onPress={() => onNavigateScreen && onNavigateScreen('MPCS_CSC_TRANS')}
+                >
+                  <View style={styles.quickActionTopRow}>
+                    <View style={[styles.quickActionIconBox, { backgroundColor: '#e0f2fe' }]}>
+                      <MaterialCommunityIcons name="laptop" size={22} color="#0369a1" />
                     </View>
-                    <Text style={[styles.moduleCardTitle, Platform.OS === 'web' && { transition: 'all 0.3s' }, hovered && { color: '#7a1a1f' }]}>Business Performance</Text>
-                    <Text style={styles.moduleCardDesc}>
-                      {businessStatus?.startsWith('COMPLETED') ? 'P&L metrics saved.' : 'KPI metrics and overall performance assessment.'}
-                    </Text>
-                  </>
-                )}
-              </Pressable>
-
-              {/* Loan Status */}
-              <Pressable
-                style={({ hovered }) => [
-                  styles.moduleCard,
-                  Platform.OS === 'web' && { transition: 'all 0.3s' },
-                  hovered && { borderColor: '#cbd5e1', shadowOpacity: 0.08, elevation: 4 }
-                ]}
-                onPress={() => onNavigateScreen && onNavigateScreen('MPCS_LOAN_STATUS')}
-              >
-                {({ hovered }) => (
-                  <>
-                    <View style={styles.moduleCardHeader}>
-                      <View style={[
-                        styles.moduleIconBox,
-                        {backgroundColor: !loanIsActive ? COLORS.slate50 : loanStatus?.startsWith('COMPLETED') ? COLORS.emerald50 : COLORS.amber50, borderColor: !loanIsActive ? COLORS.slate100 : loanStatus?.startsWith('COMPLETED') ? '#a7f3d0' : 'rgba(254,243,199,0.5)'},
-                        Platform.OS === 'web' && { transition: 'all 0.3s' },
-                        hovered && { backgroundColor: '#fef2f2', borderColor: '#fee2e2' }
-                      ]}>
-                        <MaterialCommunityIcons name="bank-outline" size={24} color={!loanIsActive ? COLORS.slate400 : loanStatus?.startsWith('COMPLETED') ? COLORS.emerald700 : COLORS.amber600} />
-                      </View>
-                      <View style={[styles.statusPill, {backgroundColor: !loanIsActive ? COLORS.slate100 : loanStatus?.startsWith('COMPLETED') ? COLORS.emerald50 : COLORS.amber50, borderColor: !loanIsActive ? 'rgba(226,232,240,0.5)' : loanStatus?.startsWith('COMPLETED') ? 'rgba(16,185,129,0.3)' : 'rgba(254,243,199,0.5)'}]}>
-                        <Text style={[styles.statusPillText, {color: !loanIsActive ? COLORS.slate500 : loanStatus?.startsWith('COMPLETED') ? COLORS.emerald700 : COLORS.amber700}]}>
-                          {loanIsActive ? loanStatus : 'NOT APPLICABLE'}
-                        </Text>
-                      </View>
+                    <View style={styles.quickActionArrowBtn}>
+                      <MaterialCommunityIcons name="arrow-right" size={16} color={COLORS.slate800} />
                     </View>
-                    <Text style={[styles.moduleCardTitle, Platform.OS === 'web' && { transition: 'all 0.3s' }, hovered && { color: '#7a1a1f' }]}>Loan Status</Text>
-                    <Text style={styles.moduleCardDesc}>
-                      {loanIsActive ? 'Report this month\'s loan recovery.' : 'No active loan on record for this society.'}
-                    </Text>
-                  </>
-                )}
-              </Pressable>
-
+                  </View>
+                  <Text style={styles.quickActionTitle}>CSC Transactions</Text>
+                  <Text style={styles.quickActionDesc}>
+                    {cscIsActive ? 'Record and review CSC service transactions.' : 'No active CSC on record for this society.'}
+                  </Text>
+                </Pressable>
+              </View>
             </View>
-          </View>
+
+            <View style={styles.sectionContainer}>
+              <Text style={styles.sectionTitle}>Monthly Data Entries</Text>
+              <Text style={styles.sectionSubtitle}>Track the status of your monthly submissions</Text>
+
+              <View style={styles.masterListContainer}>
+                {[
+                  { id: 'MPCS_EVIDENCE', title: 'Digital Evidence', icon: 'image-outline', desc: 'Live visit evidence: photo & GPS coordinates.', status: evidenceStatus || 'NOT CAPTURED', done: isEvidenceCaptured(evidenceStatus) },
+                  { id: 'MPCS_SALES', title: 'Sales & Deposit', icon: 'wallet-outline', desc: salesStatus?.startsWith('COMPLETED') ? 'Monthly parameter saved.' : 'Record daily sales and verify bank deposits.', status: salesStatus, done: salesStatus?.startsWith('COMPLETED') },
+                  { id: 'MPCS_BUSINESS', title: 'Business Performance', icon: 'chart-bar', desc: businessStatus?.startsWith('COMPLETED') ? 'P&L metrics saved.' : 'KPI metrics and overall performance assessment.', status: businessStatus, done: businessStatus?.startsWith('COMPLETED') },
+                  { id: 'MPCS_LOAN_STATUS', title: 'Loan Status', icon: 'bank-outline', desc: loanIsActive ? "Report this month's loan recovery." : 'No active loan on record for this society.', status: loanIsActive ? loanStatus : 'NOT APPLICABLE', done: loanIsActive && loanStatus?.startsWith('COMPLETED'), na: !loanIsActive },
+                ].map((item) => (
+                  <Pressable
+                    key={item.id}
+                    style={({ hovered }) => [
+                      styles.masterListItem,
+                      Platform.OS === 'web' && { transition: 'all 0.3s' },
+                      hovered && { borderColor: '#cbd5e1', shadowOpacity: 0.08, elevation: 4 }
+                    ]}
+                    onPress={() => onNavigateScreen && onNavigateScreen(item.id)}
+                  >
+                    {({ hovered }) => (
+                      <>
+                        <View style={styles.masterListLeft}>
+                          <View style={[
+                            styles.masterListIcon,
+                            { backgroundColor: item.done ? COLORS.emerald50 : item.na ? COLORS.slate50 : COLORS.amber50, borderColor: item.done ? '#a7f3d0' : item.na ? COLORS.slate100 : 'rgba(254,243,199,0.5)' },
+                            Platform.OS === 'web' && { transition: 'all 0.3s' },
+                          ]}>
+                            <MaterialCommunityIcons name={item.icon} size={20} color={item.done ? COLORS.emerald700 : item.na ? COLORS.slate400 : COLORS.amber600} />
+                          </View>
+                          <View style={{flex: 1}}>
+                            <Text style={[styles.masterListTitle, Platform.OS === 'web' && { transition: 'all 0.3s' }, hovered && { color: '#7a1a1f' }]}>{item.title}</Text>
+                            <View style={styles.masterListSubRow}>
+                              <Text style={styles.masterListSub}>{item.desc}</Text>
+                            </View>
+                          </View>
+                        </View>
+                        <View style={[styles.statusPill, {backgroundColor: item.done ? COLORS.emerald50 : item.na ? COLORS.slate100 : COLORS.amber50, borderColor: item.done ? 'rgba(16,185,129,0.3)' : item.na ? 'rgba(226,232,240,0.5)' : 'rgba(254,243,199,0.5)', flexDirection: 'row', alignItems: 'center', gap: 4}]}>
+                          <Text style={[styles.statusPillText, {color: item.done ? COLORS.emerald700 : item.na ? COLORS.slate500 : COLORS.amber700}]}>
+                            {item.status}
+                          </Text>
+                          {item.done && <MaterialCommunityIcons name="check" size={11} color={COLORS.emerald700} />}
+                        </View>
+                      </>
+                    )}
+                  </Pressable>
+                ))}
+              </View>
+            </View>
+          </>
         )}
 
         {/* Quick Access Section — CSC Transactions and MPCS Daily Transactions
@@ -844,21 +809,27 @@ const styles = StyleSheet.create({
     color: COLORS.slate800,
     letterSpacing: -0.14,
   },
-  monthBadge: {
-    backgroundColor: COLORS.slate100,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: 'rgba(226,232,240,0.5)',
+  reportSubtitle: {
+    fontFamily: FONT_FAMILY,
+    fontSize: 13,
+    fontWeight: '500',
+    color: COLORS.slate500,
+    marginTop: 2,
+  },
+  percentBadge: {
+    backgroundColor: COLORS.red50,
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: 14,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  monthBadgeText: {
+  percentBadgeText: {
     fontFamily: FONT_FAMILY,
-    fontSize: 8,
+    fontSize: 18,
     fontWeight: '800',
-    color: COLORS.slate600,
+    color: COLORS.primary,
+    letterSpacing: -0.3,
   },
   progressContainer: {
     marginBottom: 8,
@@ -893,7 +864,18 @@ const styles = StyleSheet.create({
     height: '100%',
     borderRadius: 3,
   },
-  nextStepBtnWrapper: {
+  progressFooterRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 10,
+  },
+  progressFooterText: {
+    fontFamily: FONT_FAMILY,
+    fontSize: 12,
+    fontWeight: '600',
+    color: COLORS.slate500,
+  },
+  nextActionWrapper: {
     borderRadius: 16,
     shadowColor: COLORS.primary,
     shadowOffset: { width: 0, height: 4 },
@@ -901,20 +883,55 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 4,
   },
-  nextStepBtn: {
+  nextActionCard: {
+    borderRadius: 16,
+    padding: 16,
+  },
+  nextActionLabel: {
+    fontFamily: FONT_FAMILY,
+    fontSize: 10,
+    fontWeight: '800',
+    color: 'rgba(255,255,255,0.7)',
+    letterSpacing: 1.2,
+    marginBottom: 12,
+  },
+  nextActionRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    borderRadius: 16,
-    paddingVertical: 14,
-    paddingHorizontal: 16,
+    gap: 12,
   },
-  nextStepBtnText: {
+  nextActionIconBox: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  nextActionTextCol: {
+    flex: 1,
+  },
+  nextActionTitle: {
     fontFamily: FONT_FAMILY,
     fontSize: 15,
-    fontWeight: '700',
+    fontWeight: '800',
     color: '#ffffff',
-    letterSpacing: 0.5,
+    marginBottom: 2,
+  },
+  nextActionDesc: {
+    fontFamily: FONT_FAMILY,
+    fontSize: 12,
+    fontWeight: '500',
+    color: 'rgba(255,255,255,0.75)',
+    lineHeight: 17,
+  },
+  nextActionArrowBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#ffffff',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   tabContainer: {
     flexDirection: 'row',
@@ -962,6 +979,68 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     marginBottom: 8,
     letterSpacing: -0.16,
+  },
+  sectionSubtitle: {
+    fontFamily: FONT_FAMILY,
+    fontSize: 12,
+    fontWeight: '500',
+    color: COLORS.slate500,
+    paddingHorizontal: 8,
+    marginBottom: 12,
+  },
+  quickActionsGrid: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  quickActionCard: {
+    flex: 1,
+    backgroundColor: COLORS.surface,
+    borderRadius: 14,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(226,232,240,0.6)',
+    shadowColor: '#0f172a',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 10,
+    elevation: 2,
+  },
+  quickActionTopRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  quickActionIconBox: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  quickActionArrowBtn: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: COLORS.slate50,
+    borderWidth: 1,
+    borderColor: COLORS.slate100,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  quickActionTitle: {
+    fontFamily: FONT_FAMILY,
+    fontSize: 13,
+    fontWeight: '800',
+    color: COLORS.slate800,
+    marginBottom: 4,
+  },
+  quickActionDesc: {
+    fontFamily: FONT_FAMILY,
+    fontSize: 11,
+    fontWeight: '500',
+    color: COLORS.slate500,
+    lineHeight: 15,
   },
   monthlyGrid: {
     flexDirection: 'column',
