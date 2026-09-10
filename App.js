@@ -71,6 +71,7 @@ import { queueSubmission, processQueue, getQueueStatus } from './src/utils/syncM
 import { isMonthlyParamsCompleted, saveMonthlyParams, getMonthlyParams, saveSectionStates, getSectionStates, getMilkSectionData, clearMilkSectionData } from './src/utils/monthlySyncManager';
 import { useFonts, Manrope_400Regular, Manrope_500Medium, Manrope_600SemiBold, Manrope_700Bold, Manrope_800ExtraBold } from '@expo-google-fonts/manrope';
 import { Cinzel_600SemiBold, Cinzel_700Bold } from '@expo-google-fonts/cinzel';
+import { Inter_400Regular, Inter_500Medium, Inter_600SemiBold, Inter_700Bold, Inter_800ExtraBold } from '@expo-google-fonts/inter';
 
 const { width } = Dimensions.get('window');
 
@@ -237,6 +238,11 @@ export default function App() {
     Manrope_800ExtraBold,
     Cinzel_600SemiBold,
     Cinzel_700Bold,
+    Inter_400Regular,
+    Inter_500Medium,
+    Inter_600SemiBold,
+    Inter_700Bold,
+    Inter_800ExtraBold,
   });
 
   // Inspector & User Profile State — populated after login

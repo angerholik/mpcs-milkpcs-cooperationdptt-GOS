@@ -39,8 +39,28 @@ const COLORS = {
   primary: "#7A0D18",
 };
 
+// Body text uses the same Inter typeface as the admin dashboard's login
+// (loaded there via a Google Fonts <link>). The previous FONT_FAMILY was
+// only a CSS font-stack string — real "Inter" only on web, with iOS/Android
+// silently falling back to their system fonts instead. Inter is now loaded
+// for real via @expo-google-fonts/inter + useFonts() in App.js, so native
+// builds render actual Inter too. React Native doesn't synthesize font
+// weights the way a browser does — each weight is its own registered font
+// family name, so callers pick the weight through this helper rather than
+// pairing a generic fontFamily with a separate fontWeight.
+const INTER_BY_WEIGHT = {
+  '400': 'Inter_400Regular',
+  '500': 'Inter_500Medium',
+  '600': 'Inter_600SemiBold',
+  '700': 'Inter_700Bold',
+  '800': 'Inter_800ExtraBold',
+};
+const interFont = (weight = '400') => INTER_BY_WEIGHT[String(weight)] || INTER_BY_WEIGHT['400'];
+
+// Kept for the couple of spots (native Alert titles, etc.) that still want
+// a platform-appropriate fallback stack rather than a specific weight.
 const FONT_FAMILY = Platform.select({
-  web: 'Inter, Manrope, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+  web: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
   ios: 'System',
   android: 'Roboto',
 });
@@ -568,7 +588,7 @@ const Login = ({ onLoginSuccess, onRegisterSuccess }) => {
 
                   {resetMsg ? (
                     <View style={{ backgroundColor: '#ecfdf5', padding: 12, borderRadius: 10, borderWidth: 1, borderColor: '#a7f3d0', marginBottom: 14 }}>
-                      <Text style={{ fontFamily: FONT_FAMILY, fontSize: 12, fontWeight: '700', color: '#047857', textAlign: 'center' }}>
+                      <Text style={{ fontFamily: interFont('700'), fontSize: 12, color: '#047857', textAlign: 'center' }}>
                         {resetMsg}
                       </Text>
                     </View>
@@ -576,7 +596,7 @@ const Login = ({ onLoginSuccess, onRegisterSuccess }) => {
 
                   {resetErr ? (
                     <View style={{ backgroundColor: '#fef2f2', padding: 12, borderRadius: 10, borderWidth: 1, borderColor: '#fca5a5', marginBottom: 14 }}>
-                      <Text style={{ fontFamily: FONT_FAMILY, fontSize: 12, fontWeight: '700', color: '#dc2626', textAlign: 'center' }}>
+                      <Text style={{ fontFamily: interFont('700'), fontSize: 12, color: '#dc2626', textAlign: 'center' }}>
                         ⚠️ {resetErr}
                       </Text>
                     </View>
@@ -623,7 +643,7 @@ const Login = ({ onLoginSuccess, onRegisterSuccess }) => {
                     onPress={() => { setForgotMode(false); setResetMsg(''); setResetErr(''); }}
                     activeOpacity={0.7}
                   >
-                    <Text style={{ fontFamily: FONT_FAMILY, fontSize: 12, fontWeight: '800', color: COLORS.primary }}>
+                    <Text style={{ fontFamily: interFont('800'), fontSize: 12, color: COLORS.primary }}>
                       ← Back to Sign In
                     </Text>
                   </TouchableOpacity>
@@ -841,9 +861,8 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   fullNameSub: {
-    fontFamily: FONT_FAMILY,
+    fontFamily: interFont('500'),
     fontSize: 13,
-    fontWeight: '500',
     color: 'rgba(255, 255, 255, 0.95)',
     textAlign: 'center',
     marginBottom: 10,
@@ -856,16 +875,14 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   deptSubtitle: {
-    fontFamily: FONT_FAMILY,
+    fontFamily: interFont('700'),
     fontSize: 15,
-    fontWeight: '700',
     color: COLORS.gold,
     textAlign: 'center',
   },
   govSubtitle: {
-    fontFamily: FONT_FAMILY,
+    fontFamily: interFont('400'),
     fontSize: 13,
-    fontWeight: '400',
     color: 'rgba(255, 255, 255, 0.85)',
     textAlign: 'center',
     marginTop: 2,
@@ -892,31 +909,28 @@ const styles = StyleSheet.create({
     elevation: 12,
   },
   welcomeHeading: {
-    fontFamily: FONT_FAMILY,
+    fontFamily: interFont('800'),
     fontSize: 24,
-    fontWeight: '800',
     color: COLORS.darkNavy,
     textAlign: 'center',
     marginBottom: 4,
     letterSpacing: -0.3,
   },
   cardSubtitle: {
-    fontFamily: FONT_FAMILY,
+    fontFamily: interFont('400'),
     fontSize: 13.5,
     color: COLORS.mutedBlue,
     textAlign: 'center',
     marginBottom: 22,
     lineHeight: 18,
-    fontWeight: '400',
   },
 
   fieldGroup: {
     marginBottom: 16,
   },
   fieldLabel: {
-    fontFamily: FONT_FAMILY,
+    fontFamily: interFont('700'),
     fontSize: 12,
-    fontWeight: '700',
     color: COLORS.darkNavy,
     letterSpacing: 1,
     textTransform: 'uppercase',
@@ -951,9 +965,8 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   activeRoleText: {
-    fontFamily: FONT_FAMILY,
+    fontFamily: interFont('800'),
     fontSize: 10.5,
-    fontWeight: '800',
     color: '#FFFFFF',
     textAlign: 'center',
   },
@@ -967,9 +980,8 @@ const styles = StyleSheet.create({
     borderRadius: 10,
   },
   inactiveRoleText: {
-    fontFamily: FONT_FAMILY,
+    fontFamily: interFont('700'),
     fontSize: 10.5,
-    fontWeight: '700',
     color: COLORS.slate600,
     textAlign: 'center',
   },
@@ -993,9 +1005,8 @@ const styles = StyleSheet.create({
   },
   input: {
     flex: 1,
-    fontFamily: FONT_FAMILY,
+    fontFamily: interFont('500'),
     fontSize: 15,
-    fontWeight: '500',
     color: COLORS.onSurface,
     outlineStyle: 'none',
   },
@@ -1019,10 +1030,9 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
   forgotText: {
-    fontFamily: FONT_FAMILY,
+    fontFamily: interFont('600'),
     fontSize: 13.5,
     color: COLORS.burgundy,
-    fontWeight: '600',
   },
 
   // Primary CTA Button
@@ -1042,9 +1052,8 @@ const styles = StyleSheet.create({
     elevation: 6,
   },
   ctaText: {
-    fontFamily: FONT_FAMILY,
+    fontFamily: interFont('800'),
     fontSize: 15,
-    fontWeight: '800',
     color: '#FFFFFF',
     letterSpacing: 0.6,
   },
@@ -1062,15 +1071,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   switchModeText: {
-    fontFamily: FONT_FAMILY,
+    fontFamily: interFont('400'),
     fontSize: 14,
-    fontWeight: '400',
     color: COLORS.mutedBlue,
   },
   switchModeLink: {
-    fontFamily: FONT_FAMILY,
+    fontFamily: interFont('700'),
     fontSize: 14,
-    fontWeight: '700',
     color: COLORS.burgundy,
   },
 
@@ -1093,10 +1100,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   footerVersionText: {
-    fontFamily: FONT_FAMILY,
+    fontFamily: interFont('400'),
     color: 'rgba(255, 255, 255, 0.65)',
     fontSize: 12,
-    fontWeight: '400',
   },
 });
 
