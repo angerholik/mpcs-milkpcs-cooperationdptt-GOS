@@ -737,36 +737,11 @@ const Login = ({ onLoginSuccess, onRegisterSuccess }) => {
             </View>
           </View>
 
-          {/* Trust Badges */}
-          <View style={styles.trustBadgeRow}>
-            <View style={styles.trustBadgeItem}>
-              <View style={styles.trustBadgeCircle}>
-                <MaterialCommunityIcons name="shield-check-outline" size={22} color={COLORS.gold} />
-              </View>
-              <Text style={styles.trustBadgeLabel}>Secure{'\n'}Access</Text>
-            </View>
-            <View style={styles.trustBadgeItem}>
-              <View style={styles.trustBadgeCircle}>
-                <MaterialCommunityIcons name="account-group-outline" size={22} color={COLORS.gold} />
-              </View>
-              <Text style={styles.trustBadgeLabel}>For a Stronger{'\n'}Cooperative Ecosystem</Text>
-            </View>
-            <View style={styles.trustBadgeItem}>
-              <View style={styles.trustBadgeCircle}>
-                <MaterialCommunityIcons name="leaf" size={22} color={COLORS.gold} />
-              </View>
-              <Text style={styles.trustBadgeLabel}>Government{'\n'}of Sikkim</Text>
-            </View>
-          </View>
-
           {/* Footer */}
           <View style={styles.footer}>
             <View style={styles.footerDivider} />
             <View style={styles.footerVersionRow}>
               <Text style={styles.footerVersionText}>Version 2.0.4</Text>
-              <Text style={styles.footerVersionText}> | </Text>
-              <MaterialCommunityIcons name="lock-outline" size={11} color="rgba(255,255,255,0.55)" style={{ marginRight: 4 }} />
-              <Text style={styles.footerVersionText}>Secure government system</Text>
             </View>
           </View>
         </ScrollView>
@@ -846,8 +821,9 @@ const styles = StyleSheet.create({
   emblemImage: {
     width: '100%',
     height: '100%',
-    tintColor: '#FFFFFF',
-    ...(Platform.OS === 'web' ? { filter: 'drop-shadow(0 2px 6px rgba(0,0,0,0.5))' } : {}),
+    tintColor: COLORS.gold,
+    opacity: 0.9,
+    ...(Platform.OS === 'web' ? { filter: 'drop-shadow(0 1px 3px rgba(0,0,0,0.4))' } : {}),
   },
 
   govTitle: {
@@ -1088,38 +1064,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '700',
     color: COLORS.burgundy,
-  },
-
-  // Trust Badges
-  trustBadgeRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    width: '100%',
-    maxWidth: 540,
-    marginTop: 22,
-  },
-  trustBadgeItem: {
-    alignItems: 'center',
-    flex: 1,
-    paddingHorizontal: 4,
-  },
-  trustBadgeCircle: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-    borderWidth: 1,
-    borderColor: 'rgba(227, 185, 79, 0.4)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 8,
-  },
-  trustBadgeLabel: {
-    fontFamily: FONT_FAMILY,
-    fontSize: 11.5,
-    fontWeight: '500',
-    color: 'rgba(255, 255, 255, 0.8)',
-    textAlign: 'center',
-    lineHeight: 15,
   },
 
   // Footer
