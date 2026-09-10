@@ -20,40 +20,47 @@ import { supabase } from '../supabase';
 
 const { width } = Dimensions.get('window');
 
-// STITCH Design Tokens (Matching Dashboard Overview)
+// Design tokens pinned to the reference spec's exact palette.
 const COLORS = {
-  bgStart: "#3b080b",
-  bgMid: "#7a1a1f",
-  bgMid2: "#4a1017",
-  bgEnd: "#1c0406",
-  gold: "#fde68a",
-  goldDark: "#b45309",
-  surface: "#ffffff",
-  onSurface: "#1b1b1d",
-  slate800: "#1e293b",
-  slate700: "#334155",
-  slate600: "#475569",
-  slate500: "#64748b",
+  maroon: "#5A0710",
+  maroonDark: "#47050C",
+  burgundy: "#7A0D18",
+  gold: "#E3B94F",
+  surface: "#FFFFFF",
+  offWhite: "#FAFAFA",
+  mutedBlue: "#71839B",
+  darkNavy: "#26384F",
+  onSurface: "#26384F",
+  slate600: "#71839B",
+  slate500: "#71839B",
   slate400: "#94a3b8",
-  slate300: "#cbd5e1",
   slate200: "#e2e8f0",
-  slate100: "#f1f5f9",
-  slate50: "#f8fafc",
-  primary: "#7a1a1f",
-  primaryDark: "#4a1017",
+  slate50: "#F8FAFC",
+  primary: "#7A0D18",
 };
 
 const FONT_FAMILY = Platform.select({
-  web: 'Manrope, Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+  web: 'Inter, Manrope, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
   ios: 'System',
   android: 'Roboto',
 });
 
-// Official Sikkim Government Seal Emblem Component
+// React Native has no CSS filter/mix-blend-mode/mask-image — grayscale,
+// duotone photo treatment is approximated everywhere via opacity + a
+// semi-transparent maroon overlay + a gradient fade into the background,
+// which are genuinely supported on both native and web. On web specifically
+// (React Native Web passes unrecognized style keys straight through to the
+// DOM), a real CSS `filter` is layered on top for a closer duotone match —
+// native builds fall back to the opacity/overlay approximation only.
+const webPhotoFilter = Platform.OS === 'web' ? { filter: 'grayscale(0.4) brightness(0.6) contrast(1.25)' } : {};
+
+// Official Sikkim Government Seal — the real emblem downloaded from Wikimedia
+// Commons (Special:Redirect/file/Seal_of_Sikkim.svg), rasterized to PNG since
+// this project has no SVG-via-Image transformer installed (see assets/core/).
 function SikkimEmblem() {
   return (
     <Image
-      source={require('../../assets/Seal_of_Sikkim_greyscale.png')}
+      source={require('../../assets/core/sikkim-emblem.png')}
       style={styles.emblemImage}
       resizeMode="contain"
     />
@@ -68,6 +75,7 @@ const Login = ({ onLoginSuccess, onRegisterSuccess }) => {
   const [mobile, setMobile] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const [forgotMode, setForgotMode] = useState(false);
   const [resetEmail, setResetEmail] = useState('');
@@ -265,17 +273,57 @@ const Login = ({ onLoginSuccess, onRegisterSuccess }) => {
 
   return (
     <View style={styles.container}>
-      {/* Rich Background Gradient */}
+      {/* Base maroon gradient */}
       <LinearGradient
-        colors={[COLORS.bgStart, COLORS.bgMid, COLORS.bgMid2, COLORS.bgEnd]}
-        locations={[0, 0.35, 0.7, 1]}
+        colors={[COLORS.maroon, COLORS.maroonDark]}
+        start={{ x: 0.5, y: 0 }}
+        end={{ x: 0.5, y: 1 }}
         style={styles.background}
       />
 
-      {/* Ambient Glow Blobs (Matches Dashboard Overview) */}
-      <View style={styles.bgBlobTop} pointerEvents="none" />
-      <View style={styles.bgBlobBottomLeft} pointerEvents="none" />
-      <View style={styles.bgBlobBottomRight} pointerEvents="none" />
+      {/* Kanchenjunga photo behind the header, duotone-treated and faded
+          into the maroon background toward the card. */}
+      <View style={styles.mountainPhotoWrap} pointerEvents="none">
+        <Image
+          source={require('../../assets/core/kanchenjunga.jpg')}
+          style={[styles.mountainPhoto, webPhotoFilter]}
+          resizeMode="cover"
+        />
+        <View style={styles.mountainTint} />
+        <LinearGradient
+          colors={['transparent', COLORS.maroon]}
+          start={{ x: 0.5, y: 0.55 }}
+          end={{ x: 0.5, y: 1 }}
+          style={StyleSheet.absoluteFillObject}
+        />
+      </View>
+
+      {/* Rhododendron (bottom-left) + Enchey Monastery (bottom-right),
+          partially cropped by the viewport, faded into the background. */}
+      <View style={styles.bottomPhotoStrip} pointerEvents="none">
+        <View style={styles.bottomPhotoLeft}>
+          <Image
+            source={require('../../assets/core/rhododendron.jpg')}
+            style={[styles.bottomPhotoImg, webPhotoFilter]}
+            resizeMode="cover"
+          />
+          <View style={styles.bottomPhotoTint} />
+        </View>
+        <View style={styles.bottomPhotoRight}>
+          <Image
+            source={require('../../assets/core/enchey-monastery.jpg')}
+            style={[styles.bottomPhotoImg, webPhotoFilter]}
+            resizeMode="cover"
+          />
+          <View style={styles.bottomPhotoTint} />
+        </View>
+        <LinearGradient
+          colors={[COLORS.maroon, 'transparent']}
+          start={{ x: 0.5, y: 0 }}
+          end={{ x: 0.5, y: 0.5 }}
+          style={StyleSheet.absoluteFillObject}
+        />
+      </View>
 
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -289,33 +337,14 @@ const Login = ({ onLoginSuccess, onRegisterSuccess }) => {
             </View>
 
             <Text style={styles.govTitle}>CORE</Text>
-            <Text style={styles.fullNameSub}>COOPERATIVE OVERSIGHT & REPORTING ENGINE</Text>
-            <Text style={styles.deptSubtitle}>DEPARTMENT OF COOPERATION • GOVERNMENT OF SIKKIM</Text>
+            <Text style={styles.fullNameSub}>Cooperative Oversight & Reporting Engine</Text>
+            <View style={styles.headerGoldDivider} />
+            <Text style={styles.deptSubtitle}>Department of Cooperation</Text>
+            <Text style={styles.govSubtitle}>Government of Sikkim</Text>
           </View>
 
           {/* Form Card Container */}
           <View style={styles.cardWrapper}>
-            {/* Top Tab Bar */}
-            <View style={styles.tabContainer}>
-              <TouchableOpacity
-                style={[styles.tabBtn, tab === 'signin' && styles.activeTabBtn]}
-                onPress={() => setTab('signin')}
-                activeOpacity={0.85}
-              >
-                <Text style={[styles.tabBtnText, tab === 'signin' && styles.activeTabText]}>SIGN IN</Text>
-                {tab === 'signin' && <View style={styles.activeTabIndicator} />}
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[styles.tabBtn, tab === 'register' && styles.activeTabBtn]}
-                onPress={() => setTab('register')}
-                activeOpacity={0.85}
-              >
-                <Text style={[styles.tabBtnText, tab === 'register' && styles.activeTabText]}>REGISTER INSPECTOR</Text>
-                {tab === 'register' && <View style={styles.activeTabIndicator} />}
-              </TouchableOpacity>
-            </View>
-
             {/* White Form Card Body */}
             <View style={styles.whiteFormCard}>
               {tab === 'register' ? (
@@ -335,7 +364,7 @@ const Login = ({ onLoginSuccess, onRegisterSuccess }) => {
                       >
                         {role === 'CI' ? (
                           <LinearGradient
-                            colors={['#7a1a1f', '#4a1017']}
+                            colors={['#8B111C', '#650810']}
                             start={{ x: 0, y: 0 }}
                             end={{ x: 1, y: 0 }}
                             style={styles.activeRoleGradient}
@@ -358,7 +387,7 @@ const Login = ({ onLoginSuccess, onRegisterSuccess }) => {
                       >
                         {role === 'ACI' ? (
                           <LinearGradient
-                            colors={['#7a1a1f', '#4a1017']}
+                            colors={['#8B111C', '#650810']}
                             start={{ x: 0, y: 0 }}
                             end={{ x: 1, y: 0 }}
                             style={styles.activeRoleGradient}
@@ -381,7 +410,7 @@ const Login = ({ onLoginSuccess, onRegisterSuccess }) => {
                       >
                         {role === 'PA' ? (
                           <LinearGradient
-                            colors={['#7a1a1f', '#4a1017']}
+                            colors={['#8B111C', '#650810']}
                             start={{ x: 0, y: 0 }}
                             end={{ x: 1, y: 0 }}
                             style={styles.activeRoleGradient}
@@ -463,13 +492,6 @@ const Login = ({ onLoginSuccess, onRegisterSuccess }) => {
                     </View>
                   </View>
 
-                  {/* PROCEED Divider */}
-                  <View style={styles.proceedDividerRow}>
-                    <View style={styles.dividerLine} />
-                    <Text style={styles.dividerText}>PROCEED</Text>
-                    <View style={styles.dividerLine} />
-                  </View>
-
                   {/* Submit CTA Button */}
                   <Pressable
                     style={({ hovered, pressed }) => [
@@ -482,7 +504,7 @@ const Login = ({ onLoginSuccess, onRegisterSuccess }) => {
                   >
                     {({ hovered }) => (
                       <LinearGradient
-                        colors={['#7a1a1f', '#4a1017']}
+                        colors={['#8B111C', '#650810']}
                         start={{ x: 0, y: 0 }}
                         end={{ x: 1, y: 0 }}
                         style={[
@@ -506,6 +528,14 @@ const Login = ({ onLoginSuccess, onRegisterSuccess }) => {
                       </LinearGradient>
                     )}
                   </Pressable>
+
+                  <View style={styles.switchModeDivider} />
+                  <View style={styles.switchModeRow}>
+                    <Text style={styles.switchModeText}>Already registered? </Text>
+                    <TouchableOpacity onPress={() => setTab('signin')} activeOpacity={0.7}>
+                      <Text style={styles.switchModeLink}>Sign in →</Text>
+                    </TouchableOpacity>
+                  </View>
                 </>
               ) : forgotMode ? (
                 <>
@@ -558,7 +588,7 @@ const Login = ({ onLoginSuccess, onRegisterSuccess }) => {
                   >
                     {({ hovered }) => (
                       <LinearGradient
-                        colors={['#7a1a1f', '#4a1017']}
+                        colors={['#8B111C', '#650810']}
                         start={{ x: 0, y: 0 }}
                         end={{ x: 1, y: 0 }}
                         style={[
@@ -594,6 +624,7 @@ const Login = ({ onLoginSuccess, onRegisterSuccess }) => {
                 </>
               ) : (
                 <>
+                  <Text style={styles.welcomeHeading}>Welcome back</Text>
                   <Text style={styles.cardSubtitle}>
                     Sign in to access the Cooperative Portal
                   </Text>
@@ -612,6 +643,16 @@ const Login = ({ onLoginSuccess, onRegisterSuccess }) => {
                         autoCapitalize="none"
                         keyboardType="email-address"
                       />
+                      {email ? (
+                        <TouchableOpacity
+                          style={styles.inputClearBtn}
+                          onPress={() => { setEmail(''); setResetEmail(''); }}
+                          activeOpacity={0.7}
+                          accessibilityLabel="Clear email"
+                        >
+                          <MaterialCommunityIcons name="close" size={13} color="#FFFFFF" />
+                        </TouchableOpacity>
+                      ) : null}
                     </View>
                   </View>
 
@@ -626,25 +667,26 @@ const Login = ({ onLoginSuccess, onRegisterSuccess }) => {
                         placeholderTextColor={COLORS.slate400}
                         value={password}
                         onChangeText={setPassword}
-                        secureTextEntry
+                        secureTextEntry={!showPassword}
                       />
+                      <TouchableOpacity
+                        style={styles.eyeToggleBtn}
+                        onPress={() => setShowPassword((v) => !v)}
+                        activeOpacity={0.7}
+                        accessibilityLabel={showPassword ? 'Hide password' : 'Show password'}
+                      >
+                        <MaterialCommunityIcons name={showPassword ? 'eye-off-outline' : 'eye-outline'} size={18} color={COLORS.darkNavy} />
+                      </TouchableOpacity>
                     </View>
                   </View>
 
-                  <TouchableOpacity 
-                    style={styles.forgotBtn} 
+                  <TouchableOpacity
+                    style={styles.forgotBtn}
                     onPress={() => { setForgotMode(true); setResetEmail(email); setResetMsg(''); setResetErr(''); }}
                     activeOpacity={0.7}
                   >
-                    <Text style={styles.forgotText}>Forgot Password?</Text>
+                    <Text style={styles.forgotText}>Forgot password?</Text>
                   </TouchableOpacity>
-
-                  {/* PROCEED Divider */}
-                  <View style={styles.proceedDividerRow}>
-                    <View style={styles.dividerLine} />
-                    <Text style={styles.dividerText}>PROCEED</Text>
-                    <View style={styles.dividerLine} />
-                  </View>
 
                   {/* Sign In CTA Button */}
                   <Pressable
@@ -658,7 +700,7 @@ const Login = ({ onLoginSuccess, onRegisterSuccess }) => {
                   >
                     {({ hovered }) => (
                       <LinearGradient
-                        colors={['#7a1a1f', '#4a1017']}
+                        colors={['#8B111C', '#650810']}
                         start={{ x: 0, y: 0 }}
                         end={{ x: 1, y: 0 }}
                         style={[
@@ -670,11 +712,11 @@ const Login = ({ onLoginSuccess, onRegisterSuccess }) => {
                           <ActivityIndicator color="#FFFFFF" size="small" />
                         ) : (
                           <>
-                            <Text style={styles.ctaText}>SIGN IN TO PORTAL</Text>
-                            <MaterialCommunityIcons 
-                              name="arrow-right" 
-                              size={18} 
-                              color="#FFFFFF" 
+                            <Text style={styles.ctaText}>SIGN IN</Text>
+                            <MaterialCommunityIcons
+                              name="arrow-right"
+                              size={18}
+                              color="#FFFFFF"
                               style={hovered && Platform.OS === 'web' ? { transform: [{ translateX: 4 }] } : null}
                             />
                           </>
@@ -682,15 +724,50 @@ const Login = ({ onLoginSuccess, onRegisterSuccess }) => {
                       </LinearGradient>
                     )}
                   </Pressable>
+
+                  <View style={styles.switchModeDivider} />
+                  <View style={styles.switchModeRow}>
+                    <Text style={styles.switchModeText}>New Inspector? </Text>
+                    <TouchableOpacity onPress={() => setTab('register')} activeOpacity={0.7}>
+                      <Text style={styles.switchModeLink}>Register here →</Text>
+                    </TouchableOpacity>
+                  </View>
                 </>
               )}
             </View>
           </View>
 
+          {/* Trust Badges */}
+          <View style={styles.trustBadgeRow}>
+            <View style={styles.trustBadgeItem}>
+              <View style={styles.trustBadgeCircle}>
+                <MaterialCommunityIcons name="shield-check-outline" size={22} color={COLORS.gold} />
+              </View>
+              <Text style={styles.trustBadgeLabel}>Secure{'\n'}Access</Text>
+            </View>
+            <View style={styles.trustBadgeItem}>
+              <View style={styles.trustBadgeCircle}>
+                <MaterialCommunityIcons name="account-group-outline" size={22} color={COLORS.gold} />
+              </View>
+              <Text style={styles.trustBadgeLabel}>For a Stronger{'\n'}Cooperative Ecosystem</Text>
+            </View>
+            <View style={styles.trustBadgeItem}>
+              <View style={styles.trustBadgeCircle}>
+                <MaterialCommunityIcons name="leaf" size={22} color={COLORS.gold} />
+              </View>
+              <Text style={styles.trustBadgeLabel}>Government{'\n'}of Sikkim</Text>
+            </View>
+          </View>
+
           {/* Footer */}
           <View style={styles.footer}>
-            <Text style={styles.footerText}>SECURE GOVERNMENT ASSETS • v2.0.4-beta</Text>
-            <Text style={styles.footerSubtext}>System generated access tokens are cryptographically monitored.</Text>
+            <View style={styles.footerDivider} />
+            <View style={styles.footerVersionRow}>
+              <Text style={styles.footerVersionText}>Version 2.0.4</Text>
+              <Text style={styles.footerVersionText}> | </Text>
+              <MaterialCommunityIcons name="lock-outline" size={11} color="rgba(255,255,255,0.55)" style={{ marginRight: 4 }} />
+              <Text style={styles.footerVersionText}>Secure government system</Text>
+            </View>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -701,42 +778,51 @@ const Login = ({ onLoginSuccess, onRegisterSuccess }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.bgEnd,
+    backgroundColor: COLORS.maroonDark,
   },
   background: {
     ...StyleSheet.absoluteFillObject,
   },
 
-  // Glow Blobs (Matches Dashboard Overview)
-  bgBlobTop: {
+  // Kanchenjunga photo behind the header
+  mountainPhotoWrap: {
     position: 'absolute',
-    top: -100,
-    alignSelf: 'center',
-    width: 600,
-    height: 350,
-    borderRadius: 300,
-    backgroundColor: 'rgba(122, 26, 31, 0.25)',
-    zIndex: -1,
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 460,
+    overflow: 'hidden',
   },
-  bgBlobBottomLeft: {
-    position: 'absolute',
-    bottom: -50,
-    left: -50,
-    width: 350,
-    height: 350,
-    borderRadius: 175,
-    backgroundColor: 'rgba(74, 16, 23, 0.35)',
-    zIndex: -1,
+  mountainPhoto: {
+    width: '100%',
+    height: '100%',
+    opacity: 0.5,
   },
-  bgBlobBottomRight: {
+  mountainTint: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(71, 5, 12, 0.45)',
+  },
+
+  // Rhododendron (left) + Enchey Monastery (right) at the very bottom
+  bottomPhotoStrip: {
     position: 'absolute',
-    bottom: -50,
-    right: -50,
-    width: 300,
-    height: 300,
-    borderRadius: 150,
-    backgroundColor: 'rgba(180, 83, 9, 0.15)',
-    zIndex: -1,
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: 260,
+    flexDirection: 'row',
+    overflow: 'hidden',
+  },
+  bottomPhotoLeft: { flex: 1, overflow: 'hidden' },
+  bottomPhotoRight: { flex: 1, overflow: 'hidden' },
+  bottomPhotoImg: {
+    width: '100%',
+    height: '100%',
+    opacity: 0.4,
+  },
+  bottomPhotoTint: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(71, 5, 12, 0.55)',
   },
 
   content: { flex: 1 },
@@ -753,132 +839,94 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   emblemContainer: {
-    width: 76,
-    height: 76,
-    borderRadius: 38,
-    backgroundColor: 'rgba(255, 255, 255, 0.12)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1.5,
-    borderColor: 'rgba(253, 230, 138, 0.4)',
-    padding: 14,
-    marginBottom: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.4,
-    shadowRadius: 16,
-    elevation: 10,
+    width: 92,
+    height: 92,
+    marginBottom: 12,
   },
   emblemImage: {
     width: '100%',
     height: '100%',
     tintColor: '#FFFFFF',
+    ...(Platform.OS === 'web' ? { filter: 'drop-shadow(0 2px 6px rgba(0,0,0,0.5))' } : {}),
   },
 
   govTitle: {
     fontFamily: FONT_FAMILY,
-    fontSize: 32,
+    fontSize: 40,
     fontWeight: '800',
     color: '#ffffff',
-    letterSpacing: 8,
+    letterSpacing: 7,
     textAlign: 'center',
-    marginBottom: 4,
+    marginBottom: 6,
   },
   fullNameSub: {
     fontFamily: FONT_FAMILY,
-    fontSize: 9.5,
-    fontWeight: '700',
-    color: 'rgba(255, 255, 255, 0.7)',
-    letterSpacing: 2,
-    textTransform: 'uppercase',
+    fontSize: 15,
+    fontWeight: '500',
+    color: 'rgba(255, 255, 255, 0.95)',
     textAlign: 'center',
-    marginBottom: 4,
+    marginBottom: 10,
+  },
+  headerGoldDivider: {
+    width: 160,
+    height: 1,
+    backgroundColor: COLORS.gold,
+    opacity: 0.8,
+    marginBottom: 10,
   },
   deptSubtitle: {
     fontFamily: FONT_FAMILY,
-    fontSize: 9,
-    fontWeight: '800',
+    fontSize: 17,
+    fontWeight: '700',
     color: COLORS.gold,
-    letterSpacing: 1.5,
-    textTransform: 'uppercase',
     textAlign: 'center',
   },
+  govSubtitle: {
+    fontFamily: FONT_FAMILY,
+    fontSize: 14,
+    fontWeight: '400',
+    color: 'rgba(255, 255, 255, 0.85)',
+    textAlign: 'center',
+    marginTop: 2,
+  },
 
-  // Card & Tabs Container
+  // Card Container
   cardWrapper: {
     width: '100%',
     maxWidth: 540,
     marginTop: 8,
   },
 
-  // Tabs Header
-  tabContainer: {
-    flexDirection: 'row',
-    backgroundColor: 'rgba(28, 4, 6, 0.65)',
-    borderTopLeftRadius: 18,
-    borderTopRightRadius: 18,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.12)',
-    borderBottomWidth: 0,
-    overflow: 'hidden',
-  },
-  tabBtn: {
-    flex: 1,
-    paddingVertical: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-    position: 'relative',
-  },
-  activeTabBtn: {
-    backgroundColor: 'rgba(122, 26, 31, 0.25)',
-  },
-  tabBtnText: {
-    fontFamily: FONT_FAMILY,
-    fontSize: 11,
-    fontWeight: '800',
-    letterSpacing: 1.5,
-    color: 'rgba(255, 255, 255, 0.5)',
-    textTransform: 'uppercase',
-  },
-  activeTabText: {
-    color: '#ffffff',
-  },
-  activeTabIndicator: {
-    position: 'absolute',
-    bottom: 0,
-    left: 20,
-    right: 20,
-    height: 3,
-    backgroundColor: COLORS.gold,
-    borderTopLeftRadius: 2,
-    borderTopRightRadius: 2,
-  },
-
   // White Form Body
   whiteFormCard: {
     backgroundColor: COLORS.surface,
-    borderBottomLeftRadius: 20,
-    borderBottomRightRadius: 20,
-    borderTopRightRadius: 20,
-    paddingHorizontal: 20,
-    paddingTop: 24,
-    paddingBottom: 28,
-    borderWidth: 1,
-    borderColor: COLORS.slate200,
-    shadowColor: '#0f172a',
+    borderRadius: 30,
+    paddingHorizontal: 24,
+    paddingTop: 28,
+    paddingBottom: 24,
+    shadowColor: '#000',
     shadowOffset: { width: 0, height: 16 },
-    shadowOpacity: 0.18,
+    shadowOpacity: 0.3,
     shadowRadius: 32,
     elevation: 12,
   },
+  welcomeHeading: {
+    fontFamily: FONT_FAMILY,
+    fontSize: 27,
+    fontWeight: '800',
+    color: COLORS.darkNavy,
+    textAlign: 'center',
+    marginBottom: 4,
+    letterSpacing: -0.3,
+  },
   cardSubtitle: {
     fontFamily: FONT_FAMILY,
-    fontSize: 12,
-    color: COLORS.slate500,
+    fontSize: 14,
+    color: COLORS.mutedBlue,
     textAlign: 'center',
-    marginBottom: 20,
-    lineHeight: 18,
-    fontWeight: '500',
+    marginBottom: 22,
+    lineHeight: 19,
+    fontWeight: '400',
   },
 
   fieldGroup: {
@@ -886,10 +934,10 @@ const styles = StyleSheet.create({
   },
   fieldLabel: {
     fontFamily: FONT_FAMILY,
-    fontSize: 10,
-    fontWeight: '800',
-    color: COLORS.slate700,
-    letterSpacing: 1.2,
+    fontSize: 12,
+    fontWeight: '700',
+    color: COLORS.darkNavy,
+    letterSpacing: 1,
     textTransform: 'uppercase',
     marginBottom: 6,
   },
@@ -950,11 +998,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: COLORS.slate50,
-    borderRadius: 12,
-    borderWidth: 1,
+    borderRadius: 14,
+    borderWidth: 1.5,
     borderColor: COLORS.slate200,
     paddingHorizontal: 14,
-    height: 46,
+    height: 54,
   },
   inputIcon: {
     marginRight: 10,
@@ -962,87 +1010,142 @@ const styles = StyleSheet.create({
   input: {
     flex: 1,
     fontFamily: FONT_FAMILY,
-    fontSize: 13,
+    fontSize: 15,
+    fontWeight: '500',
     color: COLORS.onSurface,
     outlineStyle: 'none',
+  },
+  inputClearBtn: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: COLORS.slate400,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: 8,
+  },
+  eyeToggleBtn: {
+    padding: 4,
+    marginLeft: 4,
   },
 
   forgotBtn: {
     alignSelf: 'flex-end',
     marginTop: 2,
-    marginBottom: 10,
+    marginBottom: 14,
   },
   forgotText: {
     fontFamily: FONT_FAMILY,
-    fontSize: 11,
-    color: COLORS.primary,
-    fontWeight: '700',
-  },
-
-  // PROCEED Divider
-  proceedDividerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    marginVertical: 20,
-  },
-  dividerLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: COLORS.slate200,
-  },
-  dividerText: {
-    fontFamily: FONT_FAMILY,
-    fontSize: 10,
-    fontWeight: '800',
-    color: COLORS.slate400,
-    letterSpacing: 1.8,
-    textTransform: 'uppercase',
+    fontSize: 13.5,
+    color: COLORS.burgundy,
+    fontWeight: '600',
   },
 
   // Primary CTA Button
-  primaryCtaBtnWrapper: { borderRadius: 14, overflow: 'hidden' },
+  primaryCtaBtnWrapper: { borderRadius: 20, overflow: 'hidden' },
   ctaGradient: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 15,
-    borderRadius: 14,
+    minHeight: 58,
+    paddingVertical: 16,
+    borderRadius: 20,
     gap: 8,
-    shadowColor: COLORS.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 10,
-    elevation: 4,
+    shadowColor: COLORS.maroonDark,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.35,
+    shadowRadius: 12,
+    elevation: 6,
   },
   ctaText: {
     fontFamily: FONT_FAMILY,
-    fontSize: 12,
+    fontSize: 15,
     fontWeight: '800',
     color: '#FFFFFF',
-    letterSpacing: 0.8,
+    letterSpacing: 0.6,
+  },
+
+  // Switch Mode (sign in ↔ register), replaces the old top tab bar
+  switchModeDivider: {
+    height: 1,
+    backgroundColor: COLORS.slate200,
+    marginTop: 20,
+    marginBottom: 16,
+  },
+  switchModeRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  switchModeText: {
+    fontFamily: FONT_FAMILY,
+    fontSize: 14,
+    fontWeight: '400',
+    color: COLORS.mutedBlue,
+  },
+  switchModeLink: {
+    fontFamily: FONT_FAMILY,
+    fontSize: 14,
+    fontWeight: '700',
+    color: COLORS.burgundy,
+  },
+
+  // Trust Badges
+  trustBadgeRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    width: '100%',
+    maxWidth: 540,
+    marginTop: 22,
+  },
+  trustBadgeItem: {
+    alignItems: 'center',
+    flex: 1,
+    paddingHorizontal: 4,
+  },
+  trustBadgeCircle: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    borderWidth: 1,
+    borderColor: 'rgba(227, 185, 79, 0.4)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 8,
+  },
+  trustBadgeLabel: {
+    fontFamily: FONT_FAMILY,
+    fontSize: 11.5,
+    fontWeight: '500',
+    color: 'rgba(255, 255, 255, 0.8)',
+    textAlign: 'center',
+    lineHeight: 15,
   },
 
   // Footer
   footer: {
-    marginTop: 24,
+    marginTop: 20,
     alignItems: 'center',
+    width: '100%',
+    maxWidth: 540,
   },
-  footerText: {
-    fontFamily: FONT_FAMILY,
-    color: 'rgba(255, 255, 255, 0.5)',
-    fontSize: 10,
-    fontWeight: '800',
-    letterSpacing: 1.2,
+  footerDivider: {
+    height: 1,
+    width: '80%',
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    marginBottom: 12,
   },
-  footerSubtext: {
+  footerVersionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  footerVersionText: {
     fontFamily: FONT_FAMILY,
-    color: 'rgba(255, 255, 255, 0.3)',
-    fontSize: 9,
-    textAlign: 'center',
-    marginTop: 4,
-    paddingHorizontal: 40,
-  }
+    color: 'rgba(255, 255, 255, 0.65)',
+    fontSize: 12,
+    fontWeight: '400',
+  },
 });
 
 export default Login;
