@@ -601,18 +601,23 @@ function LoginPage() {
   return (
     <div style={{
       minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center',
-      background: `linear-gradient(180deg, ${C.maroon} 0%, ${C.maroonDark} 100%)`,
+      // Flat single color, not a top-to-bottom gradient — the photo panel
+      // below fades to this exact color at its own bottom edge, and a
+      // gradient's color shifts with total page height, so on a tall
+      // (desktop) viewport the two didn't line up and left a visible seam
+      // where the fixed-height photo panel ended.
+      background: C.maroonDark,
       padding:'20px', position:'relative', overflow:'hidden',
     }}>
       {/* Kanchenjunga photo behind the header, duotone-treated and faded
-          into the maroon background — matches the mobile Sign In screen. */}
+          into the flat background — matches the mobile Sign In screen. */}
       <div style={{position:'absolute', top:0, left:0, right:0, height:'480px', overflow:'hidden', pointerEvents:'none'}}>
         <img src={kanchenjunga} alt="" style={{
           width:'100%', height:'100%', objectFit:'cover', opacity:0.5,
           filter:'grayscale(0.4) brightness(0.6) contrast(1.25)',
         }}/>
         <div style={{position:'absolute', inset:0, background:'rgba(71,5,12,0.45)'}}/>
-        <div style={{position:'absolute', inset:0, background:`linear-gradient(180deg, transparent 45%, ${C.maroon} 100%)`}}/>
+        <div style={{position:'absolute', inset:0, background:`linear-gradient(180deg, transparent 45%, ${C.maroonDark} 100%)`}}/>
       </div>
 
       <div className="fade-in" style={{ width:'100%', maxWidth:'420px', position:'relative', zIndex:1 }}>
