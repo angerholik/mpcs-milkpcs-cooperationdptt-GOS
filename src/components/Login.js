@@ -68,7 +68,7 @@ function SikkimEmblem() {
 }
 
 const Login = ({ onLoginSuccess, onRegisterSuccess }) => {
-  const [tab, setTab] = useState('register'); // 'signin' or 'register'
+  const [tab, setTab] = useState('signin'); // 'signin' or 'register'
   const [role, setRole] = useState('CI'); // 'CI', 'ACI', or 'PA'
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
