@@ -766,8 +766,8 @@ const Login = ({ onLoginSuccess, onRegisterSuccess }) => {
               mountain art for why these live in the scroll flow instead of
               as a fixed absolute background layer. */}
           <View style={styles.bottomArtRow} pointerEvents="none">
-            <RhododendronCluster size={100} />
-            <PagodaSilhouette width={72} height={72} />
+            <RhododendronCluster size={130} />
+            <PagodaSilhouette width={155} height={96} />
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -822,7 +822,7 @@ const styles = StyleSheet.create({
     top: 0,
     left: 0,
     right: 0,
-    height: 160,
+    height: 200,
   },
   bottomArtRow: {
     flexDirection: 'row',
