@@ -17,30 +17,36 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialIcons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { supabase } from '../supabase';
+import { MountainSilhouette, RhododendronCluster, PagodaSilhouette } from './LoginBackgroundArt';
 
 const { width } = Dimensions.get('window');
 
-// STITCH Design Tokens (Matching Dashboard Overview)
+// Design tokens pinned to the exact hex values in the design spec, not the
+// nearest Tailwind slate shade — this screen is meant to match a specific
+// mockup pixel-for-pixel, unlike the rest of the app's screens.
 const COLORS = {
   bgStart: "#3b080b",
-  bgMid: "#7a1a1f",
-  bgMid2: "#4a1017",
+  bgMid: "#7D2427",       // Secondary
+  bgMid2: "#6D0F14",      // Primary Maroon
   bgEnd: "#1c0406",
-  gold: "#fde68a",
+  gold: "#F4E1B5",        // Gold Accent
   goldDark: "#b45309",
-  surface: "#ffffff",
-  onSurface: "#1b1b1d",
+  surface: "#FFFFFF",     // Card Background
+  onSurface: "#1F1F1F",   // Primary Text
   slate800: "#1e293b",
   slate700: "#334155",
   slate600: "#475569",
-  slate500: "#64748b",
-  slate400: "#94a3b8",
+  slate500: "#6B7280",    // Secondary Text
+  slate400: "#9CA3AF",    // Placeholder
   slate300: "#cbd5e1",
   slate200: "#e2e8f0",
   slate100: "#f1f5f9",
-  slate50: "#f8fafc",
-  primary: "#7a1a1f",
-  primaryDark: "#4a1017",
+  slate50: "#F8F9FB",     // Input Background
+  primary: "#6D0F14",     // Primary Maroon
+  primaryHover: "#A31D24",// Button Hover
+  primaryDark: "#4a0d10",
+  secondary: "#7D2427",
+  linkAccent: "#DC2626",  // Link / Accent
 };
 
 const FONT_FAMILY = Platform.select({
@@ -279,6 +285,18 @@ const Login = ({ onLoginSuccess, onRegisterSuccess }) => {
       <View style={styles.bgBlobBottomLeft} pointerEvents="none" />
       <View style={styles.bgBlobBottomRight} pointerEvents="none" />
 
+      {/* Mountain range up top, per the design spec's "Assets You'll Need"
+          list — sits behind the header, which is always at the top of the
+          scroll content so a fixed absolute position works here. The
+          rhododendron/pagoda motifs are NOT fixed the same way: this screen's
+          content (especially the Register tab) is often taller than the
+          viewport, and an absolutely-positioned "bottom" would land mid-scroll
+          under the white card instead of at the true bottom of the page — so
+          those render inline at the end of the ScrollView content instead. */}
+      <View style={styles.mountainArt} pointerEvents="none">
+        <MountainSilhouette />
+      </View>
+
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={styles.content}
@@ -334,7 +352,7 @@ const Login = ({ onLoginSuccess, onRegisterSuccess }) => {
                       >
                         {role === 'CI' ? (
                           <LinearGradient
-                            colors={['#7a1a1f', '#4a1017']}
+                            colors={[COLORS.primary, COLORS.primaryDark]}
                             start={{ x: 0, y: 0 }}
                             end={{ x: 1, y: 0 }}
                             style={styles.activeRoleGradient}
@@ -357,7 +375,7 @@ const Login = ({ onLoginSuccess, onRegisterSuccess }) => {
                       >
                         {role === 'ACI' ? (
                           <LinearGradient
-                            colors={['#7a1a1f', '#4a1017']}
+                            colors={[COLORS.primary, COLORS.primaryDark]}
                             start={{ x: 0, y: 0 }}
                             end={{ x: 1, y: 0 }}
                             style={styles.activeRoleGradient}
@@ -380,7 +398,7 @@ const Login = ({ onLoginSuccess, onRegisterSuccess }) => {
                       >
                         {role === 'PA' ? (
                           <LinearGradient
-                            colors={['#7a1a1f', '#4a1017']}
+                            colors={[COLORS.primary, COLORS.primaryDark]}
                             start={{ x: 0, y: 0 }}
                             end={{ x: 1, y: 0 }}
                             style={styles.activeRoleGradient}
@@ -481,7 +499,7 @@ const Login = ({ onLoginSuccess, onRegisterSuccess }) => {
                   >
                     {({ hovered }) => (
                       <LinearGradient
-                        colors={['#7a1a1f', '#4a1017']}
+                        colors={[COLORS.primary, COLORS.primaryDark]}
                         start={{ x: 0, y: 0 }}
                         end={{ x: 1, y: 0 }}
                         style={[
@@ -565,7 +583,7 @@ const Login = ({ onLoginSuccess, onRegisterSuccess }) => {
                   >
                     {({ hovered }) => (
                       <LinearGradient
-                        colors={['#7a1a1f', '#4a1017']}
+                        colors={[COLORS.primary, COLORS.primaryDark]}
                         start={{ x: 0, y: 0 }}
                         end={{ x: 1, y: 0 }}
                         style={[
@@ -675,7 +693,7 @@ const Login = ({ onLoginSuccess, onRegisterSuccess }) => {
                   >
                     {({ hovered }) => (
                       <LinearGradient
-                        colors={['#7a1a1f', '#4a1017']}
+                        colors={[COLORS.primary, COLORS.primaryDark]}
                         start={{ x: 0, y: 0 }}
                         end={{ x: 1, y: 0 }}
                         style={[
@@ -717,19 +735,19 @@ const Login = ({ onLoginSuccess, onRegisterSuccess }) => {
             <View style={styles.footerIconRow}>
               <View style={styles.footerIconItem}>
                 <View style={styles.footerIconCircle}>
-                  <MaterialCommunityIcons name="shield-check-outline" size={20} color={COLORS.gold} />
+                  <MaterialCommunityIcons name="shield-check-outline" size={26} color={COLORS.gold} />
                 </View>
                 <Text style={styles.footerIconLabel}>Secure{'\n'}Access</Text>
               </View>
               <View style={styles.footerIconItem}>
                 <View style={styles.footerIconCircle}>
-                  <MaterialCommunityIcons name="account-group-outline" size={20} color={COLORS.gold} />
+                  <MaterialCommunityIcons name="account-group-outline" size={26} color={COLORS.gold} />
                 </View>
                 <Text style={styles.footerIconLabel}>For a Stronger{'\n'}Cooperative Ecosystem</Text>
               </View>
               <View style={styles.footerIconItem}>
                 <View style={styles.footerIconCircle}>
-                  <MaterialCommunityIcons name="leaf" size={20} color={COLORS.gold} />
+                  <MaterialCommunityIcons name="leaf" size={26} color={COLORS.gold} />
                 </View>
                 <Text style={styles.footerIconLabel}>Government{'\n'}of Sikkim</Text>
               </View>
@@ -742,6 +760,14 @@ const Login = ({ onLoginSuccess, onRegisterSuccess }) => {
               <MaterialCommunityIcons name="lock-outline" size={11} color="rgba(255,255,255,0.4)" style={{ marginHorizontal: 6 }} />
               <Text style={styles.footerVersionText}>Secure government system</Text>
             </View>
+          </View>
+
+          {/* Rhododendron / monastery motifs — see the comment above the
+              mountain art for why these live in the scroll flow instead of
+              as a fixed absolute background layer. */}
+          <View style={styles.bottomArtRow} pointerEvents="none">
+            <RhododendronCluster size={100} />
+            <PagodaSilhouette width={72} height={72} />
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -790,6 +816,23 @@ const styles = StyleSheet.create({
     zIndex: -1,
   },
 
+  // Decorative Sikkim Motifs
+  mountainArt: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 160,
+  },
+  bottomArtRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-end',
+    width: '100%',
+    maxWidth: 540,
+    marginTop: 24,
+  },
+
   content: { flex: 1 },
   scrollInner: {
     paddingHorizontal: 16,
@@ -804,16 +847,16 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   emblemContainer: {
-    width: 76,
-    height: 76,
-    borderRadius: 38,
+    width: 64,
+    height: 64,
+    borderRadius: 32,
     backgroundColor: 'rgba(255, 255, 255, 0.12)',
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1.5,
-    borderColor: 'rgba(253, 230, 138, 0.4)',
-    padding: 14,
-    marginBottom: 16,
+    borderColor: 'rgba(244, 225, 181, 0.4)',
+    padding: 12,
+    marginBottom: 12,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.4,
@@ -901,14 +944,14 @@ const styles = StyleSheet.create({
   cardWrapper: {
     width: '100%',
     maxWidth: 540,
-    marginTop: 8,
+    marginTop: 32,
   },
 
   // White Form Body
   whiteFormCard: {
     backgroundColor: COLORS.surface,
     borderRadius: 20,
-    paddingHorizontal: 20,
+    paddingHorizontal: 24,
     paddingTop: 28,
     paddingBottom: 28,
     borderWidth: 1,
@@ -930,12 +973,12 @@ const styles = StyleSheet.create({
   },
   cardSubtitle: {
     fontFamily: FONT_FAMILY,
-    fontSize: 12,
+    fontSize: 14,
     color: COLORS.slate500,
     textAlign: 'center',
     marginBottom: 20,
-    lineHeight: 18,
-    fontWeight: '500',
+    lineHeight: 20,
+    fontWeight: '400',
   },
 
   fieldGroup: {
@@ -943,10 +986,10 @@ const styles = StyleSheet.create({
   },
   fieldLabel: {
     fontFamily: FONT_FAMILY,
-    fontSize: 10,
-    fontWeight: '800',
+    fontSize: 12,
+    fontWeight: '600',
     color: COLORS.slate700,
-    letterSpacing: 1.2,
+    letterSpacing: 0.5,
     textTransform: 'uppercase',
     marginBottom: 6,
   },
@@ -1011,7 +1054,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: COLORS.slate200,
     paddingHorizontal: 14,
-    height: 46,
+    height: 52,
   },
   inputIcon: {
     marginRight: 10,
@@ -1044,9 +1087,9 @@ const styles = StyleSheet.create({
   },
   forgotText: {
     fontFamily: FONT_FAMILY,
-    fontSize: 11,
-    color: COLORS.primary,
-    fontWeight: '700',
+    fontSize: 14,
+    color: COLORS.linkAccent,
+    fontWeight: '500',
   },
 
   // PROCEED Divider
@@ -1076,7 +1119,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 15,
+    minHeight: 52,
+    paddingVertical: 14,
     borderRadius: 14,
     gap: 8,
     shadowColor: COLORS.primary,
@@ -1087,10 +1131,10 @@ const styles = StyleSheet.create({
   },
   ctaText: {
     fontFamily: FONT_FAMILY,
-    fontSize: 12,
-    fontWeight: '800',
+    fontSize: 16,
+    fontWeight: '600',
     color: '#FFFFFF',
-    letterSpacing: 0.8,
+    letterSpacing: 0.4,
   },
 
   // Switch Mode (sign in ↔ register), replaces the old top tab bar
@@ -1107,15 +1151,15 @@ const styles = StyleSheet.create({
   },
   switchModeText: {
     fontFamily: FONT_FAMILY,
-    fontSize: 12,
+    fontSize: 14,
     fontWeight: '500',
     color: COLORS.slate500,
   },
   switchModeLink: {
     fontFamily: FONT_FAMILY,
-    fontSize: 12,
-    fontWeight: '800',
-    color: COLORS.primary,
+    fontSize: 14,
+    fontWeight: '600',
+    color: COLORS.linkAccent,
   },
 
   // Footer
@@ -1136,22 +1180,22 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
   },
   footerIconCircle: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 64,
+    height: 64,
+    borderRadius: 32,
     borderWidth: 1,
-    borderColor: 'rgba(253, 230, 138, 0.4)',
+    borderColor: 'rgba(244, 225, 181, 0.4)',
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 8,
   },
   footerIconLabel: {
     fontFamily: FONT_FAMILY,
-    fontSize: 10.5,
+    fontSize: 12,
     fontWeight: '600',
     color: 'rgba(255, 255, 255, 0.7)',
     textAlign: 'center',
-    lineHeight: 14,
+    lineHeight: 15,
   },
   footerDivider: {
     height: 1,
