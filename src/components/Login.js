@@ -820,8 +820,8 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   emblemContainer: {
-    width: 92,
-    height: 92,
+    width: 76,
+    height: 76,
     marginBottom: 12,
   },
   emblemImage: {
@@ -834,22 +834,22 @@ const styles = StyleSheet.create({
 
   govTitle: {
     fontFamily: DISPLAY_FONT_FAMILY,
-    fontSize: 38,
+    fontSize: 34,
     color: '#ffffff',
-    letterSpacing: 7,
+    letterSpacing: 5,
     textAlign: 'center',
-    marginBottom: 6,
+    marginBottom: 4,
   },
   fullNameSub: {
     fontFamily: FONT_FAMILY,
-    fontSize: 15,
+    fontSize: 13,
     fontWeight: '500',
     color: 'rgba(255, 255, 255, 0.95)',
     textAlign: 'center',
     marginBottom: 10,
   },
   headerGoldDivider: {
-    width: 160,
+    width: 150,
     height: 1,
     backgroundColor: COLORS.gold,
     opacity: 0.8,
@@ -857,14 +857,14 @@ const styles = StyleSheet.create({
   },
   deptSubtitle: {
     fontFamily: FONT_FAMILY,
-    fontSize: 17,
+    fontSize: 15,
     fontWeight: '700',
     color: COLORS.gold,
     textAlign: 'center',
   },
   govSubtitle: {
     fontFamily: FONT_FAMILY,
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '400',
     color: 'rgba(255, 255, 255, 0.85)',
     textAlign: 'center',
@@ -874,17 +874,17 @@ const styles = StyleSheet.create({
   // Card Container
   cardWrapper: {
     width: '100%',
-    maxWidth: 540,
+    maxWidth: 420,
     marginTop: 8,
   },
 
   // White Form Body
   whiteFormCard: {
     backgroundColor: COLORS.surface,
-    borderRadius: 30,
-    paddingHorizontal: 24,
-    paddingTop: 28,
-    paddingBottom: 24,
+    borderRadius: 28,
+    paddingHorizontal: 28,
+    paddingTop: 32,
+    paddingBottom: 28,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 16 },
     shadowOpacity: 0.3,
@@ -893,7 +893,7 @@ const styles = StyleSheet.create({
   },
   welcomeHeading: {
     fontFamily: FONT_FAMILY,
-    fontSize: 27,
+    fontSize: 24,
     fontWeight: '800',
     color: COLORS.darkNavy,
     textAlign: 'center',
@@ -902,11 +902,11 @@ const styles = StyleSheet.create({
   },
   cardSubtitle: {
     fontFamily: FONT_FAMILY,
-    fontSize: 14,
+    fontSize: 13.5,
     color: COLORS.mutedBlue,
     textAlign: 'center',
     marginBottom: 22,
-    lineHeight: 19,
+    lineHeight: 18,
     fontWeight: '400',
   },
 
@@ -985,7 +985,7 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: COLORS.slate200,
     paddingHorizontal: 14,
-    height: 54,
+    height: 52,
     ...(Platform.OS === 'web' ? { boxShadow: 'inset 0 1px 2px rgba(15,23,42,0.04)' } : {}),
   },
   inputIcon: {
@@ -1031,8 +1031,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: 58,
-    paddingVertical: 16,
+    minHeight: 52,
+    paddingVertical: 14,
     borderRadius: 20,
     gap: 8,
     shadowColor: COLORS.maroonDark,
@@ -1079,7 +1079,7 @@ const styles = StyleSheet.create({
     marginTop: 20,
     alignItems: 'center',
     width: '100%',
-    maxWidth: 540,
+    maxWidth: 420,
   },
   footerDivider: {
     height: 1,
