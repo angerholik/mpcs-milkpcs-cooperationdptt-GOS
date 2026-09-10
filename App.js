@@ -438,6 +438,10 @@ export default function App() {
   const [litres, setLitres] = useState('');
   const [withdrawal, setWithdrawal] = useState('');
   const [balance, setBalance] = useState('');
+  // Sales & Deposit's own remarks — previously wired to the same
+  // businessPerformanceData.remarks the Business Performance screen uses,
+  // so editing either field silently overwrote the other's value.
+  const [salesRemarks, setSalesRemarks] = useState('');
 
   // Member Demographics Legacy States
   const [mSc, setMSc] = useState('');
@@ -518,6 +522,7 @@ export default function App() {
     setLitres('');
     setWithdrawal('');
     setBalance('');
+    setSalesRemarks('');
 
     // Clear member demographics legacy states
     setMSc(''); setFSc(''); setMSt(''); setFSt('');
@@ -1109,6 +1114,7 @@ export default function App() {
         if (saved.reportingMonth) setReportingMonth(saved.reportingMonth);
         if (saved.withdrawal !== undefined) setWithdrawal(saved.withdrawal);
         if (saved.balance !== undefined) setBalance(saved.balance);
+        if (saved.salesRemarks !== undefined) setSalesRemarks(saved.salesRemarks);
         if (saved.sales !== undefined && !saved.withdrawal) setWithdrawal(saved.sales);
         if (saved.deposit !== undefined && !saved.balance) setBalance(saved.deposit);
         if (saved.activityItems) setActivityItems(saved.activityItems);
@@ -1753,6 +1759,10 @@ export default function App() {
       if (activeBusinessPerf.remarks) {
         financialRows.push({ label: 'Business Performance Remarks', value: activeBusinessPerf.remarks });
       }
+      const activeSalesRemarks = recordOverride ? (recordFormData?.salesRemarks || '') : (salesRemarks || '');
+      if (activeSalesRemarks) {
+        financialRows.push({ label: 'Sales & Deposit Remarks', value: activeSalesRemarks });
+      }
     }
 
     const renderInfoRows = (rows) => rows.map(r => `<tr class="data-row"><td class="data-label">${escapeHtml(r.label)}</td><td class="data-value">${escapeHtml(r.value)}</td></tr>`).join('');
@@ -2072,6 +2082,7 @@ export default function App() {
       deposit: activeBalance || '0',
       balance: activeBalance || '0',
       totalTurnover: activeWithdrawal || '0',
+      salesRemarks: salesRemarks || '',
       totalIncome: businessPerformanceData?.totalIncome || '',
       totalExpenses: businessPerformanceData?.totalExpenses || '',
       netSurplusDeficit: businessPerformanceData?.netSurplusDeficit || '',
@@ -3191,15 +3202,15 @@ export default function App() {
                             ? demographicsData.reduce((s, d) => s + (parseInt(d.male || 0) + parseInt(d.female || 0)), 0)
                             : 0
                         }
-                        remarks={businessPerformanceData?.remarks || ''}
-                        setRemarks={(val) => setBusinessPerformanceData(prev => ({ ...prev, remarks: val }))}
+                        remarks={salesRemarks}
+                        setRemarks={setSalesRemarks}
                         onSaveNext={() => {
                           saveMasterStateToStorage({
                             sales: withdrawal,
                             withdrawal,
                             deposit: balance,
                             balance,
-                            businessPerformanceData
+                            salesRemarks
                           });
                           updateSectionState('sales', { status: 'COMPLETED ✓' });
                           setCurrentMobileScreen('MPCS_REVIEW');
