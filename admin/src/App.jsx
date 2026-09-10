@@ -2,6 +2,8 @@ import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { supabase } from './supabase.js';
 import sikkimEmblem from './sikkim-emblem-official.png';
 import kanchenjunga from './kanchenjunga.jpg';
+import rhododendron from './rhododendron.jpg';
+import encheyMonastery from './enchey-monastery.jpg';
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, 
   LineChart, Line, PieChart, Pie, Cell, AreaChart, Area, Legend
@@ -610,14 +612,39 @@ function LoginPage() {
       padding:'20px', position:'relative', overflow:'hidden',
     }}>
       {/* Kanchenjunga photo behind the header, duotone-treated and faded
-          into the flat background — matches the mobile Sign In screen. */}
-      <div style={{position:'absolute', top:0, left:0, right:0, height:'480px', overflow:'hidden', pointerEvents:'none'}}>
+          into the flat background — matches the mobile Sign In screen.
+          objectPosition is biased toward the top of the source photo (the
+          summit sits about a fifth of the way down it) — on a very wide,
+          short container, default center-cropping cut straight through the
+          peak; pulling the crop window up keeps the whole summit in frame
+          with sky margin above it instead. */}
+      <div style={{position:'absolute', top:0, left:0, right:0, height:'520px', overflow:'hidden', pointerEvents:'none'}}>
         <img src={kanchenjunga} alt="" style={{
-          width:'100%', height:'100%', objectFit:'cover', opacity:0.5,
+          width:'100%', height:'100%', objectFit:'cover', objectPosition:'center 18%', opacity:0.5,
           filter:'grayscale(0.4) brightness(0.6) contrast(1.25)',
         }}/>
         <div style={{position:'absolute', inset:0, background:'rgba(71,5,12,0.45)'}}/>
         <div style={{position:'absolute', inset:0, background:`linear-gradient(180deg, transparent 45%, ${C.maroonDark} 100%)`}}/>
+      </div>
+
+      {/* Rhododendron (left) + Enchey Monastery (right), filling what was
+          previously an empty flat-color strip at the bottom of the page. */}
+      <div style={{position:'absolute', bottom:0, left:0, right:0, height:'320px', display:'flex', overflow:'hidden', pointerEvents:'none'}}>
+        <div style={{position:'relative', flex:1, overflow:'hidden'}}>
+          <img src={rhododendron} alt="" style={{
+            width:'100%', height:'100%', objectFit:'cover', opacity:0.4,
+            filter:'grayscale(0.4) brightness(0.6) contrast(1.25)',
+          }}/>
+          <div style={{position:'absolute', inset:0, background:'rgba(71,5,12,0.55)'}}/>
+        </div>
+        <div style={{position:'relative', flex:1, overflow:'hidden'}}>
+          <img src={encheyMonastery} alt="" style={{
+            width:'100%', height:'100%', objectFit:'cover', opacity:0.4,
+            filter:'grayscale(0.4) brightness(0.6) contrast(1.25)',
+          }}/>
+          <div style={{position:'absolute', inset:0, background:'rgba(71,5,12,0.55)'}}/>
+        </div>
+        <div style={{position:'absolute', inset:0, background:`linear-gradient(180deg, ${C.maroonDark} 0%, transparent 35%)`}}/>
       </div>
 
       <div className="fade-in" style={{ width:'100%', maxWidth:'420px', position:'relative', zIndex:1 }}>
@@ -658,7 +685,7 @@ function LoginPage() {
                   <input type="email" className="field-input"
                     placeholder="officer@sikkim.gov.in" value={email}
                     onChange={e=>{setEmail(e.target.value);setResetErr('');}}
-                    style={{fontSize:'14px', paddingLeft:'42px', height:'52px', borderRadius:'14px', background:C.slate50, borderColor:C.slate200}}/>
+                    style={{fontSize:'14px', fontWeight:500, paddingLeft:'42px', paddingRight:'14px', height:'52px', borderRadius:'14px', background:C.slate50, border:`1.5px solid ${C.slate200}`, color:C.darkNavy, boxShadow:'inset 0 1px 2px rgba(15,23,42,0.04)'}}/>
                 </div>
                 {resetMsg && <div style={{fontSize:'12px',color:'#047857',marginTop:'8px',background:'#ECFDF5',padding:'8px',borderRadius:'8px',border:'1px solid #A7F3D0'}}>{resetMsg}</div>}
                 {resetErr && <div style={{fontSize:'12px',color:'#EF4444',marginTop:'8px',background:'#FEF2F2',padding:'8px',borderRadius:'8px',border:'1px solid #FECACA'}}>⚠️ {resetErr}</div>}
@@ -696,7 +723,7 @@ function LoginPage() {
                 <input type="email" className="field-input"
                   placeholder="officer@sikkim.gov.in" value={email}
                   onChange={e=>{setEmail(e.target.value);setErr('');}}
-                  style={{fontSize:'14px', paddingLeft:'42px', height:'52px', borderRadius:'14px', background:C.slate50, borderColor:C.slate200}}/>
+                  style={{fontSize:'14px', fontWeight:500, paddingLeft:'42px', paddingRight:'14px', height:'52px', borderRadius:'14px', background:C.slate50, border:`1.5px solid ${C.slate200}`, color:C.darkNavy, boxShadow:'inset 0 1px 2px rgba(15,23,42,0.04)'}}/>
               </div>
             </div>
 
@@ -709,7 +736,7 @@ function LoginPage() {
                 <input id="admin-password" type="password" className="field-input"
                   placeholder="••••••••" value={pw}
                   onChange={e=>{setPw(e.target.value);setErr('');}}
-                  style={{fontSize:'15px',letterSpacing:'2px', paddingLeft:'42px', height:'52px', borderRadius:'14px', background:C.slate50, borderColor:C.slate200}}/>
+                  style={{fontSize:'15px',letterSpacing:'2px', fontWeight:500, paddingLeft:'42px', paddingRight:'14px', height:'52px', borderRadius:'14px', background:C.slate50, border:`1.5px solid ${C.slate200}`, color:C.darkNavy, boxShadow:'inset 0 1px 2px rgba(15,23,42,0.04)'}}/>
               </div>
               {err && <div style={{fontSize:'12px',color:'#EF4444',marginTop:'8px',background:'#FEF2F2',padding:'8px',borderRadius:'8px',border:'1px solid #FECACA'}}>⚠️ {err}</div>}
             </div>
