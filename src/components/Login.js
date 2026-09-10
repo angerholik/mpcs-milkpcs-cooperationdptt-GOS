@@ -60,7 +60,7 @@ const webPhotoFilter = Platform.OS === 'web' ? { filter: 'grayscale(0.4) brightn
 function SikkimEmblem() {
   return (
     <Image
-      source={require('../../assets/core/sikkim-emblem.png')}
+      source={require('../../assets/core/sikkim-emblem-official.png')}
       style={styles.emblemImage}
       resizeMode="contain"
     />
