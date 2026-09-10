@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { supabase } from './supabase.js';
 import sikkimEmblem from './sikkim-emblem-official.png';
+import kanchenjunga from './kanchenjunga.jpg';
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, 
   LineChart, Line, PieChart, Pie, Cell, AreaChart, Area, Legend
@@ -582,110 +583,153 @@ function LoginPage() {
     else setResetMsg('✅ Password recovery email sent. Check your inbox.');
   };
 
+  // Palette pinned to the mobile app's Sign In redesign, as literal hex
+  // values rather than the dashboard's shared --brand-burgundy/--emerald
+  // CSS vars — those vars are used across every other admin screen, so
+  // repointing them here would rebrand the whole dashboard, not just login.
+  const C = {
+    maroon: '#5A0710',
+    maroonDark: '#47050C',
+    burgundy: '#7A0D18',
+    gold: '#E3B94F',
+    darkNavy: '#26384F',
+    mutedBlue: '#71839B',
+    slate50: '#F8FAFC',
+    slate200: '#E2E8F0',
+  };
+
   return (
     <div style={{
       minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center',
-      background: 'linear-gradient(135deg, #7F1D1D 0%, #450A0A 100%)', padding:'20px'
+      background: `linear-gradient(180deg, ${C.maroon} 0%, ${C.maroonDark} 100%)`,
+      padding:'20px', position:'relative', overflow:'hidden',
     }}>
-      <div style={{position:'fixed',top:'-100px',left:'-100px',width:'350px',height:'350px',
-        borderRadius:'50%',background:'rgba(212,175,55,0.08)',pointerEvents:'none'}}/>
-      <div className="fade-in" style={{
-        width:'100%', maxWidth:'420px',
-        background:'rgba(255,255,255,0.97)', borderRadius:'24px',
-        boxShadow:'0 30px 80px rgba(0,0,0,0.25)', overflow:'hidden',
-      }}>
-        <div style={{background:'linear-gradient(135deg,#7F1D1D,#450A0A)',padding:'32px 36px 28px',textAlign:'center'}}>
-          <div style={{width:'80px',height:'80px',borderRadius:'50%',
-            background:'rgba(255,255,255,0.15)',
-            display:'flex',alignItems:'center',justifyContent:'center',margin:'0 auto 20px',
-            border:'1px solid rgba(255,255,255,0.2)', padding:'10px'}}>
-            <img src={sikkimEmblem} alt="Sikkim Emblem" style={{width:'100%',height:'100%',objectFit:'contain', filter:'brightness(0) invert(1)'}}/>
-          </div>
-          <h1 style={{fontFamily:'Cinzel,serif',fontSize:'28px',color:'#fff',letterSpacing:'4px',fontWeight:900,margin:'0 0 4px'}}>
-            CORE</h1>
-          <p style={{fontSize:'10px',color:'rgba(255,255,255,0.7)',margin:'0 0 10px',letterSpacing:'1.5px',fontWeight:700}}>
-            COOPERATIVE OVERSIGHT & REPORTING ENGINE</p>
-          <p style={{fontSize:'9px',color:'var(--gold-light)',letterSpacing:'1px',fontWeight:800,margin:0}}>
-            DEPARTMENT OF COOPERATION • GOVERNMENT OF SIKKIM</p>
-        </div>
-        {mode === 'forgot' ? (
-          <form onSubmit={handleForgotSubmit} style={{padding:'32px 36px'}}>
-            <div style={{marginBottom:'8px',fontSize:'13px',color:'#6B7280',textAlign:'center'}}>
-              Enter your officer email to receive a password reset link.</div>
+      {/* Kanchenjunga photo behind the header, duotone-treated and faded
+          into the maroon background — matches the mobile Sign In screen. */}
+      <div style={{position:'absolute', top:0, left:0, right:0, height:'480px', overflow:'hidden', pointerEvents:'none'}}>
+        <img src={kanchenjunga} alt="" style={{
+          width:'100%', height:'100%', objectFit:'cover', opacity:0.5,
+          filter:'grayscale(0.4) brightness(0.6) contrast(1.25)',
+        }}/>
+        <div style={{position:'absolute', inset:0, background:'rgba(71,5,12,0.45)'}}/>
+        <div style={{position:'absolute', inset:0, background:`linear-gradient(180deg, transparent 45%, ${C.maroon} 100%)`}}/>
+      </div>
 
-            <div className="field-group" style={{marginTop:'24px',marginBottom:'20px'}}>
-              <label className="field-label">Officer Email</label>
+      <div className="fade-in" style={{ width:'100%', maxWidth:'420px', position:'relative', zIndex:1 }}>
+        {/* Branding header — floats directly on the photo, no card box */}
+        <div style={{textAlign:'center', marginBottom:'24px'}}>
+          <img src={sikkimEmblem} alt="Sikkim Emblem" style={{
+            width:'76px', height:'76px', objectFit:'contain', marginBottom:'12px',
+            filter:'brightness(0) invert(1) drop-shadow(0 1px 3px rgba(0,0,0,0.4))', opacity:0.6,
+          }}/>
+          <h1 style={{fontFamily:'Cinzel,serif',fontSize:'34px',color:'#fff',letterSpacing:'5px',fontWeight:900,margin:'0 0 6px'}}>
+            CORE</h1>
+          <p style={{fontSize:'13px',color:'rgba(255,255,255,0.95)',margin:'0 0 10px',fontWeight:500}}>
+            Cooperative Oversight & Reporting Engine</p>
+          <div style={{width:'150px',height:'1px',background:C.gold,opacity:0.8,margin:'0 auto 10px'}}/>
+          <p style={{fontSize:'15px',color:C.gold,fontWeight:700,margin:0}}>
+            Department of Cooperation</p>
+          <p style={{fontSize:'13px',color:'rgba(255,255,255,0.85)',margin:'2px 0 0'}}>
+            Government of Sikkim</p>
+        </div>
+
+        <div style={{
+          background:'#FFFFFF', borderRadius:'28px',
+          boxShadow:'0 20px 50px rgba(0,0,0,0.35)', padding:'32px 28px 28px',
+        }}>
+          {mode === 'forgot' ? (
+            <form onSubmit={handleForgotSubmit}>
+              <h2 style={{fontFamily:'Inter,-apple-system,sans-serif',fontSize:'22px',fontWeight:800,color:C.darkNavy,textAlign:'center',margin:'0 0 6px'}}>
+                Reset password</h2>
+              <div style={{marginBottom:'20px',fontSize:'13.5px',color:C.mutedBlue,textAlign:'center'}}>
+                Enter your officer email to receive a password reset link.</div>
+
+              <div className="field-group" style={{marginBottom:'20px'}}>
+                <label className="field-label" style={{color:C.darkNavy}}>Officer Email</label>
+                <div style={{position:'relative'}}>
+                  <div style={{position:'absolute',left:'14px',top:'50%',transform:'translateY(-50%)',color:C.burgundy,opacity:0.75}}>
+                    <Icon d={I.user} size={16}/>
+                  </div>
+                  <input type="email" className="field-input"
+                    placeholder="officer@sikkim.gov.in" value={email}
+                    onChange={e=>{setEmail(e.target.value);setResetErr('');}}
+                    style={{fontSize:'14px', paddingLeft:'42px', height:'52px', borderRadius:'14px', background:C.slate50, borderColor:C.slate200}}/>
+                </div>
+                {resetMsg && <div style={{fontSize:'12px',color:'#047857',marginTop:'8px',background:'#ECFDF5',padding:'8px',borderRadius:'8px',border:'1px solid #A7F3D0'}}>{resetMsg}</div>}
+                {resetErr && <div style={{fontSize:'12px',color:'#EF4444',marginTop:'8px',background:'#FEF2F2',padding:'8px',borderRadius:'8px',border:'1px solid #FECACA'}}>⚠️ {resetErr}</div>}
+              </div>
+
+              <button type="submit" disabled={resetLoading} style={{
+                width:'100%', padding:'16px', fontSize:'15px', fontWeight:800, color:'#fff',
+                border:'none', borderRadius:'20px', cursor:'pointer',
+                background:`linear-gradient(135deg, #8B111C, #650810)`,
+                display:'flex', alignItems:'center', justifyContent:'center', gap:'8px',
+                boxShadow:'0 6px 16px rgba(71,5,12,0.35)',
+              }}>
+                {resetLoading ? <div className="spinner" style={{width:'18px',height:'18px',borderWidth:'2px'}}/> : null}
+                {resetLoading ? 'Sending...' : 'Send Reset Email'}
+              </button>
+
+              <button type="button" onClick={()=>{setMode('signin');setResetErr('');setResetMsg('');}}
+                style={{width:'100%',background:'none',border:'none',cursor:'pointer',marginTop:'18px',fontSize:'13.5px',fontWeight:600,color:C.burgundy}}>
+                ← Back to Sign In
+              </button>
+            </form>
+          ) : (
+          <form onSubmit={handleSubmit}>
+            <h2 style={{fontFamily:'Inter,-apple-system,sans-serif',fontSize:'24px',fontWeight:800,color:C.darkNavy,textAlign:'center',margin:'0 0 6px'}}>
+              Welcome back</h2>
+            <div style={{marginBottom:'22px',fontSize:'13.5px',color:C.mutedBlue,textAlign:'center'}}>
+              Official Gatekeeper Portal. Authorised personnel only.</div>
+
+            <div className="field-group" style={{marginBottom:'16px'}}>
+              <label className="field-label" style={{color:C.darkNavy}}>Officer Email</label>
               <div style={{position:'relative'}}>
-                <div style={{position:'absolute',left:'12px',top:'50%',transform:'translateY(-50%)',color:'var(--emerald)',opacity:0.6}}>
+                <div style={{position:'absolute',left:'14px',top:'50%',transform:'translateY(-50%)',color:C.burgundy,opacity:0.75}}>
                   <Icon d={I.user} size={16}/>
                 </div>
                 <input type="email" className="field-input"
                   placeholder="officer@sikkim.gov.in" value={email}
-                  onChange={e=>{setEmail(e.target.value);setResetErr('');}}
-                  style={{fontSize:'14px', paddingLeft:'40px'}}/>
+                  onChange={e=>{setEmail(e.target.value);setErr('');}}
+                  style={{fontSize:'14px', paddingLeft:'42px', height:'52px', borderRadius:'14px', background:C.slate50, borderColor:C.slate200}}/>
               </div>
-              {resetMsg && <div style={{fontSize:'12px',color:'#047857',marginTop:'8px',background:'#ECFDF5',padding:'8px',borderRadius:'8px',border:'1px solid #A7F3D0'}}>{resetMsg}</div>}
-              {resetErr && <div style={{fontSize:'12px',color:'#EF4444',marginTop:'8px',background:'#FEF2F2',padding:'8px',borderRadius:'8px',border:'1px solid #FECACA'}}>⚠️ {resetErr}</div>}
             </div>
 
-            <button type="submit" className="btn-primary" disabled={resetLoading}
-              style={{width:'100%',padding:'13px',fontSize:'14px',display:'flex',alignItems:'center',justifyContent:'center',gap:'8px'}}>
-              {resetLoading ? <div className="spinner" style={{width:'18px',height:'18px',borderWidth:'2px'}}/> : null}
-              {resetLoading ? 'Sending...' : 'Send Reset Email'}
+            <div className="field-group" style={{marginBottom:'12px'}}>
+              <label className="field-label" style={{color:C.darkNavy}}>Access Key</label>
+              <div style={{position:'relative'}}>
+                <div style={{position:'absolute',left:'14px',top:'50%',transform:'translateY(-50%)',color:C.burgundy,opacity:0.75}}>
+                  <Icon d={I.key} size={16}/>
+                </div>
+                <input id="admin-password" type="password" className="field-input"
+                  placeholder="••••••••" value={pw}
+                  onChange={e=>{setPw(e.target.value);setErr('');}}
+                  style={{fontSize:'15px',letterSpacing:'2px', paddingLeft:'42px', height:'52px', borderRadius:'14px', background:C.slate50, borderColor:C.slate200}}/>
+              </div>
+              {err && <div style={{fontSize:'12px',color:'#EF4444',marginTop:'8px',background:'#FEF2F2',padding:'8px',borderRadius:'8px',border:'1px solid #FECACA'}}>⚠️ {err}</div>}
+            </div>
+
+            <button type="button" onClick={()=>{setMode('forgot');setErr('');}}
+              style={{background:'none',border:'none',cursor:'pointer',display:'block',marginLeft:'auto',marginBottom:'20px',fontSize:'13.5px',fontWeight:600,color:C.burgundy}}>
+              Forgot password?
             </button>
 
-            <button type="button" onClick={()=>{setMode('signin');setResetErr('');setResetMsg('');}}
-              style={{width:'100%',background:'none',border:'none',cursor:'pointer',marginTop:'16px',fontSize:'12px',fontWeight:800,color:'var(--brand-burgundy)'}}>
-              ← Back to Sign In
+            <button id="login-submit" type="submit" disabled={loading} style={{
+              width:'100%', padding:'16px', fontSize:'15px', fontWeight:800, color:'#fff',
+              border:'none', borderRadius:'20px', cursor:'pointer',
+              background:`linear-gradient(135deg, #8B111C, #650810)`,
+              display:'flex', alignItems:'center', justifyContent:'center', gap:'8px',
+              boxShadow:'0 6px 16px rgba(71,5,12,0.35)',
+            }}>
+              {loading ? <div className="spinner" style={{width:'18px',height:'18px',borderWidth:'2px'}}/> : null}
+              {loading ? 'Verifying...' : 'Access Dashboard →'}
             </button>
+
+            <p style={{fontSize:'11px',color:'#9CA3AF',textAlign:'center',marginTop:'20px'}}>
+              FOR OFFICIAL USE ONLY • UNAUTHORIZED ACCESS PROHIBITED • v2.0.4-beta</p>
           </form>
-        ) : (
-        <form onSubmit={handleSubmit} style={{padding:'32px 36px'}}>
-          <div style={{marginBottom:'8px',fontSize:'13px',color:'#6B7280',textAlign:'center'}}>
-            Official Gatekeeper Portal. Authorised personnel only.</div>
-
-          <div className="field-group" style={{marginTop:'24px',marginBottom:'16px'}}>
-            <label className="field-label">Officer Email</label>
-            <div style={{position:'relative'}}>
-              <div style={{position:'absolute',left:'12px',top:'50%',transform:'translateY(-50%)',color:'var(--emerald)',opacity:0.6}}>
-                <Icon d={I.user} size={16}/>
-              </div>
-              <input type="email" className="field-input"
-                placeholder="officer@sikkim.gov.in" value={email}
-                onChange={e=>{setEmail(e.target.value);setErr('');}}
-                style={{fontSize:'14px', paddingLeft:'40px'}}/>
-            </div>
-          </div>
-
-          <div className="field-group" style={{marginBottom:'12px'}}>
-            <label className="field-label">Access Key</label>
-            <div style={{position:'relative'}}>
-              <div style={{position:'absolute',left:'12px',top:'50%',transform:'translateY(-50%)',color:'var(--emerald)',opacity:0.6}}>
-                <Icon d={I.key} size={16}/>
-              </div>
-              <input id="admin-password" type="password" className="field-input"
-                placeholder="••••••••" value={pw}
-                onChange={e=>{setPw(e.target.value);setErr('');}}
-                style={{fontSize:'15px',letterSpacing:'2px', paddingLeft:'40px'}}/>
-            </div>
-            {err && <div style={{fontSize:'12px',color:'#EF4444',marginTop:'8px',background:'#FEF2F2',padding:'8px',borderRadius:'8px',border:'1px solid #FECACA'}}>⚠️ {err}</div>}
-          </div>
-
-          <button type="button" onClick={()=>{setMode('forgot');setErr('');}}
-            style={{background:'none',border:'none',cursor:'pointer',display:'block',marginLeft:'auto',marginBottom:'20px',fontSize:'12px',fontWeight:700,color:'var(--brand-burgundy)'}}>
-            Forgot Password?
-          </button>
-
-          <button id="login-submit" type="submit" className="btn-primary" disabled={loading}
-            style={{width:'100%',padding:'13px',fontSize:'14px',display:'flex',alignItems:'center',justifyContent:'center',gap:'8px'}}>
-            {loading ? <div className="spinner" style={{width:'18px',height:'18px',borderWidth:'2px'}}/> : null}
-            {loading ? 'Verifying...' : 'Access Dashboard →'}
-          </button>
-
-          <p style={{fontSize:'11px',color:'#9CA3AF',textAlign:'center',marginTop:'20px'}}>
-            FOR OFFICIAL USE ONLY • UNAUTHORIZED ACCESS PROHIBITED • v2.0.4-beta</p>
-        </form>
-        )}
+          )}
+        </div>
       </div>
     </div>
   );
