@@ -260,13 +260,6 @@ export default function HomeScreen({
           >
             <Text style={[styles.tabText, internalTab === 'master' && styles.tabTextActive]}>Master Data</Text>
           </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.tabBtn, internalTab === 'quickaccess' && styles.tabBtnActive]}
-            onPress={() => setInternalTab('quickaccess')}
-            activeOpacity={0.9}
-          >
-            <Text style={[styles.tabText, internalTab === 'quickaccess' && styles.tabTextActive]}>Quick Access</Text>
-          </TouchableOpacity>
           {/* Member Data is a standalone roster, not one of the Master Data
               tiles — tapping it navigates straight to the screen rather than
               switching internalTab, since there's nothing to show inline here. */}
@@ -283,8 +276,8 @@ export default function HomeScreen({
         {internalTab === 'monthly' && (
           <>
             {/* Quick Actions — surfaces the two anytime ledgers (CSC / Daily
-                Transactions) directly on Home, without requiring a tab
-                switch to Quick Access. */}
+                Transactions), which have no fixed home in the monthly
+                wizard since they can be logged any day. */}
             <View style={styles.sectionContainer}>
               <Text style={styles.sectionTitle}>Quick Actions</Text>
               <Text style={styles.sectionSubtitle}>Get started with your most common tasks</Text>
@@ -383,66 +376,6 @@ export default function HomeScreen({
               </View>
             </View>
           </>
-        )}
-
-        {/* Quick Access Section — CSC Transactions and MPCS Daily Transactions
-            can happen any day, not just once during monthly reporting, so
-            they live here as an always-available running ledger per
-            institution rather than inside the Monthly Data wizard. */}
-        {internalTab === 'quickaccess' && (
-          <View style={styles.sectionContainer}>
-            <Text style={styles.sectionTitle}>Quick Access</Text>
-            <View style={styles.masterListContainer}>
-              {[
-                { id: 'MPCS_CSC_TRANS', title: 'CSC Transactions', icon: 'laptop', desc: cscIsActive ? 'Log CSC service transactions, any day.' : 'No active CSC on record for this society.' },
-                { id: 'MPCS_DAILY_TRANS', title: 'MPCS Daily Transactions', icon: 'notebook-outline', desc: 'Record daily cash-book entries as they happen.' },
-              ].map((item) => (
-                <Pressable
-                  key={item.id}
-                  style={({ hovered }) => [
-                    styles.masterListItem,
-                    Platform.OS === 'web' && { transition: 'all 0.3s' },
-                    hovered && { borderColor: '#cbd5e1', shadowOpacity: 0.08, elevation: 4 }
-                  ]}
-                  onPress={() => onNavigateScreen && onNavigateScreen(item.id)}
-                >
-                  {({ hovered }) => (
-                    <>
-                      <View style={styles.masterListLeft}>
-                        <View style={[
-                          styles.masterListIcon,
-                          Platform.OS === 'web' && { transition: 'all 0.3s' },
-                          hovered && { backgroundColor: '#fef2f2', borderColor: '#fee2e2' }
-                        ]}>
-                          <MaterialCommunityIcons name={item.icon} size={20} color={hovered ? '#7a1a1f' : COLORS.slate600} />
-                        </View>
-                        <View style={{flex: 1}}>
-                          <Text style={[styles.masterListTitle, Platform.OS === 'web' && { transition: 'all 0.3s' }, hovered && { color: '#7a1a1f' }]}>{item.title}</Text>
-                          <View style={styles.masterListSubRow}>
-                            <Text style={styles.masterListSub}>{item.desc}</Text>
-                          </View>
-                        </View>
-                      </View>
-                      <View style={styles.masterListRight}>
-                        <View style={[
-                          {width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center', backgroundColor: COLORS.slate50, borderWidth: 1, borderColor: COLORS.slate100},
-                          Platform.OS === 'web' && { transition: 'all 0.3s' },
-                          hovered && { backgroundColor: '#7a1a1f', borderColor: 'transparent' }
-                        ]}>
-                          <MaterialCommunityIcons
-                            name="arrow-right"
-                            size={18}
-                            color={hovered ? '#ffffff' : COLORS.slate400}
-                            style={[Platform.OS === 'web' && { transition: 'transform 0.3s' }, hovered && { transform: [{ translateX: 2 }] }]}
-                          />
-                        </View>
-                      </View>
-                    </>
-                  )}
-                </Pressable>
-              ))}
-            </View>
-          </View>
         )}
 
         {/* Master Data Section */}
