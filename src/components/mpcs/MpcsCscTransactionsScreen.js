@@ -1,12 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, TextInput,
-  ScrollView, Switch, Platform, Pressable,
+  ScrollView, Platform, Pressable, ActivityIndicator, Alert,
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import BottomNav from '../BottomNav';
 import { webCapWidth } from '../../utils/webStyles';
+import { getMpcsCscTransactions, saveMpcsCscTransaction, deleteMpcsCscTransaction } from '../../supabase';
 
 const COLORS = {
   surface: '#ffffff',
@@ -32,12 +33,9 @@ const COLORS = {
 
 const FONT_FAMILY = 'Manrope';
 
-// Transaction Date was a plain typed TextInput with no actual calendar —
-// every other date field in the app (Compliance Audit, Loan Setup, Share
-// Capital, Dividend Details, Institutional Profile) already uses a real
-// browser date picker on web via a native <input type="date">; this screen
-// was the one exception. Matches that same DD/MM/YYYY <-> ISO conversion
-// pattern so it looks and behaves consistently with the rest of the app.
+// Every other date field in the app (Compliance Audit, Loan Setup, Share
+// Capital, Dividend Details, Institutional Profile) uses a real browser
+// date picker on web via a native <input type="date">.
 function formatDMYToIso(displayStr) {
   if (!displayStr) return '';
   const parts = displayStr.trim().split('/');
@@ -86,69 +84,74 @@ function formatCurrency(val) {
   return '₹' + n.toLocaleString('en-IN', { minimumFractionDigits: 2 });
 }
 
+// CSC transactions can happen any day — this is a continuous running ledger
+// per society in its own table, not draft state tied to a monthly
+// submission. Whether the society even has a CSC centre is a Master Data
+// fact (cscIsActive, set on the CSC Details screen), so that's read-only
+// here rather than a second, redundant "active this month" toggle.
 export default function MpcsCscTransactionsScreen({
-  reportingMonth = '',
-  cscTransData = {},
-  onChangeCscTrans,
-  onSaveNext,
+  societyName = '',
+  cscIsActive = false,
   onBack,
   activeTab,
   onTabPress
 }) {
-  const isCscActive = cscTransData.isCscActive ?? false;
-  const transactions = cscTransData.transactions ?? [];
+  const [transactions, setTransactions] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
 
-  // Local form state for the "Add Transaction" form
   const [txDate, setTxDate] = useState('');
   const [txType, setTxType] = useState('');
   const [txCount, setTxCount] = useState('');
   const [txAmount, setTxAmount] = useState('');
   const [txCommission, setTxCommission] = useState('');
 
-  const autoTotal =
-    (parseFloat(txAmount) || 0) + (parseFloat(txCommission) || 0);
+  const autoTotal = (parseFloat(txAmount) || 0) + (parseFloat(txCommission) || 0);
 
-  const update = (patch) => {
-    onChangeCscTrans && onChangeCscTrans({ ...cscTransData, ...patch });
-  };
+  const loadTransactions = useCallback(async () => {
+    if (!societyName) { setLoading(false); return; }
+    setLoading(true);
+    const { data } = await getMpcsCscTransactions(societyName);
+    setTransactions(data || []);
+    setLoading(false);
+  }, [societyName]);
 
-  const handleToggle = (val) => update({ isCscActive: val });
+  useEffect(() => { loadTransactions(); }, [loadTransactions]);
 
-  const handleAddTransaction = () => {
-    if (!txDate || !txType || !txCount || !txAmount) return;
-    const newTx = {
-      id: Date.now().toString(),
-      date: txDate,
-      type: txType,
+  const canAdd = txDate && txType && txCount && txAmount && !saving;
+
+  const handleAddTransaction = async () => {
+    if (!canAdd) return;
+    setSaving(true);
+    const { error } = await saveMpcsCscTransaction(societyName, {
+      transactionDate: formatDMYToIso(txDate),
+      serviceType: txType,
       count: txCount,
       amount: txAmount,
       commission: txCommission,
-      totalIncome: autoTotal.toFixed(2),
-    };
-    update({ transactions: [newTx, ...transactions] });
-    // Clear form
-    setTxDate('');
-    setTxType('');
-    setTxCount('');
-    setTxAmount('');
-    setTxCommission('');
+    });
+    setSaving(false);
+    if (error) {
+      const msg = 'Could not save this transaction. Please try again.';
+      if (Platform.OS === 'web') alert(msg); else Alert.alert('Save Failed', msg);
+      return;
+    }
+    setTxDate(''); setTxType(''); setTxCount(''); setTxAmount(''); setTxCommission('');
+    loadTransactions();
   };
 
-  const handleDeleteTransaction = (id) => {
-    update({ transactions: transactions.filter((t) => t.id !== id) });
+  const handleDeleteTransaction = async (id) => {
+    await deleteMpcsCscTransaction(id);
+    loadTransactions();
   };
 
-  // Summary totals
-  const totalTxCount = transactions.reduce((s, t) => s + (parseInt(t.count) || 0), 0);
+  const totalTxCount = transactions.reduce((s, t) => s + (parseInt(t.transaction_count) || 0), 0);
   const totalTxAmount = transactions.reduce((s, t) => s + (parseFloat(t.amount) || 0), 0);
   const totalCommission = transactions.reduce((s, t) => s + (parseFloat(t.commission) || 0), 0);
   const grandTotal = totalTxAmount + totalCommission;
 
-  const canAdd = txDate && txType && txCount && txAmount;
-
   return (
     <View style={styles.container}>
-      {/* ── Premium Header ── */}
       <View style={styles.topBar}>
         <LinearGradient
           colors={['#7a1a1f', '#4a1017']}
@@ -160,8 +163,8 @@ export default function MpcsCscTransactionsScreen({
           <MaterialCommunityIcons name="arrow-left" size={24} color="#FFFFFF" />
         </TouchableOpacity>
         <View style={styles.topBarTitleContainer}>
-          <Text style={styles.moduleTag}>MPCS</Text>
-          <Text style={styles.screenTitleHeader}>CSC Monthly Transactions</Text>
+          <Text style={styles.moduleTag}>MPCS · QUICK ACCESS</Text>
+          <Text style={styles.screenTitleHeader}>CSC Transactions</Text>
         </View>
       </View>
 
@@ -171,63 +174,19 @@ export default function MpcsCscTransactionsScreen({
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
-        {/* Month Indicator */}
-        <View style={styles.monthCard}>
-          <LinearGradient
-            colors={['rgba(122,26,31,0.06)', 'rgba(122,26,31,0.02)']}
-            style={StyleSheet.absoluteFillObject}
-          />
-          <View style={styles.monthIconBox}>
-            <MaterialCommunityIcons name="calendar-month-outline" size={20} color={COLORS.primary} />
-          </View>
-          <View style={{ flex: 1, marginLeft: 10 }}>
-            <Text style={styles.monthLabel}>Reporting Period</Text>
-            <Text style={styles.monthValue}>{reportingMonth || 'Current Month'}</Text>
-          </View>
-          <View style={styles.draftChip}>
-            <Text style={styles.draftChipText}>DRAFT</Text>
-          </View>
-        </View>
-
-        {/* ── CSC Activity Toggle ── */}
-        <View style={[styles.toggleCard, isCscActive && styles.toggleCardActive]}>
-          <View style={[styles.toggleIconBox, { backgroundColor: isCscActive ? COLORS.emerald50 : COLORS.slate100 }]}>
-            <MaterialCommunityIcons
-              name={isCscActive ? 'wifi' : 'wifi-off'}
-              size={22}
-              color={isCscActive ? COLORS.emerald500 : COLORS.slate400}
-            />
-          </View>
-          <View style={{ flex: 1, marginLeft: 12 }}>
-            <Text style={styles.toggleTitle}>CSC Centre Activity</Text>
-            <Text style={[styles.toggleSub, { color: isCscActive ? COLORS.emerald700 : COLORS.slate400 }]}>
-              {isCscActive
-                ? 'Active — transactions carried out this month'
-                : 'Inactive / Closed this month'}
-            </Text>
-          </View>
-          <Switch
-            value={isCscActive}
-            onValueChange={handleToggle}
-            trackColor={{ false: COLORS.slate200, true: '#6EE7B7' }}
-            thumbColor={isCscActive ? COLORS.emerald500 : COLORS.slate400}
-          />
-        </View>
-
-        {/* ── INACTIVE STATE ── */}
-        {!isCscActive && (
+        {!cscIsActive ? (
           <View style={styles.inactiveNotice}>
             <MaterialCommunityIcons name="information-outline" size={20} color={COLORS.slate400} />
             <Text style={styles.inactiveText}>
-              Toggle the switch to <Text style={{ fontWeight: '800', color: COLORS.slate700 }}>Active</Text> if this MPCS has a CSC centre with transactions this month.
+              This society's CSC Details (Master Data) is marked <Text style={{ fontWeight: '800', color: COLORS.slate700 }}>Inactive</Text>. Mark it Active there first to log transactions here.
             </Text>
           </View>
-        )}
-
-        {/* ── ACTIVE STATE ── */}
-        {isCscActive && (
+        ) : loading ? (
+          <View style={{ paddingVertical: 40, alignItems: 'center' }}>
+            <ActivityIndicator color={COLORS.primary} />
+          </View>
+        ) : (
           <>
-            {/* Add Transaction Form */}
             <View style={styles.formCard}>
               <View style={styles.cardHeaderRow}>
                 <View style={styles.cardIconBox}>
@@ -236,7 +195,6 @@ export default function MpcsCscTransactionsScreen({
                 <Text style={styles.cardHeaderTitle}>Add Transaction Entry</Text>
               </View>
 
-              {/* Row 1: Date + Type */}
               <View style={styles.inputRowHalf}>
                 <View style={styles.inputHalf}>
                   <Text style={styles.inputLabel}>Transaction Date</Text>
@@ -280,7 +238,6 @@ export default function MpcsCscTransactionsScreen({
                 </View>
               </View>
 
-              {/* Service Type Chips */}
               <View>
                 <Text style={styles.inputLabel}>Service / Transaction Type</Text>
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipsScroll}>
@@ -303,7 +260,6 @@ export default function MpcsCscTransactionsScreen({
                     </TouchableOpacity>
                   ))}
                 </ScrollView>
-                {/* Free-text fallback */}
                 <View style={[styles.inputBox, { marginTop: 6 }]}>
                   <MaterialCommunityIcons name="pencil-outline" size={15} color={COLORS.slate400} style={styles.inputIcon} />
                   <TextInput
@@ -316,7 +272,6 @@ export default function MpcsCscTransactionsScreen({
                 </View>
               </View>
 
-              {/* Row 2: Amount + Commission */}
               <View style={styles.inputRowHalf}>
                 <View style={styles.inputHalf}>
                   <Text style={styles.inputLabel}>Transaction Amount (₹)</Text>
@@ -348,7 +303,6 @@ export default function MpcsCscTransactionsScreen({
                 </View>
               </View>
 
-              {/* Auto-computed Total Income */}
               <View style={styles.autoTotalRow}>
                 <View style={{ flex: 1 }}>
                   <Text style={styles.inputLabel}>Total Income (Auto)</Text>
@@ -363,7 +317,6 @@ export default function MpcsCscTransactionsScreen({
                 </View>
               </View>
 
-              {/* Add Button */}
               <View style={styles.btnWrapper}>
                 <Pressable
                   style={({ pressed }) => [
@@ -382,19 +335,18 @@ export default function MpcsCscTransactionsScreen({
                       style={StyleSheet.absoluteFillObject}
                     />
                   )}
-                  <MaterialCommunityIcons
-                    name="plus-circle"
-                    size={17}
-                    color={canAdd ? '#ffffff' : COLORS.slate400}
-                  />
+                  {saving ? (
+                    <ActivityIndicator color={canAdd ? '#ffffff' : COLORS.slate400} size="small" />
+                  ) : (
+                    <MaterialCommunityIcons name="plus-circle" size={17} color={canAdd ? '#ffffff' : COLORS.slate400} />
+                  )}
                   <Text style={[styles.addBtnText, !canAdd && { color: COLORS.slate400 }]}>
-                    ADD TO LEDGER
+                    {saving ? 'SAVING...' : 'ADD TO LEDGER'}
                   </Text>
                 </Pressable>
               </View>
             </View>
 
-            {/* ── Transactions List ── */}
             <View style={styles.sectionHeaderRow}>
               <Text style={styles.sectionTitle}>Recorded Transactions</Text>
               <View style={styles.countBadge}>
@@ -412,7 +364,6 @@ export default function MpcsCscTransactionsScreen({
               </View>
             ) : (
               <>
-                {/* Summary Strip */}
                 <View style={styles.summaryStrip}>
                   <View style={styles.summaryItem}>
                     <Text style={styles.summaryLabel}>Transactions</Text>
@@ -432,21 +383,19 @@ export default function MpcsCscTransactionsScreen({
                   </View>
                 </View>
 
-                {/* Transaction Cards */}
-                {transactions.map((tx, idx) => (
+                {transactions.map((tx) => (
                   <View key={tx.id} style={styles.txCard}>
-                    {/* Card Header */}
                     <View style={styles.txCardHeader}>
                       <View style={styles.txTypeChip}>
                         <MaterialCommunityIcons
-                          name={SERVICE_ICONS[tx.type] || 'tag-outline'}
+                          name={SERVICE_ICONS[tx.service_type] || 'tag-outline'}
                           size={12}
                           color={COLORS.primary}
                           style={{ marginRight: 4 }}
                         />
-                        <Text style={styles.txTypeText}>{tx.type}</Text>
+                        <Text style={styles.txTypeText}>{tx.service_type}</Text>
                       </View>
-                      <Text style={styles.txDateText}>{tx.date}</Text>
+                      <Text style={styles.txDateText}>{formatIsoToDMY(tx.transaction_date)}</Text>
                       <TouchableOpacity
                         onPress={() => handleDeleteTransaction(tx.id)}
                         style={styles.deleteBtn}
@@ -456,11 +405,10 @@ export default function MpcsCscTransactionsScreen({
                       </TouchableOpacity>
                     </View>
 
-                    {/* Card Metrics Grid */}
                     <View style={styles.txMetricsRow}>
                       <View style={styles.txMetric}>
                         <Text style={styles.txMetricLabel}>No. of Txns</Text>
-                        <Text style={styles.txMetricValue}>{tx.count}</Text>
+                        <Text style={styles.txMetricValue}>{tx.transaction_count}</Text>
                       </View>
                       <View style={styles.txMetricDivider} />
                       <View style={styles.txMetric}>
@@ -476,14 +424,9 @@ export default function MpcsCscTransactionsScreen({
                       <View style={styles.txMetric}>
                         <Text style={styles.txMetricLabel}>Income</Text>
                         <Text style={[styles.txMetricValue, { color: COLORS.emerald700, fontWeight: '800' }]}>
-                          {formatCurrency(tx.totalIncome)}
+                          {formatCurrency((parseFloat(tx.amount) || 0) + (parseFloat(tx.commission) || 0))}
                         </Text>
                       </View>
-                    </View>
-
-                    {/* Sequence indicator */}
-                    <View style={styles.txSeqBar}>
-                      <Text style={styles.txSeqText}>Entry #{transactions.length - idx}</Text>
                     </View>
                   </View>
                 ))}
@@ -493,28 +436,12 @@ export default function MpcsCscTransactionsScreen({
             <View style={{ height: 8 }} />
           </>
         )}
-      {/* Wizard navigation actions now scroll with the content
-          instead of sitting in a fixed footer, which competed with the
-          floating BottomNav pill for the same strip at the bottom. */}
-        <View style={[{ flexDirection: 'row', flex: 1, gap: 10 }, webCapWidth]}>
-        <TouchableOpacity style={styles.navBackBtn} onPress={onBack} activeOpacity={0.7}>
-          <Text style={styles.buttonTextSecondary}>BACK</Text>
-        </TouchableOpacity>
-        <Pressable
-          style={({ pressed }) => [styles.navNextBtn, pressed && { transform: [{ scale: 0.98 }] }]}
-          onPress={onSaveNext}
-        >
-          <LinearGradient
-            colors={['#7a1a1f', '#4a1017']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
-            style={StyleSheet.absoluteFillObject}
-          />
-          <Text style={styles.buttonTextPrimary}>SAVE &amp; NEXT</Text>
-          <MaterialCommunityIcons name="arrow-right" size={16} color="#ffffff" />
-        </Pressable>
-        </View>
 
+        <View style={[{ flexDirection: 'row', flex: 1, gap: 10 }, webCapWidth]}>
+          <TouchableOpacity style={styles.navBackBtn} onPress={onBack} activeOpacity={0.7}>
+            <Text style={styles.buttonTextSecondary}>BACK</Text>
+          </TouchableOpacity>
+        </View>
       </ScrollView>
 
       {onTabPress && <BottomNav activeTab={activeTab || 'home'} onTabPress={onTabPress} />}
@@ -525,7 +452,6 @@ export default function MpcsCscTransactionsScreen({
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.bg },
 
-  // ── Header ──
   topBar: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -551,112 +477,10 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     letterSpacing: -0.3,
   },
-  stepBadge: {
-    backgroundColor: 'rgba(255,255,255,0.18)',
-    borderRadius: 20,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-  },
-  stepIndicator: {
-    color: 'rgba(255,255,255,0.9)',
-    fontFamily: FONT_FAMILY,
-    fontSize: 11,
-    fontWeight: '700',
-  },
 
-  // ── Scroll ──
   scrollContent: { flex: 1 },
-  scrollInner: { padding: 16, paddingBottom: 110 },
+  scrollInner: { padding: 16, paddingBottom: 110, gap: 14 },
 
-  // ── Month Card ──
-  monthCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: COLORS.surface,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: COLORS.slate200,
-    padding: 14,
-    marginBottom: 12,
-    overflow: 'hidden',
-  },
-  monthIconBox: {
-    width: 38,
-    height: 38,
-    borderRadius: 10,
-    backgroundColor: COLORS.primaryLight,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  monthLabel: {
-    fontFamily: FONT_FAMILY,
-    fontSize: 10,
-    fontWeight: '600',
-    color: COLORS.slate400,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  monthValue: {
-    fontFamily: FONT_FAMILY,
-    fontSize: 15,
-    fontWeight: '800',
-    color: COLORS.slate800,
-    letterSpacing: -0.2,
-    marginTop: 1,
-  },
-  draftChip: {
-    backgroundColor: COLORS.amber50,
-    borderRadius: 6,
-    paddingHorizontal: 7,
-    paddingVertical: 3,
-    borderWidth: 1,
-    borderColor: '#FDE68A',
-  },
-  draftChipText: {
-    fontFamily: FONT_FAMILY,
-    fontSize: 9,
-    fontWeight: '800',
-    color: COLORS.amber900,
-    letterSpacing: 0.5,
-  },
-
-  // ── Toggle Card ──
-  toggleCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: COLORS.surface,
-    borderRadius: 14,
-    borderWidth: 1.5,
-    borderColor: COLORS.slate200,
-    padding: 14,
-    marginBottom: 12,
-  },
-  toggleCardActive: {
-    borderColor: '#6EE7B7',
-    backgroundColor: '#F0FDF4',
-  },
-  toggleIconBox: {
-    width: 44,
-    height: 44,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  toggleTitle: {
-    fontFamily: FONT_FAMILY,
-    fontSize: 14,
-    fontWeight: '800',
-    color: COLORS.slate800,
-    letterSpacing: -0.1,
-  },
-  toggleSub: {
-    fontFamily: FONT_FAMILY,
-    fontSize: 11,
-    fontWeight: '500',
-    marginTop: 2,
-  },
-
-  // ── Inactive Notice ──
   inactiveNotice: {
     flexDirection: 'row',
     alignItems: 'flex-start',
@@ -676,7 +500,6 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
 
-  // ── Form Card ──
   formCard: {
     backgroundColor: COLORS.surface,
     borderRadius: 16,
@@ -702,7 +525,6 @@ const styles = StyleSheet.create({
     color: COLORS.slate800,
   },
 
-  // ── Inputs ──
   inputRowHalf: { flexDirection: 'row', gap: 10 },
   inputHalf: { flex: 1, gap: 5 },
   inputLabel: {
@@ -739,7 +561,6 @@ const styles = StyleSheet.create({
     ...(Platform.OS === 'web' ? { outlineStyle: 'none' } : {}),
   },
 
-  // ── Chips ──
   chipsScroll: { marginTop: 6, marginBottom: 2 },
   chip: {
     flexDirection: 'row',
@@ -765,7 +586,6 @@ const styles = StyleSheet.create({
   },
   chipTextActive: { color: COLORS.primary },
 
-  // ── Auto Total ──
   autoTotalRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -808,7 +628,6 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
 
-  // ── Add Button ──
   btnWrapper: { borderRadius: 12, overflow: 'hidden' },
   addBtn: {
     flexDirection: 'row',
@@ -829,7 +648,6 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
 
-  // ── Section Header ──
   sectionHeaderRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -860,7 +678,6 @@ const styles = StyleSheet.create({
     color: '#ffffff',
   },
 
-  // ── Empty State ──
   emptyCard: {
     backgroundColor: COLORS.surface,
     borderRadius: 14,
@@ -885,7 +702,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
   },
 
-  // ── Summary Strip ──
   summaryStrip: {
     flexDirection: 'row',
     backgroundColor: COLORS.surface,
@@ -919,7 +735,6 @@ const styles = StyleSheet.create({
     marginHorizontal: 4,
   },
 
-  // ── Transaction Card ──
   txCard: {
     backgroundColor: COLORS.surface,
     borderRadius: 14,
@@ -996,23 +811,7 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.slate100,
     marginHorizontal: 2,
   },
-  txSeqBar: {
-    backgroundColor: COLORS.slate50,
-    borderTopWidth: 1,
-    borderTopColor: COLORS.slate100,
-    paddingHorizontal: 12,
-    paddingVertical: 5,
-    alignItems: 'flex-end',
-  },
-  txSeqText: {
-    fontFamily: FONT_FAMILY,
-    fontSize: 9,
-    fontWeight: '600',
-    color: COLORS.slate400,
-    letterSpacing: 0.3,
-  },
 
-  // ── Bottom Bar ──
   navBackBtn: {
     flex: 1,
     paddingVertical: 14,
@@ -1026,22 +825,5 @@ const styles = StyleSheet.create({
     fontFamily: FONT_FAMILY,
     fontSize: 13,
     fontWeight: '700',
-  },
-  navNextBtn: {
-    flex: 2,
-    flexDirection: 'row',
-    paddingVertical: 14,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    overflow: 'hidden',
-  },
-  buttonTextPrimary: {
-    color: '#FFFFFF',
-    fontFamily: FONT_FAMILY,
-    fontSize: 13,
-    fontWeight: '800',
-    letterSpacing: 0.3,
   },
 });

@@ -51,6 +51,7 @@ import MpcsDigitalEvidenceScreen from './src/components/mpcs/MpcsDigitalEvidence
 import MpcsSalesDepositScreen from './src/components/mpcs/MpcsSalesDepositScreen';
 import MpcsBusinessPerformanceScreen from './src/components/mpcs/MpcsBusinessPerformanceScreen';
 import MpcsCscTransactionsScreen from './src/components/mpcs/MpcsCscTransactionsScreen';
+import MpcsDailyTransactionScreen from './src/components/mpcs/MpcsDailyTransactionScreen';
 import MpcsActivitiesLogScreen from './src/components/mpcs/MpcsActivitiesLogScreen';
 import MpcsInstitutionalProfileScreen from './src/components/mpcs/MpcsInstitutionalProfileScreen';
 import MpcsProfileSummaryScreen from './src/components/mpcs/MpcsProfileSummaryScreen';
@@ -2146,7 +2147,6 @@ export default function App() {
       bankData,
       shareCapitalData,
       cscDetailsData,
-      cscTransData,
       businessPerformanceData,
       remarks: businessPerformanceData?.remarks || ''
     };
@@ -3121,9 +3121,8 @@ export default function App() {
                             (((((sectionStates?.evidence?.status?.includes('CAPTURED') && !sectionStates?.evidence?.status?.includes('NOT')) || sectionStates?.evidence?.status?.includes('Valid')) ? 1 : 0) +
                             (sectionStates?.sales?.status?.startsWith('COMPLETED') ? 1 : 0) +
                             (sectionStates?.business?.status?.startsWith('COMPLETED') ? 1 : 0) +
-                            (!cscDetailsData?.isCscActive || sectionStates?.csc?.status?.startsWith('COMPLETED') ? 1 : 0) +
                             (!(loanData?.hasLoan && !loanData?.loanCleared) || sectionStates?.loan?.status?.startsWith('COMPLETED') ? 1 : 0) +
-                            (activityItems.length > 0 ? 1 : 0)) / 6) * 100
+                            (activityItems.length > 0 ? 1 : 0)) / 5) * 100
                           )
                         }
                         hasSubmittedMonthlyParams={false} // Disable global lock
@@ -3131,17 +3130,15 @@ export default function App() {
                           (((sectionStates?.evidence?.status?.includes('CAPTURED') && !sectionStates?.evidence?.status?.includes('NOT')) || sectionStates?.evidence?.status?.includes('Valid')) ? 1 : 0) +
                           (sectionStates?.sales?.status?.startsWith('COMPLETED') ? 1 : 0) +
                           (sectionStates?.business?.status?.startsWith('COMPLETED') ? 1 : 0) +
-                          ((!cscDetailsData?.isCscActive || sectionStates?.csc?.status?.startsWith('COMPLETED')) ? 1 : 0) +
                           ((!(loanData?.hasLoan && !loanData?.loanCleared) || sectionStates?.loan?.status?.startsWith('COMPLETED')) ? 1 : 0) +
                           (activityItems.length > 0 ? 1 : 0)
                         }
-                        totalCount={6}
+                        totalCount={5}
                         evidenceStatus={
                           (sectionStates?.evidence?.validUntil && new Date() >= new Date(sectionStates.evidence.validUntil)) ? 'EXPIRED' : (sectionStates?.evidence?.status || 'NOT CAPTURED')
                         }
                         salesStatus={sectionStates?.sales?.status || 'NOT COMPLETED'}
                         businessStatus={sectionStates?.business?.status || 'NOT COMPLETED'}
-                        cscTransStatus={sectionStates?.csc?.status || 'NOT COMPLETED'}
                         activitiesStatus={`${activityItems.length} ENTRIES`}
                         loanIsActive={!!(loanData?.hasLoan && !loanData?.loanCleared)}
                         loanStatus={sectionStates?.loan?.status || 'NOT COMPLETED'}
@@ -3273,16 +3270,21 @@ export default function App() {
 
                     {currentMobileScreen === 'MPCS_CSC_TRANS' && (
                       <MpcsCscTransactionsScreen
-                        reportingMonth={reportingMonth || "August 2026"}
-                        cscTransData={cscTransData}
-                        onChangeCscTrans={(data) => {
-                          setCscTransData(data);
-                        }}
-                        onSaveNext={() => {
-                          updateSectionState('csc', { status: 'COMPLETED ✓' });
-                          setCurrentMobileScreen('MPCS_REVIEW');
-                        }}
-                        onBack={() => setCurrentMobileScreen('MPCS_REVIEW')}
+                        societyName={selectedSociety?.name || centerName?.trim() || ''}
+                        cscIsActive={!!cscDetailsData?.isCscActive}
+                        onBack={() => setCurrentMobileScreen('HOME')}
+                      activeTab="home"
+                      onTabPress={(tab) => {
+                        setActiveBottomTab(tab);
+                        if (tab === 'home') setCurrentMobileScreen('HOME');
+                      }}
+                      />
+                    )}
+
+                    {currentMobileScreen === 'MPCS_DAILY_TRANS' && (
+                      <MpcsDailyTransactionScreen
+                        societyName={selectedSociety?.name || centerName?.trim() || ''}
+                        onBack={() => setCurrentMobileScreen('HOME')}
                       activeTab="home"
                       onTabPress={(tab) => {
                         setActiveBottomTab(tab);
@@ -3788,12 +3790,6 @@ export default function App() {
                         societyName={selectedSociety?.name || centerName?.trim() || ''}
                         reportingMonth={reportingMonth || ''}
                         sectionStates={sectionStates}
-                        // cscDetailsData.isCscActive is the authoritative flag set on the
-                        // CSC Details Master Data screen — cscTransData carries its own,
-                        // separate (and never actually kept in sync) isCscActive, which
-                        // showed "CSC Services Not Available" here even when CSC Details
-                        // said Active.
-                        cscIsActive={!!cscDetailsData?.isCscActive}
                         loanIsActive={!!(loanData?.hasLoan && !loanData?.loanCleared)}
                         activitiesCount={activityItems.length}
                         onNavigateSection={(screenKey) => setCurrentMobileScreen(screenKey)}

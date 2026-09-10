@@ -32,7 +32,6 @@ export default function MpcsReviewSubmitScreen({
   societyName = "",
   reportingMonth = "",
   sectionStates = {},
-  cscIsActive = false,
   loanIsActive = false,
   activitiesCount = 0,
   onSubmitReturn,
@@ -74,9 +73,6 @@ export default function MpcsReviewSubmitScreen({
   const businessState = sectionStates.business || { status: 'NOT COMPLETED' };
   const isBusinessComplete = businessState.status.startsWith('COMPLETED') || businessState.status.includes('UPDATED');
 
-  const cscState = sectionStates.csc || { status: 'NOT COMPLETED' };
-  const isCscComplete = cscState.status.startsWith('COMPLETED') || cscState.status.includes('UPDATED');
-
   const loanState = sectionStates.loan || { status: 'NOT COMPLETED' };
   const isLoanComplete = loanState.status.startsWith('COMPLETED') || loanState.status.includes('UPDATED');
 
@@ -107,15 +103,6 @@ export default function MpcsReviewSubmitScreen({
       isComplete: isBusinessComplete,   
       isNA: false, 
       screenKey: 'MPCS_BUSINESS' 
-    },
-    {
-      title: 'CSC Monthly Transactions',
-      status: !cscIsActive ? 'CSC SERVICES NOT AVAILABLE' : cscState.status,
-      subText: (!cscIsActive || !cscState.updatedAt) ? '' : `Last updated ${formatTime(cscState.updatedAt)}`,
-      isComplete: !cscIsActive ? false : isCscComplete,
-      isNA: !cscIsActive,
-      isOptional: !cscIsActive,
-      screenKey: 'MPCS_CSC_TRANS',
     },
     {
       title: 'Loan Status',
@@ -224,7 +211,6 @@ export default function MpcsReviewSubmitScreen({
               <Text style={styles.cardHeaderTitle}>Monthly Sections</Text>
               <Text style={styles.cardHeaderSub}>
                 Tap any section to independently view or update it.
-                {!cscIsActive ? '  •  CSC: Optional' : ''}
                 {!loanIsActive ? '  •  Loan: Optional' : ''}
               </Text>
             </View>

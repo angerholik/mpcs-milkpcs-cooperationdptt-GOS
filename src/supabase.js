@@ -482,3 +482,94 @@ export async function deleteLoanBeneficiary(beneficiaryId) {
   if (error) console.error('[CORE] deleteLoanBeneficiary failed:', error.message);
   return { error };
 }
+
+// ─── MPCS Daily Transactions ───────────────────────────────────────────────────
+// A continuous running ledger per society — unlike the monthly submission
+// tables, this is never reset or scoped to a reporting month; entries just
+// accumulate, same as a real physical cash book.
+export async function getMpcsDailyTransactions(societyName) {
+  const { data, error } = await supabase
+    .from('mpcs_daily_transactions')
+    .select('*')
+    .eq('society_name', societyName)
+    .order('transaction_no', { ascending: false });
+  if (error) console.error('[CORE] getMpcsDailyTransactions failed:', error.message);
+  return { data: data || [], error };
+}
+
+export async function saveMpcsDailyTransaction(societyName, { transactionDate, particulars, amount }) {
+  try {
+    // Transaction No. is assigned here rather than via a DB sequence — this
+    // app has no concurrent-editing scenario per institution (one inspector
+    // at a time), matching the lightweight approach already used elsewhere.
+    const { data: existing, error: fetchError } = await supabase
+      .from('mpcs_daily_transactions')
+      .select('transaction_no')
+      .eq('society_name', societyName)
+      .order('transaction_no', { ascending: false })
+      .limit(1);
+    if (fetchError) {
+      console.error('[CORE] saveMpcsDailyTransaction lookup failed:', fetchError.message);
+      return { data: null, error: fetchError };
+    }
+    const nextTransactionNo = (existing?.[0]?.transaction_no || 0) + 1;
+
+    const { data, error } = await supabase.from('mpcs_daily_transactions').insert([{
+      society_name: societyName,
+      transaction_no: nextTransactionNo,
+      transaction_date: transactionDate,
+      particulars: particulars || '',
+      amount: amount !== '' && amount != null ? parseFloat(amount) : null,
+    }]).select();
+    if (error) console.error('[CORE] saveMpcsDailyTransaction failed:', error.message);
+    return { data, error };
+  } catch (err) {
+    console.error('[CORE] saveMpcsDailyTransaction exception:', err);
+    return { data: null, error: err };
+  }
+}
+
+export async function deleteMpcsDailyTransaction(transactionId) {
+  const { error } = await supabase.from('mpcs_daily_transactions').delete().eq('id', transactionId);
+  if (error) console.error('[CORE] deleteMpcsDailyTransaction failed:', error.message);
+  return { error };
+}
+
+// ─── MPCS CSC Transactions ──────────────────────────────────────────────────────
+// Previously kept only as in-memory draft state (cscTransData) that was
+// discarded unless the monthly report happened to be compiled & sealed —
+// CSC transactions can occur any day, so this is now its own continuous
+// running ledger per society, same shape as MPCS Daily Transactions.
+export async function getMpcsCscTransactions(societyName) {
+  const { data, error } = await supabase
+    .from('mpcs_csc_transactions')
+    .select('*')
+    .eq('society_name', societyName)
+    .order('created_at', { ascending: false });
+  if (error) console.error('[CORE] getMpcsCscTransactions failed:', error.message);
+  return { data: data || [], error };
+}
+
+export async function saveMpcsCscTransaction(societyName, { transactionDate, serviceType, count, amount, commission }) {
+  try {
+    const { data, error } = await supabase.from('mpcs_csc_transactions').insert([{
+      society_name: societyName,
+      transaction_date: transactionDate,
+      service_type: serviceType || '',
+      transaction_count: count !== '' && count != null ? parseInt(count) : null,
+      amount: amount !== '' && amount != null ? parseFloat(amount) : null,
+      commission: commission !== '' && commission != null ? parseFloat(commission) : null,
+    }]).select();
+    if (error) console.error('[CORE] saveMpcsCscTransaction failed:', error.message);
+    return { data, error };
+  } catch (err) {
+    console.error('[CORE] saveMpcsCscTransaction exception:', err);
+    return { data: null, error: err };
+  }
+}
+
+export async function deleteMpcsCscTransaction(transactionId) {
+  const { error } = await supabase.from('mpcs_csc_transactions').delete().eq('id', transactionId);
+  if (error) console.error('[CORE] deleteMpcsCscTransaction failed:', error.message);
+  return { error };
+}
