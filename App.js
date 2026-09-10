@@ -70,6 +70,7 @@ import { saveMilkPcsProfile, loadMilkPcsProfileByName, loadMilkCenters, addMilkC
 import { queueSubmission, processQueue, getQueueStatus } from './src/utils/syncManager';
 import { isMonthlyParamsCompleted, saveMonthlyParams, getMonthlyParams, saveSectionStates, getSectionStates, getMilkSectionData, clearMilkSectionData } from './src/utils/monthlySyncManager';
 import { useFonts, Manrope_400Regular, Manrope_500Medium, Manrope_600SemiBold, Manrope_700Bold, Manrope_800ExtraBold } from '@expo-google-fonts/manrope';
+import { Cinzel_600SemiBold, Cinzel_700Bold } from '@expo-google-fonts/cinzel';
 
 const { width } = Dimensions.get('window');
 
@@ -234,6 +235,8 @@ export default function App() {
     Manrope_600SemiBold,
     Manrope_700Bold,
     Manrope_800ExtraBold,
+    Cinzel_600SemiBold,
+    Cinzel_700Bold,
   });
 
   // Inspector & User Profile State — populated after login

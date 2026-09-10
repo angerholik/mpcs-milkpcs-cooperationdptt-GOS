@@ -45,6 +45,12 @@ const FONT_FAMILY = Platform.select({
   android: 'Roboto',
 });
 
+// The CORE wordmark uses the same Cinzel serif as the admin dashboard's
+// login (loaded there via a Google Fonts <link>; here via the
+// @expo-google-fonts/cinzel package + useFonts() in App.js, which
+// registers this exact family name on both web and native builds).
+const DISPLAY_FONT_FAMILY = 'Cinzel_700Bold';
+
 // React Native has no CSS filter/mix-blend-mode/mask-image — grayscale,
 // duotone photo treatment is approximated everywhere via opacity + a
 // semi-transparent maroon overlay + a gradient fade into the background,
@@ -827,9 +833,8 @@ const styles = StyleSheet.create({
   },
 
   govTitle: {
-    fontFamily: FONT_FAMILY,
-    fontSize: 40,
-    fontWeight: '800',
+    fontFamily: DISPLAY_FONT_FAMILY,
+    fontSize: 38,
     color: '#ffffff',
     letterSpacing: 7,
     textAlign: 'center',
@@ -969,7 +974,9 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
 
-  // Input Field Box
+  // Input Field Box — matches the admin login's polished treatment (a
+  // border light enough to blend into a light background read as
+  // "undefined/flat" there, until it was darkened with an inset shadow).
   inputInner: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -979,6 +986,7 @@ const styles = StyleSheet.create({
     borderColor: COLORS.slate200,
     paddingHorizontal: 14,
     height: 54,
+    ...(Platform.OS === 'web' ? { boxShadow: 'inset 0 1px 2px rgba(15,23,42,0.04)' } : {}),
   },
   inputIcon: {
     marginRight: 10,
