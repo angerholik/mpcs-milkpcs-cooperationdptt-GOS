@@ -821,8 +821,8 @@ const styles = StyleSheet.create({
   emblemImage: {
     width: '100%',
     height: '100%',
-    tintColor: COLORS.gold,
-    opacity: 0.9,
+    tintColor: '#FFFFFF',
+    opacity: 0.6,
     ...(Platform.OS === 'web' ? { filter: 'drop-shadow(0 1px 3px rgba(0,0,0,0.4))' } : {}),
   },
 
