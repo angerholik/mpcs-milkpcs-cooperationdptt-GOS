@@ -2554,6 +2554,13 @@ function Dashboard({ onLogout, session, officerRole }) {
   const [loanBenTypeFilter, setLoanBenTypeFilter] = useState('');
   const [loanBenSocietyFilter, setLoanBenSocietyFilter] = useState('');
 
+  // MPCS Quick Access ledgers — CSC service transactions and daily
+  // cash-book entries, logged anytime from the mobile app's Quick Access
+  // cards rather than as part of a monthly submission (see
+  // MpcsCscTransactionsScreen / MpcsDailyTransactionScreen).
+  const [cscTransRows, setCscTransRows] = useState([]);
+  const [dailyTransRows, setDailyTransRows] = useState([]);
+
   // Modal & Interactive states
   const [showAddMilkModal, setShowAddMilkModal] = useState(false);
   const [showAddMpcsModal, setShowAddMpcsModal] = useState(false);
@@ -2768,6 +2775,22 @@ function Dashboard({ onLogout, session, officerRole }) {
     });
   }, [loanBenRows, userRole, assignedUnits]);
 
+  const scopedCscTransRows = useMemo(() => {
+    if (userRole === 'System Admin') return cscTransRows;
+    return cscTransRows.filter(r => {
+      const name = (r.society_name || '').toLowerCase();
+      return assignedUnits.some(u => name.includes(u.toLowerCase()) || u.toLowerCase().includes(name));
+    });
+  }, [cscTransRows, userRole, assignedUnits]);
+
+  const scopedDailyTransRows = useMemo(() => {
+    if (userRole === 'System Admin') return dailyTransRows;
+    return dailyTransRows.filter(r => {
+      const name = (r.society_name || '').toLowerCase();
+      return assignedUnits.some(u => name.includes(u.toLowerCase()) || u.toLowerCase().includes(name));
+    });
+  }, [dailyTransRows, userRole, assignedUnits]);
+
   // Derived from the SCOPED rows, not the raw fetch — these used to be
   // computed once in fetchAll from the full district-wide dataset and
   // stored as plain state, so every KPI card fed by them (turnover,
@@ -2949,9 +2972,11 @@ function Dashboard({ onLogout, session, officerRole }) {
     else if (reportCategory === 'MPCS Member List') names = scopedMemberRows.filter(m => (m.society_type || '').toUpperCase() === 'MPCS').map(m => m.society_name);
     else if (reportCategory === 'Milk PCS Member List') names = scopedMemberRows.filter(m => (m.society_type || '').toUpperCase() === 'MILK').map(m => m.society_name);
     else if (reportCategory === 'Audit & Compliance Audit Log') names = [...scopedMpcsRows.map(r => r.society_name), ...scopedMilkRows.map(r => r.center_name)];
+    else if (reportCategory === 'CSC Transactions') names = scopedCscTransRows.map(r => r.society_name);
+    else if (reportCategory === 'MPCS Daily Transactions') names = scopedDailyTransRows.map(r => r.society_name);
     else names = [];
     return [...new Set(names.filter(Boolean))].sort();
-  }, [reportCategory, scopedMilkRows, scopedMpcsRows, scopedMemberRows]);
+  }, [reportCategory, scopedMilkRows, scopedMpcsRows, scopedMemberRows, scopedCscTransRows, scopedDailyTransRows]);
   const reportTableRef = useRef(null);
 
   const formatTimeAgo = (dateStr) => {
@@ -3066,6 +3091,12 @@ function Dashboard({ onLogout, session, officerRole }) {
     const { data: loanBenRes } = await supabase.from('loan_beneficiaries').select('*').order('created_at', { ascending: false });
     if (loanBenRes) setLoanBenRows(loanBenRes);
 
+    const { data: cscTransRes } = await supabase.from('mpcs_csc_transactions').select('*').order('transaction_date', { ascending: false });
+    if (cscTransRes) setCscTransRows(cscTransRes);
+
+    const { data: dailyTransRes } = await supabase.from('mpcs_daily_transactions').select('*').order('transaction_no', { ascending: false });
+    if (dailyTransRes) setDailyTransRows(dailyTransRes);
+
     const { data: offRes } = await supabase.from('officer_registry').select('*').order('created_at', { ascending: false });
     if (offRes) setOfficers(offRes);
 
@@ -3104,6 +3135,12 @@ function Dashboard({ onLogout, session, officerRole }) {
         fetchAll(false);
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'loan_beneficiaries' }, () => {
+        fetchAll(false);
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'mpcs_csc_transactions' }, () => {
+        fetchAll(false);
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'mpcs_daily_transactions' }, () => {
         fetchAll(false);
       })
       .subscribe();
@@ -3946,6 +3983,8 @@ function Dashboard({ onLogout, session, officerRole }) {
                     <option>Milk PCS Member List</option>
                     <option>Audit & Compliance Audit Log</option>
                     <option>Official Inspectors Registry</option>
+                    <option>CSC Transactions</option>
+                    <option>MPCS Daily Transactions</option>
                   </select>
                 </div>
                 <div className="field-group">
@@ -4014,6 +4053,26 @@ function Dashboard({ onLogout, session, officerRole }) {
                       { label: 'Entity', get: r => r._name },
                       { label: 'AGM Status', get: r => r.agm_status },
                       { label: 'Audit Status', get: r => r.audit_status },
+                    ];
+                  } else if (reportCategory === 'CSC Transactions') {
+                    rows = scopedCscTransRows.filter(r => inRange(r.transaction_date) && (!reportEntity || r.society_name === reportEntity));
+                    columns = [
+                      { label: 'Date', get: r => r.transaction_date ? new Date(r.transaction_date).toLocaleDateString('en-IN') : '—' },
+                      { label: 'Society', get: r => r.society_name || '—' },
+                      { label: 'Service Type', get: r => r.service_type || '—' },
+                      { label: 'No. of Transactions', get: r => r.transaction_count ?? '—' },
+                      { label: 'Amount', get: r => r.amount != null ? `₹${Number(r.amount).toLocaleString('en-IN')}` : '—' },
+                      { label: 'Commission', get: r => r.commission != null ? `₹${Number(r.commission).toLocaleString('en-IN')}` : '—' },
+                      { label: 'Total Income', get: r => (r.amount != null || r.commission != null) ? `₹${(Number(r.amount || 0) + Number(r.commission || 0)).toLocaleString('en-IN')}` : '—' },
+                    ];
+                  } else if (reportCategory === 'MPCS Daily Transactions') {
+                    rows = scopedDailyTransRows.filter(r => inRange(r.transaction_date) && (!reportEntity || r.society_name === reportEntity));
+                    columns = [
+                      { label: 'Txn No.', get: r => r.transaction_no ?? '—' },
+                      { label: 'Date', get: r => r.transaction_date ? new Date(r.transaction_date).toLocaleDateString('en-IN') : '—' },
+                      { label: 'Society', get: r => r.society_name || '—' },
+                      { label: 'Particulars', get: r => r.particulars || '—' },
+                      { label: 'Amount', get: r => r.amount != null ? `₹${Number(r.amount).toLocaleString('en-IN')}` : '—' },
                     ];
                   } else {
                     rows = scopedOfficers;
