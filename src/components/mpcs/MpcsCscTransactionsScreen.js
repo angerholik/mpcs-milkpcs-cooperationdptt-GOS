@@ -32,6 +32,32 @@ const COLORS = {
 
 const FONT_FAMILY = 'Manrope';
 
+// Transaction Date was a plain typed TextInput with no actual calendar —
+// every other date field in the app (Compliance Audit, Loan Setup, Share
+// Capital, Dividend Details, Institutional Profile) already uses a real
+// browser date picker on web via a native <input type="date">; this screen
+// was the one exception. Matches that same DD/MM/YYYY <-> ISO conversion
+// pattern so it looks and behaves consistently with the rest of the app.
+function formatDMYToIso(displayStr) {
+  if (!displayStr) return '';
+  const parts = displayStr.trim().split('/');
+  if (parts.length === 3) {
+    const [d, m, y] = parts;
+    if (d && m && y && y.length === 4) return `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
+  }
+  return '';
+}
+
+function formatIsoToDMY(isoStr) {
+  if (!isoStr) return '';
+  const parts = isoStr.split('-');
+  if (parts.length === 3) {
+    const [y, m, d] = parts;
+    return `${d}/${m}/${y}`;
+  }
+  return isoStr;
+}
+
 const SERVICE_TYPES = [
   'Banking / Aadhaar',
   'Govt. Certificates',
@@ -216,13 +242,26 @@ export default function MpcsCscTransactionsScreen({
                   <Text style={styles.inputLabel}>Transaction Date</Text>
                   <View style={styles.inputBox}>
                     <MaterialCommunityIcons name="calendar-range" size={15} color={COLORS.slate400} style={styles.inputIcon} />
-                    <TextInput
-                      style={styles.textInput}
-                      value={txDate}
-                      onChangeText={setTxDate}
-                      placeholder="DD/MM/YYYY"
-                      placeholderTextColor={COLORS.slate300}
-                    />
+                    {Platform.OS === 'web' ? (
+                      <input
+                        type="date"
+                        value={formatDMYToIso(txDate)}
+                        onChange={(e) => setTxDate(formatIsoToDMY(e.target.value))}
+                        style={{
+                          width: '100%', height: '100%', border: 'none', outline: 'none',
+                          background: 'transparent', fontFamily: FONT_FAMILY, fontSize: 13,
+                          color: COLORS.slate800, fontWeight: '500', cursor: 'pointer',
+                        }}
+                      />
+                    ) : (
+                      <TextInput
+                        style={styles.textInput}
+                        value={txDate}
+                        onChangeText={setTxDate}
+                        placeholder="DD/MM/YYYY"
+                        placeholderTextColor={COLORS.slate300}
+                      />
+                    )}
                   </View>
                 </View>
                 <View style={styles.inputHalf}>
