@@ -588,7 +588,7 @@ const Login = ({ onLoginSuccess, onRegisterSuccess }) => {
 
                   {resetMsg ? (
                     <View style={{ backgroundColor: '#ecfdf5', padding: 12, borderRadius: 10, borderWidth: 1, borderColor: '#a7f3d0', marginBottom: 14 }}>
-                      <Text style={{ fontFamily: interFont('700'), fontSize: 12, color: '#047857', textAlign: 'center' }}>
+                      <Text style={{ fontFamily: interFont('600'), fontSize: 12, color: '#047857', textAlign: 'center' }}>
                         {resetMsg}
                       </Text>
                     </View>
@@ -596,7 +596,7 @@ const Login = ({ onLoginSuccess, onRegisterSuccess }) => {
 
                   {resetErr ? (
                     <View style={{ backgroundColor: '#fef2f2', padding: 12, borderRadius: 10, borderWidth: 1, borderColor: '#fca5a5', marginBottom: 14 }}>
-                      <Text style={{ fontFamily: interFont('700'), fontSize: 12, color: '#dc2626', textAlign: 'center' }}>
+                      <Text style={{ fontFamily: interFont('600'), fontSize: 12, color: '#dc2626', textAlign: 'center' }}>
                         ⚠️ {resetErr}
                       </Text>
                     </View>
@@ -643,7 +643,7 @@ const Login = ({ onLoginSuccess, onRegisterSuccess }) => {
                     onPress={() => { setForgotMode(false); setResetMsg(''); setResetErr(''); }}
                     activeOpacity={0.7}
                   >
-                    <Text style={{ fontFamily: interFont('800'), fontSize: 12, color: COLORS.primary }}>
+                    <Text style={{ fontFamily: interFont('700'), fontSize: 12, color: COLORS.primary }}>
                       ← Back to Sign In
                     </Text>
                   </TouchableOpacity>
@@ -875,7 +875,7 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   deptSubtitle: {
-    fontFamily: interFont('700'),
+    fontFamily: interFont('600'),
     fontSize: 15,
     color: COLORS.gold,
     textAlign: 'center',
@@ -909,7 +909,7 @@ const styles = StyleSheet.create({
     elevation: 12,
   },
   welcomeHeading: {
-    fontFamily: interFont('800'),
+    fontFamily: interFont('700'),
     fontSize: 24,
     color: COLORS.darkNavy,
     textAlign: 'center',
@@ -929,7 +929,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   fieldLabel: {
-    fontFamily: interFont('700'),
+    fontFamily: interFont('600'),
     fontSize: 12,
     color: COLORS.darkNavy,
     letterSpacing: 1,
@@ -965,7 +965,7 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   activeRoleText: {
-    fontFamily: interFont('800'),
+    fontFamily: interFont('700'),
     fontSize: 10.5,
     color: '#FFFFFF',
     textAlign: 'center',
@@ -980,7 +980,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
   },
   inactiveRoleText: {
-    fontFamily: interFont('700'),
+    fontFamily: interFont('600'),
     fontSize: 10.5,
     color: COLORS.slate600,
     textAlign: 'center',
@@ -1052,7 +1052,7 @@ const styles = StyleSheet.create({
     elevation: 6,
   },
   ctaText: {
-    fontFamily: interFont('800'),
+    fontFamily: interFont('700'),
     fontSize: 15,
     color: '#FFFFFF',
     letterSpacing: 0.6,
@@ -1076,7 +1076,7 @@ const styles = StyleSheet.create({
     color: COLORS.mutedBlue,
   },
   switchModeLink: {
-    fontFamily: interFont('700'),
+    fontFamily: interFont('600'),
     fontSize: 14,
     color: COLORS.burgundy,
   },
