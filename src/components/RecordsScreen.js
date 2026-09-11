@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, Platform, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, Image, Platform, ActivityIndicator } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
@@ -7,6 +7,13 @@ import HeaderNav from './HeaderNav';
 import BottomNav from './BottomNav';
 import { supabase } from '../supabase';
 import { webCapWidth } from '../utils/webStyles';
+
+// Same Kanchenjunga photo used in every header, at a much lower opacity so
+// it reads as a faint page watermark behind the (mostly white/card-covered)
+// scroll content rather than competing with it.
+const pageBgPhotoFilter = Platform.OS === 'web'
+  ? { opacity: 0.05, filter: 'grayscale(1) contrast(1.1)' }
+  : { opacity: 0.035 };
 
 const COLORS = {
   primary: '#7C1C1C',
@@ -281,6 +288,12 @@ export default function RecordsScreen({
 
   return (
     <View style={styles.container}>
+      <Image
+        source={require('../../assets/core/kanchenjunga.jpg')}
+        style={[StyleSheet.absoluteFillObject, { width: '100%', height: '100%' }, pageBgPhotoFilter]}
+        resizeMode="cover"
+        pointerEvents="none"
+      />
       <HeaderNav
         activeModule={activeModule}
         selectedSociety={selectedSociety}
@@ -409,7 +422,7 @@ export default function RecordsScreen({
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.bg },
+  container: { flex: 1, position: 'relative', overflow: 'hidden', backgroundColor: COLORS.bg },
   scrollContent: { flex: 1 },
   scrollInner: { padding: 16 },
   titleRow: {

@@ -1,10 +1,17 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Pressable, ScrollView, Platform } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Pressable, ScrollView, Image, Platform } from 'react-native';
 import { MaterialIcons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { webCapWidth } from '../utils/webStyles';
 import HeaderNav from './HeaderNav';
 import BottomNav from './BottomNav';
+
+// Same Kanchenjunga photo used in every header, at a much lower opacity so
+// it reads as a faint page watermark behind the (mostly white/card-covered)
+// scroll content rather than competing with it.
+const pageBgPhotoFilter = Platform.OS === 'web'
+  ? { opacity: 0.05, filter: 'grayscale(1) contrast(1.1)' }
+  : { opacity: 0.035 };
 
 // STITCH Design Tokens (Matching Dashboard Overview)
 const COLORS = {
@@ -103,6 +110,12 @@ export default function MoreScreen({
 
   return (
     <View style={styles.container}>
+      <Image
+        source={require('../../assets/core/kanchenjunga.jpg')}
+        style={[StyleSheet.absoluteFillObject, { width: '100%', height: '100%' }, pageBgPhotoFilter]}
+        resizeMode="cover"
+        pointerEvents="none"
+      />
       <HeaderNav
         activeModule={activeModule}
         selectedSociety={selectedSociety}
@@ -221,6 +234,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: COLORS.background,
     position: 'relative',
+    overflow: 'hidden',
   },
   
   // Ambient Blobs (Matches Dashboard Overview)

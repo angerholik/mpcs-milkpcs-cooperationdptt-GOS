@@ -10,6 +10,12 @@ const headerPhotoFilter = Platform.OS === 'web'
   ? { opacity: 0.4, filter: 'grayscale(0.35) contrast(1.15) brightness(0.95)', mixBlendMode: 'luminosity' }
   : { opacity: 0.28 };
 
+// Same photo again, much fainter, as a full-page watermark behind the
+// (mostly white/card-covered) scroll content below the header.
+const pageBgPhotoFilter = Platform.OS === 'web'
+  ? { opacity: 0.05, filter: 'grayscale(1) contrast(1.1)' }
+  : { opacity: 0.035 };
+
 const COLORS = {
   surface: '#ffffff',
   slate800: '#1e293b',
@@ -56,6 +62,12 @@ export default function ProfileSummaryScreen({
 
   return (
     <View style={styles.container}>
+      <Image
+        source={require('../../assets/core/kanchenjunga.jpg')}
+        style={[StyleSheet.absoluteFillObject, { width: '100%', height: '100%' }, pageBgPhotoFilter]}
+        resizeMode="cover"
+        pointerEvents="none"
+      />
       <View style={styles.topBar}>
         <LinearGradient
           colors={['#7a1a1f', '#4a1017']}
@@ -162,7 +174,7 @@ export default function ProfileSummaryScreen({
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.slate50, position: 'relative' },
+  container: { flex: 1, backgroundColor: COLORS.slate50, position: 'relative', overflow: 'hidden' },
   topBar: {
     position: 'relative',
     flexDirection: 'row',

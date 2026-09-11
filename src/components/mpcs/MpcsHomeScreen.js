@@ -1,10 +1,17 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Pressable, ScrollView, Platform, StatusBar } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Pressable, ScrollView, Image, Platform, StatusBar } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { webCapWidth } from '../../utils/webStyles';
 import BottomNav from '../BottomNav';
 import HeaderNav from '../HeaderNav';
+
+// Same Kanchenjunga photo used in every header, at a much lower opacity so
+// it reads as a faint page watermark behind the (mostly white/card-covered)
+// scroll content rather than competing with it.
+const pageBgPhotoFilter = Platform.OS === 'web'
+  ? { opacity: 0.05, filter: 'grayscale(1) contrast(1.1)' }
+  : { opacity: 0.035 };
 
 // STITCH Design Tokens (New Iteration)
 const COLORS = {
@@ -104,7 +111,14 @@ export default function HomeScreen({
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor={COLORS.primary} />
-      
+
+      <Image
+        source={require('../../../assets/core/kanchenjunga.jpg')}
+        style={[StyleSheet.absoluteFillObject, { width: '100%', height: '100%' }, pageBgPhotoFilter]}
+        resizeMode="cover"
+        pointerEvents="none"
+      />
+
       <HeaderNav
         activeModule={activeModule}
         selectedSociety={selectedSociety}
@@ -455,6 +469,8 @@ export default function HomeScreen({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    position: 'relative',
+    overflow: 'hidden',
     backgroundColor: COLORS.background,
   },
   stickyActionBanner: {
