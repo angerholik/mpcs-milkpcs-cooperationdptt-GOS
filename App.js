@@ -2580,6 +2580,9 @@ export default function App() {
                       setActiveBottomTab(tab);
                       if (tab === 'home') setCurrentMobileScreen('HOME');
                     }}
+                    onNotifyPress={() => setShowHistory(true)}
+                    onProfilePress={() => setActiveBottomTab('more')}
+                    unreadCount={activeAlert ? 1 : 0}
                   />
                 ) : (
                   <>
@@ -3104,6 +3107,9 @@ export default function App() {
                       setActiveBottomTab(tab);
                       if (tab === 'home') setCurrentMobileScreen('HOME');
                     }}
+                    onNotifyPress={() => setShowHistory(true)}
+                    onProfilePress={() => setActiveBottomTab('more')}
+                    unreadCount={activeAlert ? 1 : 0}
                   />
                 ) : activeBottomTab === 'more' ? (
                   <MoreScreen
