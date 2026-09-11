@@ -1,17 +1,34 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Pressable, ScrollView, TextInput, Platform } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Pressable, ScrollView, TextInput, Image, Platform } from 'react-native';
 import { MaterialIcons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { webCapWidth } from '../utils/webStyles';
-import AnimatedContinueButton from './AnimatedContinueButton';
+
+// Web-only: approximates the reference's mix-blend-mode: luminosity treatment
+// on the header's mountain photo (RN has no CSS filter/blend-mode support;
+// react-native-web passes unrecognized style keys straight to the DOM).
+const headerPhotoFilter = Platform.OS === 'web'
+  ? { opacity: 0.22, filter: 'grayscale(1) contrast(1.3)', mixBlendMode: 'luminosity' }
+  : { opacity: 0.16 };
 
 // STITCH Design Tokens (Matching Dashboard Overview)
 const COLORS = {
-  background: "#fcf8fa",
+  background: "#F7F5F2",
   surface: "#ffffff",
   primary: "#7a1a1f",
   primaryDark: "#4a1017",
   onSurface: "#1b1b1d",
+  maroon950: "#2A0307",
+  maroon900: "#42060B",
+  maroon850: "#54080E",
+  maroon800: "#680B12",
+  maroon700: "#83101A",
+  maroon600: "#A11723",
+  gold: "#D4AF37",
+  goldLight: "#F3E5AB",
+  goldDark: "#997D20",
+  cream: "#FAF8F5",
+  borderCream: "#E8E1D9",
   slate800: "#1e293b",
   slate700: "#334155",
   slate600: "#475569",
@@ -61,7 +78,6 @@ export default function MyInstitutionsScreen({
   onLogout
 }) {
   const isCi = role === 'CI';
-  const [activeTab, setActiveTab] = useState('ALL'); // 'ALL', 'MPCS', 'MILK'
   const [modalVisible, setModalVisible] = useState(false);
 
   // Form State for Adding New Institution
@@ -73,11 +89,7 @@ export default function MyInstitutionsScreen({
   const mpcsCount = institutions.filter(i => i.type === 'MPCS').length;
   const milkCount = institutions.filter(i => i.type === 'MILK').length;
 
-  const filteredInstitutions = institutions.filter(i => {
-    if (activeTab === 'MPCS') return i.type === 'MPCS';
-    if (activeTab === 'MILK') return i.type === 'MILK';
-    return true;
-  });
+  const filteredInstitutions = institutions;
 
   const handleAddSubmit = () => {
     if (!instName) {
@@ -106,53 +118,60 @@ export default function MyInstitutionsScreen({
 
   return (
     <View style={styles.container}>
-      {/* Top Inspector Header with Rich Crimson Gradient */}
-      <LinearGradient
-        colors={['#7a1a1f', '#4a1017']}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 0 }}
-        style={styles.topBar}
-      >
-        <View style={{ flex: 1 }}>
-          <View style={styles.roleBadgeRow}>
+      {/* Header + overlapping summary cards live outside the ScrollView so
+          the cards' upward overlap isn't clipped by the ScrollView's own
+          scroll-clipping boundary (a negative margin inside a ScrollView
+          gets cut off at the container edge instead of floating above it). */}
+      <View style={styles.headerWrap}>
+        <LinearGradient
+          colors={[COLORS.maroon850, COLORS.maroon900]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 0, y: 1 }}
+          style={styles.topBar}
+        >
+          <Image
+            source={require('../../assets/core/kanchenjunga.jpg')}
+            style={[StyleSheet.absoluteFillObject, headerPhotoFilter]}
+            resizeMode="cover"
+          />
+          <LinearGradient
+            colors={['rgba(84,8,14,0.6)', 'rgba(66,6,11,0.8)', COLORS.maroon900]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 0, y: 1 }}
+            style={StyleSheet.absoluteFillObject}
+          />
+
+          <View style={styles.headerTopRow}>
             <View style={styles.rolePill}>
-              <MaterialCommunityIcons name="shield-check" size={13} color="#FDE68A" />
-              <Text style={styles.rolePillText}>{ROLE_LABELS[role] || 'CI'} INSPECTOR</Text>
+              <MaterialCommunityIcons name="shield-check" size={14} color={COLORS.gold} />
+              <Text style={styles.rolePillText}>{ROLE_LABELS[role] || 'CI'}</Text>
+              <View style={styles.rolePillDot} />
+              {user?.district ? <Text style={styles.rolePillDistrict}>{user.district}</Text> : null}
             </View>
-            {user?.district ? (
-              <View style={styles.districtPill}>
-                <MaterialCommunityIcons name="map-marker-outline" size={11} color="rgba(255,255,255,0.75)" />
-                <Text style={styles.districtTag}>{user.district}</Text>
-              </View>
-            ) : null}
+
+            {onLogout && (
+              <TouchableOpacity style={styles.logoutBtn} onPress={onLogout} activeOpacity={0.75}>
+                <MaterialCommunityIcons name="logout" size={16} color="rgba(255,255,255,0.9)" />
+              </TouchableOpacity>
+            )}
           </View>
-          <Text style={styles.welcomeName}>{displayName || 'Cooperative Inspector'}</Text>
-          <Text style={styles.welcomeSub}>
-            {isCi ? 'Manage registered MPCS & Milk PCS institutions' : 'View institutions assigned to you'}
-          </Text>
-        </View>
 
-        {onLogout && (
-          <TouchableOpacity style={styles.logoutBtn} onPress={onLogout} activeOpacity={0.75}>
-            <MaterialIcons name="logout" size={18} color="#FFFFFF" />
-          </TouchableOpacity>
-        )}
-      </LinearGradient>
+          <View style={styles.headerGreetBlock}>
+            <Text style={styles.welcomeNameBig}>{displayName || 'Cooperative Inspector'}</Text>
+            <Text style={styles.welcomeSub}>
+              {isCi ? 'Manage registered MPCS & Milk PCS institutions' : 'View institutions assigned to you'}
+            </Text>
+          </View>
+        </LinearGradient>
 
-      {/* Decorative Ambient Background Blobs (Matches Dashboard Overview) */}
-      <View style={styles.bgBlobTop} pointerEvents="none" />
-      <View style={styles.bgBlobBottomRight} pointerEvents="none" />
-
-      <ScrollView style={styles.scrollContent} contentContainerStyle={[styles.scrollInner, webCapWidth]} showsVerticalScrollIndicator={false}>
-        {/* Modern Quick Summary Cards Bar */}
-        <View style={styles.summaryBarRow}>
+        <View style={[styles.summaryBarRow, webCapWidth]}>
           <View style={styles.summaryCard}>
             <View style={[styles.summaryIconBox, { backgroundColor: COLORS.red50 }]}>
-              <MaterialCommunityIcons name="office-building" size={16} color={COLORS.primary} />
+              <MaterialCommunityIcons name="office-building" size={16} color={COLORS.maroon700} />
             </View>
             <View style={styles.summaryTextGroup}>
-              <Text style={[styles.summaryVal, { color: COLORS.primary }]}>{mpcsCount}</Text>
-              <Text style={styles.summaryLabel}>MPCS SOCIETIES</Text>
+              <Text style={[styles.summaryVal, { color: COLORS.onSurface }]}>{mpcsCount}</Text>
+              <Text style={styles.summaryLabel}>MPCS Societies</Text>
             </View>
           </View>
 
@@ -162,7 +181,7 @@ export default function MyInstitutionsScreen({
             </View>
             <View style={styles.summaryTextGroup}>
               <Text style={[styles.summaryVal, { color: '#2563eb' }]}>{milkCount}</Text>
-              <Text style={styles.summaryLabel}>MILK PCS UNITS</Text>
+              <Text style={styles.summaryLabel}>Milk PCS Units</Text>
             </View>
           </View>
 
@@ -172,77 +191,37 @@ export default function MyInstitutionsScreen({
             </View>
             <View style={styles.summaryTextGroup}>
               <Text style={[styles.summaryVal, { color: COLORS.emerald700 }]}>{institutions.length}</Text>
-              <Text style={styles.summaryLabel}>TOTAL MANAGED</Text>
+              <Text style={styles.summaryLabel}>Total Managed</Text>
             </View>
           </View>
         </View>
+      </View>
 
-        {/* Tab Filter Switcher */}
-        <View style={styles.tabFilterContainer}>
-          <TouchableOpacity
-            style={styles.filterChipWrapper}
-            onPress={() => setActiveTab('ALL')}
-            activeOpacity={0.85}
-          >
-            {activeTab === 'ALL' ? (
-              <View style={styles.activeFilterChip}>
-                <Text style={styles.activeFilterChipText}>ALL ({institutions.length})</Text>
-              </View>
-            ) : (
-              <View style={styles.filterChip}>
-                <Text style={styles.filterChipText}>ALL ({institutions.length})</Text>
-              </View>
-            )}
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.filterChipWrapper}
-            onPress={() => setActiveTab('MPCS')}
-            activeOpacity={0.85}
-          >
-            {activeTab === 'MPCS' ? (
-              <View style={styles.activeFilterChip}>
-                <Text style={styles.activeFilterChipText}>MPCS ({mpcsCount})</Text>
-              </View>
-            ) : (
-              <View style={styles.filterChip}>
-                <Text style={styles.filterChipText}>MPCS ({mpcsCount})</Text>
-              </View>
-            )}
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.filterChipWrapper}
-            onPress={() => setActiveTab('MILK')}
-            activeOpacity={0.85}
-          >
-            {activeTab === 'MILK' ? (
-              <View style={styles.activeFilterChip}>
-                <Text style={styles.activeFilterChipText}>MILK PCS ({milkCount})</Text>
-              </View>
-            ) : (
-              <View style={styles.filterChip}>
-                <Text style={styles.filterChipText}>MILK PCS ({milkCount})</Text>
-              </View>
-            )}
-          </TouchableOpacity>
-        </View>
+      <ScrollView style={styles.scrollContent} contentContainerStyle={[styles.scrollInner, webCapWidth]} showsVerticalScrollIndicator={false}>
 
         {/* Add Institution CTA — CI only. ACI/PA cannot add institutions at
             all (they only ever act on institutions a CI assigned to them),
             so for those roles this control must not exist in the render
-            tree — not disabled, not hidden, not an empty state. Same
-            pale-bg / dark-circle treatment as Save & Continue, so it
-            doesn't stack a third block of maroon directly under the header
-            and the active filter chip. */}
+            tree — not disabled, not hidden, not an empty state. Static
+            solid maroon-gradient pill with a persistent icon badge, per
+            the Stitch reference (not a hover-reveal button). */}
         {isCi && (
-          <AnimatedContinueButton
-            label="ADD NEW INSTITUTION (MPCS / MILK PCS)"
-            icon="plus"
+          <Pressable
+            style={({ pressed }) => [pressed && { transform: [{ scale: 0.99 }] }]}
             onPress={() => setModalVisible(true)}
-            height={52}
-            fontSize={11}
-          />
+          >
+            <LinearGradient
+              colors={[COLORS.maroon800, COLORS.maroon900]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={styles.addInstBtn}
+            >
+              <View style={styles.addInstIconCircle}>
+                <MaterialCommunityIcons name="plus" size={16} color="#FFFFFF" />
+              </View>
+              <Text style={styles.addInstBtnText}>Add New Institution (MPCS / Milk PCS)</Text>
+            </LinearGradient>
+          </Pressable>
         )}
 
         {/* List of Registered Institutions */}
@@ -257,14 +236,24 @@ export default function MyInstitutionsScreen({
           {filteredInstitutions.length === 0 ? (
             <View style={styles.emptyCard}>
               <View style={styles.emptyIconCircle}>
-                <MaterialCommunityIcons name="office-building-remove-outline" size={32} color={COLORS.slate400} />
+                <MaterialCommunityIcons name="bank-outline" size={32} color={COLORS.maroon800} />
               </View>
               <Text style={styles.emptyTitle}>No Institutions Found</Text>
               <Text style={styles.emptySub}>
                 {isCi
-                  ? 'Tap the button above to register your first MPCS or Milk PCS unit.'
+                  ? 'Tap the button above to register your first MPCS or Milk PCS unit under your jurisdiction.'
                   : 'No institutions have been assigned to you yet. Contact your Cooperative Inspector.'}
               </Text>
+              {isCi && (
+                <TouchableOpacity
+                  style={styles.emptyRegisterBtn}
+                  onPress={() => setModalVisible(true)}
+                  activeOpacity={0.8}
+                >
+                  <Text style={styles.emptyRegisterBtnText}>Register First Institution</Text>
+                  <MaterialCommunityIcons name="arrow-right" size={15} color={COLORS.primary} />
+                </TouchableOpacity>
+              )}
             </View>
           ) : (
             filteredInstitutions.map((item) => (
@@ -371,6 +360,11 @@ export default function MyInstitutionsScreen({
             )}
           </Pressable>
         )}
+
+        <View style={styles.footerBlock}>
+          <Text style={styles.footerLine}>Department of Cooperation • Government of Sikkim</Text>
+          <Text style={styles.footerLineMuted}>CORE Engine v2.0.4 • Encrypted Secure Portal</Text>
+        </View>
       </ScrollView>
 
       {/* In-App Slide-Up Sheet Modal for Adding Institution */}
@@ -498,183 +492,176 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.background,
     position: 'relative',
   },
+  headerWrap: { position: 'relative' },
   topBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 16,
+    paddingHorizontal: 20,
     paddingTop: Platform.OS === 'ios' ? 48 : 16,
+    paddingBottom: 80,
+    borderBottomLeftRadius: 28,
+    borderBottomRightRadius: 28,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.08)',
+    borderBottomColor: 'rgba(212,175,55,0.2)',
+    overflow: 'hidden',
   },
-  roleBadgeRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 6 },
+  headerTopRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 },
   rolePill: {
-    backgroundColor: 'rgba(255, 255, 255, 0.12)',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6,
+    backgroundColor: 'rgba(255,255,255,0.1)',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.18)',
+    borderColor: 'rgba(212,175,55,0.4)',
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 999,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    gap: 6,
   },
-  rolePillText: { color: '#FFFFFF', fontFamily: FONT_FAMILY, fontSize: 9, fontWeight: '800', letterSpacing: 0.6 },
-  districtPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 3,
-    backgroundColor: 'rgba(0, 0, 0, 0.2)',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6,
-  },
-  districtTag: { color: 'rgba(255,255,255,0.85)', fontFamily: FONT_FAMILY, fontSize: 10, fontWeight: '600' },
-  welcomeName: { color: '#FFFFFF', fontFamily: FONT_FAMILY, fontSize: 18, fontWeight: '800', letterSpacing: 0.2 },
-  welcomeSub: { color: 'rgba(255,255,255,0.75)', fontFamily: FONT_FAMILY, fontSize: 11, marginTop: 2 },
+  rolePillText: { color: COLORS.gold, fontFamily: FONT_FAMILY, fontSize: 11, fontWeight: '800', letterSpacing: 0.6, textTransform: 'uppercase' },
+  rolePillDot: { width: 4, height: 4, borderRadius: 2, backgroundColor: 'rgba(212,175,55,0.8)' },
+  rolePillDistrict: { color: 'rgba(255,255,255,0.8)', fontFamily: FONT_FAMILY, fontSize: 10, fontWeight: '500' },
+  welcomeNameBig: { color: '#FFFFFF', fontFamily: FONT_FAMILY, fontSize: 24, fontWeight: '700', letterSpacing: 0.1 },
+  headerGreetBlock: {},
+  welcomeSub: { color: 'rgba(255,255,255,0.8)', fontFamily: FONT_FAMILY, fontSize: 12, marginTop: 4, lineHeight: 17 },
   logoutBtn: {
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: 'rgba(255,255,255,0.12)',
+    backgroundColor: 'rgba(255,255,255,0.1)',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.2)',
+    borderColor: 'rgba(255,255,255,0.15)',
     alignItems: 'center',
     justifyContent: 'center',
   },
 
-  // Ambient Blobs (Matches Dashboard Overview)
-  bgBlobTop: {
-    position: 'absolute',
-    top: -40,
-    right: -40,
-    width: 240,
-    height: 240,
-    borderRadius: 120,
-    backgroundColor: 'rgba(122, 26, 31, 0.06)',
-    zIndex: -1,
-  },
-  bgBlobBottomRight: {
-    position: 'absolute',
-    bottom: 40,
-    right: -50,
-    width: 220,
-    height: 220,
-    borderRadius: 110,
-    backgroundColor: 'rgba(180, 83, 9, 0.05)',
-    zIndex: -1,
-  },
-
   scrollContent: { flex: 1 },
-  scrollInner: { padding: 14, gap: 14 },
+  // paddingTop clears the summary cards, which float below headerWrap as an
+  // absolutely positioned overlay (see summaryBarRow) rather than living
+  // inside this scroll content.
+  scrollInner: { paddingHorizontal: 14, paddingBottom: 14, paddingTop: 64, gap: 14 },
 
-  // Summary Metrics Bar
-  summaryBarRow: { flexDirection: 'row', gap: 8 },
+  // Summary Metrics Bar — an absolutely positioned overlay straddling the
+  // header's rounded bottom edge (not a negative-margin child of the
+  // ScrollView, which clips anything pulled above its own boundary).
+  summaryBarRow: {
+    position: 'absolute',
+    left: 14,
+    right: 14,
+    bottom: -50,
+    flexDirection: 'row',
+    gap: 10,
+  },
   summaryCard: {
     flex: 1,
     backgroundColor: COLORS.surface,
-    borderRadius: 14,
-    padding: 10,
+    borderRadius: 16,
+    padding: 12,
     borderWidth: 1,
     borderColor: COLORS.slate200,
     flexDirection: 'column',
     alignItems: 'flex-start',
+    justifyContent: 'space-between',
     gap: 8,
     shadowColor: '#0f172a',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.03,
+    shadowOpacity: 0.04,
     shadowRadius: 6,
     elevation: 1,
   },
   summaryIconBox: {
-    width: 30,
-    height: 30,
-    borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  summaryTextGroup: { gap: 1 },
-  summaryVal: { fontFamily: FONT_FAMILY, fontSize: 18, fontWeight: '800' },
-  summaryLabel: { fontFamily: FONT_FAMILY, fontSize: 9, color: COLORS.slate500, fontWeight: '800', letterSpacing: 0.5 },
-
-  // Tab Filter Switcher
-  tabFilterContainer: { flexDirection: 'row', gap: 8 },
-  filterChipWrapper: { flex: 1 },
-  filterChip: {
-    paddingVertical: 8,
-    borderRadius: 12,
-    backgroundColor: COLORS.surface,
-    borderWidth: 1,
-    borderColor: COLORS.slate200,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  // Tonal rather than solid-filled — a solid maroon gradient here, right
-  // beneath the maroon header, made the whole top of the screen read as
-  // one heavy red block.
-  activeFilterChip: {
-    paddingVertical: 8,
+    width: 32,
+    height: 32,
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(122,26,31,0.08)',
-    borderWidth: 1,
-    borderColor: 'rgba(122,26,31,0.25)',
   },
-  filterChipText: { fontFamily: FONT_FAMILY, fontSize: 11, fontWeight: '700', color: COLORS.slate600 },
-  activeFilterChipText: { fontFamily: FONT_FAMILY, fontSize: 11, fontWeight: '800', color: COLORS.primary, letterSpacing: 0.3 },
+  summaryTextGroup: { gap: 4 },
+  summaryVal: { fontFamily: FONT_FAMILY, fontSize: 22, fontWeight: '800', lineHeight: 24 },
+  summaryLabel: { fontFamily: FONT_FAMILY, fontSize: 10, color: COLORS.slate500, fontWeight: '600', letterSpacing: 0.1 },
 
-  // Add Institution CTA — outlined, not solid-filled, for the same reason.
-  addCtaBtn: {
+  // Add Institution CTA — static solid maroon-gradient pill with a
+  // persistent translucent icon badge (matches the Stitch reference).
+  addInstBtn: {
     paddingVertical: 14,
-    paddingHorizontal: 16,
-    borderRadius: 14,
-    borderWidth: 1.5,
-    borderColor: COLORS.primary,
-    backgroundColor: COLORS.surface,
+    paddingHorizontal: 20,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(161,23,35,0.3)',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
+    gap: 12,
+    shadowColor: COLORS.maroon900,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 3,
   },
-  addCtaText: { color: COLORS.primary, fontFamily: FONT_FAMILY, fontSize: 12, fontWeight: '800', letterSpacing: 0.6 },
+  addInstIconCircle: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  addInstBtnText: { color: '#FFFFFF', fontFamily: FONT_FAMILY, fontSize: 11, fontWeight: '700', letterSpacing: 0.6, textTransform: 'uppercase' },
 
   // List Section
   listSection: { gap: 10 },
   sectionHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 2 },
-  sectionHeaderTitle: { fontFamily: FONT_FAMILY, fontSize: 12, fontWeight: '800', color: COLORS.slate700, letterSpacing: 1.2 },
+  sectionHeaderTitle: { fontFamily: FONT_FAMILY, fontSize: 12, fontWeight: '800', color: COLORS.slate500, letterSpacing: 0.6, textTransform: 'uppercase' },
   sectionCountBadge: {
-    backgroundColor: COLORS.slate100,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
+    width: 20,
+    height: 20,
     borderRadius: 10,
-    borderWidth: 1,
-    borderColor: COLORS.slate200,
+    backgroundColor: 'rgba(226,232,240,0.9)',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  sectionCountText: { fontFamily: FONT_FAMILY, fontSize: 11, fontWeight: '800', color: COLORS.slate600 },
+  sectionCountText: { fontFamily: FONT_FAMILY, fontSize: 11, fontWeight: '700', color: COLORS.slate700 },
 
   emptyCard: {
     backgroundColor: COLORS.surface,
-    borderRadius: 16,
+    borderRadius: 24,
     padding: 28,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: COLORS.slate200,
-    gap: 6,
+    borderColor: 'rgba(226,232,240,0.9)',
+    shadowColor: '#0f172a',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.03,
+    shadowRadius: 4,
+    elevation: 1,
   },
   emptyIconCircle: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: COLORS.slate50,
+    width: 64,
+    height: 64,
+    borderRadius: 16,
+    backgroundColor: 'rgba(255,251,235,0.8)',
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: COLORS.slate100,
+    borderColor: 'rgba(253,230,138,0.6)',
+    marginBottom: 16,
     marginBottom: 4,
   },
-  emptyTitle: { fontFamily: FONT_FAMILY, fontSize: 15, fontWeight: '800', color: COLORS.onSurface },
-  emptySub: { fontFamily: FONT_FAMILY, fontSize: 12, color: COLORS.slate500, textAlign: 'center', maxWidth: 260 },
+  emptyTitle: { fontFamily: FONT_FAMILY, fontSize: 16, fontWeight: '700', color: COLORS.onSurface, marginBottom: 4 },
+  emptySub: { fontFamily: FONT_FAMILY, fontSize: 12, color: COLORS.slate500, textAlign: 'center', maxWidth: 240, lineHeight: 18, marginBottom: 20 },
+  emptyRegisterBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 12,
+    backgroundColor: COLORS.red50,
+    borderWidth: 1,
+    borderColor: COLORS.red100,
+  },
+  emptyRegisterBtnText: { fontFamily: FONT_FAMILY, fontSize: 12, fontWeight: '600', color: COLORS.maroon800 },
+
+  footerBlock: { alignItems: 'center', paddingTop: 8, paddingBottom: 18, gap: 4 },
+  footerLine: { fontFamily: FONT_FAMILY, fontSize: 10, fontWeight: '500', color: COLORS.slate400 },
+  footerLineMuted: { fontFamily: FONT_FAMILY, fontSize: 9, fontWeight: '400', color: 'rgba(148,163,184,0.8)' },
 
   institutionCard: {
     backgroundColor: COLORS.surface,

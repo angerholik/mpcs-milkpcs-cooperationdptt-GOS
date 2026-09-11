@@ -42,6 +42,24 @@
         height: 100dvh;
         flex: 1;
       }
+
+      /* Chrome/Safari render an autofilled <input>'s value with an internal
+         UA font/background until the field is focused or edited, at which
+         point the page's own styling (font, size, color) finally applies —
+         seen on the CORE login screen as email/password text visibly
+         "growing" the moment the field is clicked. Forcing font + color
+         back to the app's own values (and neutralizing the autofill
+         background-color flash) makes autofilled text render correctly
+         from the first paint instead of only after interaction. */
+      input:-webkit-autofill,
+      input:-webkit-autofill:hover,
+      input:-webkit-autofill:focus,
+      input:-webkit-autofill:active {
+        font-size: 15px !important;
+        font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif !important;
+        -webkit-text-fill-color: #26384F !important;
+        transition: background-color 9999s ease-in-out 0s;
+      }
     </style>
   </head>
 
