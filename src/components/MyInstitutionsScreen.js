@@ -137,7 +137,17 @@ export default function MyInstitutionsScreen({
         >
           <Image
             source={require('../../assets/core/kanchenjunga.jpg')}
-            style={[StyleSheet.absoluteFillObject, headerPhotoFilter]}
+            style={[
+              StyleSheet.absoluteFillObject,
+              // width/height:100% on top of absoluteFillObject's inset:0 —
+              // the production web export's atomic-CSS output otherwise
+              // keeps a base class sized to the photo's raw intrinsic
+              // dimensions (900x675px) and inset:0 alone doesn't override
+              // it, so the image renders far larger than the header and
+              // effectively disappears once clipped.
+              { width: '100%', height: '100%' },
+              headerPhotoFilter,
+            ]}
             resizeMode="cover"
           />
           <LinearGradient
