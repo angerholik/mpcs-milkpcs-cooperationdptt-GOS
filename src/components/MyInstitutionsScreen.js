@@ -498,8 +498,12 @@ const styles = StyleSheet.create({
   },
   // marginBottom clears the summary cards, which float below this block as
   // an absolutely positioned overlay (see summaryBarRow) rather than taking
-  // up normal document space themselves.
-  headerWrap: { position: 'relative', marginBottom: 50 },
+  // up normal document space themselves. marginTop/marginHorizontal cancel
+  // scrollInner's own padding so the header bleeds edge-to-edge (flush with
+  // the real screen on mobile, flush with the capped column's edges on
+  // desktop) instead of sitting inset like a card, the way everything else
+  // on this screen does.
+  headerWrap: { position: 'relative', marginBottom: 50, marginTop: -14, marginHorizontal: -14 },
   topBar: {
     paddingHorizontal: 20,
     paddingTop: Platform.OS === 'ios' ? 48 : 16,
@@ -550,8 +554,10 @@ const styles = StyleSheet.create({
   // ScrollView, which clips anything pulled above its own boundary).
   summaryBarRow: {
     position: 'absolute',
-    left: 14,
-    right: 14,
+    // 28 = the 14 gutter the rest of the content uses + the 14 headerWrap
+    // bled outward, so the cards line up with everything below them.
+    left: 28,
+    right: 28,
     bottom: -50,
     flexDirection: 'row',
     gap: 10,
