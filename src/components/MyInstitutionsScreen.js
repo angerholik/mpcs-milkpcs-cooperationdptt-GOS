@@ -717,7 +717,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 4,
   },
-  typeBadgeText: { color: '#FFFFFF', fontSize: 9, fontWeight: '800', letterSpacing: 0.5 },
+  typeBadgeText: { fontFamily: FONT_FAMILY, color: '#FFFFFF', fontSize: 9, fontWeight: '800', letterSpacing: 0.5 },
   instCodePill: {
     backgroundColor: COLORS.slate50,
     paddingHorizontal: 8,

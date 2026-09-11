@@ -875,6 +875,7 @@ const styles = StyleSheet.create({
     marginLeft: 2,
   },
   sortGlyphArrow: {
+    fontFamily: FONT_FAMILY,
     fontSize: 6,
     lineHeight: 7,
     color: COLORS.slate300,
