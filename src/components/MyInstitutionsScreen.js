@@ -118,10 +118,16 @@ export default function MyInstitutionsScreen({
 
   return (
     <View style={styles.container}>
-      {/* Header + overlapping summary cards live outside the ScrollView so
-          the cards' upward overlap isn't clipped by the ScrollView's own
-          scroll-clipping boundary (a negative margin inside a ScrollView
-          gets cut off at the container edge instead of floating above it). */}
+      <ScrollView style={styles.scrollContent} contentContainerStyle={[styles.scrollInner, webCapWidth]} showsVerticalScrollIndicator={false}>
+      {/* Header + overlapping summary cards stay inside the same capped-width
+          scroll content as everything else on this screen (matching every
+          other screen's convention: the header is not full-bleed) — on a
+          wide desktop browser this renders as one centered mobile-width
+          column instead of a full-bleed banner. The cards overlap the
+          header via absolute positioning *within* headerWrap, which is
+          fine because that's an internal overlap in normal document flow —
+          it's only a negative margin at the very top of the ScrollView's
+          own content that gets clipped by the scroll boundary. */}
       <View style={styles.headerWrap}>
         <LinearGradient
           colors={[COLORS.maroon850, COLORS.maroon900]}
@@ -164,7 +170,7 @@ export default function MyInstitutionsScreen({
           </View>
         </LinearGradient>
 
-        <View style={[styles.summaryBarRow, webCapWidth]}>
+        <View style={styles.summaryBarRow}>
           <View style={styles.summaryCard}>
             <View style={[styles.summaryIconBox, { backgroundColor: COLORS.red50 }]}>
               <MaterialCommunityIcons name="office-building" size={16} color={COLORS.maroon700} />
@@ -196,8 +202,6 @@ export default function MyInstitutionsScreen({
           </View>
         </View>
       </View>
-
-      <ScrollView style={styles.scrollContent} contentContainerStyle={[styles.scrollInner, webCapWidth]} showsVerticalScrollIndicator={false}>
 
         {/* Add Institution CTA — CI only. ACI/PA cannot add institutions at
             all (they only ever act on institutions a CI assigned to them),
@@ -492,7 +496,10 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.background,
     position: 'relative',
   },
-  headerWrap: { position: 'relative' },
+  // marginBottom clears the summary cards, which float below this block as
+  // an absolutely positioned overlay (see summaryBarRow) rather than taking
+  // up normal document space themselves.
+  headerWrap: { position: 'relative', marginBottom: 50 },
   topBar: {
     paddingHorizontal: 20,
     paddingTop: Platform.OS === 'ios' ? 48 : 16,
@@ -536,7 +543,7 @@ const styles = StyleSheet.create({
   // paddingTop clears the summary cards, which float below headerWrap as an
   // absolutely positioned overlay (see summaryBarRow) rather than living
   // inside this scroll content.
-  scrollInner: { paddingHorizontal: 14, paddingBottom: 14, paddingTop: 64, gap: 14 },
+  scrollInner: { padding: 14, gap: 14 },
 
   // Summary Metrics Bar — an absolutely positioned overlay straddling the
   // header's rounded bottom edge (not a negative-margin child of the
