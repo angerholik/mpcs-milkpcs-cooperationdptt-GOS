@@ -8,8 +8,8 @@ import { webCapWidth } from '../utils/webStyles';
 // on the header's mountain photo (RN has no CSS filter/blend-mode support;
 // react-native-web passes unrecognized style keys straight to the DOM).
 const headerPhotoFilter = Platform.OS === 'web'
-  ? { opacity: 0.22, filter: 'grayscale(1) contrast(1.3)', mixBlendMode: 'luminosity' }
-  : { opacity: 0.16 };
+  ? { opacity: 0.55, filter: 'grayscale(0.35) contrast(1.15) brightness(0.95)', mixBlendMode: 'luminosity' }
+  : { opacity: 0.38 };
 
 // STITCH Design Tokens (Matching Dashboard Overview)
 const COLORS = {
@@ -141,7 +141,8 @@ export default function MyInstitutionsScreen({
             resizeMode="cover"
           />
           <LinearGradient
-            colors={['rgba(84,8,14,0.6)', 'rgba(66,6,11,0.8)', COLORS.maroon900]}
+            colors={['rgba(84,8,14,0.2)', 'rgba(66,6,11,0.55)', COLORS.maroon900]}
+            locations={[0, 0.55, 1]}
             start={{ x: 0, y: 0 }}
             end={{ x: 0, y: 1 }}
             style={StyleSheet.absoluteFillObject}
