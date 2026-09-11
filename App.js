@@ -2518,6 +2518,10 @@ export default function App() {
                       if (tab === 'home') setCurrentMobileScreen('HOME');
                     }}
                     onViewPdf={generatePDF}
+                    role={getUserRole()}
+                    onNotifyPress={() => setShowHistory(true)}
+                    onProfilePress={() => setActiveBottomTab('more')}
+                    unreadCount={activeAlert ? 1 : 0}
                   />
                 ) : activeBottomTab === 'more' ? (
                   <MoreScreen
@@ -2544,6 +2548,9 @@ export default function App() {
                     }}
                     onOpenBulletins={() => setShowHistory(true)}
                     onSignOut={handleUserLogout}
+                    onNotifyPress={() => setShowHistory(true)}
+                    onProfilePress={() => setActiveBottomTab('more')}
+                    unreadCount={activeAlert ? 1 : 0}
                   />
                 ) : activeBottomTab === 'profile' ? (
                   <ProfileSummaryScreen
@@ -2626,6 +2633,8 @@ export default function App() {
                           setCurrentMobileScreen('REVIEW');
                         }}
                         onNotifyPress={() => setShowHistory(true)}
+                        onProfilePress={() => setActiveBottomTab('more')}
+                        role={getUserRole()}
                         activeTab={activeBottomTab}
                         onTabPress={(tab) => setActiveBottomTab(tab)}
                       />
@@ -2740,6 +2749,9 @@ export default function App() {
                         setActiveBottomTab(tab);
                         if (tab === 'home') setCurrentMobileScreen('HOME');
                       }}
+                      onNotifyPress={() => setShowHistory(true)}
+                      onProfilePress={() => setActiveBottomTab('more')}
+                      unreadCount={activeAlert ? 1 : 0}
                       />
                     )}
 
@@ -2773,6 +2785,9 @@ export default function App() {
                         setActiveBottomTab(tab);
                         if (tab === 'home') setCurrentMobileScreen('HOME');
                       }}
+                      onNotifyPress={() => setShowHistory(true)}
+                      onProfilePress={() => setActiveBottomTab('more')}
+                      unreadCount={activeAlert ? 1 : 0}
                       />
                     )}
 
@@ -3056,6 +3071,10 @@ export default function App() {
                       if (tab === 'home') setCurrentMobileScreen('HOME');
                     }}
                     onViewPdf={generatePDF}
+                    role={getUserRole()}
+                    onNotifyPress={() => setShowHistory(true)}
+                    onProfilePress={() => setActiveBottomTab('more')}
+                    unreadCount={activeAlert ? 1 : 0}
                   />
                 ) : activeBottomTab === 'profile' ? (
                   <MpcsProfileSummaryScreen
@@ -3111,6 +3130,9 @@ export default function App() {
                     }}
                     onOpenBulletins={() => setShowHistory(true)}
                     onSignOut={handleUserLogout}
+                    onNotifyPress={() => setShowHistory(true)}
+                    onProfilePress={() => setActiveBottomTab('more')}
+                    unreadCount={activeAlert ? 1 : 0}
                   />
                 ) : (
                   <>
@@ -3163,6 +3185,8 @@ export default function App() {
                         onNavigateScreen={(scr) => { setMasterDataViewReturnTab('home'); setCurrentMobileScreen(scr); }}
                         onReviewSubmit={() => setCurrentMobileScreen('MPCS_REVIEW')}
                         onNotifyPress={() => setShowHistory(true)}
+                        onProfilePress={() => setActiveBottomTab('more')}
+                        role={getUserRole()}
                         activeTab={activeBottomTab}
                         onTabPress={(tab) => setActiveBottomTab(tab)}
                       />
@@ -3376,6 +3400,9 @@ export default function App() {
                         setActiveBottomTab(tab);
                         if (tab === 'home') setCurrentMobileScreen('HOME');
                       }}
+                      onNotifyPress={() => setShowHistory(true)}
+                      onProfilePress={() => setActiveBottomTab('more')}
+                      unreadCount={activeAlert ? 1 : 0}
                       />
                     )}
 
@@ -3437,6 +3464,9 @@ export default function App() {
                         setActiveBottomTab(tab);
                         if (tab === 'home') setCurrentMobileScreen('HOME');
                       }}
+                      onNotifyPress={() => setShowHistory(true)}
+                      onProfilePress={() => setActiveBottomTab('more')}
+                      unreadCount={activeAlert ? 1 : 0}
                       />
                     )}
 

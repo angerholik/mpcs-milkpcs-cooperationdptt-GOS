@@ -42,7 +42,11 @@ export default function RecordsScreen({
   institutionsList = [],
   onSelectSociety,
   onManageInstitutions,
-  onSwitchModule
+  onSwitchModule,
+  onNotifyPress,
+  onProfilePress,
+  unreadCount = 0,
+  role
 }) {
   const [searchQ, setSearchQ] = useState('');
   const [dbRecords, setDbRecords] = useState([]);
@@ -284,6 +288,11 @@ export default function RecordsScreen({
         onSelectSociety={onSelectSociety}
         onManageInstitutions={onManageInstitutions}
         onSwitchModule={onSwitchModule}
+        onMenuPress={onManageInstitutions}
+        onNotifyPress={onNotifyPress}
+        onProfilePress={onProfilePress}
+        unreadCount={unreadCount}
+        role={role}
       />
 
       <ScrollView style={styles.scrollContent} contentContainerStyle={[styles.scrollInner, webCapWidth]}>

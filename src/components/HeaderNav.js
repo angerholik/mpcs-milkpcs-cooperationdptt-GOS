@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Platform, StatusBar, Modal } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image, Platform, StatusBar, Modal } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 
 const COLORS = {
@@ -9,6 +9,13 @@ const COLORS = {
   badgeRed: '#EF4444',
   primary: '#6B1212',
 };
+
+// Same subtle Kanchenjunga treatment used across every header (MyInstitutionsScreen
+// originated this) — kept web-only since RN has no CSS filter/blend-mode, and
+// react-native-web passes unrecognized style keys straight to the DOM.
+const headerPhotoFilter = Platform.OS === 'web'
+  ? { opacity: 0.4, filter: 'grayscale(0.35) contrast(1.15) brightness(0.95)', mixBlendMode: 'luminosity' }
+  : { opacity: 0.28 };
 
 const FONT_FAMILY = Platform.select({
   web: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
@@ -44,16 +51,18 @@ export default function HeaderNav({
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor={COLORS.headerBg} />
+      <Image
+        source={require('../../assets/core/kanchenjunga.jpg')}
+        style={[StyleSheet.absoluteFillObject, { width: '100%', height: '100%' }, headerPhotoFilter]}
+        resizeMode="cover"
+      />
       <View style={styles.headerContent}>
         {/* Left Branding */}
         <View style={styles.leftBrandGroup}>
           <TouchableOpacity style={styles.iconBtn} onPress={onMenuPress} activeOpacity={0.7}>
             <MaterialIcons name="menu" size={22} color="#FFFFFF" />
           </TouchableOpacity>
-          <View style={styles.logoRow}>
-            <MaterialIcons name="shield" size={16} color={COLORS.gold} style={{ marginRight: 4 }} />
-            <Text style={styles.mainTitle}>{title}</Text>
-          </View>
+          <Text style={styles.mainTitle}>{title}</Text>
         </View>
 
         {/* Right Actions & Dynamic Society Dropdown Trigger */}
@@ -71,11 +80,7 @@ export default function HeaderNav({
 
           <TouchableOpacity style={styles.notifyBtn} onPress={onNotifyPress} activeOpacity={0.7}>
             <MaterialIcons name="notifications-none" size={20} color="#FFFFFF" />
-            {unreadCount > 0 && (
-              <View style={styles.badge}>
-                <Text style={styles.badgeText}>{unreadCount}</Text>
-              </View>
-            )}
+            {unreadCount > 0 && <View style={styles.badge} />}
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.avatarBtn} onPress={onProfilePress} activeOpacity={0.8}>
@@ -154,6 +159,13 @@ export default function HeaderNav({
 
 const styles = StyleSheet.create({
   container: {
+    // position:'relative' + overflow:'hidden' give the absolutely-positioned
+    // photo layer above a real containing block to stretch against — without
+    // it the image renders at its own raw intrinsic size instead of filling
+    // the header (a production-only web-export bug found and fixed the hard
+    // way on MyInstitutionsScreen's header first).
+    position: 'relative',
+    overflow: 'hidden',
     backgroundColor: COLORS.headerBg,
     paddingTop: Platform.OS === 'ios' ? 44 : (StatusBar.currentHeight || 10),
     paddingBottom: 10,
@@ -174,16 +186,14 @@ const styles = StyleSheet.create({
   iconBtn: {
     padding: 4,
   },
-  logoRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
+  // Matches HomeScreen's "CORE" wordmark exactly — the app-wide reference
+  // style, rather than each header inventing its own size/tracking.
   mainTitle: {
     color: '#FFFFFF',
-    fontSize: 17,
+    fontSize: 18,
     fontWeight: '800',
     fontFamily: FONT_FAMILY,
-    letterSpacing: 0.8,
+    letterSpacing: 3.6,
   },
   rightActions: {
     flexDirection: 'row',
@@ -215,22 +225,14 @@ const styles = StyleSheet.create({
   },
   badge: {
     position: 'absolute',
-    top: 1,
-    right: 1,
+    top: 3,
+    right: 3,
     backgroundColor: COLORS.badgeRed,
-    width: 14,
-    height: 14,
-    borderRadius: 7,
-    alignItems: 'center',
-    justifyContent: 'center',
+    width: 8,
+    height: 8,
+    borderRadius: 4,
     borderWidth: 1,
     borderColor: COLORS.headerBg,
-  },
-  badgeText: {
-    color: '#FFFFFF',
-    fontSize: 8,
-    fontWeight: '900',
-    fontFamily: FONT_FAMILY,
   },
   avatarBtn: {
     width: 28,

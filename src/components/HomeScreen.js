@@ -4,6 +4,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { webCapWidth } from '../utils/webStyles';
 import BottomNav from './BottomNav';
+import HeaderNav from './HeaderNav';
 
 // STITCH Design Tokens (New Iteration)
 const COLORS = {
@@ -82,6 +83,8 @@ export default function HomeScreen({
   onNavigateScreen,
   onReviewSubmit,
   onNotifyPress,
+  onProfilePress,
+  role,
   activeTab = 'home',
   onTabPress
 }) {
@@ -93,26 +96,19 @@ export default function HomeScreen({
     <View style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor={COLORS.primary} />
 
-      {/* Header */}
-      <View style={styles.header}>
-        <View style={styles.headerLeft}>
-          <TouchableOpacity style={styles.iconBtn} onPress={onManageInstitutions}>
-            <MaterialCommunityIcons name="menu" size={24} color="rgba(255,255,255,0.9)" />
-          </TouchableOpacity>
-          <Text style={styles.brandTitle}>CORE</Text>
-        </View>
-
-        <View style={styles.headerRight}>
-          <TouchableOpacity style={styles.societySelector} onPress={onManageInstitutions}>
-            <Text style={styles.societySelectorText}>{selectedSociety?.name || societyName || 'Select Society'}</Text>
-            <MaterialCommunityIcons name="chevron-down" size={16} color="rgba(255,255,255,0.7)" />
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.notifyBtn} onPress={onNotifyPress} activeOpacity={0.7}>
-            <MaterialCommunityIcons name="bell-outline" size={20} color="rgba(255,255,255,0.9)" />
-            <View style={styles.notifyDot} />
-          </TouchableOpacity>
-        </View>
-      </View>
+      <HeaderNav
+        activeModule={activeModule}
+        selectedSociety={selectedSociety}
+        institutionsList={institutionsList}
+        onSelectSociety={onSelectSociety}
+        onManageInstitutions={onManageInstitutions}
+        onSwitchModule={onSwitchModule}
+        onMenuPress={onManageInstitutions}
+        onNotifyPress={onNotifyPress}
+        onProfilePress={onProfilePress}
+        unreadCount={activeAlert ? 1 : 0}
+        role={role}
+      />
 
       {/* Sticky Action Banner at Top */}
       {alertVisible && (
@@ -497,79 +493,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: COLORS.background,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    height: 64,
-    backgroundColor: COLORS.primary,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.05)',
-    paddingTop: Platform.OS === 'ios' ? 44 : 0,
-    zIndex: 50,
-  },
-  headerLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 16,
-  },
-  iconBtn: {
-    width: 40,
-    height: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  brandTitle: {
-    fontFamily: FONT_FAMILY,
-    fontSize: 18,
-    fontWeight: '800',
-    color: '#ffffff',
-    letterSpacing: 3.6,
-  },
-  headerRight: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  societySelector: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    paddingHorizontal: 16,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: 'rgba(255,255,255,0.05)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
-  },
-  societySelectorText: {
-    fontFamily: FONT_FAMILY,
-    fontSize: 10,
-    fontWeight: '800',
-    color: 'rgba(255,255,255,0.9)',
-    letterSpacing: 1.2,
-  },
-  notifyBtn: {
-    width: 36,
-    height: 36,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  notifyDot: {
-    position: 'absolute',
-    top: 8,
-    right: 8,
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: '#ffffff',
-    shadowColor: '#ffffff',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.6,
-    shadowRadius: 4,
-    elevation: 2,
   },
   stickyActionBanner: {
     backgroundColor: 'rgba(255, 255, 255, 0.95)',

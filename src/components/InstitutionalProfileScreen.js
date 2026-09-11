@@ -1,10 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, Platform, Pressable } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, Image, Platform, Pressable } from 'react-native';
 import { MaterialIcons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { webCapWidth } from '../utils/webStyles';
 import BottomNav from './BottomNav';
 import AnimatedContinueButton from './AnimatedContinueButton';
+
+// Same subtle Kanchenjunga treatment used on every header across the app.
+const headerPhotoFilter = Platform.OS === 'web'
+  ? { opacity: 0.4, filter: 'grayscale(0.35) contrast(1.15) brightness(0.95)', mixBlendMode: 'luminosity' }
+  : { opacity: 0.28 };
 
 const COLORS = {
   surface: '#ffffff',
@@ -52,7 +57,10 @@ export default function InstitutionalProfileScreen({
   onNext,
   onBack,
   activeTab,
-  onTabPress
+  onTabPress,
+  onNotifyPress,
+  onProfilePress,
+  unreadCount = 0
 }) {
   const [modalVisible, setModalVisible] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
@@ -120,6 +128,11 @@ export default function InstitutionalProfileScreen({
           end={{ x: 1, y: 0 }}
           style={StyleSheet.absoluteFillObject}
         />
+        <Image
+          source={require('../../assets/core/kanchenjunga.jpg')}
+          style={[StyleSheet.absoluteFillObject, { width: '100%', height: '100%' }, headerPhotoFilter]}
+          resizeMode="cover"
+        />
         <TouchableOpacity style={styles.backBtn} onPress={onBack} activeOpacity={0.7}>
           <MaterialCommunityIcons name="arrow-left" size={24} color="#FFFFFF" />
         </TouchableOpacity>
@@ -127,6 +140,13 @@ export default function InstitutionalProfileScreen({
           <Text style={styles.moduleTag}>MILK PCS</Text>
           <Text style={styles.screenTitleHeader}>Institutional Profile</Text>
         </View>
+        <TouchableOpacity style={styles.notifyBtn} onPress={onNotifyPress} activeOpacity={0.7}>
+          <MaterialCommunityIcons name="bell-outline" size={20} color="#FFFFFF" />
+          {unreadCount > 0 && <View style={styles.notifyBadge} />}
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.avatarBtn} onPress={onProfilePress} activeOpacity={0.8}>
+          <Text style={styles.avatarText}>CI</Text>
+        </TouchableOpacity>
       </View>
 
       {/* Sticky Action Banner at Top — only the contextual edit action.
@@ -324,6 +344,7 @@ export default function InstitutionalProfileScreen({
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.slate50, position: 'relative' },
   topBar: {
+    position: 'relative',
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 12,
@@ -336,6 +357,40 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   topBarTitleContainer: { flex: 1 },
+  notifyBtn: {
+    width: 36,
+    height: 36,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  notifyBadge: {
+    position: 'absolute',
+    top: 6,
+    right: 6,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#EF4444',
+    borderWidth: 1,
+    borderColor: '#7a1a1f',
+  },
+  avatarBtn: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.35)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: 8,
+  },
+  avatarText: {
+    color: '#FFFFFF',
+    fontSize: 10,
+    fontWeight: '800',
+    fontFamily: FONT_FAMILY,
+  },
   stickyActionBanner: {
     backgroundColor: 'rgba(255, 255, 255, 0.95)',
     borderBottomWidth: 1,

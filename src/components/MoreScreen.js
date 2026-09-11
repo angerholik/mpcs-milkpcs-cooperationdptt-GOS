@@ -62,7 +62,10 @@ export default function MoreScreen({
   institutionsList = [],
   onSelectSociety,
   onManageInstitutions,
-  onSwitchModule
+  onSwitchModule,
+  onNotifyPress,
+  onProfilePress,
+  unreadCount = 0
 }) {
   // Screen keys diverge between the two apps (MPCS prefixes its master data
   // screens with MPCS_; Milk PCS doesn't), so this menu can't use one fixed
@@ -107,6 +110,11 @@ export default function MoreScreen({
         onSelectSociety={onSelectSociety}
         onManageInstitutions={onManageInstitutions}
         onSwitchModule={onSwitchModule}
+        onMenuPress={onManageInstitutions}
+        onNotifyPress={onNotifyPress}
+        onProfilePress={onProfilePress}
+        unreadCount={unreadCount}
+        role={role}
       />
 
       {/* Ambient Decorative Background Blobs (Matches Dashboard Overview) */}
