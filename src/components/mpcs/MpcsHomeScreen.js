@@ -254,6 +254,59 @@ export default function HomeScreen({
           )}
         </Pressable>
 
+        {/* Quick Actions — surfaces the two anytime ledgers (CSC / Daily
+            Transactions), which have no fixed home in the monthly wizard
+            since they can be logged any day. Sits above the tab switcher so
+            it stays visible regardless of which tab is selected, rather
+            than disappearing when the user switches to Master/Member Data. */}
+        <View style={styles.sectionContainer}>
+          <Text style={styles.sectionTitle}>Quick Actions</Text>
+          <Text style={styles.sectionSubtitle}>Get started with your most common tasks</Text>
+          <View style={styles.quickActionsGrid}>
+            <Pressable
+              style={({ hovered }) => [
+                styles.quickActionCard,
+                Platform.OS === 'web' && { transition: 'all 0.3s' },
+                hovered && { borderColor: '#cbd5e1', shadowOpacity: 0.08, elevation: 4 }
+              ]}
+              onPress={() => onNavigateScreen && onNavigateScreen('MPCS_DAILY_TRANS')}
+            >
+              <View style={styles.quickActionTopRow}>
+                <View style={[styles.quickActionIconBox, { backgroundColor: COLORS.red50 }]}>
+                  <MaterialCommunityIcons name="notebook-outline" size={22} color={COLORS.primary} />
+                </View>
+                <View style={styles.quickActionArrowBtn}>
+                  <MaterialCommunityIcons name="arrow-right" size={16} color={COLORS.slate800} />
+                </View>
+              </View>
+              <Text style={styles.quickActionTitle}>MPCS Daily Transactions</Text>
+              <Text style={styles.quickActionDesc}>Record today's cash-book entries as they happen.</Text>
+            </Pressable>
+
+            <Pressable
+              style={({ hovered }) => [
+                styles.quickActionCard,
+                Platform.OS === 'web' && { transition: 'all 0.3s' },
+                hovered && { borderColor: '#cbd5e1', shadowOpacity: 0.08, elevation: 4 }
+              ]}
+              onPress={() => onNavigateScreen && onNavigateScreen('MPCS_CSC_TRANS')}
+            >
+              <View style={styles.quickActionTopRow}>
+                <View style={[styles.quickActionIconBox, { backgroundColor: '#e0f2fe' }]}>
+                  <MaterialCommunityIcons name="laptop" size={22} color="#0369a1" />
+                </View>
+                <View style={styles.quickActionArrowBtn}>
+                  <MaterialCommunityIcons name="arrow-right" size={16} color={COLORS.slate800} />
+                </View>
+              </View>
+              <Text style={styles.quickActionTitle}>CSC Transactions</Text>
+              <Text style={styles.quickActionDesc}>
+                {cscIsActive ? 'Record and review CSC service transactions.' : 'No active CSC on record for this society.'}
+              </Text>
+            </Pressable>
+          </View>
+        </View>
+
         {/* Tabs Grid */}
         <View style={styles.tabContainer}>
           <TouchableOpacity 
@@ -285,57 +338,6 @@ export default function HomeScreen({
         {/* Monthly Data Section */}
         {internalTab === 'monthly' && (
           <>
-            {/* Quick Actions — surfaces the two anytime ledgers (CSC / Daily
-                Transactions), which have no fixed home in the monthly
-                wizard since they can be logged any day. */}
-            <View style={styles.sectionContainer}>
-              <Text style={styles.sectionTitle}>Quick Actions</Text>
-              <Text style={styles.sectionSubtitle}>Get started with your most common tasks</Text>
-              <View style={styles.quickActionsGrid}>
-                <Pressable
-                  style={({ hovered }) => [
-                    styles.quickActionCard,
-                    Platform.OS === 'web' && { transition: 'all 0.3s' },
-                    hovered && { borderColor: '#cbd5e1', shadowOpacity: 0.08, elevation: 4 }
-                  ]}
-                  onPress={() => onNavigateScreen && onNavigateScreen('MPCS_DAILY_TRANS')}
-                >
-                  <View style={styles.quickActionTopRow}>
-                    <View style={[styles.quickActionIconBox, { backgroundColor: COLORS.red50 }]}>
-                      <MaterialCommunityIcons name="notebook-outline" size={22} color={COLORS.primary} />
-                    </View>
-                    <View style={styles.quickActionArrowBtn}>
-                      <MaterialCommunityIcons name="arrow-right" size={16} color={COLORS.slate800} />
-                    </View>
-                  </View>
-                  <Text style={styles.quickActionTitle}>MPCS Daily Transactions</Text>
-                  <Text style={styles.quickActionDesc}>Record today's cash-book entries as they happen.</Text>
-                </Pressable>
-
-                <Pressable
-                  style={({ hovered }) => [
-                    styles.quickActionCard,
-                    Platform.OS === 'web' && { transition: 'all 0.3s' },
-                    hovered && { borderColor: '#cbd5e1', shadowOpacity: 0.08, elevation: 4 }
-                  ]}
-                  onPress={() => onNavigateScreen && onNavigateScreen('MPCS_CSC_TRANS')}
-                >
-                  <View style={styles.quickActionTopRow}>
-                    <View style={[styles.quickActionIconBox, { backgroundColor: '#e0f2fe' }]}>
-                      <MaterialCommunityIcons name="laptop" size={22} color="#0369a1" />
-                    </View>
-                    <View style={styles.quickActionArrowBtn}>
-                      <MaterialCommunityIcons name="arrow-right" size={16} color={COLORS.slate800} />
-                    </View>
-                  </View>
-                  <Text style={styles.quickActionTitle}>CSC Transactions</Text>
-                  <Text style={styles.quickActionDesc}>
-                    {cscIsActive ? 'Record and review CSC service transactions.' : 'No active CSC on record for this society.'}
-                  </Text>
-                </Pressable>
-              </View>
-            </View>
-
             <View style={styles.sectionContainer}>
               <Text style={styles.sectionTitle}>Monthly Data Entries</Text>
               <Text style={styles.sectionSubtitle}>Track the status of your monthly submissions</Text>
