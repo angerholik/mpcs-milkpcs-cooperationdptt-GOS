@@ -207,6 +207,12 @@ export default function MoreScreen({
           ))}
         </View>
 
+        {/* Footer */}
+        <View style={styles.footerBlock}>
+          <Text style={styles.footerLine}>Department of Cooperation • Government of Sikkim</Text>
+          <Text style={styles.footerLineMuted}>CORE Engine v2.0.4 • Encrypted Secure Portal</Text>
+        </View>
+
         {/* Sign Out Button */}
         <Pressable
           style={({ hovered, pressed }) => [
@@ -367,6 +373,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
 
+  footerBlock: { alignItems: 'center', paddingTop: 8, paddingBottom: 16, gap: 4 },
+  footerLine: { fontFamily: FONT_FAMILY, fontSize: 10, fontWeight: '500', color: COLORS.slate400 },
+  footerLineMuted: { fontFamily: FONT_FAMILY, fontSize: 9, fontWeight: '400', color: 'rgba(148,163,184,0.8)' },
   signOutBtn: {
     flexDirection: 'row',
     alignItems: 'center',
