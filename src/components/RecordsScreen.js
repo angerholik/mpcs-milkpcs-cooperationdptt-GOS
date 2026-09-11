@@ -27,6 +27,11 @@ const COLORS = {
   amber: '#D97706',
 };
 
+// Same typeface used everywhere else in the app (Home, More, Profile) —
+// this screen's text styles never set fontFamily, so they were silently
+// falling back to the browser/OS default font instead of Manrope.
+const FONT_FAMILY = 'Manrope';
+
 // The all-records PDF is assembled from field-entered strings (officer/center
 // names) interpolated straight into HTML — escape them so a name containing
 // `<`/`&` can't break the markup or inject content into the exported report.
@@ -358,8 +363,8 @@ export default function RecordsScreen({
         {filtered.length === 0 ? (
           <View style={{ padding: 24, alignItems: 'center', backgroundColor: '#FFFFFF', borderRadius: 12, borderWidth: 1, borderColor: COLORS.border, marginTop: 10 }}>
             <MaterialIcons name="folder-open" size={40} color="#94A3B8" />
-            <Text style={{ fontSize: 14, fontWeight: '700', color: COLORS.textPrimary, marginTop: 8 }}>No Records Found</Text>
-            <Text style={{ fontSize: 12, color: COLORS.textSecondary, textAlign: 'center', marginTop: 4 }}>
+            <Text style={{ fontFamily: FONT_FAMILY, fontSize: 14, fontWeight: '700', color: COLORS.textPrimary, marginTop: 8 }}>No Records Found</Text>
+            <Text style={{ fontFamily: FONT_FAMILY, fontSize: 12, color: COLORS.textSecondary, textAlign: 'center', marginTop: 4 }}>
               Completed monthly returns and audit logs will appear here once saved.
             </Text>
           </View>
@@ -431,8 +436,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 14,
   },
-  screenHeading: { fontSize: 18, fontWeight: '800', color: COLORS.textPrimary },
-  screenSub: { fontSize: 11, color: COLORS.textSecondary, marginTop: 2, fontWeight: '500' },
+  screenHeading: { fontFamily: FONT_FAMILY, fontSize: 18, fontWeight: '800', color: COLORS.textPrimary },
+  screenSub: { fontFamily: FONT_FAMILY, fontSize: 11, color: COLORS.textSecondary, marginTop: 2, fontWeight: '500' },
   countBadge: {
     backgroundColor: '#FEF2F2',
     paddingHorizontal: 10,
@@ -441,7 +446,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#FCA5A5',
   },
-  countText: { fontSize: 11, fontWeight: '800', color: COLORS.primary },
+  countText: { fontFamily: FONT_FAMILY, fontSize: 11, fontWeight: '800', color: COLORS.primary },
   exportAllBtn: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -455,7 +460,7 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
   exportAllBtnDisabled: { borderColor: '#E2E8F0' },
-  exportAllBtnText: { fontSize: 12.5, fontWeight: '800', color: COLORS.primary, letterSpacing: 0.3 },
+  exportAllBtnText: { fontFamily: FONT_FAMILY, fontSize: 12.5, fontWeight: '800', color: COLORS.primary, letterSpacing: 0.3 },
   searchBox: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -467,7 +472,7 @@ const styles = StyleSheet.create({
     borderColor: COLORS.border,
     marginBottom: 16,
   },
-  searchInput: { flex: 1, marginLeft: 8, fontSize: 13, color: COLORS.textPrimary, fontWeight: '600' },
+  searchInput: { flex: 1, marginLeft: 8, fontFamily: FONT_FAMILY, fontSize: 13, color: COLORS.textPrimary, fontWeight: '600' },
   recordCard: {
     backgroundColor: COLORS.cardBg,
     borderRadius: 12,
@@ -486,8 +491,8 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'flex-start',
   },
-  monthTitle: { fontSize: 15, fontWeight: '800', color: COLORS.textPrimary },
-  centerSub: { fontSize: 12, color: COLORS.textSecondary, marginTop: 2, fontWeight: '600' },
+  monthTitle: { fontFamily: FONT_FAMILY, fontSize: 15, fontWeight: '800', color: COLORS.textPrimary },
+  centerSub: { fontFamily: FONT_FAMILY, fontSize: 12, color: COLORS.textSecondary, marginTop: 2, fontWeight: '600' },
   statusBadge: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -497,7 +502,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     gap: 4,
   },
-  statusBadgeText: { fontSize: 10, fontWeight: '800', color: '#065F46' },
+  statusBadgeText: { fontFamily: FONT_FAMILY, fontSize: 10, fontWeight: '800', color: '#065F46' },
   updatedBadge: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -509,7 +514,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#FCD34D',
   },
-  updatedBadgeText: { fontSize: 10, fontWeight: '800', color: '#B45309' },
+  updatedBadgeText: { fontFamily: FONT_FAMILY, fontSize: 10, fontWeight: '800', color: '#B45309' },
   divider: { height: 1, backgroundColor: '#F1F5F9', marginVertical: 12 },
   statsGrid: {
     flexDirection: 'row',
@@ -517,8 +522,8 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   statCol: { flex: 1 },
-  statLabel: { fontSize: 10, color: COLORS.textSecondary, fontWeight: '600' },
-  statValue: { fontSize: 13, fontWeight: '800', marginTop: 2 },
+  statLabel: { fontFamily: FONT_FAMILY, fontSize: 10, color: COLORS.textSecondary, fontWeight: '600' },
+  statValue: { fontFamily: FONT_FAMILY, fontSize: 13, fontWeight: '800', marginTop: 2 },
   cardFooter: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -527,7 +532,7 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: '#F1F5F9',
   },
-  footerMeta: { fontSize: 11, color: COLORS.textSecondary, fontWeight: '500' },
+  footerMeta: { fontFamily: FONT_FAMILY, fontSize: 11, color: COLORS.textSecondary, fontWeight: '500' },
   pdfBtn: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -539,5 +544,5 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#FCA5A5',
   },
-  pdfBtnText: { color: COLORS.primary, fontSize: 11, fontWeight: '800' },
+  pdfBtnText: { fontFamily: FONT_FAMILY, color: COLORS.primary, fontSize: 11, fontWeight: '800' },
 });
