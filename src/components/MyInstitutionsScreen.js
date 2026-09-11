@@ -506,6 +506,14 @@ const styles = StyleSheet.create({
   // on this screen does.
   headerWrap: { position: 'relative', marginBottom: 50, marginTop: -14, marginHorizontal: -14 },
   topBar: {
+    // Explicit position:'relative' so the absolutely-positioned photo and
+    // scrim (inset:0) get a real containing block to stretch against — RN
+    // native's Yoga layout treats a View as relatively positioned by
+    // default, but the web export doesn't reliably carry that over, and
+    // without it those children fall back to their own intrinsic size
+    // (the photo rendering at its raw 900x675px instead of filling the
+    // header) — a bug that only showed up in the production build, not dev.
+    position: 'relative',
     paddingHorizontal: 20,
     paddingTop: Platform.OS === 'ios' ? 48 : 16,
     paddingBottom: 80,
