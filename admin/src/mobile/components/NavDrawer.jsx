@@ -13,7 +13,7 @@ const ITEMS = [
   { id: 'LOAN_BENEFICIARIES', label: 'Loan Beneficiaries', icon: 'rupee', enabled: true },
   { id: 'STATS', label: 'Benchmarks', icon: 'bars', enabled: false },
   { id: 'OFFICERS', label: 'Official Registry', icon: 'users', enabled: false },
-  { id: 'REPORTS', label: 'Reports', icon: 'download', enabled: false },
+  { id: 'REPORTS', label: 'Reports', icon: 'download', enabled: true },
   { id: 'USERS', label: 'Users & Roles', icon: 'person', enabled: false },
 ];
 

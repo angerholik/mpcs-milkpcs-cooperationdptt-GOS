@@ -484,7 +484,7 @@ const mpcsMasterColumns = () => {
 // so the Reports generator can export report types downloadCSV was never
 // built to handle (compliance log, inspector registry) without silently
 // mis-shaping them through the wrong field order.
-const downloadReportCSV = (columns, rows, filename) => {
+export const downloadReportCSV = (columns, rows, filename) => {
   if (!rows || !rows.length) return;
   const escape = (v) => {
     if (v === null || v === undefined) return '';
@@ -3057,6 +3057,87 @@ function Dashboard({ onLogout, session, officerRole }) {
   }, [reportCategory, scopedMilkRows, scopedMpcsRows, scopedMemberRows, scopedCscTransRows, scopedDailyTransRows]);
   const reportTableRef = useRef(null);
 
+  // Shared by the desktop Reports tab and the mobile Reports & Export Center
+  // screen — builds { title, columns, rows } for whichever category/entity/
+  // date-range is currently selected, then hands it to setGeneratedReport.
+  const generateReport = () => {
+    const inRange = (dateStr) => {
+      if (!dateStr) return false;
+      const d = dateStr.slice(0, 10);
+      return d >= reportStartDate && d <= reportEndDate;
+    };
+    let rows = [], columns = [];
+    if (reportCategory === 'Milk PCS Master') {
+      // "Master" means every recorded submission field — matching what
+      // downloadCSV / "Download Milk Master CSV" already export.
+      // Membership is its own report (Milk PCS Member List) instead of
+      // repeating Member N columns bolted onto this one, which made the
+      // table unmanageably wide and turned a simple submission log into
+      // a lopsided grid.
+      rows = scopedMilkRows.filter(r => inRange(r.created_at) && (!reportEntity || r.center_name === reportEntity));
+      columns = fullFieldColumns(MILK_FIELD_ORDER);
+    } else if (reportCategory === 'MPCS Master') {
+      rows = scopedMpcsRows.filter(r => inRange(r.created_at) && (!reportEntity || r.society_name === reportEntity));
+      columns = mpcsMasterColumns();
+    } else if (reportCategory === 'MPCS Member List' || reportCategory === 'Milk PCS Member List') {
+      // One row per registered member — a proper flat table instead of
+      // the Member N repeating-column pattern.
+      const type = reportCategory === 'MPCS Member List' ? 'MPCS' : 'MILK';
+      rows = scopedMemberRows.filter(m => (m.society_type || '').toUpperCase() === type && inRange(m.created_at) && (!reportEntity || m.society_name === reportEntity));
+      columns = [
+        { label: 'Date Added', get: r => r.created_at ? new Date(r.created_at).toLocaleDateString('en-IN') : '—' },
+        { label: 'Member Name', get: r => r.member_name || '—' },
+        { label: type === 'MPCS' ? 'Society' : 'Center', get: r => r.society_name || '—' },
+        { label: 'Ward', get: r => r.ward_name || '—' },
+        { label: 'Mobile', get: r => r.mobile_number || '—' },
+        { label: 'Aadhaar No', get: r => r.aadhaar_number ? fmtAadhaar(r.aadhaar_number) : '—' },
+        { label: 'Address', get: r => r.address || '—' },
+      ];
+    } else if (reportCategory === 'Audit & Compliance Audit Log') {
+      rows = [
+        ...scopedMpcsRows.filter(r => inRange(r.created_at) && (!reportEntity || r.society_name === reportEntity)).map(r => ({ ...r, ...getMpcsAuditAgm(r), _sector: 'MPCS', _name: r.society_name || 'Unnamed Society' })),
+        ...scopedMilkRows.filter(r => inRange(r.created_at) && (!reportEntity || r.center_name === reportEntity)).map(r => ({ ...r, ...getMilkAuditAgm(r), _sector: 'MILK', _name: r.center_name || 'Unnamed Center' })),
+      ];
+      columns = [
+        { label: 'Date', get: r => r.created_at ? new Date(r.created_at).toLocaleDateString('en-IN') : '—' },
+        { label: 'Sector', get: r => r._sector },
+        { label: 'Entity', get: r => r._name },
+        { label: 'AGM Status', get: r => r.agm_status },
+        { label: 'Audit Status', get: r => r.audit_status },
+      ];
+    } else if (reportCategory === 'CSC Transactions') {
+      rows = scopedCscTransRows.filter(r => inRange(r.transaction_date) && (!reportEntity || r.society_name === reportEntity));
+      columns = [
+        { label: 'Date', get: r => r.transaction_date ? new Date(r.transaction_date).toLocaleDateString('en-IN') : '—' },
+        { label: 'Society', get: r => r.society_name || '—' },
+        { label: 'Service Type', get: r => r.service_type || '—' },
+        { label: 'No. of Transactions', get: r => r.transaction_count ?? '—' },
+        { label: 'Amount', get: r => r.amount != null ? `₹${Number(r.amount).toLocaleString('en-IN')}` : '—' },
+        { label: 'Commission', get: r => r.commission != null ? `₹${Number(r.commission).toLocaleString('en-IN')}` : '—' },
+        { label: 'Total Income', get: r => (r.amount != null || r.commission != null) ? `₹${(Number(r.amount || 0) + Number(r.commission || 0)).toLocaleString('en-IN')}` : '—' },
+      ];
+    } else if (reportCategory === 'MPCS Daily Transactions') {
+      rows = scopedDailyTransRows.filter(r => inRange(r.transaction_date) && (!reportEntity || r.society_name === reportEntity));
+      columns = [
+        { label: 'Txn No.', get: r => r.transaction_no ?? '—' },
+        { label: 'Date', get: r => r.transaction_date ? new Date(r.transaction_date).toLocaleDateString('en-IN') : '—' },
+        { label: 'Society', get: r => r.society_name || '—' },
+        { label: 'Particulars', get: r => r.particulars || '—' },
+        { label: 'Amount', get: r => r.amount != null ? `₹${Number(r.amount).toLocaleString('en-IN')}` : '—' },
+      ];
+    } else {
+      rows = scopedOfficers;
+      columns = [
+        { label: 'Officer Name', get: r => r.name || '—' },
+        { label: 'Email', get: r => r.email || '—' },
+        { label: 'Contact', get: r => r.subdivision || r.mobile || r.phone || '—' },
+        { label: 'Role', get: r => r.role || 'Inspector' },
+      ];
+    }
+    setGeneratedReport({ title: reportCategory, columns, rows });
+    setReportPage(1);
+  };
+
   const formatTimeAgo = (dateStr) => {
     if (!dateStr) return 'Recently';
     const date = new Date(dateStr);
@@ -3722,6 +3803,13 @@ function Dashboard({ onLogout, session, officerRole }) {
             loanBenSocietyFilter, setLoanBenSocietyFilter, loanBenSocietyOptions,
             downloadLoanBeneficiariesCSV,
           }}
+          reportsRegistry={{
+            reportCategory, setReportCategory, reportEntity, setReportEntity,
+            reportEntityOptions, reportStartDate, setReportStartDate, reportEndDate, setReportEndDate,
+            generatedReport, setGeneratedReport, generateReport,
+            reportPaged, reportPage, reportPageSize, reportTotalPages, reportPageClamped, setReportPage,
+            downloadReportCSV,
+          }}
         />
         {mpcsSelected && <MPCSDetailModal row={mpcsSelected} onClose={()=>setMpcsSelected(null)}/>}
         {milkSelected && <MilkDetailModal row={milkSelected} onClose={()=>setMilkSelected(null)} submitter={resolveSubmitter(milkSelected, '—')}/>}
@@ -4151,87 +4239,7 @@ function Dashboard({ onLogout, session, officerRole }) {
                     onChange={e=>{setReportEndDate(e.target.value); setGeneratedReport(null);}}/>
                 </div>
               </div>
-              <button
-                className="btn-primary"
-                onClick={() => {
-                  const inRange = (dateStr) => {
-                    if (!dateStr) return false;
-                    const d = dateStr.slice(0, 10);
-                    return d >= reportStartDate && d <= reportEndDate;
-                  };
-                  let rows = [], columns = [];
-                  if (reportCategory === 'Milk PCS Master') {
-                    // "Master" means every recorded submission field —
-                    // matching what downloadCSV / "Download Milk Master
-                    // CSV" already export. Membership is its own report
-                    // (Milk PCS Member List) instead of repeating Member N
-                    // columns bolted onto this one, which made the table
-                    // unmanageably wide and turned a simple submission log
-                    // into a lopsided grid.
-                    rows = scopedMilkRows.filter(r => inRange(r.created_at) && (!reportEntity || r.center_name === reportEntity));
-                    columns = fullFieldColumns(MILK_FIELD_ORDER);
-                  } else if (reportCategory === 'MPCS Master') {
-                    rows = scopedMpcsRows.filter(r => inRange(r.created_at) && (!reportEntity || r.society_name === reportEntity));
-                    columns = mpcsMasterColumns();
-                  } else if (reportCategory === 'MPCS Member List' || reportCategory === 'Milk PCS Member List') {
-                    // One row per registered member — a proper flat table
-                    // instead of the Member N repeating-column pattern.
-                    const type = reportCategory === 'MPCS Member List' ? 'MPCS' : 'MILK';
-                    rows = scopedMemberRows.filter(m => (m.society_type || '').toUpperCase() === type && inRange(m.created_at) && (!reportEntity || m.society_name === reportEntity));
-                    columns = [
-                      { label: 'Date Added', get: r => r.created_at ? new Date(r.created_at).toLocaleDateString('en-IN') : '—' },
-                      { label: 'Member Name', get: r => r.member_name || '—' },
-                      { label: type === 'MPCS' ? 'Society' : 'Center', get: r => r.society_name || '—' },
-                      { label: 'Ward', get: r => r.ward_name || '—' },
-                      { label: 'Mobile', get: r => r.mobile_number || '—' },
-                      { label: 'Aadhaar No', get: r => r.aadhaar_number ? fmtAadhaar(r.aadhaar_number) : '—' },
-                      { label: 'Address', get: r => r.address || '—' },
-                    ];
-                  } else if (reportCategory === 'Audit & Compliance Audit Log') {
-                    rows = [
-                      ...scopedMpcsRows.filter(r => inRange(r.created_at) && (!reportEntity || r.society_name === reportEntity)).map(r => ({ ...r, ...getMpcsAuditAgm(r), _sector: 'MPCS', _name: r.society_name || 'Unnamed Society' })),
-                      ...scopedMilkRows.filter(r => inRange(r.created_at) && (!reportEntity || r.center_name === reportEntity)).map(r => ({ ...r, ...getMilkAuditAgm(r), _sector: 'MILK', _name: r.center_name || 'Unnamed Center' })),
-                    ];
-                    columns = [
-                      { label: 'Date', get: r => r.created_at ? new Date(r.created_at).toLocaleDateString('en-IN') : '—' },
-                      { label: 'Sector', get: r => r._sector },
-                      { label: 'Entity', get: r => r._name },
-                      { label: 'AGM Status', get: r => r.agm_status },
-                      { label: 'Audit Status', get: r => r.audit_status },
-                    ];
-                  } else if (reportCategory === 'CSC Transactions') {
-                    rows = scopedCscTransRows.filter(r => inRange(r.transaction_date) && (!reportEntity || r.society_name === reportEntity));
-                    columns = [
-                      { label: 'Date', get: r => r.transaction_date ? new Date(r.transaction_date).toLocaleDateString('en-IN') : '—' },
-                      { label: 'Society', get: r => r.society_name || '—' },
-                      { label: 'Service Type', get: r => r.service_type || '—' },
-                      { label: 'No. of Transactions', get: r => r.transaction_count ?? '—' },
-                      { label: 'Amount', get: r => r.amount != null ? `₹${Number(r.amount).toLocaleString('en-IN')}` : '—' },
-                      { label: 'Commission', get: r => r.commission != null ? `₹${Number(r.commission).toLocaleString('en-IN')}` : '—' },
-                      { label: 'Total Income', get: r => (r.amount != null || r.commission != null) ? `₹${(Number(r.amount || 0) + Number(r.commission || 0)).toLocaleString('en-IN')}` : '—' },
-                    ];
-                  } else if (reportCategory === 'MPCS Daily Transactions') {
-                    rows = scopedDailyTransRows.filter(r => inRange(r.transaction_date) && (!reportEntity || r.society_name === reportEntity));
-                    columns = [
-                      { label: 'Txn No.', get: r => r.transaction_no ?? '—' },
-                      { label: 'Date', get: r => r.transaction_date ? new Date(r.transaction_date).toLocaleDateString('en-IN') : '—' },
-                      { label: 'Society', get: r => r.society_name || '—' },
-                      { label: 'Particulars', get: r => r.particulars || '—' },
-                      { label: 'Amount', get: r => r.amount != null ? `₹${Number(r.amount).toLocaleString('en-IN')}` : '—' },
-                    ];
-                  } else {
-                    rows = scopedOfficers;
-                    columns = [
-                      { label: 'Officer Name', get: r => r.name || '—' },
-                      { label: 'Email', get: r => r.email || '—' },
-                      { label: 'Contact', get: r => r.subdivision || r.mobile || r.phone || '—' },
-                      { label: 'Role', get: r => r.role || 'Inspector' },
-                    ];
-                  }
-                  setGeneratedReport({ title: reportCategory, columns, rows });
-                  setReportPage(1);
-                }}
-              >
+              <button className="btn-primary" onClick={generateReport}>
                 Generate Report
               </button>
 
