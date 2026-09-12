@@ -4311,6 +4311,18 @@ function Dashboard({ onLogout, session, officerRole }) {
                         const role = off.role || 'ACI / Field Officer';
                         const isCiOfficer = role.includes('Cooperative Inspector');
                         const isPaOfficer = role.includes('Project Assistant');
+                        // A CI never shows up as an aci/pa target in scopedHierarchyMapping —
+                        // that mapping only tracks what a CI delegates OUT to an ACI/PA. A CI's
+                        // own institutions live in officer_registry.assigned_units (set via the
+                        // System-Admin-only "Assign Scope" action) and were never folded into this
+                        // column, so every CI showed "No institutions assigned" regardless of how
+                        // many MPCS/Milk units were actually on their own assigned_units. Keep
+                        // `assignments` itself ACI/PA-only, since the actions menu below still
+                        // uses it for per-unit Reassign/Revoke (which don't apply to a CI's scope
+                        // — that's replaced wholesale via Assign Scope instead).
+                        const displayAssignments = isCiOfficer
+                          ? (off.assigned_units || []).map(unitName => ({ unitName, role: 'Scope' }))
+                          : assignments;
                         const avatar = officerAvatarStyle(off.name);
                         const officerCode = `OF-${String(idx + 1).padStart(3, '0')}`;
                         const institutionsOpen = openOfficerPopover?.id === (off.id || idx) && openOfficerPopover?.type === 'institutions';
@@ -4333,14 +4345,14 @@ function Dashboard({ onLogout, session, officerRole }) {
                             </td>
                             <td style={{verticalAlign:'top', paddingTop:'14px'}}><span className={isCiOfficer?'badge badge-gold':isPaOfficer?'badge badge-green':'badge badge-purple'}>{officerRoleCode(role)}</span></td>
                             <td style={{verticalAlign:'top', paddingTop:'14px', position:'relative'}}>
-                              {assignments.length > 0 ? (
+                              {displayAssignments.length > 0 ? (
                                 <button
                                   type="button"
                                   className="btn-ghost"
                                   style={{padding:'4px 8px', fontSize:'12px', fontWeight:700, display:'inline-flex', alignItems:'center', gap:'4px'}}
                                   onClick={() => setOpenOfficerPopover(institutionsOpen ? null : { id: off.id || idx, type: 'institutions' })}
                                 >
-                                  {assignments.length} institution{assignments.length > 1 ? 's' : ''} <span style={{fontSize:'10px'}}>▾</span>
+                                  {displayAssignments.length} institution{displayAssignments.length > 1 ? 's' : ''} <span style={{fontSize:'10px'}}>▾</span>
                                 </button>
                               ) : <span style={{color:'#94A3B8', fontStyle:'italic', fontSize:'12px'}}>No institutions assigned</span>}
                               {institutionsOpen && (
@@ -4353,14 +4365,14 @@ function Dashboard({ onLogout, session, officerRole }) {
                                         <Icon d={I.close} size={13} color="#64748B"/>
                                       </button>
                                     </div>
-                                    {assignments.map((a, i) => (
-                                      <div key={`${a.role}_${a.unitName}`} style={{display:'flex', gap:'10px', alignItems:'center', padding:'7px 0', borderBottom: i < assignments.length - 1 ? '1px solid #F1F5F9' : 'none'}}>
+                                    {displayAssignments.map((a, i) => (
+                                      <div key={`${a.role}_${a.unitName}`} style={{display:'flex', gap:'10px', alignItems:'center', padding:'7px 0', borderBottom: i < displayAssignments.length - 1 ? '1px solid #F1F5F9' : 'none'}}>
                                         <div style={{width:'20px', height:'20px', borderRadius:'50%', background:'#DBEAFE', color:'#1E40AF', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'10px', fontWeight:800, flexShrink:0}}>{i + 1}</div>
                                         <span style={{fontSize:'12px', color:'#334155', fontWeight:600, flex:1}}>{a.unitName}</span>
                                       </div>
                                     ))}
                                     <div style={{fontSize:'11px', color:'#94A3B8', marginTop:'10px', paddingTop:'8px', borderTop:'1px solid #F1F5F9'}}>
-                                      Total: {assignments.length} institution{assignments.length > 1 ? 's' : ''}
+                                      Total: {displayAssignments.length} institution{displayAssignments.length > 1 ? 's' : ''}
                                     </div>
                                   </div>
                                 </>
