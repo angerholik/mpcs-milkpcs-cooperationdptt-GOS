@@ -11,13 +11,14 @@ import MilkRegistryScreen from './screens/MilkRegistryScreen';
 import MemberRegistryScreen from './screens/MemberRegistryScreen';
 import LoanBeneficiariesScreen from './screens/LoanBeneficiariesScreen';
 import ReportsScreen from './screens/ReportsScreen';
+import UsersRolesScreen from './screens/UsersRolesScreen';
 
 // Top-level shell for the mobile admin/inspector UI (see
 // /Users/vivekrai/.claude/plans/buzzing-scribbling-dawn.md). Rendered by
 // Dashboard (App.jsx) instead of the desktop JSX when useIsMobileViewport()
 // is true — everything here is presentation only; all data comes from
 // Dashboard's already-computed state via props.
-export default function MobileApp({ session, userRole, onLogout, dashboard, mpcsRegistry, milkRegistry, memberRegistry, loanBenRegistry, reportsRegistry }) {
+export default function MobileApp({ session, userRole, onLogout, dashboard, mpcsRegistry, milkRegistry, memberRegistry, loanBenRegistry, reportsRegistry, usersRegistry }) {
   const [tab, setTab] = useState('HOME');
   const [record, setRecord] = useState('MPCS');
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -43,6 +44,8 @@ export default function MobileApp({ session, userRole, onLogout, dashboard, mpcs
     body = <LoanBeneficiariesScreen {...loanBenRegistry} />;
   } else if (tab === 'RECORDS' && record === 'REPORTS') {
     body = <ReportsScreen {...reportsRegistry} />;
+  } else if (tab === 'RECORDS' && record === 'USERS') {
+    body = <UsersRolesScreen {...usersRegistry} userRole={userRole} />;
   } else {
     body = (
       <div style={{ padding: '40px 16px', textAlign: 'center' }}>

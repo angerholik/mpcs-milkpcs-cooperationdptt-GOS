@@ -21,3 +21,19 @@ export const fmtAadhaar = (n) => {
   if (digits.length !== 12) return digits || '—';
   return `${digits.slice(0, 4)} ${digits.slice(4, 8)} ${digits.slice(8, 12)}`;
 };
+
+// Mirrors App.jsx's officerInitials (module-scope there, not exported).
+export const officerInitials = (name) => {
+  const parts = (name || '').trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return '—';
+  return (parts[0][0] + (parts[1]?.[0] || '')).toUpperCase();
+};
+
+// Mirrors App.jsx's officerRoleCode (module-scope there, not exported).
+export const officerRoleCode = (role) => {
+  if ((role || '').includes('Cooperative Inspector')) return 'CI';
+  if ((role || '').includes('Assistant CI')) return 'ACI';
+  if ((role || '').includes('Project Assistant')) return 'PA';
+  if ((role || '').includes('System Admin')) return 'Admin';
+  return role || '—';
+};

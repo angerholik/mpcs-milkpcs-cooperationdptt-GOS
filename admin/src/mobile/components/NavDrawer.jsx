@@ -14,7 +14,7 @@ const ITEMS = [
   { id: 'STATS', label: 'Benchmarks', icon: 'bars', enabled: false },
   { id: 'OFFICERS', label: 'Official Registry', icon: 'users', enabled: false },
   { id: 'REPORTS', label: 'Reports', icon: 'download', enabled: true },
-  { id: 'USERS', label: 'Users & Roles', icon: 'person', enabled: false },
+  { id: 'USERS', label: 'Users & Roles', icon: 'person', enabled: true },
 ];
 
 export default function NavDrawer({ open, onClose, userRole, onSelect, onLogout }) {

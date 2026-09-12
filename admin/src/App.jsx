@@ -3810,9 +3810,35 @@ function Dashboard({ onLogout, session, officerRole }) {
             reportPaged, reportPage, reportPageSize, reportTotalPages, reportPageClamped, setReportPage,
             downloadReportCSV,
           }}
+          usersRegistry={{
+            scopedOfficers, scopedHierarchyMapping,
+            setAssignAciPrefillUnit, setAssignDelegateRole, setAssignDelegatePrefillAssignee, setShowAssignAciModal,
+            openReassignDelegate, handleRevokeDelegate, setScopeOfficer,
+          }}
         />
         {mpcsSelected && <MPCSDetailModal row={mpcsSelected} onClose={()=>setMpcsSelected(null)}/>}
         {milkSelected && <MilkDetailModal row={milkSelected} onClose={()=>setMilkSelected(null)} submitter={resolveSubmitter(milkSelected, '—')}/>}
+        {showAssignAciModal && (
+          <AssignAciModal
+            mpcsRows={mpcsRows}
+            milkRows={milkRows}
+            officers={scopedOfficers}
+            hierarchyMapping={hierarchyMapping}
+            initialUnit={assignAciPrefillUnit}
+            assigneeRole={assignDelegateRole}
+            initialAssignee={assignDelegatePrefillAssignee}
+            onClose={()=>{ setShowAssignAciModal(false); setAssignAciPrefillUnit(null); setAssignDelegatePrefillAssignee(null); }}
+            onSave={handleAssignDelegate}
+          />
+        )}
+        {scopeOfficer && (
+          <AssignScopeModal
+            officer={scopeOfficer}
+            mpcsRows={mpcsRows}
+            onClose={()=>setScopeOfficer(null)}
+            onSave={handleUpdateOfficerScope}
+          />
+        )}
       </>
     );
   }
