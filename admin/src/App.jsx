@@ -2209,7 +2209,7 @@ function DistrictPerformance({ milkRows = [], mpcsRows = [], onViewMpcs, onViewM
           tall as the 8-row compliance checklist, so this uses the page's
           width instead of stacking all three full-width and pushing the
           footer far down the page. */}
-      <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:'14px', marginBottom:'20px', alignItems:'start'}}>
+      <div className="analytics-grid" style={{gap:'14px', marginBottom:'20px', alignItems:'start'}}>
         <div>
           <RankingListCard
             title="Total Turnover — by Society"
@@ -2261,7 +2261,7 @@ function DistrictPerformance({ milkRows = [], mpcsRows = [], onViewMpcs, onViewM
 
       {/* Footer stat cards — only figures computed directly from real
           submission records; no invented "next sync" countdown. */}
-      <div style={{display:'grid', gridTemplateColumns:'repeat(4, 1fr)', gap:'16px'}}>
+      <div className="stat-grid-4">
         {[
           { icon: I.members, color: '#7C3AED', bg: '#F5F3FF', value: mpcsRows.length + milkRows.length, label: 'Total Societies', sub: 'All registered' },
           { icon: I.clipboard, color: '#1D4ED8', bg: '#EFF6FF', value: mpcsSubmittedThisMonth + milkSubmittedThisMonth, label: 'Submitted This Month', sub: 'User app submissions' },
@@ -2505,7 +2505,7 @@ function AuditOverview({ mpcsRows, onSelectSociety }) {
       </div>
 
       <div className="card" style={{overflow:'hidden', padding:0}}>
-        <div style={{overflowX:'auto'}}>
+        <div className="table-responsive">
           <table className="data-table">
             <thead>
               <tr>
@@ -3534,6 +3534,11 @@ function Dashboard({ onLogout, session, officerRole }) {
             <p style={{fontSize:'10px', color:'var(--text-muted)', marginTop:'2px', fontWeight:600}}>Profitability Ratio</p>
           </div>
         </div>
+        {chartData_MpcsProfit.length === 0 ? (
+          <div style={{height:'calc(100% - 46px)', display:'flex', alignItems:'center', justifyContent:'center', color:'#9CA3AF', fontSize:'12px', fontStyle:'italic'}}>
+            No profit/loss data recorded yet.
+          </div>
+        ) : (
         <div style={{display:'flex', alignItems:'center', gap:'16px', height:'calc(100% - 46px)'}}>
           <ResponsiveContainer width="55%" height="100%">
             <PieChart>
@@ -3572,6 +3577,7 @@ function Dashboard({ onLogout, session, officerRole }) {
              ))}
           </div>
         </div>
+        )}
       </div>
 
       {/* 2. Audit Grade Bar */}
@@ -3584,6 +3590,11 @@ function Dashboard({ onLogout, session, officerRole }) {
             <p style={{fontSize:'10px', color:'var(--text-muted)', marginTop:'2px', fontWeight:600}}>AGM & Audit Completion Status</p>
           </div>
         </div>
+        {chartData_MpcsAudit.every(d => d.value === 0) ? (
+          <div style={{height:'144px', display:'flex', alignItems:'center', justifyContent:'center', color:'#9CA3AF', fontSize:'12px', fontStyle:'italic'}}>
+            No societies on record yet.
+          </div>
+        ) : (
         <div style={{height:'144px'}}>
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={chartData_MpcsAudit} margin={{top: 10, bottom: 0}}>
@@ -3600,6 +3611,7 @@ function Dashboard({ onLogout, session, officerRole }) {
           </BarChart>
         </ResponsiveContainer>
         </div>
+        )}
       </div>
 
       {/* 3. Turnover & Balance by Society */}
@@ -3664,9 +3676,9 @@ function Dashboard({ onLogout, session, officerRole }) {
     <div style={{minHeight:'100vh', background:'#F8FAFC'}}>
       {/* 🏛️ Top Header Bar */}
       <header className="app-header">
-        <div style={{display:'flex', alignItems:'center', gap:'12px'}}>
-          <button 
-            className="mobile-menu-btn" 
+        <div className="app-header-left" style={{display:'flex', alignItems:'center', gap:'12px'}}>
+          <button
+            className="mobile-menu-btn"
             onClick={() => setMobileNavOpen(prev => !prev)}
             title="Toggle Navigation"
           >
@@ -3676,8 +3688,8 @@ function Dashboard({ onLogout, session, officerRole }) {
           <div style={{width:'36px', height:'36px', background:'rgba(255,255,255,0.15)', borderRadius:'8px', padding:'5px', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0}}>
             <img src={sikkimEmblem} alt="Sikkim Crest" style={{maxHeight:'100%', maxWidth:'100%', objectFit:'contain'}}/>
           </div>
-          <div>
-            <div style={{fontFamily:'Cinzel, serif', fontSize:'15px', fontWeight:900, color:'#FFFFFF', letterSpacing:'0.8px', lineHeight:1.1, whiteSpace:'nowrap'}}>
+          <div style={{minWidth:0}}>
+            <div className="app-header-title" style={{fontFamily:'Cinzel, serif', fontSize:'15px', fontWeight:900, color:'#FFFFFF', letterSpacing:'0.8px', lineHeight:1.1, whiteSpace:'nowrap'}}>
               GYALSHING DISTRICT CORE
             </div>
             <div className="hide-mobile" style={{fontSize:'10px', color:'rgba(255,255,255,0.85)', letterSpacing:'0.4px', fontWeight:600, marginTop:'3px'}}>
@@ -4040,7 +4052,7 @@ function Dashboard({ onLogout, session, officerRole }) {
           {/* 📄 REPORTS & EXPORT CENTER */}
           {activeTab === 'REPORTS' && (
             <div className="fade-in card" style={{padding:'24px'}}>
-              <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'20px'}}>
+              <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', flexWrap:'wrap', gap:'12px', marginBottom:'20px'}}>
                 <div>
                   <h2 style={{fontSize:'20px', fontWeight:900, color:'#0F172A'}}>📄 Reports & Export Center</h2>
                   <p style={{fontSize:'12px', color:'#64748B', marginTop:'2px'}}>Generate and download official district co-operative oversight reports</p>
@@ -4232,12 +4244,12 @@ function Dashboard({ onLogout, session, officerRole }) {
           {/* 👤 USERS & ROLES */}
           {activeTab === 'USERS' && (
             <div className="fade-in card" style={{padding:'24px'}}>
-              <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'20px'}}>
+              <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', flexWrap:'wrap', gap:'12px', marginBottom:'20px'}}>
                 <div>
                   <h2 style={{fontSize:'20px', fontWeight:900, color:'#0F172A'}}>👤 Governance Hierarchy & User Roles Portal</h2>
                   <p style={{fontSize:'12px', color:'#64748B', marginTop:'2px'}}>Cooperative Inspector (CI) ➔ ACI ➔ PA</p>
                 </div>
-                <div style={{display:'flex', gap:'10px'}}>
+                <div style={{display:'flex', gap:'10px', flexWrap:'wrap'}}>
                   <button className="btn-ghost" onClick={() => setShowHierarchyTree(!showHierarchyTree)}>
                     <Icon d={I.members} size={14}/> {showHierarchyTree ? 'Hide Governance Tree' : '🌲 View Governance Tree'}
                   </button>
@@ -4428,17 +4440,17 @@ function Dashboard({ onLogout, session, officerRole }) {
           {activeTab === 'MILK' && (
             <div className="fade-in">
               {/* Header Banner */}
-              <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom: '20px', paddingBottom:'16px', borderBottom:'1px solid var(--border)'}}>
+              <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', flexWrap:'wrap', marginBottom: '20px', paddingBottom:'16px', borderBottom:'1px solid var(--border)', gap:'12px'}}>
                  <div>
                     <div style={{fontSize:'11px', fontWeight:800, color:'var(--emerald)', textTransform:'uppercase', letterSpacing:'1px', marginBottom:'4px'}}>Dairy Cooperative Operations</div>
-                    <div style={{display:'flex', alignItems:'center', gap:'12px'}}>
-                       <h2 style={{fontSize:'22px', fontWeight:900, color: '#0F172A', lineHeight:1}}>Milk PCS Units Registry & Returns</h2>
+                    <div style={{display:'flex', alignItems:'center', flexWrap:'wrap', gap:'12px'}}>
+                       <h2 className="page-heading" style={{fontWeight:900, color: '#0F172A', lineHeight:1.15}}>Milk PCS Units Registry & Returns</h2>
                        <span className="badge badge-green" style={{padding:'4px 10px', fontSize:'11px', fontWeight:800}}>
                          {milkStats.total} Total Submissions
                        </span>
                     </div>
                  </div>
-                 <div style={{display:'flex', gap: '8px'}}>
+                 <div style={{display:'flex', gap: '8px', flexWrap:'wrap'}}>
                     <button className="btn-primary" onClick={()=>downloadCSV(scopedMilkRows, 'Milk_PCS_Submissions')} style={{padding: '8px 14px', fontSize: '12px', height:'38px', display: 'flex', alignItems:'center', gap:'6px'}}>
                       <Icon d={I.download} size={14} color="#fff"/> Export CSV
                     </button>
@@ -4462,7 +4474,7 @@ function Dashboard({ onLogout, session, officerRole }) {
 
               {/* Structured Filters */}
               <div className="card" style={{marginBottom:'20px', padding:'16px 20px', background:'#FFFFFF'}}>
-                <div style={{display:'grid', gridTemplateColumns:'2fr 1fr 1fr auto', gap:'12px', alignItems:'end'}}>
+                <div className="filter-grid" style={{gridTemplateColumns:'2fr 1fr 1fr auto'}}>
                   <div className="field-group" style={{marginBottom:0}}>
                     <label className="field-label" style={{fontSize:'10px', fontWeight:800, textTransform:'uppercase', color:'#64748B', marginBottom:'4px'}}>Search Submissions</label>
                     <div style={{position:'relative'}}>
@@ -4523,7 +4535,7 @@ function Dashboard({ onLogout, session, officerRole }) {
                     <div style={{fontSize:'13px',marginTop:'4px'}}>{scopedMilkRows.length===0?'No records yet — submit a form from the Milk PCS app!':'Try adjusting your filters.'}</div>
                   </div>
                 ) : (
-                  <div style={{overflowX:'auto'}}>
+                  <div className="table-responsive">
                     <table className="data-table">
                       <thead>
                         <tr>
@@ -4625,7 +4637,7 @@ function Dashboard({ onLogout, session, officerRole }) {
 
               {/* Structured Filters */}
               <div className="card" style={{marginBottom:'20px', padding:'16px 20px', background:'#FFFFFF'}}>
-                <div style={{display:'grid', gridTemplateColumns:'2fr 1fr 1fr 1fr auto', gap:'12px', alignItems:'end'}}>
+                <div className="filter-grid" style={{gridTemplateColumns:'2fr 1fr 1fr 1fr auto'}}>
                   <div className="field-group" style={{marginBottom:0}}>
                     <label className="field-label" style={{fontSize:'10px', fontWeight:800, textTransform:'uppercase', color:'#64748B', marginBottom:'4px'}}>Search Members</label>
                     <div style={{position:'relative'}}>
@@ -4695,7 +4707,7 @@ function Dashboard({ onLogout, session, officerRole }) {
                     <div style={{fontSize:'13px',marginTop:'4px'}}>{scopedMemberRows.length===0?'No members registered yet — add one from the mobile app\'s Master Data → Member Data screen.':'Try adjusting your filters.'}</div>
                   </div>
                 ) : (
-                  <div style={{overflowX:'auto'}}>
+                  <div className="table-responsive">
                     <table className="data-table">
                       <thead>
                         <tr>
@@ -4795,7 +4807,7 @@ function Dashboard({ onLogout, session, officerRole }) {
 
               {/* Structured Filters */}
               <div className="card" style={{marginBottom:'20px', padding:'16px 20px', background:'#FFFFFF'}}>
-                <div style={{display:'grid', gridTemplateColumns:'2fr 1fr 1fr auto', gap:'12px', alignItems:'end'}}>
+                <div className="filter-grid" style={{gridTemplateColumns:'2fr 1fr 1fr auto'}}>
                   <div className="field-group" style={{marginBottom:0}}>
                     <label className="field-label" style={{fontSize:'10px', fontWeight:800, textTransform:'uppercase', color:'#64748B', marginBottom:'4px'}}>Search Beneficiaries</label>
                     <div style={{position:'relative'}}>
@@ -4857,7 +4869,7 @@ function Dashboard({ onLogout, session, officerRole }) {
                     <div style={{fontSize:'13px',marginTop:'4px'}}>{scopedLoanBenRows.length===0?'No beneficiaries recorded yet — add one from the mobile app\'s Loan Setup → Manage Beneficiaries screen.':'Try adjusting your filters.'}</div>
                   </div>
                 ) : (
-                  <div style={{overflowX:'auto'}}>
+                  <div className="table-responsive">
                     <table className="data-table">
                       <thead>
                         <tr>
@@ -4901,17 +4913,17 @@ function Dashboard({ onLogout, session, officerRole }) {
         {activeTab === 'MPCS' && (
           <div className="fade-in">
             {/* Header Banner */}
-            <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom: '20px', paddingBottom:'16px', borderBottom:'1px solid var(--border)'}}>
+            <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', flexWrap:'wrap', marginBottom: '20px', paddingBottom:'16px', borderBottom:'1px solid var(--border)', gap:'12px'}}>
                <div>
                   <div style={{fontSize:'11px', fontWeight:800, color:'var(--emerald)', textTransform:'uppercase', letterSpacing:'1px', marginBottom:'4px'}}>Cooperative Sector Oversight</div>
-                  <div style={{display:'flex', alignItems:'center', gap:'12px'}}>
-                     <h2 style={{fontSize:'22px', fontWeight:900, color: '#0F172A', lineHeight:1}}>MPCS Societies Registry & Returns</h2>
+                  <div style={{display:'flex', alignItems:'center', flexWrap:'wrap', gap:'12px'}}>
+                     <h2 className="page-heading" style={{fontWeight:900, color: '#0F172A', lineHeight:1.15}}>MPCS Societies Registry & Returns</h2>
                      <span className="badge badge-green" style={{padding:'4px 10px', fontSize:'11px', fontWeight:800}}>
                        {mpcsStats.total} Total Returns
                      </span>
                   </div>
                </div>
-               <div style={{display:'flex', gap: '8px'}}>
+               <div style={{display:'flex', gap: '8px', flexWrap:'wrap'}}>
                   <button className="btn-ghost" onClick={()=>setShowCharts(!showCharts)} style={{padding: '8px 14px', fontSize: '12px', height:'38px'}}>
                     {showCharts ? 'Hide Analytics' : 'Show Analytics'}
                   </button>
@@ -4942,7 +4954,7 @@ function Dashboard({ onLogout, session, officerRole }) {
 
             {/* Structured Filters */}
             <div className="card" style={{marginBottom:'20px', padding:'16px 20px', background:'#FFFFFF'}}>
-              <div style={{display:'grid', gridTemplateColumns:'2fr 1fr 1fr 1fr auto', gap:'12px', alignItems:'end'}}>
+              <div className="filter-grid" style={{gridTemplateColumns:'2fr 1fr 1fr 1fr auto'}}>
                 <div className="field-group" style={{marginBottom:0}}>
                   <label className="field-label" style={{fontSize:'10px', fontWeight:800, textTransform:'uppercase', color:'#64748B', marginBottom:'4px'}}>Quick Search</label>
                   <div style={{position:'relative'}}>
@@ -5018,7 +5030,7 @@ function Dashboard({ onLogout, session, officerRole }) {
                   <div style={{fontSize:'13px',marginTop:'4px'}}>Submit via the MPCS tab in the Expo app</div>
                 </div>
               ) : (
-                <div style={{overflowX:'auto'}}>
+                <div className="table-responsive">
                   <table className="data-table">
                     <thead><tr>
                       <th style={{textAlign:'left', width:'110px'}}>Date</th>
@@ -5083,7 +5095,7 @@ function Dashboard({ onLogout, session, officerRole }) {
         {/* ── OFFICERS VIEW ── */}
         {activeTab === 'OFFICERS' && (
           <div className="fade-in">
-            <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom: '16px'}}>
+            <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', flexWrap:'wrap', gap:'12px', marginBottom: '16px'}}>
                <h2 style={{fontSize:'18px', fontWeight: 800, color: '#111827'}}>Official Registry</h2>
                <button className="btn-primary" onClick={() => setShowAddOfficer(true)}>
                  + Provision Officer
