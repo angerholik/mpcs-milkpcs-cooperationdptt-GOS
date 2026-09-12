@@ -8,7 +8,7 @@ function initialsOf(name) {
 export default function AppBar({ userRole, fullName, unreadCount, onMenu, onBell, onAvatar }) {
   const isAdmin = userRole === 'System Admin';
   return (
-    <div style={{ position: 'sticky', top: 0, zIndex: 30, background: COLOR.headerGradient, padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
+    <div style={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 30, background: COLOR.headerGradient, padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
       <button type="button" onClick={onMenu} aria-label="Open navigation" style={{ background: 'none', border: 'none', padding: 4, display: 'flex', flexDirection: 'column', gap: 4, flex: '0 0 auto' }}>
         <span style={{ display: 'block', width: 19, height: 2, borderRadius: 2, background: '#FFFFFF' }} />
         <span style={{ display: 'block', width: 19, height: 2, borderRadius: 2, background: '#FFFFFF' }} />

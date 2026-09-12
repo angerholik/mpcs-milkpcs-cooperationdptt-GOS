@@ -3702,8 +3702,15 @@ function Dashboard({ onLogout, session, officerRole }) {
             filterMpcsAuditGrade, setFilterMpcsAuditGrade, activeFilter, setActiveFilter,
             downloadCSV, onView: setMpcsSelected, getMpcsAuditAgm,
           }}
+          milkRegistry={{
+            assignedUnits, scopedMilkRows, milkFiltered, milkStats, milkPaged, milkPage, milkPageSize,
+            milkTotalPages, milkPageClamped, setMilkPage, searchQ, setSearchQ,
+            filterMonth, setFilterMonth, filterCenter, setFilterCenter, centerOptions,
+            activeFilter, setActiveFilter, downloadCSV, onView: setMilkSelected, getMilkAuditAgm, resolveSubmitter,
+          }}
         />
         {mpcsSelected && <MPCSDetailModal row={mpcsSelected} onClose={()=>setMpcsSelected(null)}/>}
+        {milkSelected && <MilkDetailModal row={milkSelected} onClose={()=>setMilkSelected(null)} submitter={resolveSubmitter(milkSelected, '—')}/>}
       </>
     );
   }

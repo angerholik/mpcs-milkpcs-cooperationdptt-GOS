@@ -10,7 +10,7 @@ const TABS = [
 
 export default function TabBar({ active, onSelect }) {
   return (
-    <div style={{ position: 'sticky', bottom: 0, zIndex: 30, padding: '0 18px 18px', pointerEvents: 'none' }}>
+    <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 30, padding: '0 18px 18px', pointerEvents: 'none' }}>
       <div style={{ background: COLOR.surface, borderRadius: 999, boxShadow: SHADOW.tabBar, display: 'flex', padding: '9px 8px', pointerEvents: 'auto' }}>
         {TABS.map((t) => {
           const isActive = active === t.id;

@@ -8,7 +8,7 @@ import { iconEl } from '../icons';
 const ITEMS = [
   { id: 'DASHBOARD', label: 'Dashboard', icon: 'grid', enabled: true },
   { id: 'MPCS', label: 'MPCS Societies', icon: 'home', enabled: true },
-  { id: 'MILK', label: 'Milk Units', icon: 'drop', enabled: false },
+  { id: 'MILK', label: 'Milk Units', icon: 'drop', enabled: true },
   { id: 'MEMBERS', label: 'Member Registry', icon: 'person', enabled: false },
   { id: 'LOAN_BENEFICIARIES', label: 'Loan Beneficiaries', icon: 'rupee', enabled: false },
   { id: 'STATS', label: 'Benchmarks', icon: 'bars', enabled: false },

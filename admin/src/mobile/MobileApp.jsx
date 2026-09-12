@@ -7,13 +7,14 @@ import TabBar from './components/TabBar';
 import FooterLine from './components/FooterLine';
 import DashboardScreen from './screens/DashboardScreen';
 import MpcsRegistryScreen from './screens/MpcsRegistryScreen';
+import MilkRegistryScreen from './screens/MilkRegistryScreen';
 
 // Top-level shell for the mobile admin/inspector UI (see
 // /Users/vivekrai/.claude/plans/buzzing-scribbling-dawn.md). Rendered by
 // Dashboard (App.jsx) instead of the desktop JSX when useIsMobileViewport()
 // is true — everything here is presentation only; all data comes from
 // Dashboard's already-computed state via props.
-export default function MobileApp({ session, userRole, onLogout, dashboard, mpcsRegistry }) {
+export default function MobileApp({ session, userRole, onLogout, dashboard, mpcsRegistry, milkRegistry }) {
   const [tab, setTab] = useState('HOME');
   const [record, setRecord] = useState('MPCS');
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -31,6 +32,8 @@ export default function MobileApp({ session, userRole, onLogout, dashboard, mpcs
     body = <DashboardScreen {...dashboard} userRole={userRole} onOpenRecords={(r) => { setTab('RECORDS'); setRecord(r); }} />;
   } else if (tab === 'RECORDS' && record === 'MPCS') {
     body = <MpcsRegistryScreen {...mpcsRegistry} />;
+  } else if (tab === 'RECORDS' && record === 'MILK') {
+    body = <MilkRegistryScreen {...milkRegistry} userRole={userRole} session={session} />;
   } else {
     body = (
       <div style={{ padding: '40px 16px', textAlign: 'center' }}>
@@ -45,7 +48,15 @@ export default function MobileApp({ session, userRole, onLogout, dashboard, mpcs
   }
 
   return (
-    <div className="core-mobile" style={{ background: COLOR.ground, minHeight: '100vh', position: 'relative', overflowX: 'hidden' }}>
+    // overflow: clip (not 'hidden') — the KPI rail and filter-pill row both
+    // bleed edge-to-edge via negative margins, which is fine visually, but
+    // a hidden-overflow ancestor still lets the browser scroll itself when
+    // a focused element (e.g. a transparent <select> in a filter pill)
+    // requests to be scrolled into view. That silently shifted this whole
+    // container sideways after any such focus. `clip` disables scrolling
+    // entirely, including that programmatic case, while still clipping the
+    // decorative background circles the same as `hidden` did visually.
+    <div className="core-mobile" style={{ background: COLOR.ground, minHeight: '100vh', position: 'relative', overflowX: 'clip' }}>
       <div style={{ position: 'absolute', top: 120, right: -90, width: 280, height: 280, borderRadius: '50%', background: COLOR.watermark1, pointerEvents: 'none' }} />
       <div style={{ position: 'absolute', top: 620, left: -120, width: 300, height: 300, borderRadius: '50%', background: COLOR.watermark2, pointerEvents: 'none' }} />
 
@@ -58,7 +69,11 @@ export default function MobileApp({ session, userRole, onLogout, dashboard, mpcs
         onAvatar={() => {}}
       />
 
-      <div style={{ position: 'relative', padding: '16px 16px 0', display: 'flex', flexDirection: 'column', gap: 14 }}>
+      {/* AppBar is position:fixed (not sticky — see AppBar.jsx for why), so
+          it no longer occupies space in flow; padding-top here reserves
+          room for it instead. Bottom clearance for the fixed TabBar is
+          already handled by FooterLine's own 120px bottom padding. */}
+      <div style={{ position: 'relative', padding: '74px 16px 0', display: 'flex', flexDirection: 'column', gap: 14 }}>
         {body}
         <FooterLine />
       </div>
@@ -71,7 +86,7 @@ export default function MobileApp({ session, userRole, onLogout, dashboard, mpcs
         onLogout={onLogout}
       />
 
-      <TabBar active={tab} onSelect={(id) => { if (id === 'RECORDS') setRecord('MPCS'); setTab(id); }} />
+      <TabBar active={tab} onSelect={setTab} />
     </div>
   );
 }
