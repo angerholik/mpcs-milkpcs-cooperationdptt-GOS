@@ -1,0 +1,8 @@
+/* Scoped to .core-mobile so nothing here can bleed into the desktop
+   dashboard's own styles (index.css) — this file is only imported by
+   MobileApp.jsx, which wraps everything in that class. */
+.core-mobile { font-family: 'DM Sans', system-ui, sans-serif; }
+.core-mobile a { color: #8C1C1C; text-decoration: none; }
+.core-mobile input, .core-mobile select, .core-mobile button { font-family: inherit; }
+.core-mobile .hide-sb::-webkit-scrollbar { display: none; }
+.core-mobile .hide-sb { scrollbar-width: none; }

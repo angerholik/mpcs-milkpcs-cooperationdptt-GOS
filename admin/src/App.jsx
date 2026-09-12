@@ -11,6 +11,8 @@ import {
 import { MapContainer, TileLayer, Marker, Popup, Circle } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
+import useIsMobileViewport from './mobile/useIsMobileViewport';
+import MobileApp from './mobile/MobileApp';
 
 // Fix Leaflet icons
 delete L.Icon.Default.prototype._getIconUrl;
@@ -277,7 +279,7 @@ function normalizeMpcsAuditFields(row) {
 }
 
 // Helper to parse MPCS Audit & AGM details
-function getMpcsAuditAgm(row) {
+export function getMpcsAuditAgm(row) {
   if (!row) return { audit_done: 'No', audit_year: '—', audit_category: '—', audit_status: 'Not Completed', agm_done: 'No', agm_date: '—', agm_status: 'Pending' };
   const fd = row.form_data || {};
   let audit_done = row.audit_done || (fd['4.1'] || 'No');
@@ -295,7 +297,7 @@ function getMpcsAuditAgm(row) {
   return { audit_done, audit_year, audit_category, audit_status: isYes(audit_done) ? 'Completed' : 'Not Completed', agm_done, agm_date, agm_status: agm_done === 'Yes' ? 'Completed' : 'Pending' };
 }
 
-const downloadCSV = (rows, filename) => {
+export const downloadCSV = (rows, filename) => {
   if (!rows || !rows.length) return;
 
   // 1. Detect which order to use
@@ -3671,6 +3673,40 @@ function Dashboard({ onLogout, session, officerRole }) {
       )}
     </button>
   );
+
+  // Below ~900px, replace the whole desktop tree with the purpose-built
+  // mobile UI (see design_handoff_core_mobile) instead of squeezing this
+  // dashboard's dense 9-tab layout into a phone screen. Viewport-based, not
+  // role-based — the handoff itself renders both an Admin and an Inspector
+  // variant, so it's for whoever is on a phone, not CI-only. Modals that
+  // both trees can open (e.g. the MPCS detail view) render alongside
+  // MobileApp here so "View return" from a mobile registry card still works.
+  const isMobile = useIsMobileViewport();
+  if (isMobile) {
+    return (
+      <>
+        <MobileApp
+          session={session}
+          userRole={userRole}
+          onLogout={onLogout}
+          dashboard={{
+            scopedOfficers, scopedMpcsRows, scopedMilkRows, recentActivities,
+            chartData_MilkMonth, chartData_District, milkYtdTotal, milkAvgMonthly,
+            milkGrowthPct, milkMonthsWithData, yearFilter, setYearFilter,
+            getMpcsAuditAgm, getMilkAuditAgm,
+          }}
+          mpcsRegistry={{
+            scopedMpcsRows, mpcsFiltered, mpcsStats, mpcsPaged, mpcsPage, mpcsPageSize,
+            mpcsTotalPages, mpcsPageClamped, setMpcsPage, searchQ, setSearchQ,
+            filterMpcsAuditStatus, setFilterMpcsAuditStatus, filterMpcsProfitStatus, setFilterMpcsProfitStatus,
+            filterMpcsAuditGrade, setFilterMpcsAuditGrade, activeFilter, setActiveFilter,
+            downloadCSV, onView: setMpcsSelected, getMpcsAuditAgm,
+          }}
+        />
+        {mpcsSelected && <MPCSDetailModal row={mpcsSelected} onClose={()=>setMpcsSelected(null)}/>}
+      </>
+    );
+  }
 
   return (
     <div style={{minHeight:'100vh', background:'#F8FAFC'}}>
