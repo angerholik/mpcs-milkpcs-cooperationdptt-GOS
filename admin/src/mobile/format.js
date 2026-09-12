@@ -14,3 +14,10 @@ export const fmtRs = (n) => {
 
 // Mirrors App.jsx's isYes (module-scope there, not exported).
 export const isYes = (val) => typeof val === 'string' && val.trim().toLowerCase().startsWith('yes');
+
+// Mirrors App.jsx's fmtAadhaar (module-scope there, not exported).
+export const fmtAadhaar = (n) => {
+  const digits = (n || '').toString().replace(/\D/g, '');
+  if (digits.length !== 12) return digits || '—';
+  return `${digits.slice(0, 4)} ${digits.slice(4, 8)} ${digits.slice(8, 12)}`;
+};

@@ -3708,6 +3708,13 @@ function Dashboard({ onLogout, session, officerRole }) {
             filterMonth, setFilterMonth, filterCenter, setFilterCenter, centerOptions,
             activeFilter, setActiveFilter, downloadCSV, onView: setMilkSelected, getMilkAuditAgm, resolveSubmitter,
           }}
+          memberRegistry={{
+            scopedMemberRows, memberFiltered, memberStats, memberPaged, memberPage, memberPageSize,
+            memberTotalPages, memberPageClamped, setMemberPage,
+            memberSearchQ, setMemberSearchQ, memberTypeFilter, setMemberTypeFilter,
+            memberSocietyFilter, setMemberSocietyFilter, memberWardFilter, setMemberWardFilter,
+            memberSocietyOptions, memberWardOptions, downloadCSV, handleFlagMember, handleUnflagMember,
+          }}
         />
         {mpcsSelected && <MPCSDetailModal row={mpcsSelected} onClose={()=>setMpcsSelected(null)}/>}
         {milkSelected && <MilkDetailModal row={milkSelected} onClose={()=>setMilkSelected(null)} submitter={resolveSubmitter(milkSelected, '—')}/>}
