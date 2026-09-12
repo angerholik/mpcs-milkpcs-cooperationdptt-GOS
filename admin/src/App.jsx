@@ -348,7 +348,7 @@ export const downloadCSV = (rows, filename) => {
 // Separate from downloadCSV — that helper picks its column set by sniffing
 // `row.society_name` to guess MPCS vs Milk submission shape, which doesn't
 // apply to loan_beneficiaries' own fixed set of columns.
-const downloadLoanBeneficiariesCSV = (rows, filename) => {
+export const downloadLoanBeneficiariesCSV = (rows, filename) => {
   if (!rows || !rows.length) return;
   const columns = [
     ['created_at', 'Date Added'], ['beneficiary_name', 'Beneficiary Name'],
@@ -3714,6 +3714,13 @@ function Dashboard({ onLogout, session, officerRole }) {
             memberSearchQ, setMemberSearchQ, memberTypeFilter, setMemberTypeFilter,
             memberSocietyFilter, setMemberSocietyFilter, memberWardFilter, setMemberWardFilter,
             memberSocietyOptions, memberWardOptions, downloadCSV, handleFlagMember, handleUnflagMember,
+          }}
+          loanBenRegistry={{
+            scopedLoanBenRows, loanBenFiltered, loanBenStats, loanBenPaged, loanBenPage, loanBenPageSize,
+            loanBenTotalPages, loanBenPageClamped, setLoanBenPage,
+            loanBenSearchQ, setLoanBenSearchQ, loanBenTypeFilter, setLoanBenTypeFilter,
+            loanBenSocietyFilter, setLoanBenSocietyFilter, loanBenSocietyOptions,
+            downloadLoanBeneficiariesCSV,
           }}
         />
         {mpcsSelected && <MPCSDetailModal row={mpcsSelected} onClose={()=>setMpcsSelected(null)}/>}

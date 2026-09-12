@@ -10,7 +10,7 @@ const ITEMS = [
   { id: 'MPCS', label: 'MPCS Societies', icon: 'home', enabled: true },
   { id: 'MILK', label: 'Milk Units', icon: 'drop', enabled: true },
   { id: 'MEMBERS', label: 'Member Registry', icon: 'person', enabled: true },
-  { id: 'LOAN_BENEFICIARIES', label: 'Loan Beneficiaries', icon: 'rupee', enabled: false },
+  { id: 'LOAN_BENEFICIARIES', label: 'Loan Beneficiaries', icon: 'rupee', enabled: true },
   { id: 'STATS', label: 'Benchmarks', icon: 'bars', enabled: false },
   { id: 'OFFICERS', label: 'Official Registry', icon: 'users', enabled: false },
   { id: 'REPORTS', label: 'Reports', icon: 'download', enabled: false },
