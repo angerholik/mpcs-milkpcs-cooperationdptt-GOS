@@ -2666,6 +2666,9 @@ export default function App() {
                         setActiveBottomTab(tab);
                         if (tab === 'home') setCurrentMobileScreen('HOME');
                       }}
+                      onNotifyPress={() => setShowHistory(true)}
+                      onProfilePress={() => setActiveBottomTab('more')}
+                      unreadCount={activeAlert ? 1 : 0}
                       />
                     )}
 
@@ -2692,6 +2695,9 @@ export default function App() {
                         setActiveBottomTab(tab);
                         if (tab === 'home') setCurrentMobileScreen('HOME');
                       }}
+                      onNotifyPress={() => setShowHistory(true)}
+                      onProfilePress={() => setActiveBottomTab('more')}
+                      unreadCount={activeAlert ? 1 : 0}
                       />
                     )}
 
@@ -2718,6 +2724,9 @@ export default function App() {
                         setActiveBottomTab(tab);
                         if (tab === 'home') setCurrentMobileScreen('HOME');
                       }}
+                      onNotifyPress={() => setShowHistory(true)}
+                      onProfilePress={() => setActiveBottomTab('more')}
+                      unreadCount={activeAlert ? 1 : 0}
                       />
                     )}
 
@@ -2829,6 +2838,9 @@ export default function App() {
                         setActiveBottomTab(tab);
                         if (tab === 'home') setCurrentMobileScreen('HOME');
                       }}
+                      onNotifyPress={() => setShowHistory(true)}
+                      onProfilePress={() => setActiveBottomTab('more')}
+                      unreadCount={activeAlert ? 1 : 0}
                       />
                     )}
 
@@ -2867,6 +2879,9 @@ export default function App() {
                         setActiveBottomTab(tab);
                         if (tab === 'home') setCurrentMobileScreen('HOME');
                       }}
+                      onNotifyPress={() => setShowHistory(true)}
+                      onProfilePress={() => setActiveBottomTab('more')}
+                      unreadCount={activeAlert ? 1 : 0}
                       />
                     )}
 
@@ -2904,6 +2919,9 @@ export default function App() {
                         setActiveBottomTab(tab);
                         if (tab === 'home') setCurrentMobileScreen('HOME');
                       }}
+                      onNotifyPress={() => setShowHistory(true)}
+                      onProfilePress={() => setActiveBottomTab('more')}
+                      unreadCount={activeAlert ? 1 : 0}
                       />
                     )}
 
@@ -2941,6 +2959,9 @@ export default function App() {
                         setActiveBottomTab(tab);
                         if (tab === 'home') setCurrentMobileScreen('HOME');
                       }}
+                      onNotifyPress={() => setShowHistory(true)}
+                      onProfilePress={() => setActiveBottomTab('more')}
+                      unreadCount={activeAlert ? 1 : 0}
                       />
                     )}
 
@@ -2950,6 +2971,9 @@ export default function App() {
                         societyType="MILK"
                         onBack={() => setCurrentMobileScreen(loanBeneficiariesBackTarget)}
                         onBeneficiariesChanged={() => stampMasterDataUpdated('loanBeneficiaries')}
+                      onNotifyPress={() => setShowHistory(true)}
+                      onProfilePress={() => setActiveBottomTab('more')}
+                      unreadCount={activeAlert ? 1 : 0}
                       />
                     )}
 
@@ -2975,6 +2999,9 @@ export default function App() {
                         setActiveBottomTab(tab);
                         if (tab === 'home') setCurrentMobileScreen('HOME');
                       }}
+                      onNotifyPress={() => setShowHistory(true)}
+                      onProfilePress={() => setActiveBottomTab('more')}
+                      unreadCount={activeAlert ? 1 : 0}
                       />
                     )}
 
@@ -2992,6 +3019,9 @@ export default function App() {
                           setActiveBottomTab(tab);
                           if (tab === 'home') setCurrentMobileScreen('HOME');
                         }}
+                      onNotifyPress={() => setShowHistory(true)}
+                      onProfilePress={() => setActiveBottomTab('more')}
+                      unreadCount={activeAlert ? 1 : 0}
                       />
                     )}
 
@@ -3002,6 +3032,9 @@ export default function App() {
                         inspectorEmail={userProfile?.email}
                         onBack={() => setCurrentMobileScreen('HOME')}
                         onMemberDataChanged={() => stampMasterDataUpdated('members')}
+                      onNotifyPress={() => setShowHistory(true)}
+                      onProfilePress={() => setActiveBottomTab('more')}
+                      unreadCount={activeAlert ? 1 : 0}
                       />
                     )}
 
@@ -3032,6 +3065,9 @@ export default function App() {
                         setActiveBottomTab(tab);
                         if (tab === 'home') setCurrentMobileScreen('HOME');
                       }}
+                      onNotifyPress={() => setShowHistory(true)}
+                      onProfilePress={() => setActiveBottomTab('more')}
+                      unreadCount={activeAlert ? 1 : 0}
                       />
                     )}
 
@@ -3047,6 +3083,9 @@ export default function App() {
                         isSealing={isSealing}
                         onCompileAndSeal={() => generatePDF(null)}
                         onBack={() => setCurrentMobileScreen('HOME')}
+                      onNotifyPress={() => setShowHistory(true)}
+                      onProfilePress={() => setActiveBottomTab('more')}
+                      unreadCount={activeAlert ? 1 : 0}
                       />
                     )}
                   </>
@@ -3223,6 +3262,9 @@ export default function App() {
                         setActiveBottomTab(tab);
                         if (tab === 'home') setCurrentMobileScreen('HOME');
                       }}
+                      onNotifyPress={() => setShowHistory(true)}
+                      onProfilePress={() => setActiveBottomTab('more')}
+                      unreadCount={activeAlert ? 1 : 0}
                       />
                     )}
 
@@ -3257,6 +3299,9 @@ export default function App() {
                         setActiveBottomTab(tab);
                         if (tab === 'home') setCurrentMobileScreen('HOME');
                       }}
+                      onNotifyPress={() => setShowHistory(true)}
+                      onProfilePress={() => setActiveBottomTab('more')}
+                      unreadCount={activeAlert ? 1 : 0}
                       />
                     )}
 
@@ -3304,6 +3349,9 @@ export default function App() {
                         setActiveBottomTab(tab);
                         if (tab === 'home') setCurrentMobileScreen('HOME');
                       }}
+                      onNotifyPress={() => setShowHistory(true)}
+                      onProfilePress={() => setActiveBottomTab('more')}
+                      unreadCount={activeAlert ? 1 : 0}
                       />
                     )}
 
@@ -3317,6 +3365,9 @@ export default function App() {
                         setActiveBottomTab(tab);
                         if (tab === 'home') setCurrentMobileScreen('HOME');
                       }}
+                      onNotifyPress={() => setShowHistory(true)}
+                      onProfilePress={() => setActiveBottomTab('more')}
+                      unreadCount={activeAlert ? 1 : 0}
                       />
                     )}
 
@@ -3329,6 +3380,9 @@ export default function App() {
                         setActiveBottomTab(tab);
                         if (tab === 'home') setCurrentMobileScreen('HOME');
                       }}
+                      onNotifyPress={() => setShowHistory(true)}
+                      onProfilePress={() => setActiveBottomTab('more')}
+                      unreadCount={activeAlert ? 1 : 0}
                       />
                     )}
 
@@ -3348,6 +3402,9 @@ export default function App() {
                         setActiveBottomTab(tab);
                         if (tab === 'home') setCurrentMobileScreen('HOME');
                       }}
+                      onNotifyPress={() => setShowHistory(true)}
+                      onProfilePress={() => setActiveBottomTab('more')}
+                      unreadCount={activeAlert ? 1 : 0}
                       />
                     )}
 
@@ -3491,6 +3548,9 @@ export default function App() {
                         setActiveBottomTab(tab);
                         if (tab === 'home') setCurrentMobileScreen('HOME');
                       }}
+                      onNotifyPress={() => setShowHistory(true)}
+                      onProfilePress={() => setActiveBottomTab('more')}
+                      unreadCount={activeAlert ? 1 : 0}
                       />
                     )}
 
@@ -3511,6 +3571,9 @@ export default function App() {
                         setActiveBottomTab(tab);
                         if (tab === 'home') setCurrentMobileScreen('HOME');
                       }}
+                      onNotifyPress={() => setShowHistory(true)}
+                      onProfilePress={() => setActiveBottomTab('more')}
+                      unreadCount={activeAlert ? 1 : 0}
                       />
                     )}
 
@@ -3534,6 +3597,9 @@ export default function App() {
                         setActiveBottomTab(tab);
                         if (tab === 'home') setCurrentMobileScreen('HOME');
                       }}
+                      onNotifyPress={() => setShowHistory(true)}
+                      onProfilePress={() => setActiveBottomTab('more')}
+                      unreadCount={activeAlert ? 1 : 0}
                       />
                     )}
 
@@ -3557,6 +3623,9 @@ export default function App() {
                         setActiveBottomTab(tab);
                         if (tab === 'home') setCurrentMobileScreen('HOME');
                       }}
+                      onNotifyPress={() => setShowHistory(true)}
+                      onProfilePress={() => setActiveBottomTab('more')}
+                      unreadCount={activeAlert ? 1 : 0}
                       />
                     )}
 
@@ -3580,6 +3649,9 @@ export default function App() {
                         setActiveBottomTab(tab);
                         if (tab === 'home') setCurrentMobileScreen('HOME');
                       }}
+                      onNotifyPress={() => setShowHistory(true)}
+                      onProfilePress={() => setActiveBottomTab('more')}
+                      unreadCount={activeAlert ? 1 : 0}
                       />
                     )}
 
@@ -3603,6 +3675,9 @@ export default function App() {
                         setActiveBottomTab(tab);
                         if (tab === 'home') setCurrentMobileScreen('HOME');
                       }}
+                      onNotifyPress={() => setShowHistory(true)}
+                      onProfilePress={() => setActiveBottomTab('more')}
+                      unreadCount={activeAlert ? 1 : 0}
                       />
                     )}
 
@@ -3625,6 +3700,9 @@ export default function App() {
                         setActiveBottomTab(tab);
                         if (tab === 'home') setCurrentMobileScreen('HOME');
                       }}
+                      onNotifyPress={() => setShowHistory(true)}
+                      onProfilePress={() => setActiveBottomTab('more')}
+                      unreadCount={activeAlert ? 1 : 0}
                       />
                     )}
 
@@ -3647,6 +3725,9 @@ export default function App() {
                         setActiveBottomTab(tab);
                         if (tab === 'home') setCurrentMobileScreen('HOME');
                       }}
+                      onNotifyPress={() => setShowHistory(true)}
+                      onProfilePress={() => setActiveBottomTab('more')}
+                      unreadCount={activeAlert ? 1 : 0}
                       />
                     )}
 
@@ -3668,6 +3749,9 @@ export default function App() {
                         setActiveBottomTab(tab);
                         if (tab === 'home') setCurrentMobileScreen('HOME');
                       }}
+                      onNotifyPress={() => setShowHistory(true)}
+                      onProfilePress={() => setActiveBottomTab('more')}
+                      unreadCount={activeAlert ? 1 : 0}
                       />
                     )}
 
@@ -3689,6 +3773,9 @@ export default function App() {
                         setActiveBottomTab(tab);
                         if (tab === 'home') setCurrentMobileScreen('HOME');
                       }}
+                      onNotifyPress={() => setShowHistory(true)}
+                      onProfilePress={() => setActiveBottomTab('more')}
+                      unreadCount={activeAlert ? 1 : 0}
                       />
                     )}
 
@@ -3713,6 +3800,9 @@ export default function App() {
                         setActiveBottomTab(tab);
                         if (tab === 'home') setCurrentMobileScreen('HOME');
                       }}
+                      onNotifyPress={() => setShowHistory(true)}
+                      onProfilePress={() => setActiveBottomTab('more')}
+                      unreadCount={activeAlert ? 1 : 0}
                       />
                     )}
 
@@ -3737,6 +3827,9 @@ export default function App() {
                         setActiveBottomTab(tab);
                         if (tab === 'home') setCurrentMobileScreen('HOME');
                       }}
+                      onNotifyPress={() => setShowHistory(true)}
+                      onProfilePress={() => setActiveBottomTab('more')}
+                      unreadCount={activeAlert ? 1 : 0}
                       />
                     )}
 
@@ -3764,6 +3857,9 @@ export default function App() {
                         setActiveBottomTab(tab);
                         if (tab === 'home') setCurrentMobileScreen('HOME');
                       }}
+                      onNotifyPress={() => setShowHistory(true)}
+                      onProfilePress={() => setActiveBottomTab('more')}
+                      unreadCount={activeAlert ? 1 : 0}
                       />
                     )}
 
@@ -3773,6 +3869,9 @@ export default function App() {
                         societyType="MPCS"
                         onBack={() => setCurrentMobileScreen(loanBeneficiariesBackTarget)}
                         onBeneficiariesChanged={() => stampMasterDataUpdated('loanBeneficiaries')}
+                      onNotifyPress={() => setShowHistory(true)}
+                      onProfilePress={() => setActiveBottomTab('more')}
+                      unreadCount={activeAlert ? 1 : 0}
                       />
                     )}
 
@@ -3790,6 +3889,9 @@ export default function App() {
                           setActiveBottomTab(tab);
                           if (tab === 'home') setCurrentMobileScreen('HOME');
                         }}
+                      onNotifyPress={() => setShowHistory(true)}
+                      onProfilePress={() => setActiveBottomTab('more')}
+                      unreadCount={activeAlert ? 1 : 0}
                       />
                     )}
 
@@ -3800,6 +3902,9 @@ export default function App() {
                         inspectorEmail={userProfile?.email}
                         onBack={() => setCurrentMobileScreen('HOME')}
                         onMemberDataChanged={() => stampMasterDataUpdated('members')}
+                      onNotifyPress={() => setShowHistory(true)}
+                      onProfilePress={() => setActiveBottomTab('more')}
+                      unreadCount={activeAlert ? 1 : 0}
                       />
                     )}
 
@@ -3827,6 +3932,9 @@ export default function App() {
                         setActiveBottomTab(tab);
                         if (tab === 'home') setCurrentMobileScreen('HOME');
                       }}
+                      onNotifyPress={() => setShowHistory(true)}
+                      onProfilePress={() => setActiveBottomTab('more')}
+                      unreadCount={activeAlert ? 1 : 0}
                       />
                     )}
 
@@ -3840,6 +3948,9 @@ export default function App() {
                         onNavigateSection={(screenKey) => setCurrentMobileScreen(screenKey)}
                         onSubmitReturn={() => generatePDF(null)}
                         onBack={() => setCurrentMobileScreen('HOME')}
+                      onNotifyPress={() => setShowHistory(true)}
+                      onProfilePress={() => setActiveBottomTab('more')}
+                      unreadCount={activeAlert ? 1 : 0}
                       />
                     )}
                   </>
