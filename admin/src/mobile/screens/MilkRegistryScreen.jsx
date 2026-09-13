@@ -69,7 +69,10 @@ export default function MilkRegistryScreen({
           { label: 'TOTAL WITHDRAWAL', value: fmtRs(milkStats.withdrawal), icon: 'rupee', tint: COLOR.amberTint, ink: COLOR.amber },
           { label: 'AGGREGATE BALANCE', value: fmtRs(milkStats.balance), icon: 'rupee', tint: COLOR.greenTint, ink: COLOR.green },
           { label: 'TOTAL MEMBERS', value: milkStats.members, icon: 'users', tint: COLOR.blueTint, ink: COLOR.blue },
-          { label: 'ACTIVE LOANS', value: milkStats.loans, icon: 'briefcase', tint: COLOR.roseTint, ink: COLOR.maroon },
+          {
+            label: 'ACTIVE LOANS', value: milkStats.loans, icon: 'briefcase', tint: COLOR.roseTint, ink: COLOR.maroon,
+            selected: activeFilter === 'loan', onClick: () => setActiveFilter(activeFilter === 'loan' ? null : 'loan'),
+          },
         ]}
       />
 

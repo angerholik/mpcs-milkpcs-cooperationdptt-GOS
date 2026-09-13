@@ -18,7 +18,7 @@ import UsersRolesScreen from './screens/UsersRolesScreen';
 // Dashboard (App.jsx) instead of the desktop JSX when useIsMobileViewport()
 // is true — everything here is presentation only; all data comes from
 // Dashboard's already-computed state via props.
-export default function MobileApp({ session, userRole, onLogout, dashboard, mpcsRegistry, milkRegistry, memberRegistry, loanBenRegistry, reportsRegistry, usersRegistry }) {
+export default function MobileApp({ session, userRole, onLogout, onOpenProfile, onOpenNotifications, dashboard, mpcsRegistry, milkRegistry, memberRegistry, loanBenRegistry, reportsRegistry, usersRegistry }) {
   const [tab, setTab] = useState('HOME');
   const [record, setRecord] = useState('MPCS');
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -77,8 +77,8 @@ export default function MobileApp({ session, userRole, onLogout, dashboard, mpcs
         fullName={fullName}
         unreadCount={unreadCount}
         onMenu={() => setDrawerOpen(true)}
-        onBell={() => {}}
-        onAvatar={() => {}}
+        onBell={onOpenNotifications}
+        onAvatar={onOpenProfile}
       />
 
       {/* AppBar is position:fixed (not sticky — see AppBar.jsx for why), so
@@ -98,7 +98,10 @@ export default function MobileApp({ session, userRole, onLogout, dashboard, mpcs
         onLogout={onLogout}
       />
 
-      <TabBar active={tab} onSelect={setTab} />
+      <TabBar
+        active={tab}
+        onSelect={(t) => (t === 'PROFILE' ? onOpenProfile() : setTab(t))}
+      />
     </div>
   );
 }

@@ -39,9 +39,18 @@ export default function MpcsRegistryScreen({
         items={[
           { label: 'TOTAL TURNOVER', value: fmtRs(mpcsStats.turnover), icon: 'rupee', tint: COLOR.roseTint, ink: COLOR.maroon },
           { label: 'TOTAL MEMBERS', value: mpcsStats.members, icon: 'users', tint: COLOR.amberTint, ink: COLOR.amber },
-          { label: 'ACTIVE LOANS', value: mpcsStats.loans, icon: 'briefcase', tint: COLOR.roseTint, ink: COLOR.maroon },
-          { label: 'AUDITS DONE', value: mpcsStats.audits, icon: 'refresh', tint: COLOR.roseTint, ink: COLOR.maroon },
-          { label: 'ACTIVE PROFITS', value: mpcsStats.profits, icon: 'doc', tint: COLOR.amberTint, ink: COLOR.amber },
+          {
+            label: 'ACTIVE LOANS', value: mpcsStats.loans, icon: 'briefcase', tint: COLOR.roseTint, ink: COLOR.maroon,
+            selected: activeFilter === 'loan', onClick: () => setActiveFilter(activeFilter === 'loan' ? null : 'loan'),
+          },
+          {
+            label: 'AUDITS DONE', value: mpcsStats.audits, icon: 'refresh', tint: COLOR.roseTint, ink: COLOR.maroon,
+            selected: activeFilter === 'audit', onClick: () => setActiveFilter(activeFilter === 'audit' ? null : 'audit'),
+          },
+          {
+            label: 'ACTIVE PROFITS', value: mpcsStats.profits, icon: 'doc', tint: COLOR.amberTint, ink: COLOR.amber,
+            selected: activeFilter === 'profit', onClick: () => setActiveFilter(activeFilter === 'profit' ? null : 'profit'),
+          },
         ]}
       />
 

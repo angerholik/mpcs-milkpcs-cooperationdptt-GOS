@@ -3770,6 +3770,8 @@ function Dashboard({ onLogout, session, officerRole }) {
           session={session}
           userRole={userRole}
           onLogout={onLogout}
+          onOpenProfile={() => setShowProfileModal(true)}
+          onOpenNotifications={() => setShowNotificationsDrawer(true)}
           dashboard={{
             scopedOfficers, scopedMpcsRows, scopedMilkRows, recentActivities,
             chartData_MilkMonth, chartData_District, milkYtdTotal, milkAvgMonthly,
@@ -3837,6 +3839,25 @@ function Dashboard({ onLogout, session, officerRole }) {
             mpcsRows={mpcsRows}
             onClose={()=>setScopeOfficer(null)}
             onSave={handleUpdateOfficerScope}
+          />
+        )}
+        {showProfileModal && (
+          <InspectorProfileModal
+            session={session}
+            userRole={userRole}
+            assignedUnits={assignedUnits}
+            onClose={()=>setShowProfileModal(false)}
+          />
+        )}
+        {showNotificationsDrawer && (
+          <NotificationsDrawerModal
+            activities={recentActivities}
+            formatTimeAgo={formatTimeAgo}
+            onClose={()=>setShowNotificationsDrawer(false)}
+            onSelect={(act) => {
+              setShowNotificationsDrawer(false);
+              if (act.isMpcs) setMpcsSelected(act.row); else setMilkSelected(act.row);
+            }}
           />
         )}
       </>
