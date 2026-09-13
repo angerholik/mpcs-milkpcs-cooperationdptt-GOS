@@ -3526,15 +3526,20 @@ function Dashboard({ onLogout, session, officerRole }) {
   // Completed/Pending status and a date, no grade at all, so this bucket
   // was structurally always zero. Real, always-current data does exist for
   // AGM/Audit completion status, so that's what this chart shows instead.
-  const chartData_MpcsAudit = useMemo(() => {
-    const withStatus = scopedMpcsRows.map(getMpcsAuditAgm);
+  //
+  // Compliance is a district-wide concern, not an MPCS-only one — combines
+  // both sectors (via the same getMpcsAuditAgm/getMilkAuditAgm helpers used
+  // everywhere else audit/AGM status is read) into one snapshot rather than
+  // reporting MPCS societies only.
+  const chartData_ComplianceAudit = useMemo(() => {
+    const withStatus = [...scopedMpcsRows.map(getMpcsAuditAgm), ...scopedMilkRows.map(getMilkAuditAgm)];
     return [
       { name: 'Audit Completed', value: withStatus.filter(r => r.audit_status === 'Completed').length },
       { name: 'Audit Pending', value: withStatus.filter(r => r.audit_status !== 'Completed').length },
       { name: 'AGM Completed', value: withStatus.filter(r => r.agm_status === 'Completed').length },
       { name: 'AGM Pending', value: withStatus.filter(r => r.agm_status !== 'Completed').length },
     ];
-  }, [scopedMpcsRows]);
+  }, [scopedMpcsRows, scopedMilkRows]);
 
   // registration_authority is never collected anywhere in the live app —
   // it always falls back to the same hardcoded default, so every society
@@ -3618,99 +3623,107 @@ function Dashboard({ onLogout, session, officerRole }) {
     </div>
   );
 
+  // Extracted so both MpcsCharts (the MPCS tab's own toggleable analytics)
+  // and the Dashboard's main-page analytics row can render the exact same
+  // cards without duplicating the JSX.
+  const EconomicSustainabilityCard = () => (
+    <div className="card" style={{height:'220px', padding: '18px', position: 'relative', overflow: 'hidden'}}>
+      <div style={{position:'absolute', top:0, right:0, width:'150px', height:'150px', background:'radial-gradient(circle, rgba(212,175,55,0.05) 0%, transparent 70%)', pointerEvents:'none'}}/>
+      <div style={{display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:'8px'}}>
+        <div>
+          <h3 style={{fontSize:'14px', fontWeight: 800, color: 'var(--text-primary)', display: 'flex', alignItems:'center', gap: '8px'}}>
+            <Icon d={I.money} size={16} color="var(--gold)"/> Economic Sustainability
+          </h3>
+          <p style={{fontSize:'10px', color:'var(--text-muted)', marginTop:'2px', fontWeight:600}}>Profitability Ratio — MPCS Societies</p>
+        </div>
+      </div>
+      {chartData_MpcsProfit.length === 0 ? (
+        <div style={{height:'calc(100% - 46px)', display:'flex', alignItems:'center', justifyContent:'center', color:'#9CA3AF', fontSize:'12px', fontStyle:'italic'}}>
+          No profit/loss data recorded yet.
+        </div>
+      ) : (
+      <div style={{display:'flex', alignItems:'center', gap:'16px', height:'calc(100% - 46px)'}}>
+        <ResponsiveContainer width="55%" height="100%">
+          <PieChart>
+            <defs>
+              <linearGradient id="gradProfit" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#7F1D1D" stopOpacity={1}/>
+                <stop offset="100%" stopColor="#7F1D1D" stopOpacity={1}/>
+              </linearGradient>
+              <linearGradient id="gradLoss" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#EF4444" stopOpacity={1}/>
+                <stop offset="100%" stopColor="#991B1B" stopOpacity={1}/>
+              </linearGradient>
+            </defs>
+            <Pie
+              data={chartData_MpcsProfit}
+              innerRadius={42}
+              outerRadius={58}
+              paddingAngle={8}
+              dataKey="value"
+              isAnimationActive={false}
+            >
+              {chartData_MpcsProfit.map((entry, index) => {
+                const fill = entry.name === 'Profitable' ? 'url(#gradProfit)' : entry.name === 'Loss Making' ? 'url(#gradLoss)' : '#B45309';
+                return <Cell key={`cell-${index}`} fill={fill} stroke="rgba(255,255,255,0.2)" strokeWidth={2}/>;
+              })}
+            </Pie>
+            <Tooltip content={<CustomTooltip />} />
+          </PieChart>
+        </ResponsiveContainer>
+        <div style={{display:'flex', flexDirection:'column', gap:'10px'}}>
+           {chartData_MpcsProfit.map(d => (
+             <div key={d.name} style={{display:'flex', alignItems:'center', gap:'8px'}}>
+               <div style={{width:'10px', height:'10px', borderRadius:'3px', flexShrink:0, background: d.name === 'Profitable' ? 'var(--emerald)' : d.name === 'Loss Making' ? '#EF4444' : '#B45309', boxShadow: '0 2px 4px rgba(0,0,0,0.1)'}}/>
+               <span style={{fontSize:'11px', fontWeight:700, color:'var(--text-secondary)'}}>{d.name} ({d.value})</span>
+             </div>
+           ))}
+        </div>
+      </div>
+      )}
+    </div>
+  );
+
+  const ComplianceAuditCard = () => (
+    <div className="card" style={{height:'220px', padding: '18px'}}>
+      <div style={{display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:'8px'}}>
+        <div>
+          <h3 style={{fontSize:'14px', fontWeight: 800, color: 'var(--text-primary)', display: 'flex', alignItems:'center', gap: '8px'}}>
+            <Icon d={I.submit} size={16} color="var(--emerald)"/> Compliance Audit
+          </h3>
+          <p style={{fontSize:'10px', color:'var(--text-muted)', marginTop:'2px', fontWeight:600}}>AGM & Audit Completion — MPCS Societies + Milk Units</p>
+        </div>
+      </div>
+      {chartData_ComplianceAudit.every(d => d.value === 0) ? (
+        <div style={{height:'144px', display:'flex', alignItems:'center', justifyContent:'center', color:'#9CA3AF', fontSize:'12px', fontStyle:'italic'}}>
+          No societies or units on record yet.
+        </div>
+      ) : (
+      <div style={{height:'144px'}}>
+      <ResponsiveContainer width="100%" height="100%">
+        <BarChart data={chartData_ComplianceAudit} margin={{top: 10, bottom: 0}}>
+          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(0,0,0,0.03)" />
+          <XAxis dataKey="name" fontSize={10} fontWeight={800} axisLine={false} tickLine={false} tick={{fill: 'var(--text-secondary)'}} />
+          <YAxis hide allowDecimals={false} />
+          <Tooltip content={<CustomTooltip />} cursor={{fill: 'rgba(0,0,0,0.02)'}}/>
+          <Bar dataKey="value" name="Records" radius={[6, 6, 6, 6]} barSize={32} isAnimationActive={false}>
+            {chartData_ComplianceAudit.map((entry, index) => {
+               const colors = { 'Audit Completed': '#047857', 'Audit Pending': '#EF4444', 'AGM Completed': '#1D4ED8', 'AGM Pending': '#B45309' };
+               return <Cell key={`cell-${index}`} fill={colors[entry.name] || 'var(--emerald-light)'} fillOpacity={0.9} />;
+            })}
+          </Bar>
+        </BarChart>
+      </ResponsiveContainer>
+      </div>
+      )}
+    </div>
+  );
+
   const MpcsCharts = () => (
     <div style={{display:'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px', marginBottom: '24px'}}>
 
-      {/* 1. Economic Health Donut */}
-      <div className="card" style={{height:'220px', padding: '18px', position: 'relative', overflow: 'hidden'}}>
-        <div style={{position:'absolute', top:0, right:0, width:'150px', height:'150px', background:'radial-gradient(circle, rgba(212,175,55,0.05) 0%, transparent 70%)', pointerEvents:'none'}}/>
-        <div style={{display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:'8px'}}>
-          <div>
-            <h3 style={{fontSize:'14px', fontWeight: 800, color: 'var(--text-primary)', display: 'flex', alignItems:'center', gap: '8px'}}>
-              <Icon d={I.money} size={16} color="var(--gold)"/> Economic Sustainability
-            </h3>
-            <p style={{fontSize:'10px', color:'var(--text-muted)', marginTop:'2px', fontWeight:600}}>Profitability Ratio</p>
-          </div>
-        </div>
-        {chartData_MpcsProfit.length === 0 ? (
-          <div style={{height:'calc(100% - 46px)', display:'flex', alignItems:'center', justifyContent:'center', color:'#9CA3AF', fontSize:'12px', fontStyle:'italic'}}>
-            No profit/loss data recorded yet.
-          </div>
-        ) : (
-        <div style={{display:'flex', alignItems:'center', gap:'16px', height:'calc(100% - 46px)'}}>
-          <ResponsiveContainer width="55%" height="100%">
-            <PieChart>
-              <defs>
-                <linearGradient id="gradProfit" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#7F1D1D" stopOpacity={1}/>
-                  <stop offset="100%" stopColor="#7F1D1D" stopOpacity={1}/>
-                </linearGradient>
-                <linearGradient id="gradLoss" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#EF4444" stopOpacity={1}/>
-                  <stop offset="100%" stopColor="#991B1B" stopOpacity={1}/>
-                </linearGradient>
-              </defs>
-              <Pie
-                data={chartData_MpcsProfit}
-                innerRadius={42}
-                outerRadius={58}
-                paddingAngle={8}
-                dataKey="value"
-                isAnimationActive={false}
-              >
-                {chartData_MpcsProfit.map((entry, index) => {
-                  const fill = entry.name === 'Profitable' ? 'url(#gradProfit)' : entry.name === 'Loss Making' ? 'url(#gradLoss)' : '#B45309';
-                  return <Cell key={`cell-${index}`} fill={fill} stroke="rgba(255,255,255,0.2)" strokeWidth={2}/>;
-                })}
-              </Pie>
-              <Tooltip content={<CustomTooltip />} />
-            </PieChart>
-          </ResponsiveContainer>
-          <div style={{display:'flex', flexDirection:'column', gap:'10px'}}>
-             {chartData_MpcsProfit.map(d => (
-               <div key={d.name} style={{display:'flex', alignItems:'center', gap:'8px'}}>
-                 <div style={{width:'10px', height:'10px', borderRadius:'3px', flexShrink:0, background: d.name === 'Profitable' ? 'var(--emerald)' : d.name === 'Loss Making' ? '#EF4444' : '#B45309', boxShadow: '0 2px 4px rgba(0,0,0,0.1)'}}/>
-                 <span style={{fontSize:'11px', fontWeight:700, color:'var(--text-secondary)'}}>{d.name} ({d.value})</span>
-               </div>
-             ))}
-          </div>
-        </div>
-        )}
-      </div>
-
-      {/* 2. Audit Grade Bar */}
-      <div className="card" style={{height:'220px', padding: '18px'}}>
-        <div style={{display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:'8px'}}>
-          <div>
-            <h3 style={{fontSize:'14px', fontWeight: 800, color: 'var(--text-primary)', display: 'flex', alignItems:'center', gap: '8px'}}>
-              <Icon d={I.submit} size={16} color="var(--emerald)"/> Compliance Audit
-            </h3>
-            <p style={{fontSize:'10px', color:'var(--text-muted)', marginTop:'2px', fontWeight:600}}>AGM & Audit Completion Status</p>
-          </div>
-        </div>
-        {chartData_MpcsAudit.every(d => d.value === 0) ? (
-          <div style={{height:'144px', display:'flex', alignItems:'center', justifyContent:'center', color:'#9CA3AF', fontSize:'12px', fontStyle:'italic'}}>
-            No societies on record yet.
-          </div>
-        ) : (
-        <div style={{height:'144px'}}>
-        <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={chartData_MpcsAudit} margin={{top: 10, bottom: 0}}>
-            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(0,0,0,0.03)" />
-            <XAxis dataKey="name" fontSize={10} fontWeight={800} axisLine={false} tickLine={false} tick={{fill: 'var(--text-secondary)'}} />
-            <YAxis hide allowDecimals={false} />
-            <Tooltip content={<CustomTooltip />} cursor={{fill: 'rgba(0,0,0,0.02)'}}/>
-            <Bar dataKey="value" name="Societies" radius={[6, 6, 6, 6]} barSize={32} isAnimationActive={false}>
-              {chartData_MpcsAudit.map((entry, index) => {
-                 const colors = { 'Audit Completed': '#047857', 'Audit Pending': '#EF4444', 'AGM Completed': '#1D4ED8', 'AGM Pending': '#B45309' };
-                 return <Cell key={`cell-${index}`} fill={colors[entry.name] || 'var(--emerald-light)'} fillOpacity={0.9} />;
-              })}
-            </Bar>
-          </BarChart>
-        </ResponsiveContainer>
-        </div>
-        )}
-      </div>
+      <EconomicSustainabilityCard />
+      <ComplianceAuditCard />
 
       {/* 3. Turnover & Balance by Society */}
       <div className="card" style={{height:'220px', padding: '18px', gridColumn: 'span 1'}}>
@@ -3789,8 +3802,7 @@ function Dashboard({ onLogout, session, officerRole }) {
           onOpenNotifications={() => setShowNotificationsDrawer(true)}
           dashboard={{
             scopedOfficers, scopedMpcsRows, scopedMilkRows, recentActivities,
-            chartData_MilkMonth, chartData_District, milkYtdTotal, milkAvgMonthly,
-            milkGrowthPct, milkMonthsWithData, yearFilter, setYearFilter,
+            chartData_MpcsProfit, chartData_ComplianceAudit,
             getMpcsAuditAgm, getMilkAuditAgm, setMpcsSelected, setMilkSelected,
           }}
           mpcsRegistry={{
@@ -4048,89 +4060,16 @@ function Dashboard({ onLogout, session, officerRole }) {
                 <TabBtn id="OFFICERS" label="Official Registry" icon={I.members} count={scopedOfficers.length}/>
               </div>
 
-              {/* Dual Analytics Chart Row — both were previously hardcoded
-                  arrays with zero connection to real data (fixed bar
-                  heights, a literal "405,230 L" string, seven fictional
-                  sub-region names with made-up member/unit counts). Now
-                  driven by chartData_MilkMonth / chartData_District, which
-                  had themselves been sitting unused with a month-string
-                  parsing bug (see chartData_MilkMonth above) — the real
-                  data existed, it just never reached the screen. */}
+              {/* Dual Analytics Chart Row — previously both cards here were
+                  Milk-PCS-only (litres collected, members vs milk units),
+                  leaving MPCS — the district's actual primary focus — with
+                  no analytics on the page admins land on first. Now shows
+                  the same Economic Sustainability + Compliance Audit cards
+                  used on the MPCS tab (Compliance Audit itself covers both
+                  MPCS societies and Milk units, not MPCS alone). */}
               <div className="analytics-grid">
-                {/* Monthly Performance */}
-                <div className="card" style={{marginBottom:0}}>
-                  <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'16px'}}>
-                    <div>
-                      <h3 style={{fontSize:'15px', fontWeight:800, color:'#0F172A', display:'flex', alignItems:'center', gap:'8px'}}>
-                        <Icon d={I.chart} size={18} color="#7F1D1D"/> Monthly Performance
-                      </h3>
-                      <p style={{fontSize:'11px', color:'#64748B', marginTop:'2px'}}>Total litres collected over time ({yearFilter})</p>
-                    </div>
-                    <select className="field-input" style={{padding:'4px 8px', fontSize:'12px'}} value={yearFilter} onChange={e=>setYearFilter(e.target.value)}>
-                      <option value="This Year">This Year ({currentYearNum})</option>
-                      <option value="Last Year">Last Year ({currentYearNum - 1})</option>
-                    </select>
-                  </div>
-                  <div style={{height:'180px', display:'flex', gap:'8px', padding:'10px 0', borderBottom:'1px solid #E2E8F0'}}>
-                    {(() => {
-                      const maxLitres = Math.max(1, ...chartData_MilkMonth.map(d => d.litres));
-                      return chartData_MilkMonth.map(d => (
-                        <div key={d.name} title={`${d.name}: ${fmtL(d.litres)}`} style={{flex:1, height:'100%', display:'flex', flexDirection:'column', justifyContent:'flex-end', alignItems:'center', gap:'6px'}}>
-                          <div style={{width:'100%', height:`${Math.max(1, (d.litres / maxLitres) * 100)}%`, background: d.litres > 0 ? '#7F1D1D' : '#F1F5F9', borderRadius:'2px 2px 0 0'}}/>
-                          <span style={{fontSize:'10px', color:'#64748B', fontWeight:600}}>{d.name}</span>
-                        </div>
-                      ));
-                    })()}
-                  </div>
-                  <div style={{display:'flex', justifyContent:'space-between', paddingTop:'14px', fontSize:'12px'}}>
-                    <div><span style={{color:'#64748B'}}>Total ({yearFilter==='This Year'?'YTD':'Full Year'}):</span> <strong>{fmtL(milkYtdTotal)}</strong></div>
-                    <div><span style={{color:'#64748B'}}>Avg. Monthly:</span> <strong>{milkMonthsWithData > 0 ? fmtL(milkAvgMonthly) : '—'}</strong></div>
-                    <div style={{color: milkGrowthPct === null ? '#94A3B8' : milkGrowthPct >= 0 ? '#059669' : '#DC2626', fontWeight:700}}>
-                      {milkGrowthPct === null ? 'No prior year data to compare' : `Growth: ${milkGrowthPct >= 0 ? '↑' : '↓'} ${Math.abs(milkGrowthPct)}% vs last year`}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Regional Engagement */}
-                <div className="card" style={{marginBottom:0}}>
-                  <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'16px'}}>
-                    <div>
-                      <h3 style={{fontSize:'15px', fontWeight:800, color:'#0F172A', display:'flex', alignItems:'center', gap:'8px'}}>
-                        <Icon d={I.domain} size={18} color="#059669"/> Regional Engagement
-                      </h3>
-                      <p style={{fontSize:'11px', color:'#64748B', marginTop:'2px'}}>Members vs Milk units, by real district on record</p>
-                    </div>
-                    <div style={{display:'flex', gap:'12px', fontSize:'11px', fontWeight:700}}>
-                      <span style={{color:'#7F1D1D'}}>● Members</span>
-                      <span style={{color:'#059669'}}>● Units</span>
-                    </div>
-                  </div>
-                  {chartData_District.length === 0 ? (
-                    <div style={{height:'180px', display:'flex', alignItems:'center', justifyContent:'center', color:'#9CA3AF', fontSize:'12px', fontStyle:'italic'}}>
-                      No district recorded on any Milk PCS submission yet.
-                    </div>
-                  ) : (
-                    <div style={{height:'180px', display:'flex', gap:'12px', padding:'10px 0', borderBottom:'1px solid #E2E8F0'}}>
-                      {(() => {
-                        const maxVal = Math.max(1, ...chartData_District.flatMap(d => [d.members, d.centers]));
-                        return chartData_District.map(reg => (
-                          <div key={reg.name} title={`${reg.name}: ${reg.members} members, ${reg.centers} units`} style={{flex:1, height:'100%', display:'flex', flexDirection:'column', alignItems:'center', gap:'6px'}}>
-                            <div style={{display:'flex', alignItems:'flex-end', gap:'3px', flex:1, minHeight:0, width:'100%'}}>
-                              <div style={{flex:1, height:`${Math.max(1, (reg.members / maxVal) * 100)}%`, background:'#7F1D1D', borderRadius:'2px 2px 0 0'}}/>
-                              <div style={{flex:1, height:`${Math.max(1, (reg.centers / maxVal) * 100)}%`, background:'#059669', borderRadius:'2px 2px 0 0'}}/>
-                            </div>
-                            <span style={{fontSize:'10px', color:'#64748B', fontWeight:600, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis', maxWidth:'100%'}}>{reg.name}</span>
-                          </div>
-                        ));
-                      })()}
-                    </div>
-                  )}
-                  <div style={{paddingTop:'14px', textAlign:'right'}}>
-                    <a href="#stats" onClick={(e)=>{e.preventDefault(); setActiveTab('STATS');}} style={{fontSize:'12px', color:'#7F1D1D', fontWeight:700, textDecoration:'none'}}>
-                      View detailed benchmarks →
-                    </a>
-                  </div>
-                </div>
+                <EconomicSustainabilityCard />
+                <ComplianceAuditCard />
               </div>
 
               {/* Two-Column Operational Grid */}
