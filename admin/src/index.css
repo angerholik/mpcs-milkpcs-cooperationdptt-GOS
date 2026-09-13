@@ -32,8 +32,18 @@ html, body {
   background: var(--bg);
   color: var(--text-primary);
   -webkit-font-smoothing: antialiased;
+  /* Stops the rubber-band bounce mobile browsers show when a drag reaches
+     the top/bottom of the page even when there's zero real overflow to
+     scroll — without this, a single-viewport screen like login can still
+     visibly shift a few px on touch. Doesn't affect normal scrolling on
+     pages (dashboard, tables) that do have real content to scroll. */
+  overscroll-behavior: none;
 }
-#root { min-height: 100vh; }
+/* 100dvh (not 100vh) so #root never measures taller than what's actually
+   visible on mobile — 100vh includes space the browser's address bar
+   covers, which let #root force extra scrollable space below screens
+   (like the login page) that size themselves to exactly one viewport. */
+#root { min-height: 100dvh; }
 
 /* Scrollbar */
 ::-webkit-scrollbar { width: 6px; height: 6px; }

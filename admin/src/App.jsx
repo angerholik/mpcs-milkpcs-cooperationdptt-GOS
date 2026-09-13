@@ -612,12 +612,14 @@ function LoginPage() {
 
   return (
     <div style={{
-      // minHeight (not height) so content can still grow the page on the
-      // rare device where even the compact sizing below doesn't fit, rather
-      // than clipping the sign-in button — but 100dvh matches the
-      // actually-visible area on mobile, where 100vh alone measures taller
-      // than what's visible once the browser's address bar is on screen.
-      minHeight:'100dvh', display:'flex', alignItems:'center', justifyContent:'center',
+      // Locked to exactly one viewport, not minHeight — the user wants this
+      // screen frozen in place (no scroll, no drift) rather than merely
+      // "usually fits." 100dvh (not 100vh) matches the actually-visible
+      // area on mobile, where 100vh alone measures taller than what's
+      // visible once the browser's address bar is on screen. overflow:
+      // hidden backs this up so nothing (rubber-band bounce, a stray
+      // scrollbar) can move the page even by a few px.
+      height:'100dvh', display:'flex', alignItems:'center', justifyContent:'center',
       // Flat single color, not a top-to-bottom gradient — the photo panel
       // below fades to this exact color at its own bottom edge, and a
       // gradient's color shifts with total page height, so on a tall
