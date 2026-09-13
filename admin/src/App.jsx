@@ -4131,48 +4131,6 @@ function Dashboard({ onLogout, session, officerRole }) {
                   </div>
                 </div>
               </div>
-
-              {/* Bottom Table: Latest Submissions */}
-              <div className="card">
-                <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'16px'}}>
-                  <h3 style={{fontSize:'16px', fontWeight:800, color:'#0F172A', display:'flex', alignItems:'center', gap:'8px'}}>
-                    <Icon d={I.submit} size={18} color="#7F1D1D"/> Latest Submissions
-                  </h3>
-                  <button className="btn-ghost" style={{fontSize:'12px', padding:'4px 10px'}} onClick={() => setActiveTab('MILK')}>View all →</button>
-                </div>
-                <div className="table-responsive">
-                  <table className="data-table">
-                    <thead>
-                      <tr>
-                        <th>#</th>
-                        <th>Entity Name</th>
-                        <th>Type</th>
-                        <th>Submitted By</th>
-                        <th>Date & Time</th>
-                        <th>Status</th>
-                        <th>Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {recentActivities.slice(0, 5).map((act, idx) => (
-                        <tr key={act.id || idx}>
-                          <td>{idx + 1}</td>
-                          <td><strong>{act.row.center_name || act.row.society_name || 'Society Unit'}</strong></td>
-                          <td><span className={`badge ${act.isMpcs ? 'badge-green' : 'badge-gold'}`}>{act.isMpcs ? 'MPCS Report' : 'Milk Report'}</span></td>
-                          <td>{resolveSubmitter(act.row)}</td>
-                          <td>{act.timeStr ? new Date(act.timeStr).toLocaleString() : 'Recent'}</td>
-                          <td><span className="badge badge-green">Verified</span></td>
-                          <td>
-                            <button className="btn-ghost" style={{padding:'4px 10px', fontSize:'11px'}} onClick={() => act.isMpcs ? setMpcsSelected(act.row) : setMilkSelected(act.row)}>
-                              👁 View
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
             </div>
           )}
 
