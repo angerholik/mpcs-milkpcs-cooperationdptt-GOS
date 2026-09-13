@@ -3774,7 +3774,7 @@ function Dashboard({ onLogout, session, officerRole }) {
             scopedOfficers, scopedMpcsRows, scopedMilkRows, recentActivities,
             chartData_MilkMonth, chartData_District, milkYtdTotal, milkAvgMonthly,
             milkGrowthPct, milkMonthsWithData, yearFilter, setYearFilter,
-            getMpcsAuditAgm, getMilkAuditAgm,
+            getMpcsAuditAgm, getMilkAuditAgm, setMpcsSelected, setMilkSelected,
           }}
           mpcsRegistry={{
             scopedMpcsRows, mpcsFiltered, mpcsStats, mpcsPaged, mpcsPage, mpcsPageSize,

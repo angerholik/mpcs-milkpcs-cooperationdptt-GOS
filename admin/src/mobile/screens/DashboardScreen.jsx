@@ -42,6 +42,7 @@ export default function DashboardScreen({
   userRole, session, scopedOfficers, scopedMpcsRows, scopedMilkRows, recentActivities,
   chartData_MilkMonth, chartData_District, milkYtdTotal, milkAvgMonthly, milkGrowthPct, milkMonthsWithData,
   yearFilter, setYearFilter, getMpcsAuditAgm, getMilkAuditAgm, onOpenRecords,
+  setMpcsSelected, setMilkSelected,
 }) {
   const [broadcastText, setBroadcastText] = useState('');
   const [broadcastSending, setBroadcastSending] = useState(false);
@@ -277,7 +278,12 @@ export default function DashboardScreen({
         </div>
         <div style={{ marginTop: 14, display: 'flex', flexDirection: 'column', gap: 11 }}>
           {recentActivities.slice(0, activityCount).map((a) => (
-            <div key={a.id} style={{ display: 'flex', gap: 12, background: COLOR.inset, borderRadius: 14, padding: 14 }}>
+            <button
+              key={a.id}
+              type="button"
+              onClick={() => (a.isMpcs ? setMpcsSelected(a.row) : setMilkSelected(a.row))}
+              style={{ display: 'flex', gap: 12, background: COLOR.inset, border: 'none', borderRadius: 14, padding: 14, textAlign: 'left', width: '100%' }}
+            >
               <div style={{ width: 40, height: 40, borderRadius: 12, background: a.badgeBg, display: 'flex', alignItems: 'center', justifyContent: 'center', flex: '0 0 auto' }}>
                 <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke={a.iconColor} strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round"><path d={a.icon} /></svg>
               </div>
@@ -289,7 +295,10 @@ export default function DashboardScreen({
                   <span style={{ fontSize: 11, color: COLOR.mutedLight }}>{a.timeStr ? new Date(a.timeStr).toLocaleDateString('en-IN') : '—'}</span>
                 </div>
               </div>
-            </div>
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', justifyContent: 'flex-end', flex: '0 0 auto' }}>
+                <span style={{ fontSize: 10.5, fontWeight: 600, color: COLOR.blue, whiteSpace: 'nowrap' }}>View →</span>
+              </div>
+            </button>
           ))}
         </div>
         {recentActivities.length > activityCount && (
