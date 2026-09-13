@@ -3577,6 +3577,10 @@ function Dashboard({ onLogout, session, officerRole }) {
     return null;
   };
 
+  // Regional Engagement (members vs units by district) removed per request
+  // — not needed for now. Only Monthly Performance (litres volume trend)
+  // remains; chartData_District stays computed above since STATS/Benchmarks
+  // still has its own independent district breakdown.
   const DashboardCharts = () => (
     <div style={{display:'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '24px', marginBottom: '32px'}}>
       <div className="card" style={{height:'340px', padding: '24px'}}>
@@ -3600,24 +3604,6 @@ function Dashboard({ onLogout, session, officerRole }) {
             <Tooltip content={<CustomTooltip />} />
             <Area type="monotone" dataKey="litres" name="Litres Collected" stroke="#7F1D1D" strokeWidth={3} fillOpacity={1} fill="url(#colorLitre)" animationDuration={1500} />
           </AreaChart>
-        </ResponsiveContainer>
-      </div>
-      <div className="card" style={{height:'340px', padding: '24px'}}>
-        <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'20px'}}>
-          <h3 style={{fontSize:'14px', fontWeight: 800, color: 'var(--text-primary)', display: 'flex', alignItems:'center', gap: '8px'}}>
-            <Icon d={I.domain} size={16} color="var(--emerald-light)"/> Regional Engagement
-          </h3>
-          <span style={{fontSize:'10px', color:'var(--text-muted)', fontWeight:700, textTransform:'uppercase', letterSpacing:'1px'}}>Members vs Units</span>
-        </div>
-        <ResponsiveContainer width="100%" height="80%">
-          <BarChart data={chartData_District} layout="vertical" margin={{left: 10}}>
-            <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} stroke="rgba(127,29,29,0.05)" />
-            <XAxis type="number" hide />
-            <YAxis dataKey="name" type="category" fontSize={10} fontWeight={700} width={90} tickLine={false} axisLine={false} tick={{fill: 'var(--text-secondary)'}} />
-            <Tooltip content={<CustomTooltip />} cursor={{fill: 'rgba(127,29,29,0.02)'}} />
-            <Bar dataKey="members" name="Live Members" fill="#7F1D1D" radius={[0, 10, 10, 0]} barSize={14} animationDuration={1200} />
-            <Bar dataKey="centers" name="Active Centers" fill="#92400E" radius={[0, 10, 10, 0]} barSize={10} animationDuration={1800} />
-          </BarChart>
         </ResponsiveContainer>
       </div>
     </div>
@@ -3802,7 +3788,7 @@ function Dashboard({ onLogout, session, officerRole }) {
           onOpenNotifications={() => setShowNotificationsDrawer(true)}
           dashboard={{
             scopedOfficers, scopedMpcsRows, scopedMilkRows, recentActivities,
-            chartData_MpcsProfit, chartData_ComplianceAudit,
+            chartData_MpcsProfit, chartData_ComplianceAudit, chartData_MpcsRegional,
             getMpcsAuditAgm, getMilkAuditAgm, setMpcsSelected, setMilkSelected,
           }}
           mpcsRegistry={{
@@ -4060,17 +4046,15 @@ function Dashboard({ onLogout, session, officerRole }) {
                 <TabBtn id="OFFICERS" label="Official Registry" icon={I.members} count={scopedOfficers.length}/>
               </div>
 
-              {/* Dual Analytics Chart Row — previously both cards here were
+              {/* Analytics Row — previously both cards here were
                   Milk-PCS-only (litres collected, members vs milk units),
                   leaving MPCS — the district's actual primary focus — with
-                  no analytics on the page admins land on first. Now shows
-                  the same Economic Sustainability + Compliance Audit cards
-                  used on the MPCS tab (Compliance Audit itself covers both
-                  MPCS societies and Milk units, not MPCS alone). */}
-              <div className="analytics-grid">
-                <EconomicSustainabilityCard />
-                <ComplianceAuditCard />
-              </div>
+                  no analytics on the page admins land on first. Reuses
+                  MpcsCharts wholesale (Economic Sustainability + Compliance
+                  Audit + Financial Authority Index — Compliance Audit
+                  itself covers both MPCS societies and Milk units, not MPCS
+                  alone) instead of assembling the same cards a second time. */}
+              <MpcsCharts />
 
               {/* Two-Column Operational Grid */}
               <div className="operational-grid">
@@ -4529,11 +4513,22 @@ function Dashboard({ onLogout, session, officerRole }) {
                     </div>
                  </div>
                  <div style={{display:'flex', gap: '8px', flexWrap:'wrap'}}>
+                    <button className="btn-ghost" onClick={()=>setShowCharts(!showCharts)} style={{padding: '8px 14px', fontSize: '12px', height:'38px'}}>
+                      {showCharts ? 'Hide Analytics' : 'Show Analytics'}
+                    </button>
                     <button className="btn-primary" onClick={()=>downloadCSV(scopedMilkRows, 'Milk_PCS_Submissions')} style={{padding: '8px 14px', fontSize: '12px', height:'38px', display: 'flex', alignItems:'center', gap:'6px'}}>
                       <Icon d={I.download} size={14} color="#fff"/> Export CSV
                     </button>
                  </div>
               </div>
+
+              {/* Monthly Performance (litres trend) — built as part of
+                  DashboardCharts but never actually rendered anywhere until
+                  now; Milk had no dedicated analytics view of its own,
+                  mirroring MPCS's own toggleable analytics on its tab.
+                  (DashboardCharts originally paired this with a "Regional
+                  Engagement" members-vs-units chart, removed per request.) */}
+              {showCharts && <DashboardCharts />}
 
               {/* 5-Column Equal KPI Grid */}
               <div className="kpi-grid" style={{marginBottom:'24px'}}>
@@ -5002,16 +4997,15 @@ function Dashboard({ onLogout, session, officerRole }) {
                   </div>
                </div>
                <div style={{display:'flex', gap: '8px', flexWrap:'wrap'}}>
-                  <button className="btn-ghost" onClick={()=>setShowCharts(!showCharts)} style={{padding: '8px 14px', fontSize: '12px', height:'38px'}}>
-                    {showCharts ? 'Hide Analytics' : 'Show Analytics'}
-                  </button>
                   <button className="btn-primary" onClick={()=>downloadCSV(scopedMpcsRows, 'MPCS_Returns')} style={{padding: '8px 14px', fontSize: '12px', height:'38px', display: 'flex', alignItems:'center', gap:'6px'}}>
                     <Icon d={I.download} size={14} color="#fff"/> Export CSV
                   </button>
                </div>
             </div>
 
-            {showCharts && <MpcsCharts />}
+            {/* Economic Sustainability / Compliance Audit / Financial
+                Authority Index moved to the Dashboard (its own tab) —
+                showing them here too was redundant. */}
 
             {/* 5-Column Equal Grid */}
             <div className="kpi-grid" style={{marginBottom:'24px'}}>

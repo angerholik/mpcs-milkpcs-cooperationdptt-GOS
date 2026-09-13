@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { COLOR, FONT } from '../tokens';
 import { iconEl } from '../icons';
 import Card from '../components/Card';
+import { fmtRs } from '../format';
 import { supabase } from '../../supabase';
 
 const PROFIT_COLOR = { Profitable: COLOR.green, 'Loss Making': COLOR.maroon, 'Break-even': COLOR.amber };
@@ -43,7 +44,7 @@ function isThisMonth(d) {
 
 export default function DashboardScreen({
   userRole, session, scopedOfficers, scopedMpcsRows, scopedMilkRows, recentActivities,
-  chartData_MpcsProfit, chartData_ComplianceAudit,
+  chartData_MpcsProfit, chartData_ComplianceAudit, chartData_MpcsRegional,
   getMpcsAuditAgm, getMilkAuditAgm, onOpenRecords,
   setMpcsSelected, setMilkSelected,
 }) {
@@ -225,6 +226,31 @@ export default function DashboardScreen({
           View detailed benchmarks
           {iconEl('arrowRight', COLOR.maroon, 14, 2.1)}
         </button>
+      </Card>
+
+      <Card>
+        <div style={{ fontFamily: FONT.heading, fontSize: 17, fontWeight: 600, color: COLOR.ink900 }}>Financial Authority Index</div>
+        <div style={{ fontSize: 13, color: COLOR.muted, marginTop: 3 }}>Turnover & balance by society</div>
+        {chartData_MpcsRegional.every((d) => d.turnover === 0 && d.balance === 0) ? (
+          <div style={{ padding: '24px 0', textAlign: 'center', color: COLOR.mutedLight, fontSize: 12.5 }}>No turnover or balance recorded yet.</div>
+        ) : (
+          <div style={{ marginTop: 16, display: 'flex', flexDirection: 'column', gap: 14 }}>
+            {chartData_MpcsRegional.slice(0, 5).map((d) => {
+              const max = Math.max(1, ...chartData_MpcsRegional.map((x) => x.turnover));
+              return (
+                <div key={d.name}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 8 }}>
+                    <span style={{ fontSize: 13, fontWeight: 500, color: COLOR.ink800, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{d.name}</span>
+                    <span style={{ fontFamily: FONT.heading, fontSize: 13, fontWeight: 600, color: COLOR.green, flex: '0 0 auto' }}>{fmtRs(d.turnover)}</span>
+                  </div>
+                  <div style={{ marginTop: 6, height: 8, borderRadius: 999, background: COLOR.barTrack, overflow: 'hidden' }}>
+                    <div style={{ width: `${(d.turnover / max) * 100}%`, height: '100%', borderRadius: 999, background: COLOR.green }} />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </Card>
 
       <Card>
