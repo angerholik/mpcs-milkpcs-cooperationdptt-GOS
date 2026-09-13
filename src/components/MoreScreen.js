@@ -59,7 +59,13 @@ const ROLE_LABELS = {
 // login works here too — no separate account. Only a CI (never ACI/PA) can
 // actually get past the admin dashboard's own canAccessDashboard gate, so
 // the link is hidden rather than shown as a dead end for other roles.
-const ADMIN_DASHBOARD_URL = 'https://admin-ten-rho-87.vercel.app/';
+//
+// ?relogin=1 tells the admin dashboard to sign out any session already
+// cached in that browser before showing itself — without it, a CI tapping
+// this on a shared/device browser that still has another officer's admin
+// session saved would land straight in THAT officer's dashboard instead of
+// a login screen.
+const ADMIN_DASHBOARD_URL = 'https://admin-ten-rho-87.vercel.app/?relogin=1';
 
 export default function MoreScreen({
   activeTab = 'more',

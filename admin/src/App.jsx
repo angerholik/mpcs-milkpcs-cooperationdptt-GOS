@@ -6138,11 +6138,33 @@ export default function App() {
   );
   const [passwordRecoveryActive, setPasswordRecoveryActive] = useState(passwordRecoveryRef.current);
 
+  // The field app's "Open Admin Dashboard" link (MoreScreen.js) opens this
+  // URL with ?relogin=1 attached. Without this, a CI tapping that link on a
+  // shared/device browser that still has another officer's session cached
+  // (most commonly whoever last used it as System Admin) would land straight
+  // in THAT officer's dashboard instead of a login screen — the link is
+  // meant to switch accounts, not resume whatever was signed in before.
+  const forceReloginRef = useRef(
+    typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('relogin') === '1'
+  );
+
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setLoading(false);
-    });
+    if (forceReloginRef.current) {
+      // Strip the param immediately so a later refresh of this same tab
+      // doesn't keep forcing a fresh login for whoever signs in next.
+      const url = new URL(window.location.href);
+      url.searchParams.delete('relogin');
+      window.history.replaceState({}, '', url.toString());
+      // signOut() fires its own SIGNED_OUT event through onAuthStateChange
+      // below (registered right after this call), which is what actually
+      // clears `session` — no separate setSession(null) needed here.
+      supabase.auth.signOut().finally(() => setLoading(false));
+    } else {
+      supabase.auth.getSession().then(({ data: { session } }) => {
+        setSession(session);
+        setLoading(false);
+      });
+    }
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'PASSWORD_RECOVERY') {
