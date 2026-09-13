@@ -547,6 +547,14 @@ function LoginPage() {
   const [pw, setPw]         = useState('');
   const [err, setErr]       = useState('');
   const [loading, setLoading] = useState(false);
+  // At full desktop sizing (76px emblem, 32-34px headings, 52px inputs) the
+  // combined branding block + card comfortably exceeds 700px tall — taller
+  // than the actually-visible height on most phones once the browser's own
+  // chrome (address bar, etc.) is accounted for, which forced the whole page
+  // to scroll instead of presenting as one static screen. `isMobile` drives
+  // a compact sizing pass below so the login screen fits in one viewport on
+  // a phone without touching the desktop layout at all.
+  const isMobile = useIsMobileViewport();
 
   // Forgot-password mode: the dashboard previously had no path to recover a
   // forgotten password at all — no link, no form, nothing.
@@ -604,14 +612,19 @@ function LoginPage() {
 
   return (
     <div style={{
-      minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center',
+      // minHeight (not height) so content can still grow the page on the
+      // rare device where even the compact sizing below doesn't fit, rather
+      // than clipping the sign-in button — but 100dvh matches the
+      // actually-visible area on mobile, where 100vh alone measures taller
+      // than what's visible once the browser's address bar is on screen.
+      minHeight:'100dvh', display:'flex', alignItems:'center', justifyContent:'center',
       // Flat single color, not a top-to-bottom gradient — the photo panel
       // below fades to this exact color at its own bottom edge, and a
       // gradient's color shifts with total page height, so on a tall
       // (desktop) viewport the two didn't line up and left a visible seam
       // where the fixed-height photo panel ended.
       background: C.maroonDark,
-      padding:'20px', position:'relative', overflow:'hidden',
+      padding: isMobile ? '16px' : '20px', position:'relative', overflow:'hidden',
     }}>
       {/* Kanchenjunga photo behind the header, duotone-treated and faded
           into the flat background — matches the mobile Sign In screen.
@@ -651,16 +664,16 @@ function LoginPage() {
 
       <div className="fade-in" style={{ width:'100%', maxWidth:'420px', position:'relative', zIndex:1 }}>
         {/* Branding header — floats directly on the photo, no card box */}
-        <div style={{textAlign:'center', marginBottom:'24px'}}>
+        <div style={{textAlign:'center', marginBottom: isMobile ? '14px' : '24px'}}>
           <img src={sikkimEmblem} alt="Sikkim Emblem" style={{
-            width:'76px', height:'76px', objectFit:'contain', marginBottom:'12px',
+            width: isMobile ? '52px' : '76px', height: isMobile ? '52px' : '76px', objectFit:'contain', marginBottom: isMobile ? '8px' : '12px',
             filter:'brightness(0) invert(1) drop-shadow(0 1px 3px rgba(0,0,0,0.4))', opacity:0.6,
           }}/>
-          <h1 style={{fontFamily:'Cinzel,serif',fontSize:'34px',color:'#fff',letterSpacing:'5px',fontWeight:900,margin:'0 0 6px'}}>
+          <h1 style={{fontFamily:'Cinzel,serif',fontSize: isMobile ? '26px' : '34px',color:'#fff',letterSpacing:'5px',fontWeight:900,margin:'0 0 6px'}}>
             CORE</h1>
-          <p style={{fontSize:'13px',color:'rgba(255,255,255,0.95)',margin:'0 0 10px',fontWeight:500}}>
+          <p style={{fontSize:'13px',color:'rgba(255,255,255,0.95)',margin: isMobile ? '0 0 6px' : '0 0 10px',fontWeight:500}}>
             Cooperative Oversight & Reporting Engine</p>
-          <div style={{width:'150px',height:'1px',background:C.gold,opacity:0.8,margin:'0 auto 10px'}}/>
+          <div style={{width:'150px',height:'1px',background:C.gold,opacity:0.8,margin: isMobile ? '0 auto 6px' : '0 auto 10px'}}/>
           <p style={{fontSize:'15px',color:C.gold,fontWeight:700,margin:0}}>
             Department of Cooperation</p>
           <p style={{fontSize:'13px',color:'rgba(255,255,255,0.85)',margin:'2px 0 0'}}>
@@ -669,7 +682,7 @@ function LoginPage() {
 
         <div style={{
           background:'#FFFFFF', borderRadius:'28px',
-          boxShadow:'0 20px 50px rgba(0,0,0,0.35)', padding:'32px 28px 28px',
+          boxShadow:'0 20px 50px rgba(0,0,0,0.35)', padding: isMobile ? '20px 22px 18px' : '32px 28px 28px',
         }}>
           {mode === 'forgot' ? (
             <form onSubmit={handleForgotSubmit}>
@@ -711,12 +724,12 @@ function LoginPage() {
             </form>
           ) : (
           <form onSubmit={handleSubmit}>
-            <h2 style={{fontFamily:'Inter,-apple-system,sans-serif',fontSize:'24px',fontWeight:800,color:C.darkNavy,textAlign:'center',margin:'0 0 6px'}}>
+            <h2 style={{fontFamily:'Inter,-apple-system,sans-serif',fontSize: isMobile ? '20px' : '24px',fontWeight:800,color:C.darkNavy,textAlign:'center',margin:'0 0 6px'}}>
               Welcome back</h2>
-            <div style={{marginBottom:'22px',fontSize:'13.5px',color:C.mutedBlue,textAlign:'center'}}>
+            <div style={{marginBottom: isMobile ? '14px' : '22px',fontSize:'13.5px',color:C.mutedBlue,textAlign:'center'}}>
               Official Gatekeeper Portal. Authorised personnel only.</div>
 
-            <div className="field-group" style={{marginBottom:'16px'}}>
+            <div className="field-group" style={{marginBottom: isMobile ? '10px' : '16px'}}>
               <label className="field-label" style={{color:C.darkNavy}}>Officer Email</label>
               <div style={{position:'relative'}}>
                 <div style={{position:'absolute',left:'14px',top:'50%',transform:'translateY(-50%)',color:C.burgundy,opacity:0.75}}>
@@ -725,11 +738,11 @@ function LoginPage() {
                 <input type="email" className="field-input"
                   placeholder="officer@sikkim.gov.in" value={email}
                   onChange={e=>{setEmail(e.target.value);setErr('');}}
-                  style={{fontSize:'14px', fontWeight:500, paddingLeft:'42px', paddingRight:'14px', height:'52px', borderRadius:'14px', background:C.slate50, border:`1.5px solid ${C.slate200}`, color:C.darkNavy, boxShadow:'inset 0 1px 2px rgba(15,23,42,0.04)'}}/>
+                  style={{fontSize:'14px', fontWeight:500, paddingLeft:'42px', paddingRight:'14px', height: isMobile ? '46px' : '52px', borderRadius:'14px', background:C.slate50, border:`1.5px solid ${C.slate200}`, color:C.darkNavy, boxShadow:'inset 0 1px 2px rgba(15,23,42,0.04)'}}/>
               </div>
             </div>
 
-            <div className="field-group" style={{marginBottom:'12px'}}>
+            <div className="field-group" style={{marginBottom: isMobile ? '8px' : '12px'}}>
               <label className="field-label" style={{color:C.darkNavy}}>Access Key</label>
               <div style={{position:'relative'}}>
                 <div style={{position:'absolute',left:'14px',top:'50%',transform:'translateY(-50%)',color:C.burgundy,opacity:0.75}}>
@@ -738,18 +751,18 @@ function LoginPage() {
                 <input id="admin-password" type="password" className="field-input"
                   placeholder="••••••••" value={pw}
                   onChange={e=>{setPw(e.target.value);setErr('');}}
-                  style={{fontSize:'15px',letterSpacing:'2px', fontWeight:500, paddingLeft:'42px', paddingRight:'14px', height:'52px', borderRadius:'14px', background:C.slate50, border:`1.5px solid ${C.slate200}`, color:C.darkNavy, boxShadow:'inset 0 1px 2px rgba(15,23,42,0.04)'}}/>
+                  style={{fontSize:'15px',letterSpacing:'2px', fontWeight:500, paddingLeft:'42px', paddingRight:'14px', height: isMobile ? '46px' : '52px', borderRadius:'14px', background:C.slate50, border:`1.5px solid ${C.slate200}`, color:C.darkNavy, boxShadow:'inset 0 1px 2px rgba(15,23,42,0.04)'}}/>
               </div>
               {err && <div style={{fontSize:'12px',color:'#EF4444',marginTop:'8px',background:'#FEF2F2',padding:'8px',borderRadius:'8px',border:'1px solid #FECACA'}}>⚠️ {err}</div>}
             </div>
 
             <button type="button" onClick={()=>{setMode('forgot');setErr('');}}
-              style={{background:'none',border:'none',cursor:'pointer',display:'block',marginLeft:'auto',marginBottom:'20px',fontSize:'13.5px',fontWeight:600,color:C.burgundy}}>
+              style={{background:'none',border:'none',cursor:'pointer',display:'block',marginLeft:'auto',marginBottom: isMobile ? '12px' : '20px',fontSize:'13.5px',fontWeight:600,color:C.burgundy}}>
               Forgot password?
             </button>
 
             <button id="login-submit" type="submit" disabled={loading} style={{
-              width:'100%', padding:'16px', fontSize:'15px', fontWeight:800, color:'#fff',
+              width:'100%', padding: isMobile ? '13px' : '16px', fontSize:'15px', fontWeight:800, color:'#fff',
               border:'none', borderRadius:'20px', cursor:'pointer',
               background:`linear-gradient(135deg, #8B111C, #650810)`,
               display:'flex', alignItems:'center', justifyContent:'center', gap:'8px',
@@ -759,7 +772,7 @@ function LoginPage() {
               {loading ? 'Verifying...' : 'Access Dashboard →'}
             </button>
 
-            <p style={{fontSize:'11px',color:'#9CA3AF',textAlign:'center',marginTop:'20px'}}>
+            <p style={{fontSize:'11px',color:'#9CA3AF',textAlign:'center',marginTop: isMobile ? '12px' : '20px'}}>
               FOR OFFICIAL USE ONLY • UNAUTHORIZED ACCESS PROHIBITED • v2.0.4-beta</p>
           </form>
           )}
