@@ -2,17 +2,19 @@ import { COLOR, FONT } from '../tokens';
 import { iconEl } from '../icons';
 
 // Same 9-item list as the desktop sidebar (App.jsx's "MAIN OPERATIONS"
-// group), plus Settings gated the same way (System-Admin-only). Items
-// beyond phase 1 (Dashboard + MPCS Societies) are present but disabled —
-// they route nowhere yet until their screens are built in a later pass.
+// group), plus Settings gated the same way (System-Admin-only). All items
+// are tappable — Benchmarks, Official Registry, and Settings weren't part
+// of the original 7-screen design handoff (no mobile layout was ever
+// designed for them), so they route to MobileApp's "Not built yet" fallback
+// instead of being greyed out.
 const ITEMS = [
   { id: 'DASHBOARD', label: 'Dashboard', icon: 'grid', enabled: true },
   { id: 'MPCS', label: 'MPCS Societies', icon: 'home', enabled: true },
   { id: 'MILK', label: 'Milk Units', icon: 'drop', enabled: true },
   { id: 'MEMBERS', label: 'Member Registry', icon: 'person', enabled: true },
   { id: 'LOAN_BENEFICIARIES', label: 'Loan Beneficiaries', icon: 'rupee', enabled: true },
-  { id: 'STATS', label: 'Benchmarks', icon: 'bars', enabled: false },
-  { id: 'OFFICERS', label: 'Official Registry', icon: 'users', enabled: false },
+  { id: 'STATS', label: 'Benchmarks', icon: 'bars', enabled: true },
+  { id: 'OFFICERS', label: 'Official Registry', icon: 'users', enabled: true },
   { id: 'REPORTS', label: 'Reports', icon: 'download', enabled: true },
   { id: 'USERS', label: 'Users & Roles', icon: 'person', enabled: true },
 ];
@@ -20,7 +22,7 @@ const ITEMS = [
 export default function NavDrawer({ open, onClose, userRole, onSelect, onLogout }) {
   if (!open) return null;
   const items = userRole === 'System Admin'
-    ? [...ITEMS, { id: 'SETTINGS', label: 'Settings', icon: 'moreVertical', enabled: false }]
+    ? [...ITEMS, { id: 'SETTINGS', label: 'Settings', icon: 'moreVertical', enabled: true }]
     : ITEMS;
 
   return (
