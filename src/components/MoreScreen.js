@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Pressable, ScrollView, Image, Platform } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Pressable, ScrollView, Image, Platform, Linking } from 'react-native';
 import { MaterialIcons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { webCapWidth } from '../utils/webStyles';
@@ -55,6 +55,12 @@ const ROLE_LABELS = {
   PA: 'Project Assistant',
 };
 
+// Same Supabase auth backend as the field app, so a CI's existing officer
+// login works here too — no separate account. Only a CI (never ACI/PA) can
+// actually get past the admin dashboard's own canAccessDashboard gate, so
+// the link is hidden rather than shown as a dead end for other roles.
+const ADMIN_DASHBOARD_URL = 'https://admin-ten-rho-87.vercel.app/';
+
 export default function MoreScreen({
   activeTab = 'more',
   onTabPress,
@@ -102,6 +108,18 @@ export default function MoreScreen({
       color: '#0284c7',
       bgColor: '#f0f9ff',
     },
+    // Admin dashboard is a separate web app (same Supabase project), so this
+    // opens it in the device browser rather than navigating in-app — only a
+    // CI can actually sign into it (canAccessDashboard on the admin side),
+    // so ACI/PA never see a link that would just dead-end for them.
+    ...(role === 'CI' ? [{
+      id: 'ADMIN_DASHBOARD',
+      label: 'Open Admin Dashboard',
+      sub: 'District oversight & reporting, in your browser',
+      icon: 'open-in-new',
+      color: '#7a1a1f',
+      bgColor: '#fdf1f1',
+    }] : []),
   ];
 
   const initials = displayName
@@ -176,6 +194,8 @@ export default function MoreScreen({
               onPress={() => {
                 if (opt.id === 'BULLETINS') {
                   if (onOpenBulletins) onOpenBulletins();
+                } else if (opt.id === 'ADMIN_DASHBOARD') {
+                  Linking.openURL(ADMIN_DASHBOARD_URL);
                 } else if (onNavigateScreen) {
                   onNavigateScreen(opt.id);
                 }
