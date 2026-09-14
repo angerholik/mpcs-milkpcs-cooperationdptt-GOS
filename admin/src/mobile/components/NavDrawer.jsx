@@ -1,6 +1,6 @@
 import { COLOR, FONT } from '../tokens';
 import { iconEl } from '../icons';
-import rhododendron from '../../rhododendron.jpg';
+import drawerIllustration from '../nav-drawer-illustration.jpg';
 
 // Same 9-item list as the desktop sidebar (App.jsx's "MAIN OPERATIONS"
 // group), plus Settings gated the same way (System-Admin-only). All items
@@ -29,22 +29,41 @@ export default function NavDrawer({ open, onClose, userRole, onSelect, onLogout 
   return (
     <>
       <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 39, background: 'rgba(42,35,34,.35)' }} />
-      <div style={{ position: 'fixed', top: 0, left: 0, bottom: 0, width: 280, zIndex: 40, background: COLOR.surface, overflow: 'hidden', boxShadow: '4px 0 24px rgba(74,20,20,.18)' }}>
-        {/* Rhododendron, faded into the surface from the bottom corner — a
-            quiet echo of the login page's floral artwork rather than a loud
-            photo panel, since the drawer sits on a plain white surface.
-            Fixed in this outer layer (not the scrollable one below) so it
-            reads as the drawer's own backdrop instead of scrolling with
-            the nav items. */}
-        <img src={rhododendron} alt="" style={{
-          position: 'absolute', bottom: -30, left: -55, width: 250, height: 250, borderRadius: '50%',
-          objectFit: 'cover', opacity: 0.22, filter: 'grayscale(0.2) contrast(1.05) saturate(1.15)', pointerEvents: 'none',
+      <div style={{ position: 'fixed', top: 0, left: 0, bottom: 0, width: 280, zIndex: 40, background: '#FCFBF8', overflow: 'hidden', boxShadow: '4px 0 24px rgba(74,20,20,.18)' }}>
+        {/* The supplied Himalayan mountain + rhododendron illustration as
+            the drawer's own backdrop — one continuous piece of artwork,
+            not composited from photos. Sized to cover and anchored to the
+            bottom so the mountains and florals sit low in the panel (per
+            the reference), with a soft ivory gradient over it so the nav
+            list always reads clean regardless of what's behind it. Fixed
+            in this outer layer (not the scrollable one below) so it reads
+            as the drawer's own backdrop instead of scrolling with the nav
+            items. */}
+        <div style={{
+          position: 'absolute', inset: 0, pointerEvents: 'none',
+          backgroundImage: `url(${drawerIllustration})`,
+          backgroundPosition: 'center bottom',
+          backgroundSize: 'cover',
+          backgroundRepeat: 'no-repeat',
+          opacity: 0.8,
         }}/>
-        <div style={{ position: 'absolute', top: 90, right: -70, width: 200, height: 200, borderRadius: '50%', background: COLOR.watermark1, pointerEvents: 'none' }} />
+        <div style={{
+          position: 'absolute', inset: 0, pointerEvents: 'none',
+          background: 'linear-gradient(180deg, rgba(252,251,248,.95) 0%, rgba(252,251,248,.78) 42%, rgba(252,251,248,.55) 68%, rgba(252,251,248,.72) 100%)',
+        }}/>
+        <div style={{ position: 'absolute', bottom: 150, right: 20, textAlign: 'right', pointerEvents: 'none' }}>
+          <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: '.14em', color: COLOR.mutedLight, lineHeight: 1.7 }}>
+            PEOPLE<br/>PROGRESS<br/>PROSPERITY
+          </div>
+          <div style={{ width: 26, height: 1.5, borderRadius: 1, background: COLOR.maroon, opacity: 0.5, marginLeft: 'auto', marginTop: 6 }}/>
+        </div>
 
         <div style={{ position: 'relative', zIndex: 1, height: '100%', overflowY: 'auto', padding: '18px 14px' }}>
           <div style={{ fontFamily: FONT.heading, fontWeight: 700, fontSize: 15, letterSpacing: '.15em', color: COLOR.maroon, padding: '6px 10px 0' }}>CORE</div>
-          <div style={{ width: 34, height: 2, borderRadius: 1, background: `linear-gradient(90deg, ${COLOR.amberDot}, transparent)`, margin: '8px 10px 16px' }}/>
+          <div style={{ width: 34, height: 2, borderRadius: 1, background: `linear-gradient(90deg, ${COLOR.amberDot}, transparent)`, margin: '8px 10px 8px' }}/>
+          <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: '.12em', color: COLOR.mutedLight, lineHeight: 1.6, padding: '0 10px 16px' }}>
+            FOR A STRONGER<br/>COOPERATIVE SIKKIM
+          </div>
           {items.map((it) => (
             <button
               key={it.id}
