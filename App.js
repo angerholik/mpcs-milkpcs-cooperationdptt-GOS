@@ -433,6 +433,24 @@ export default function App() {
   );
   const [passwordRecoveryActive, setPasswordRecoveryActive] = useState(passwordRecoveryRef.current);
 
+  // Hands off from public/index.html's static boot splash to the real UI
+  // once we're actually ready to show it — not the moment the RN app
+  // mounts (that would just swap the splash for the bare loading spinners
+  // below), but once fonts are loaded and the auth check has resolved.
+  // Keeps the whole boot sequence as one continuous branded screen instead
+  // of splash → blank spinner → content. Web only — native iOS/Android
+  // builds never render public/index.html at all.
+  useEffect(() => {
+    if (Platform.OS !== 'web' || typeof document === 'undefined') return;
+    const ready = (fontsLoaded || fontError) && !authLoading;
+    if (!ready) return;
+    const el = document.getElementById('boot-splash');
+    if (!el) return;
+    el.classList.add('boot-splash-hide');
+    const timer = setTimeout(() => el.remove(), 400);
+    return () => clearTimeout(timer);
+  }, [fontsLoaded, fontError, authLoading]);
+
   // Sync & Network State
   const [isSyncing, setIsSyncing] = useState(false);
   const [pendingSyncCount, setPendingSyncCount] = useState(0);

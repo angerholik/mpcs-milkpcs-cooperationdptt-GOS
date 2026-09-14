@@ -530,6 +530,7 @@ const I = {
   key:     'M21 2l-2 2m-7.61 7.61a5.5 5.5 0 11-7.778 7.778 5.5 5.5 0 017.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3L15.5 7.5z',
   map:     'M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0zM12 11a4 4 0 100-8 4 4 0 000 8z',
   chevronsLeft: 'M11 17l-5-5 5-5M18 17l-5-5 5-5',
+  chevronDown: 'M6 9l6 6 6-6',
   alert:   'M18 8a6 6 0 00-12 0c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 01-3.46 0',
   shield:  'M12 2l8 4v6c0 5-3.5 9-8 10-4.5-1-8-5-8-10V6l8-4z',
   hourglass: 'M6 2h12M6 22h12M8 2c0 5 4 6 4 10s-4 5-4 10M16 2c0 5-4 6-4 10s4 5 4 10',
@@ -1745,6 +1746,7 @@ function MPCSDetailModal({ row, onClose }) {
 function GlobalBroadcast({ activeTab, userRole }) {
   const [msg, setMsg] = useState('');
   const [sending, setSending] = useState(false);
+  const [open, setOpen] = useState(false);
 
   // District-wide broadcast is a System Admin action — a scoped CI login
   // shouldn't be able to message every field officer in the district.
@@ -1778,7 +1780,7 @@ function GlobalBroadcast({ activeTab, userRole }) {
   return (
     <div className="card fade-in" style={{
       marginBottom: '16px',
-      padding: '14px 16px',
+      padding: open ? '14px 16px' : '10px 16px',
       background: 'rgba(255, 255, 255, 0.4)',
       border: '1px solid var(--border-hard)',
       position: 'relative',
@@ -1789,7 +1791,13 @@ function GlobalBroadcast({ activeTab, userRole }) {
         background:'linear-gradient(to bottom, var(--emerald-light), var(--gold))'
       }} />
 
-      <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'10px'}}>
+      {/* Collapsed by default — this was running full-width at all times
+          for something used occasionally. Clicking the header toggles the
+          payload row below. */}
+      <div
+        onClick={() => setOpen(v => !v)}
+        style={{display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom: open ? '10px' : 0, cursor:'pointer'}}
+      >
         <div style={{display:'flex', alignItems:'center', gap:'10px'}}>
           <div style={{
             width:'26px', height:'26px', borderRadius:'8px',
@@ -1802,55 +1810,64 @@ function GlobalBroadcast({ activeTab, userRole }) {
             <h4 style={{fontSize:'11px', fontWeight:900, color:'var(--emerald)', textTransform:'uppercase', letterSpacing:'1.2px'}}>
               Emergency Comm Terminal
             </h4>
-            <p style={{fontSize:'9px', color:'var(--text-muted)', fontWeight:600}}>
-              Push encrypted notifications to all active field officers
-            </p>
+            {open && (
+              <p style={{fontSize:'9px', color:'var(--text-muted)', fontWeight:600}}>
+                Push encrypted notifications to all active field officers
+              </p>
+            )}
           </div>
         </div>
-        <div className="badge badge-gold" style={{fontSize:'8px'}}>ENCRYPTED CHANNEL</div>
+        <div style={{display:'flex', alignItems:'center', gap:'10px'}}>
+          <div className="badge badge-gold" style={{fontSize:'8px'}}>ENCRYPTED CHANNEL</div>
+          <span style={{display:'flex', transform: open ? 'rotate(180deg)' : 'none', transition:'transform 0.15s ease'}}>
+            <Icon d={I.chevronDown} size={14} color="#64748B" sw={2}/>
+          </span>
+        </div>
       </div>
 
-      <div style={{display:'flex', gap:'10px', alignItems:'flex-end'}}>
-        <div className="field-group" style={{flex:1, marginBottom: 0}}>
-          <label className="field-label" style={{fontSize:'8px'}}>Broadcast Payload</label>
-          <input
-             className="field-input"
-             placeholder="Synchronize directive with all stations (e.g. Audit Window Closing)..."
-             value={msg}
-             onChange={e=>setMsg(e.target.value)}
-             style={{
-               background:'rgba(255,255,255,0.7)',
-               borderColor:'var(--border-hard)',
-               fontSize: '12px',
-               fontWeight: 600,
-               padding: '8px 12px',
-               height: '34px'
-             }}
-          />
+      {open && (
+        <div style={{display:'flex', gap:'10px', alignItems:'flex-end'}}>
+          <div className="field-group" style={{flex:1, marginBottom: 0}}>
+            <label className="field-label" style={{fontSize:'8px'}}>Broadcast Payload</label>
+            <input
+               className="field-input"
+               placeholder="Synchronize directive with all stations (e.g. Audit Window Closing)..."
+               value={msg}
+               onChange={e=>setMsg(e.target.value)}
+               style={{
+                 background:'rgba(255,255,255,0.7)',
+                 borderColor:'var(--border-hard)',
+                 fontSize: '12px',
+                 fontWeight: 600,
+                 padding: '8px 12px',
+                 height: '34px'
+               }}
+            />
+          </div>
+          <button
+            className="btn-primary"
+            onClick={handleSend}
+            disabled={sending || !msg.trim()}
+            style={{
+              height: '34px',
+              padding: '0 16px',
+              display:'flex',
+              alignItems:'center',
+              gap:'8px',
+              opacity: !msg.trim() ? 0.6 : 1
+            }}
+          >
+            {sending ? (
+              <div className="spinner" style={{width:'13px', height:'13px', borderWidth:'2px', borderTopColor:'#fff'}}/>
+            ) : (
+              <Icon d={I.submit} size={13} color="#fff" />
+            )}
+            <span style={{fontWeight:800, textTransform:'uppercase', fontSize:'10px', letterSpacing:'0.8px'}}>
+              {sending ? 'TRANSMITTING...' : 'INITIATE BROADCAST'}
+            </span>
+          </button>
         </div>
-        <button
-          className="btn-primary"
-          onClick={handleSend}
-          disabled={sending || !msg.trim()}
-          style={{
-            height: '34px',
-            padding: '0 16px',
-            display:'flex',
-            alignItems:'center',
-            gap:'8px',
-            opacity: !msg.trim() ? 0.6 : 1
-          }}
-        >
-          {sending ? (
-            <div className="spinner" style={{width:'13px', height:'13px', borderWidth:'2px', borderTopColor:'#fff'}}/>
-          ) : (
-            <Icon d={I.submit} size={13} color="#fff" />
-          )}
-          <span style={{fontWeight:800, textTransform:'uppercase', fontSize:'10px', letterSpacing:'0.8px'}}>
-            {sending ? 'TRANSMITTING...' : 'INITIATE BROADCAST'}
-          </span>
-        </button>
-      </div>
+      )}
     </div>
   );
 }
@@ -3750,24 +3767,29 @@ function Dashboard({ onLogout, session, officerRole }) {
 
 
 
-  const TabBtn = ({id, label, icon, count}) => (
-    <button onClick={()=>setActiveTab(id)} style={{
-      display:'flex',alignItems:'center',gap:'8px',padding:'8px 16px',
-      borderRadius:'8px',fontWeight:700,fontSize:'13px',cursor:'pointer',
-      transition:'all 0.15s ease',
-      background: activeTab===id ? 'var(--brand-burgundy)' : '#FFFFFF',
-      color: activeTab===id ? '#FFF' : '#475569',
-      border: activeTab===id ? '1px solid var(--brand-burgundy)' : '1px solid #CBD5E1',
-    }}>
-      <Icon d={icon} size={15} color={activeTab===id ? '#FFF' : '#64748B'} sw={2}/>
-      <span>{label}</span>
-      {count !== undefined && (
-        <span style={{padding:'2px 6px',borderRadius:'99px',fontSize:'10px',fontWeight:800,
-          background:activeTab===id?'rgba(255,255,255,0.2)':'#F1F5F9',
-          color:activeTab===id?'#FFF':'#64748B'}}>{count}</span>
-      )}
-    </button>
-  );
+  const TabBtn = ({id, label, icon, count}) => {
+    const isActive = activeTab === id;
+    return (
+      <button onClick={()=>setActiveTab(id)} className="kpi-card" style={{
+        textAlign:'left', cursor:'pointer',
+        borderColor: isActive ? 'var(--brand-burgundy)' : '#E2E8F0',
+        background: isActive ? '#FEF2F2' : '#FFFFFF',
+        boxShadow: isActive ? '0 0 0 2px rgba(127,29,29,0.15)' : 'var(--shadow-subtle)',
+        borderLeft: `4px solid ${isActive ? 'var(--brand-burgundy)' : '#CBD5E1'}`,
+        padding:'14px 16px', borderRadius:'6px', transition:'all 0.15s ease',
+      }}>
+        <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:'8px'}}>
+          <span style={{fontSize:'10px',fontWeight:800,letterSpacing:'0.5px',textTransform:'uppercase',color: isActive ? 'var(--brand-burgundy)' : '#64748B'}}>{label}</span>
+          <div style={{background: isActive ? '#FEE2E2' : '#F1F5F9', width:'30px',height:'30px',borderRadius:'6px',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
+            <Icon d={icon} size={15} color={isActive ? 'var(--brand-burgundy)' : '#64748B'} sw={2}/>
+          </div>
+        </div>
+        {count !== undefined && (
+          <div style={{fontSize:'22px',fontWeight:800,color: isActive ? 'var(--brand-burgundy)' : '#0F172A', lineHeight:1.1}}>{count}</div>
+        )}
+      </button>
+    );
+  };
 
   // Below ~900px, replace the whole desktop tree with the purpose-built
   // mobile UI (see design_handoff_core_mobile) instead of squeezing this
@@ -3897,10 +3919,10 @@ function Dashboard({ onLogout, session, officerRole }) {
           </div>
           <div style={{minWidth:0}}>
             <div className="app-header-title" style={{fontFamily:'Cinzel, serif', fontSize:'15px', fontWeight:900, color:'#FFFFFF', letterSpacing:'0.8px', lineHeight:1.1, whiteSpace:'nowrap'}}>
-              GYALSHING DISTRICT CORE
+              CORE ADMIN DASHBOARD
             </div>
             <div className="hide-mobile" style={{fontSize:'10px', color:'rgba(255,255,255,0.85)', letterSpacing:'0.4px', fontWeight:600, marginTop:'3px'}}>
-              District Co-operative Oversight & Reporting Engine • Government of Sikkim
+              Co-operative Oversight & Reporting Engine • Cooperation Department
             </div>
           </div>
         </div>
@@ -4040,8 +4062,11 @@ function Dashboard({ onLogout, session, officerRole }) {
           {/* 🏠 DASHBOARD MAIN OVERVIEW */}
           {activeTab === 'DASHBOARD' && (
             <div className="fade-in">
-              {/* Module Filter Tab Pill Bar */}
-              <div style={{display:'flex', gap:'8px', marginBottom:'24px'}}>
+              {/* Module Filter Tiles — upgraded from plain text pills to
+                  proper KPI-card tiles (matches the StatCard visual
+                  language used elsewhere) so the registry counts are
+                  actually visible at a glance, not easy-to-miss text. */}
+              <div className="kpi-grid" style={{gridTemplateColumns:'repeat(4, 1fr)', marginBottom:'24px'}}>
                 <TabBtn id="MPCS" label="MPCS Societies" icon={I.domain} count={scopedMpcsRows.length}/>
                 <TabBtn id="MILK" label="Milk Units" icon={I.litres} count={scopedMilkRows.length}/>
                 <TabBtn id="STATS" label="Benchmarks" icon={I.chart} count={new Set([...scopedMilkRows, ...scopedMpcsRows].map(r=>r.district||r.registration_authority).filter(Boolean)).size}/>
@@ -5609,16 +5634,9 @@ function SupportModal({ onClose }) {
         </div>
         <div className="modal-body" style={{padding:'24px', fontSize:'13px', display:'flex', flexDirection:'column', gap:'12px'}}>
           <div style={{padding:'14px', background:'#F8FAFC', borderRadius:'10px', border:'1px solid #E2E8F0'}}>
-            <strong>🏢 ARCS Office Geyzing</strong>
-            <p style={{color:'#64748B', marginTop:'2px'}}>Phone: +91 3595 250123</p>
-          </div>
-          <div style={{padding:'14px', background:'#F8FAFC', borderRadius:'10px', border:'1px solid #E2E8F0'}}>
-            <strong>📢 Emergency Broadcast Desk</strong>
-            <p style={{color:'#64748B', marginTop:'2px'}}>Hotline: +91 94340 12345</p>
-          </div>
-          <div style={{padding:'14px', background:'#F8FAFC', borderRadius:'10px', border:'1px solid #E2E8F0'}}>
             <strong>💻 Technical Support Team</strong>
-            <p style={{color:'#64748B', marginTop:'2px'}}>Email: support@sikkim.gov.in</p>
+            <p style={{color:'#64748B', marginTop:'2px'}}>Email: angerholik@gmail.com</p>
+            <p style={{color:'#64748B', marginTop:'2px'}}>Phone: +91 75858 94742</p>
           </div>
         </div>
       </div>
@@ -6115,6 +6133,22 @@ export default function App() {
       .then(({ data }) => { if (!cancelled) setOfficerRole(data?.role || null); });
     return () => { cancelled = true; };
   }, [session?.user?.email]);
+
+  // Hands off from index.html's static boot splash to the real UI once
+  // we're actually ready to show it — not the moment React mounts (that
+  // would just swap the splash for the bare loading spinners below), but
+  // once the session/role check has resolved and LoginPage/AccessDenied/
+  // Dashboard is about to render. Keeps the whole boot sequence as one
+  // continuous branded screen instead of splash → blank spinner → content.
+  useEffect(() => {
+    const ready = !loading && !passwordRecoveryActive && (!session || officerRole !== undefined);
+    if (!ready) return;
+    const el = document.getElementById('boot-splash');
+    if (!el) return;
+    el.classList.add('boot-splash-hide');
+    const timer = setTimeout(() => el.remove(), 400);
+    return () => clearTimeout(timer);
+  }, [loading, session, officerRole, passwordRecoveryActive]);
 
   const handleLogout = () => supabase.auth.signOut();
 
