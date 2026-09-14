@@ -3914,9 +3914,10 @@ function Dashboard({ onLogout, session, officerRole }) {
             <Icon d={I.menu} size={20} color="#FFFFFF"/>
           </button>
 
-          <div style={{width:'36px', height:'36px', background:'rgba(255,255,255,0.15)', borderRadius:'8px', padding:'5px', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0}}>
-            <img src={sikkimEmblem} alt="Sikkim Crest" style={{maxHeight:'100%', maxWidth:'100%', objectFit:'contain'}}/>
-          </div>
+          <img src={sikkimEmblem} alt="Sikkim Crest" style={{
+            width:'36px', height:'36px', objectFit:'contain', flexShrink:0,
+            filter:'brightness(0) invert(1) drop-shadow(0 1px 3px rgba(0,0,0,0.4))', opacity:0.85,
+          }}/>
           <div style={{minWidth:0}}>
             <div className="app-header-title" style={{fontFamily:'Cinzel, serif', fontSize:'15px', fontWeight:900, color:'#FFFFFF', letterSpacing:'0.8px', lineHeight:1.1, whiteSpace:'nowrap'}}>
               CORE ADMIN DASHBOARD
