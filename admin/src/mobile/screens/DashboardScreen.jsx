@@ -51,6 +51,7 @@ export default function DashboardScreen({
   const [broadcastText, setBroadcastText] = useState('');
   const [broadcastSending, setBroadcastSending] = useState(false);
   const [broadcastSent, setBroadcastSent] = useState(false);
+  const [broadcastOpen, setBroadcastOpen] = useState(false);
   const [activityCount, setActivityCount] = useState(4);
 
   const isAdmin = userRole === 'System Admin';
@@ -137,32 +138,51 @@ export default function DashboardScreen({
       </Card>
 
       {isAdmin && (
-        <div style={{ background: COLOR.broadcastCard, borderRadius: 16, padding: '16px 18px 18px' }}>
-          <div style={{ fontSize: 9.5, fontWeight: 700, letterSpacing: '.13em', color: 'rgba(255,255,255,.62)' }}>EMERGENCY COMM TERMINAL</div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 13, marginTop: 12 }}>
-            <div style={{ width: 46, height: 46, borderRadius: 13, background: 'rgba(255,255,255,.13)', display: 'flex', alignItems: 'center', justifyContent: 'center', flex: '0 0 auto' }}>
-              {iconEl('send', '#FFFFFF', 21, 1.6)}
-            </div>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontFamily: FONT.heading, fontSize: 16, fontWeight: 600, color: '#FFFFFF', lineHeight: 1.25 }}>Broadcast a directive</div>
-              <div style={{ fontSize: 12, color: 'rgba(255,255,255,.68)', marginTop: 4, lineHeight: 1.4 }}>Encrypted push to all active field officers.</div>
-            </div>
-          </div>
-          <input
-            value={broadcastText}
-            onChange={(e) => setBroadcastText(e.target.value)}
-            placeholder={broadcastSent ? 'Directive sent.' : 'Synchronize directive with all stations…'}
-            style={{ marginTop: 15, width: '100%', boxSizing: 'border-box', border: '1px solid rgba(255,255,255,.2)', borderRadius: 12, padding: '13px 14px', fontSize: 13, color: '#FFFFFF', background: 'rgba(255,255,255,.08)', outline: 'none' }}
-          />
+        <div style={{ background: COLOR.broadcastCard, borderRadius: 16, padding: broadcastOpen ? '16px 18px 18px' : '14px 16px' }}>
+          {/* Collapsed by default — a compact bar rather than the full
+              composer, since it was dominating the top of the dashboard
+              for something used occasionally. Tapping it expands in place. */}
           <button
             type="button"
-            onClick={sendBroadcast}
-            disabled={!broadcastText.trim() || broadcastSending}
-            style={{ marginTop: 10, width: '100%', border: 'none', borderRadius: 12, background: '#FFFFFF', color: COLOR.maroon, fontFamily: FONT.heading, fontSize: 13.5, fontWeight: 600, padding: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, opacity: broadcastText.trim() ? 1 : 0.6 }}
+            onClick={() => setBroadcastOpen((v) => !v)}
+            style={{ width: '100%', background: 'none', border: 'none', padding: 0, display: 'flex', alignItems: 'center', gap: 13, textAlign: 'left', cursor: 'pointer' }}
           >
-            {broadcastSending ? 'Sending…' : 'Initiate broadcast'}
-            {iconEl('arrowRight', COLOR.maroon, 15, 2.1)}
+            <div style={{ width: broadcastOpen ? 46 : 36, height: broadcastOpen ? 46 : 36, borderRadius: broadcastOpen ? 13 : 10, background: 'rgba(255,255,255,.13)', display: 'flex', alignItems: 'center', justifyContent: 'center', flex: '0 0 auto', transition: 'width .15s ease, height .15s ease' }}>
+              {iconEl('send', '#FFFFFF', broadcastOpen ? 21 : 16, 1.6)}
+            </div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              {broadcastOpen && (
+                <div style={{ fontSize: 9.5, fontWeight: 700, letterSpacing: '.13em', color: 'rgba(255,255,255,.62)' }}>EMERGENCY COMM TERMINAL</div>
+              )}
+              <div style={{ fontFamily: FONT.heading, fontSize: broadcastOpen ? 16 : 14, fontWeight: 600, color: '#FFFFFF', lineHeight: 1.25, marginTop: broadcastOpen ? 4 : 0 }}>Broadcast a directive</div>
+              {broadcastOpen && (
+                <div style={{ fontSize: 12, color: 'rgba(255,255,255,.68)', marginTop: 4, lineHeight: 1.4 }}>Encrypted push to all active field officers.</div>
+              )}
+            </div>
+            <div style={{ flex: '0 0 auto', transform: broadcastOpen ? 'rotate(180deg)' : 'none', transition: 'transform .15s ease' }}>
+              {iconEl('down', 'rgba(255,255,255,.6)', 16, 2.2)}
+            </div>
           </button>
+
+          {broadcastOpen && (
+            <>
+              <input
+                value={broadcastText}
+                onChange={(e) => setBroadcastText(e.target.value)}
+                placeholder={broadcastSent ? 'Directive sent.' : 'Synchronize directive with all stations…'}
+                style={{ marginTop: 15, width: '100%', boxSizing: 'border-box', border: '1px solid rgba(255,255,255,.2)', borderRadius: 12, padding: '13px 14px', fontSize: 13, color: '#FFFFFF', background: 'rgba(255,255,255,.08)', outline: 'none' }}
+              />
+              <button
+                type="button"
+                onClick={sendBroadcast}
+                disabled={!broadcastText.trim() || broadcastSending}
+                style={{ marginTop: 10, width: '100%', border: 'none', borderRadius: 12, background: '#FFFFFF', color: COLOR.maroon, fontFamily: FONT.heading, fontSize: 13.5, fontWeight: 600, padding: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, opacity: broadcastText.trim() ? 1 : 0.6 }}
+              >
+                {broadcastSending ? 'Sending…' : 'Initiate broadcast'}
+                {iconEl('arrowRight', COLOR.maroon, 15, 2.1)}
+              </button>
+            </>
+          )}
         </div>
       )}
 
