@@ -3792,14 +3792,14 @@ function Dashboard({ onLogout, session, officerRole }) {
             getMpcsAuditAgm, getMilkAuditAgm, setMpcsSelected, setMilkSelected,
           }}
           mpcsRegistry={{
-            scopedMpcsRows, mpcsFiltered, mpcsStats, mpcsPaged, mpcsPage, mpcsPageSize,
+            scopedMpcsRows, mpcsFiltered, mpcsStats, mpcsBreakdowns, mpcsPaged, mpcsPage, mpcsPageSize,
             mpcsTotalPages, mpcsPageClamped, setMpcsPage, searchQ, setSearchQ,
             filterMpcsAuditStatus, setFilterMpcsAuditStatus, filterMpcsProfitStatus, setFilterMpcsProfitStatus,
             filterMpcsAuditGrade, setFilterMpcsAuditGrade, activeFilter, setActiveFilter,
             downloadCSV, onView: setMpcsSelected, getMpcsAuditAgm,
           }}
           milkRegistry={{
-            assignedUnits, scopedMilkRows, milkFiltered, milkStats, milkPaged, milkPage, milkPageSize,
+            assignedUnits, scopedMilkRows, milkFiltered, milkStats, milkBreakdowns, milkPaged, milkPage, milkPageSize,
             milkTotalPages, milkPageClamped, setMilkPage, searchQ, setSearchQ,
             filterMonth, setFilterMonth, filterCenter, setFilterCenter, centerOptions,
             activeFilter, setActiveFilter, downloadCSV, onView: setMilkSelected, getMilkAuditAgm, resolveSubmitter,

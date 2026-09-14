@@ -9,7 +9,7 @@ import PaginationCard from '../components/PaginationCard';
 import { fmtRs } from '../format';
 
 export default function MpcsRegistryScreen({
-  scopedMpcsRows, mpcsFiltered, mpcsStats, mpcsPaged, mpcsPage, mpcsPageSize, mpcsTotalPages, mpcsPageClamped,
+  scopedMpcsRows, mpcsFiltered, mpcsStats, mpcsBreakdowns, mpcsPaged, mpcsPage, mpcsPageSize, mpcsTotalPages, mpcsPageClamped,
   setMpcsPage, searchQ, setSearchQ,
   filterMpcsAuditStatus, setFilterMpcsAuditStatus, filterMpcsProfitStatus, setFilterMpcsProfitStatus,
   filterMpcsAuditGrade, setFilterMpcsAuditGrade, activeFilter, setActiveFilter,
@@ -37,19 +37,28 @@ export default function MpcsRegistryScreen({
 
       <KpiRail
         items={[
-          { label: 'TOTAL TURNOVER', value: fmtRs(mpcsStats.turnover), icon: 'rupee', tint: COLOR.roseTint, ink: COLOR.maroon },
-          { label: 'TOTAL MEMBERS', value: mpcsStats.members, icon: 'users', tint: COLOR.amberTint, ink: COLOR.amber },
+          {
+            label: 'TOTAL TURNOVER', value: fmtRs(mpcsStats.turnover), icon: 'rupee', tint: COLOR.roseTint, ink: COLOR.maroon,
+            breakdown: mpcsBreakdowns.turnover, entityLabel: 'MPCS', entityNoun: 'society', entityNounPlural: 'societies',
+          },
+          {
+            label: 'TOTAL MEMBERS', value: mpcsStats.members, icon: 'users', tint: COLOR.amberTint, ink: COLOR.amber,
+            breakdown: mpcsBreakdowns.members, entityLabel: 'MPCS', entityNoun: 'society', entityNounPlural: 'societies',
+          },
           {
             label: 'ACTIVE LOANS', value: mpcsStats.loans, icon: 'briefcase', tint: COLOR.roseTint, ink: COLOR.maroon,
             selected: activeFilter === 'loan', onClick: () => setActiveFilter(activeFilter === 'loan' ? null : 'loan'),
+            breakdown: mpcsBreakdowns.loans, entityLabel: 'MPCS', entityNoun: 'society', entityNounPlural: 'societies',
           },
           {
             label: 'AUDITS DONE', value: mpcsStats.audits, icon: 'refresh', tint: COLOR.roseTint, ink: COLOR.maroon,
             selected: activeFilter === 'audit', onClick: () => setActiveFilter(activeFilter === 'audit' ? null : 'audit'),
+            breakdown: mpcsBreakdowns.audits, entityLabel: 'MPCS', entityNoun: 'society', entityNounPlural: 'societies',
           },
           {
             label: 'ACTIVE PROFITS', value: mpcsStats.profits, icon: 'doc', tint: COLOR.amberTint, ink: COLOR.amber,
             selected: activeFilter === 'profit', onClick: () => setActiveFilter(activeFilter === 'profit' ? null : 'profit'),
+            breakdown: mpcsBreakdowns.profits, entityLabel: 'MPCS', entityNoun: 'society', entityNounPlural: 'societies',
           },
         ]}
       />

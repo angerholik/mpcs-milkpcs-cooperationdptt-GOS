@@ -36,7 +36,7 @@ function IdentityCard({ userRole, fullName, assignedUnits }) {
 }
 
 export default function MilkRegistryScreen({
-  userRole, session, assignedUnits, scopedMilkRows, milkFiltered, milkStats,
+  userRole, session, assignedUnits, scopedMilkRows, milkFiltered, milkStats, milkBreakdowns,
   milkPaged, milkPage, milkPageSize, milkTotalPages, milkPageClamped, setMilkPage,
   searchQ, setSearchQ, filterMonth, setFilterMonth, filterCenter, setFilterCenter,
   centerOptions, activeFilter, setActiveFilter, downloadCSV, onView, getMilkAuditAgm, resolveSubmitter,
@@ -65,13 +65,26 @@ export default function MilkRegistryScreen({
 
       <KpiRail
         items={[
-          { label: 'TOTAL LITRES', value: fmtL(milkStats.litres), icon: 'drop', tint: COLOR.roseTint, ink: COLOR.maroon },
-          { label: 'TOTAL WITHDRAWAL', value: fmtRs(milkStats.withdrawal), icon: 'rupee', tint: COLOR.amberTint, ink: COLOR.amber },
-          { label: 'AGGREGATE BALANCE', value: fmtRs(milkStats.balance), icon: 'rupee', tint: COLOR.greenTint, ink: COLOR.green },
-          { label: 'TOTAL MEMBERS', value: milkStats.members, icon: 'users', tint: COLOR.blueTint, ink: COLOR.blue },
+          {
+            label: 'TOTAL LITRES', value: fmtL(milkStats.litres), icon: 'drop', tint: COLOR.roseTint, ink: COLOR.maroon,
+            breakdown: milkBreakdowns.litres, entityLabel: 'Center', entityNoun: 'center', entityNounPlural: 'centers',
+          },
+          {
+            label: 'TOTAL WITHDRAWAL', value: fmtRs(milkStats.withdrawal), icon: 'rupee', tint: COLOR.amberTint, ink: COLOR.amber,
+            breakdown: milkBreakdowns.withdrawal, entityLabel: 'Center', entityNoun: 'center', entityNounPlural: 'centers',
+          },
+          {
+            label: 'AGGREGATE BALANCE', value: fmtRs(milkStats.balance), icon: 'rupee', tint: COLOR.greenTint, ink: COLOR.green,
+            breakdown: milkBreakdowns.balance, entityLabel: 'Center', entityNoun: 'center', entityNounPlural: 'centers',
+          },
+          {
+            label: 'TOTAL MEMBERS', value: milkStats.members, icon: 'users', tint: COLOR.blueTint, ink: COLOR.blue,
+            breakdown: milkBreakdowns.members, entityLabel: 'Center', entityNoun: 'center', entityNounPlural: 'centers',
+          },
           {
             label: 'ACTIVE LOANS', value: milkStats.loans, icon: 'briefcase', tint: COLOR.roseTint, ink: COLOR.maroon,
             selected: activeFilter === 'loan', onClick: () => setActiveFilter(activeFilter === 'loan' ? null : 'loan'),
+            breakdown: milkBreakdowns.loans, entityLabel: 'Center', entityNoun: 'center', entityNounPlural: 'centers',
           },
         ]}
       />
