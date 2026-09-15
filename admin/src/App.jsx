@@ -5739,7 +5739,10 @@ function AssignAciModal({ mpcsRows, milkRows = [], officers, hierarchyMapping, i
 // scoped to. This is what actually drives their view when they log in —
 // see the userRole/assignedUnits derivation in Dashboard.
 function AssignScopeModal({ officer, mpcsRows, onClose, onSave }) {
-  const [selected, setSelected] = useState(officer?.assigned_units || []);
+  // Frozen at mount, deliberately separate from `selected` below — used at
+  // save time to work out what the admin actually touched (see handleSubmit).
+  const initialUnitsRef = useRef(officer?.assigned_units || []);
+  const [selected, setSelected] = useState(initialUnitsRef.current);
   const [loading, setLoading] = useState(false);
 
   const availableUnits = Array.from(new Set(mpcsRows.map(s => s.society_name).filter(Boolean)));
@@ -5751,8 +5754,33 @@ function AssignScopeModal({ officer, mpcsRows, onClose, onSave }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-    await onSave(officer.id, selected);
-    setLoading(false);
+    try {
+      // This modal's checkbox state is a snapshot from when it opened —
+      // saving used to just overwrite assigned_units with that snapshot
+      // wholesale. If the officer's real assigned_units changed underneath
+      // it while it was open (most commonly: a CI self-registering a new
+      // institution, which now auto-assigns it to themselves), that save
+      // would silently erase the addition, since it never existed in this
+      // modal's view. Re-fetch the current value and diff against what the
+      // admin actually checked/unchecked, instead of trusting the stale
+      // snapshot as the final answer.
+      const { data: freshRow } = await supabase
+        .from('officer_registry')
+        .select('assigned_units')
+        .eq('id', officer.id)
+        .maybeSingle();
+      const fresh = freshRow?.assigned_units || [];
+      const initial = initialUnitsRef.current;
+      const explicitlyRemoved = initial.filter(u => !selected.includes(u));
+      const explicitlyAdded = selected.filter(u => !initial.includes(u));
+      const finalUnits = Array.from(new Set([
+        ...fresh.filter(u => !explicitlyRemoved.includes(u)),
+        ...explicitlyAdded,
+      ]));
+      await onSave(officer.id, finalUnits);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
