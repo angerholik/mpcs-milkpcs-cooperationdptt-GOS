@@ -2,12 +2,45 @@ import { COLOR, FONT } from '../tokens';
 import { iconEl } from '../icons';
 
 // Shared "page header" pattern used by screens 2-7 in the handoff: eyebrow,
-// title + count pill, subtitle, and 1-2 full-width action buttons.
+// title + count pill, subtitle, and a compact action (Export CSV etc.).
+// Actions used to render as full-width buttons — disproportionate for an
+// occasional action like exporting, and it out-weighted the actual content
+// below. Now a compact pill in the title row, matching how the desktop
+// version treats the same button.
 export default function PageHeader({ eyebrow, title, countLabel, subtitle, actions }) {
   return (
     <div>
-      <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '.14em', color: COLOR.green }}>
-        {eyebrow}
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
+        <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '.14em', color: COLOR.green }}>
+          {eyebrow}
+        </div>
+        {actions && (
+          <div style={{ display: 'flex', gap: 8, flex: '0 0 auto' }}>
+            {actions.map((a, i) => (
+              <button
+                key={i}
+                type="button"
+                onClick={a.onClick}
+                style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                  background: a.primary ? COLOR.maroon : COLOR.surface,
+                  border: a.primary ? 'none' : `1px solid ${COLOR.border}`,
+                  color: a.primary ? '#FFFFFF' : COLOR.ink800,
+                  borderRadius: 10,
+                  padding: '8px 13px',
+                  fontFamily: FONT.heading,
+                  fontWeight: 600,
+                  fontSize: 12,
+                  minHeight: 34,
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                {a.icon && iconEl(a.icon, a.primary ? '#FFFFFF' : COLOR.ink800, 14)}
+                {a.label}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 8, flexWrap: 'wrap' }}>
         <span style={{ fontFamily: FONT.heading, fontSize: 24, fontWeight: 600, color: COLOR.ink900, letterSpacing: '-.015em' }}>
@@ -20,33 +53,6 @@ export default function PageHeader({ eyebrow, title, countLabel, subtitle, actio
         )}
       </div>
       {subtitle && <div style={{ fontSize: 13, color: COLOR.muted, marginTop: 7 }}>{subtitle}</div>}
-      {actions && (
-        <div style={{ display: 'flex', gap: 10, marginTop: 14 }}>
-          {actions.map((a, i) => (
-            <button
-              key={i}
-              type="button"
-              onClick={a.onClick}
-              style={{
-                flex: 1,
-                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-                background: a.primary ? COLOR.maroon : COLOR.surface,
-                border: a.primary ? 'none' : `1px solid ${COLOR.border}`,
-                color: a.primary ? '#FFFFFF' : COLOR.ink800,
-                borderRadius: 12,
-                padding: 13,
-                fontFamily: FONT.heading,
-                fontWeight: 600,
-                fontSize: 13,
-                minHeight: 44,
-              }}
-            >
-              {a.icon && iconEl(a.icon, a.primary ? '#FFFFFF' : COLOR.ink800, 16)}
-              {a.label}
-            </button>
-          ))}
-        </div>
-      )}
     </div>
   );
 }

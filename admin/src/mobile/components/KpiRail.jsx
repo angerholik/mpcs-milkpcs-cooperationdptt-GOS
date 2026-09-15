@@ -1,6 +1,9 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { COLOR, FONT, RADIUS, SHADOW } from '../tokens';
 import { iconEl } from '../icons';
+
+const CARD_WIDTH = 146;
+const CARD_GAP = 12;
 
 // Horizontal-scroller KPI cards (screens 2-3 in the handoff). `items`:
 // { label, value, icon, tint, ink, selected?, onClick?, breakdown?, entityLabel?, entityNoun?, entityNounPlural? }.
@@ -14,11 +17,38 @@ export default function KpiRail({ items }) {
   const [openIndex, setOpenIndex] = useState(null);
   const open = openIndex !== null ? items[openIndex] : null;
 
+  // Swipe-only scrolling had no visible affordance that there was more to
+  // see — these prev/next buttons mirror that pattern, fading out at
+  // either end rather than always showing both.
+  const railRef = useRef(null);
+  const [atStart, setAtStart] = useState(true);
+  const [atEnd, setAtEnd] = useState(false);
+
+  const updateEdges = () => {
+    const el = railRef.current;
+    if (!el) return;
+    setAtStart(el.scrollLeft <= 2);
+    setAtEnd(el.scrollLeft >= el.scrollWidth - el.clientWidth - 2);
+  };
+
+  useEffect(() => {
+    updateEdges();
+    // items.length changes which entity list is scoped in (e.g. filter
+    // changes the underlying rows) — re-check in case the rail got
+    // shorter than its container and no longer scrolls at all.
+  }, [items.length]);
+
+  const scrollBy = (dir) => {
+    railRef.current?.scrollBy({ left: dir * (CARD_WIDTH + CARD_GAP) * 2, behavior: 'smooth' });
+  };
+
   return (
-    <div>
+    <div style={{ position: 'relative' }}>
       <div
+        ref={railRef}
         className="hide-sb"
-        style={{ display: 'flex', gap: 12, overflowX: 'auto', margin: '0 -16px', padding: '0 16px', scrollbarWidth: 'none' }}
+        onScroll={updateEdges}
+        style={{ display: 'flex', gap: CARD_GAP, overflowX: 'auto', margin: '0 -16px', padding: '0 16px', scrollbarWidth: 'none' }}
       >
         {items.map((it, i) => {
           const Tag = it.onClick ? 'button' : 'div';
@@ -49,7 +79,13 @@ export default function KpiRail({ items }) {
                   {iconEl(openIndex === i ? 'up' : 'down', openIndex === i ? COLOR.maroon : COLOR.mutedLight, 12, 2.2)}
                 </button>
               )}
-              <div style={{ fontSize: 9.5, fontWeight: 700, letterSpacing: '.1em', color: it.selected ? COLOR.maroon : COLOR.mutedLight }}>{it.label}</div>
+              {/* minHeight reserves space for a 2-line label (e.g.
+                  "AGGREGATE BALANCE") so cards with a short 1-line label
+                  don't end up shorter than ones that wrap — without this,
+                  a whole row stretches to its tallest card (flex default),
+                  making one screen's KPI row visibly taller than another's
+                  purely because of label length, not real content. */}
+              <div style={{ fontSize: 9.5, fontWeight: 700, letterSpacing: '.1em', lineHeight: 1.25, minHeight: '2.5em', color: it.selected ? COLOR.maroon : COLOR.mutedLight }}>{it.label}</div>
               <div style={{ width: 30, height: 30, borderRadius: RADIUS.tile30, background: it.tint, display: 'flex', alignItems: 'center', justifyContent: 'center', marginTop: 10 }}>
                 {iconEl(it.icon, it.ink, 16)}
               </div>
@@ -58,6 +94,37 @@ export default function KpiRail({ items }) {
           );
         })}
       </div>
+
+      {!atStart && (
+        <button
+          type="button"
+          aria-label="Scroll left"
+          onClick={() => scrollBy(-1)}
+          style={{
+            position: 'absolute', left: 2, top: '50%', transform: 'translateY(-50%)',
+            width: 34, height: 34, borderRadius: '50%', border: `1px solid ${COLOR.border}`,
+            background: '#EDE8E6', boxShadow: '0 2px 6px rgba(74,20,20,.12)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1,
+          }}
+        >
+          {iconEl('left', COLOR.ink700, 16, 2.3)}
+        </button>
+      )}
+      {!atEnd && (
+        <button
+          type="button"
+          aria-label="Scroll right"
+          onClick={() => scrollBy(1)}
+          style={{
+            position: 'absolute', right: 2, top: '50%', transform: 'translateY(-50%)',
+            width: 34, height: 34, borderRadius: '50%', border: `1px solid ${COLOR.border}`,
+            background: '#EDE8E6', boxShadow: '0 2px 6px rgba(74,20,20,.12)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1,
+          }}
+        >
+          {iconEl('right', COLOR.ink700, 16, 2.3)}
+        </button>
+      )}
 
       {open && (
         <BreakdownPanel item={open} onClose={() => setOpenIndex(null)} />

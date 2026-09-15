@@ -10,38 +10,12 @@ import { fmtL, fmtRs, isYes } from '../format';
 
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 
-function IdentityCard({ userRole, fullName, assignedUnits }) {
-  const isAdmin = userRole === 'System Admin';
-  return (
-    <Card style={{ padding: 15 }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-        <div style={{ width: 38, height: 38, borderRadius: 12, background: isAdmin ? COLOR.greenTint : COLOR.amberTint, display: 'flex', alignItems: 'center', justifyContent: 'center', flex: '0 0 auto' }}>
-          {iconEl(isAdmin ? 'shieldCheck' : 'person', isAdmin ? COLOR.green : COLOR.amber, 18)}
-        </div>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontFamily: FONT.heading, fontSize: 15.5, fontWeight: 600, color: COLOR.ink900 }}>{fullName}</div>
-          <div style={{ fontSize: 12, color: COLOR.muted, marginTop: 2 }}>
-            {isAdmin ? 'System Administrator · All Gyalshing District' : `Cooperative Inspector · ${assignedUnits.length} assigned MPCS units`}
-          </div>
-        </div>
-        <div style={{ textAlign: 'right', flex: '0 0 auto' }}>
-          <div style={{ fontSize: 9.5, fontWeight: 700, letterSpacing: '.1em', color: COLOR.mutedLight }}>SYNC</div>
-          <div style={{ fontFamily: FONT.heading, fontSize: 14, fontWeight: 600, color: COLOR.ink900, marginTop: 2 }}>
-            {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-          </div>
-        </div>
-      </div>
-    </Card>
-  );
-}
-
 export default function MilkRegistryScreen({
-  userRole, session, assignedUnits, scopedMilkRows, milkFiltered, milkStats, milkBreakdowns,
+  scopedMilkRows, milkFiltered, milkStats, milkBreakdowns,
   milkPaged, milkPage, milkPageSize, milkTotalPages, milkPageClamped, setMilkPage,
   searchQ, setSearchQ, filterMonth, setFilterMonth, filterCenter, setFilterCenter,
   centerOptions, activeFilter, setActiveFilter, downloadCSV, onView, getMilkAuditAgm, resolveSubmitter,
 }) {
-  const fullName = session?.user?.user_metadata?.fullName || session?.user?.email || '?';
   const hasActiveFilter = Boolean(searchQ || filterMonth || filterCenter || activeFilter);
 
   const clearAll = () => {
@@ -53,8 +27,9 @@ export default function MilkRegistryScreen({
 
   return (
     <>
-      <IdentityCard userRole={userRole} fullName={fullName} assignedUnits={assignedUnits} />
-
+      {/* Identity card (name/role/jurisdiction) removed — it's already
+          shown once on the Dashboard tab; repeating it here per-screen was
+          redundant. */}
       <PageHeader
         eyebrow="DAIRY COOPERATIVE OPERATIONS"
         title="Milk PCS Units"

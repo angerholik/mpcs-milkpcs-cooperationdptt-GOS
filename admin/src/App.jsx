@@ -3934,7 +3934,7 @@ function Dashboard({ onLogout, session, officerRole }) {
           <div className="hide-mobile" style={{display:'flex', alignItems:'center', gap:'8px', background: userRole==='System Admin' ? 'rgba(16, 185, 129, 0.2)' : 'rgba(245, 158, 11, 0.2)', border: userRole==='System Admin' ? '1px solid rgba(16, 185, 129, 0.4)' : '1px solid rgba(245, 158, 11, 0.4)', padding:'6px 14px', borderRadius:'99px', cursor:'pointer'}} onClick={()=>setShowProfileModal(true)}>
             <span style={{width:'8px', height:'8px', borderRadius:'50%', background: userRole==='System Admin' ? '#10B981' : '#F59E0B', boxShadow: userRole==='System Admin' ? '0 0 10px #10B981' : '0 0 10px #F59E0B'}}/>
             <span style={{fontSize:'11px', fontWeight:700, color:'#FFFFFF', letterSpacing:'0.4px'}}>
-              {userRole==='System Admin' ? '🔓 ADMIN: All Gyalshing District' : `🔒 INSPECTOR: ${assignedUnits.length} Assigned MPCS Units`}
+              {userRole==='System Admin' ? '🔓 ADMIN: All Gyalshing District' : `🔒 INSPECTOR: ${assignedUnits.length} Assigned Unit${assignedUnits.length === 1 ? '' : 's'}`}
             </span>
           </div>
 
