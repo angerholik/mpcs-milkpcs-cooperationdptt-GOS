@@ -2448,7 +2448,25 @@ export default function App() {
                     const updated = [...institutionsList, newInst];
                     setInstitutionsList(updated);
                     saveInstitutionsForUser(updated, session?.user?.email);
-                    
+
+                    // A CI's own registered institutions must land in their
+                    // own officer_registry.assigned_units — that's the same
+                    // field admin's "Assign Scope" writes to, and the only
+                    // thing RLS now checks (is_ci_scoped_institution) for a
+                    // CI's access to mpcs_submissions/milk_pcs_submissions.
+                    // Previously nothing wrote this on registration; a CI's
+                    // own institutions were only reachable through a
+                    // separate created_by RLS bypass, which meant admin
+                    // unassigning a CI never actually revoked access to
+                    // anything that CI had registered themselves. Done
+                    // before the submission insert below so the very next
+                    // .select() on that insert already sees it as scoped.
+                    try {
+                      await supabase.rpc('self_assign_institution', { p_institution_name: newInst.name });
+                    } catch (e) {
+                      console.warn('self_assign_institution failed:', e);
+                    }
+
                     // Persist new institution record to Supabase backend immediately
                     try {
                       if (newInst.type === 'MPCS') {
@@ -2477,32 +2495,12 @@ export default function App() {
 
                     handleSelectSociety(newInst, true);
                   }}
-                  // Only a CI ever owns institutions outright and can delete
-                  // them (RLS enforces this too — this is UI-level defense
-                  // in depth, matching the requirement that ACI/PA never see
-                  // a delete control on institutions assigned to them).
-                  onRemoveInstitution={getUserRole() !== 'CI' ? undefined : async (id) => {
-                    const removedInst = institutionsList.find(i => i.id === id);
-                    const updated = institutionsList.filter(i => i.id !== id);
-                    setInstitutionsList(updated);
-                    saveInstitutionsForUser(updated, session?.user?.email);
-
-                    // Also remove the submitted data from Supabase — an
-                    // institution deleted from the device shouldn't linger
-                    // in the database as an orphaned record that a later
-                    // exact-name match could still surface.
-                    if (removedInst?.name) {
-                      try {
-                        if (removedInst.type === 'MPCS') {
-                          await supabase.from('mpcs_submissions').delete().ilike('society_name', removedInst.name);
-                        } else {
-                          await supabase.from('milk_pcs_submissions').delete().ilike('center_name', removedInst.name);
-                        }
-                      } catch (e) {
-                        console.warn('Failed to delete institution from database:', e);
-                      }
-                    }
-                  }}
+                  // A CI can register an institution but never delete one —
+                  // that's an Admin-only action now (RLS: mpcs/milk
+                  // *_delete_admin_only), including institutions the CI
+                  // registered themselves. Always undefined so the delete
+                  // control never renders for any role.
+                  onRemoveInstitution={undefined}
                   onSelectSociety={(soc) => handleSelectSociety(soc, false)}
                   onProceedToDashboard={() => {
                     if (!selectedSociety && institutionsList.length > 0) {
