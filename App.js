@@ -810,15 +810,39 @@ export default function App() {
       // Gating this on "local list is empty" meant a device that already
       // had ANY institutions cached would never pick up new ones added
       // elsewhere, no matter how many times the user logged back in.
-      const cloudList = await reconstructInstitutionsFromCloud();
-      if (cloudList.length > 0) {
-        const known = new Set(list.map(i => `${i.type}_${(i.name || '').trim().toLowerCase()}`));
-        const additions = cloudList.filter(c => !known.has(`${c.type}_${(c.name || '').trim().toLowerCase()}`));
-        if (additions.length > 0) {
-          list = [...list, ...additions];
-          await AsyncStorage.setItem(key, JSON.stringify(list));
-        }
-      }
+      //
+      // This also now PRUNES the local cache, not just adds to it — RLS on
+      // mpcs_submissions/milk_pcs_submissions is scoped to what this
+      // officer is currently authorized to see (their own
+      // assigned_units, or an ACI/PA delegation), so cloudList is already
+      // exactly "what I should still have access to". Before this, an
+      // institution admin unassigned kept showing here forever: access was
+      // correctly revoked server-side (verified), but nothing ever removed
+      // the stale local entry. The one thing deliberately NOT pruned is an
+      // institution registered while offline (its cloud save never
+      // reached Supabase, so it can never appear in cloudList) — that's
+      // tracked via each entry's `synced` flag, set false only when
+      // onAddInstitution's own cloud write demonstrably failed. Anything
+      // without that flag (every institution cached before this change
+      // shipped) is treated as synced, so existing stale entries still get
+      // cleaned up on the very first load after updating.
+      const cloudList = await reconstructInstitutionsFromCloud().then(
+        (rows) => rows.map((r) => ({ ...r, synced: true }))
+      );
+      const cloudKnown = new Set(cloudList.map((c) => `${c.type}_${(c.name || '').trim().toLowerCase()}`));
+      const localKnown = new Set(list.map((i) => `${i.type}_${(i.name || '').trim().toLowerCase()}`));
+      const additions = cloudList.filter((c) => !localKnown.has(`${c.type}_${(c.name || '').trim().toLowerCase()}`));
+      const kept = list.filter((i) => {
+        const key2 = `${i.type}_${(i.name || '').trim().toLowerCase()}`;
+        return i.synced === false || cloudKnown.has(key2);
+      });
+      const merged = [...kept, ...additions];
+
+      // Unconditional, not length-gated — a prune and an addition could
+      // coincidentally net out to the same length while the actual
+      // contents changed.
+      list = merged;
+      await AsyncStorage.setItem(key, JSON.stringify(list));
 
       setInstitutionsList(list);
       return list;
@@ -2467,10 +2491,18 @@ export default function App() {
                       console.warn('self_assign_institution failed:', e);
                     }
 
-                    // Persist new institution record to Supabase backend immediately
+                    // Persist new institution record to Supabase backend immediately.
+                    // The resulting success/failure is recorded on the local
+                    // entry as `synced` — loadInstitutionsForUser only ever
+                    // prunes a local institution the cloud no longer returns
+                    // when synced !== false, since a failed save here (most
+                    // commonly: registered while offline) means the row never
+                    // reached Supabase in the first place and would otherwise
+                    // look identical to "access revoked" on the next load.
+                    let cloudError = null;
                     try {
                       if (newInst.type === 'MPCS') {
-                        await saveMpcsSubmission({
+                        const res = await saveMpcsSubmission({
                           societyName: newInst.name,
                           registrationNumber: newInst.regNo,
                           gpu: newInst.gpu || newInst.district || '',
@@ -2480,18 +2512,28 @@ export default function App() {
                           totalMembers: 0,
                           annualTurnover: 0
                         });
+                        cloudError = res?.error || null;
                       } else {
-                        await saveMilkPcsSubmission({
+                        const res = await saveMilkPcsSubmission({
                           centerName: newInst.name,
                           centerId: newInst.name,
                           registrationNumber: newInst.regNo,
                           district: newInst.gpu || newInst.district || '',
                           reportedBy: getUserDisplayName() || 'Cooperative Inspector'
                         });
+                        cloudError = res?.error || null;
                       }
                     } catch (e) {
-                      console.warn('Initial cloud registration warning:', e);
+                      cloudError = e;
                     }
+                    if (cloudError) {
+                      console.warn('Initial cloud registration warning:', cloudError);
+                    }
+                    setInstitutionsList((prev) => {
+                      const next = prev.map((i) => (i.id === newInst.id ? { ...i, synced: !cloudError } : i));
+                      saveInstitutionsForUser(next, session?.user?.email);
+                      return next;
+                    });
 
                     handleSelectSociety(newInst, true);
                   }}
