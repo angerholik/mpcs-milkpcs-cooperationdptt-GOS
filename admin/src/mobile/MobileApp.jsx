@@ -33,7 +33,7 @@ export default function MobileApp({ session, userRole, onLogout, onOpenProfile, 
 
   let body;
   if (tab === 'HOME') {
-    body = <DashboardScreen {...dashboard} userRole={userRole} onOpenRecords={(r) => { setTab('RECORDS'); setRecord(r); }} />;
+    body = <DashboardScreen {...dashboard} userRole={userRole} session={session} onOpenRecords={(r) => { setTab('RECORDS'); setRecord(r); }} />;
   } else if (tab === 'RECORDS' && record === 'MPCS') {
     body = <MpcsRegistryScreen {...mpcsRegistry} />;
   } else if (tab === 'RECORDS' && record === 'MILK') {

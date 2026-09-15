@@ -3809,7 +3809,7 @@ function Dashboard({ onLogout, session, officerRole }) {
           onOpenProfile={() => setShowProfileModal(true)}
           onOpenNotifications={() => setShowNotificationsDrawer(true)}
           dashboard={{
-            scopedOfficers, scopedMpcsRows, scopedMilkRows, recentActivities,
+            scopedOfficers, scopedMpcsRows, scopedMilkRows, recentActivities, assignedUnits,
             chartData_MpcsProfit, chartData_ComplianceAudit, chartData_MpcsRegional,
             getMpcsAuditAgm, getMilkAuditAgm, setMpcsSelected, setMilkSelected,
           }}
@@ -3920,10 +3920,12 @@ function Dashboard({ onLogout, session, officerRole }) {
           }}/>
           <div style={{minWidth:0}}>
             <div className="app-header-title" style={{fontFamily:'Cinzel, serif', fontSize:'15px', fontWeight:900, color:'#FFFFFF', letterSpacing:'0.8px', lineHeight:1.1, whiteSpace:'nowrap'}}>
-              CORE ADMIN DASHBOARD
+              {userRole === 'System Admin' ? 'CORE ADMIN DASHBOARD' : 'CORE INSPECTOR DASHBOARD'}
             </div>
             <div className="hide-mobile" style={{fontSize:'10px', color:'rgba(255,255,255,0.85)', letterSpacing:'0.4px', fontWeight:600, marginTop:'3px'}}>
-              Co-operative Oversight & Reporting Engine • Cooperation Department
+              {userRole === 'System Admin'
+                ? 'Co-operative Oversight & Reporting Engine • Cooperation Department'
+                : `Co-operative Oversight & Reporting Engine • ${assignedUnits.length} Assigned Unit${assignedUnits.length === 1 ? '' : 's'}`}
             </div>
           </div>
         </div>

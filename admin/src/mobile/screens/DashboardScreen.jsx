@@ -43,7 +43,7 @@ function isThisMonth(d) {
 }
 
 export default function DashboardScreen({
-  userRole, session, scopedOfficers, scopedMpcsRows, scopedMilkRows, recentActivities,
+  userRole, session, scopedOfficers, scopedMpcsRows, scopedMilkRows, recentActivities, assignedUnits = [],
   chartData_MpcsProfit, chartData_ComplianceAudit, chartData_MpcsRegional,
   getMpcsAuditAgm, getMilkAuditAgm, onOpenRecords,
   setMpcsSelected, setMilkSelected,
@@ -55,7 +55,15 @@ export default function DashboardScreen({
   const [activityCount, setActivityCount] = useState(4);
 
   const isAdmin = userRole === 'System Admin';
-  const districtName = 'Gyalshing District';
+  // A CI is scoped to their own assigned jurisdiction, not the district —
+  // "Gyalshing District" as the headline card would misrepresent that, so
+  // it's their own name instead, with the subline naming their jurisdiction
+  // rather than the blanket department line System Admin gets.
+  const fullName = session?.user?.user_metadata?.fullName || session?.user?.email || 'Inspector';
+  const districtName = isAdmin ? 'Gyalshing District' : fullName;
+  const jurisdictionLine = isAdmin
+    ? 'Department of Cooperation, Sikkim'
+    : `${assignedUnits.length} Assigned Unit${assignedUnits.length === 1 ? '' : 's'} · Sikkim`;
   // Same "still pending AGM or Audit" definition DistrictPerformance (the
   // Benchmarks page) uses — computed here directly since that page's
   // mpcsPendingCompliance/milkPendingCompliance are local to its own
@@ -107,7 +115,7 @@ export default function DashboardScreen({
             <div style={{ fontFamily: FONT.heading, fontSize: 21, fontWeight: 600, color: COLOR.ink900, letterSpacing: '-.01em' }}>{districtName}</div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginTop: 7 }}>
               {iconEl('mapPin', '#9B8F8D', 14, 1.7)}
-              <span style={{ fontSize: 13, color: COLOR.ink600 }}>Department of Cooperation, Sikkim</span>
+              <span style={{ fontSize: 13, color: COLOR.ink600 }}>{jurisdictionLine}</span>
             </div>
           </div>
           <span style={{ display: 'flex', alignItems: 'center', gap: 5, background: COLOR.greenTint, color: COLOR.green, borderRadius: 999, padding: '5px 10px', fontSize: 9.5, fontWeight: 700, letterSpacing: '.1em' }}>
