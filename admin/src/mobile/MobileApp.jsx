@@ -99,8 +99,12 @@ export default function MobileApp({ session, userRole, onLogout, onOpenProfile, 
       />
 
       <TabBar
-        active={tab}
-        onSelect={(t) => (t === 'PROFILE' ? onOpenProfile() : setTab(t))}
+        active={tab === 'HOME' ? 'DASHBOARD' : (record === 'MPCS' || record === 'MILK') ? record : null}
+        onSelect={(t) => {
+          if (t === 'DASHBOARD') setTab('HOME');
+          else if (t === 'MPCS' || t === 'MILK') { setTab('RECORDS'); setRecord(t); }
+          else if (t === 'MORE') setDrawerOpen(true);
+        }}
       />
     </div>
   );

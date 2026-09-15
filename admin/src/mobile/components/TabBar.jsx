@@ -1,11 +1,21 @@
 import { COLOR, SHADOW } from '../tokens';
 import { iconEl } from '../icons';
 
+// Admin's real navigation lives in the hamburger drawer (10 items), not a
+// fixed daily task flow like the field-officer app's HOME/RECORDS/PROFILE/
+// MORE bar this was originally copied from — "Records" was vague once
+// there wasn't one records type, just distinct registries. These four
+// point at what admins actually reach for most: the dashboard, and the
+// two dominant registries (MPCS, Milk) surfaced directly instead of
+// through a generic bucket. Profile drops as a tab since it's already one
+// tap via the avatar in AppBar — MORE opens the same drawer that icon
+// does, for everything else (Members, Loans, Benchmarks, Officers,
+// Reports, Users, Settings).
 const TABS = [
-  { id: 'HOME', label: 'HOME', icon: 'home' },
-  { id: 'RECORDS', label: 'RECORDS', icon: 'bars' },
-  { id: 'PROFILE', label: 'PROFILE', icon: 'person' },
-  { id: 'MORE', label: 'MORE', icon: 'grid' },
+  { id: 'DASHBOARD', label: 'DASHBOARD', icon: 'grid' },
+  { id: 'MPCS', label: 'MPCS', icon: 'home' },
+  { id: 'MILK', label: 'MILK', icon: 'drop' },
+  { id: 'MORE', label: 'MORE', icon: 'menu' },
 ];
 
 export default function TabBar({ active, onSelect }) {
