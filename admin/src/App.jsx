@@ -2687,45 +2687,65 @@ function Dashboard({ onLogout, session, officerRole }) {
   const [assignAciPrefillUnit, setAssignAciPrefillUnit] = useState(null);
   const [assignDelegateRole, setAssignDelegateRole] = useState('ACI'); // 'ACI' | 'PA'
   const [assignDelegatePrefillAssignee, setAssignDelegatePrefillAssignee] = useState(null);
+  // Set only when reassigning one specific existing delegation (as opposed to
+  // additively assigning a unit to a new ACI/PA) — see openReassignDelegate.
+  const [assignDelegateReplacing, setAssignDelegateReplacing] = useState(null);
   const [showHierarchyTree, setShowHierarchyTree] = useState(true);
   const [hierarchyMapping, setHierarchyMapping] = useState({});
 
-  // Field Delegation — one unit_assignments row per unit (unit_name is its
-  // primary key), carrying an independent aci_name and pa_name so a CI can
-  // delegate the same unit to an ACI and a PA at once without duplicating
-  // the row. institutionType ('MPCS' | 'MILK') disambiguates a unit name
-  // that happens to exist in both tables.
-  const handleAssignDelegate = async (unitName, institutionType, assigneeName, assigneeRole) => {
+  // Field Delegation — one unit_assignments row per (unit, role, officer)
+  // delegation, so a unit can now be assigned to any number of ACIs and PAs
+  // at once rather than exactly one of each. institutionType ('MPCS' |
+  // 'MILK') disambiguates a unit name that happens to exist in both tables.
+  const handleAssignDelegate = async (unitName, institutionType, assigneeName, assigneeRole, replacingAssignee = null) => {
     const ciName = session?.user?.user_metadata?.fullName || session?.user?.email || 'System Admin';
     const rows = institutionType === 'MILK' ? milkRows : mpcsRows;
     const nameField = institutionType === 'MILK' ? 'center_name' : 'society_name';
-    const { error } = await supabase.from('unit_assignments').upsert({
-      unit_name: unitName,
-      ci_name: ciName,
-      institution_type: institutionType,
-      ...(assigneeRole === 'PA' ? { pa_name: assigneeName } : { aci_name: assigneeName }),
-      district: (() => {
-        const r = rows.find(r => r[nameField] === unitName);
-        return r?.district || r?.form_data?.gpu || r?.form_data?.gpu_name || r?.form_data?.district || null;
-      })(),
-      updated_at: new Date().toISOString()
-    });
-    if (error) {
-      alert('Failed to save delegation: ' + error.message);
-      return;
+    const district = (() => {
+      const r = rows.find(r => r[nameField] === unitName);
+      return r?.district || r?.form_data?.gpu || r?.form_data?.gpu_name || r?.form_data?.district || null;
+    })();
+
+    if (replacingAssignee && replacingAssignee !== assigneeName) {
+      // Reassigning one specific existing delegation to a different officer —
+      // swap just that row, leaving any other ACI/PA already on this unit
+      // untouched.
+      const { error } = await supabase.from('unit_assignments')
+        .update({ assignee_name: assigneeName, ci_name: ciName, institution_type: institutionType, district, updated_at: new Date().toISOString() })
+        .eq('unit_name', unitName).eq('assignee_role', assigneeRole).eq('assignee_name', replacingAssignee);
+      if (error) { alert('Failed to save delegation: ' + error.message); return; }
+    } else {
+      // Additive: always adds a new delegation alongside whatever's already
+      // on this unit rather than overwriting it. onConflict makes
+      // re-selecting an already-delegated officer a no-op instead of a
+      // duplicate row.
+      const { error } = await supabase.from('unit_assignments').upsert({
+        unit_name: unitName,
+        ci_name: ciName,
+        institution_type: institutionType,
+        assignee_name: assigneeName,
+        assignee_role: assigneeRole,
+        district,
+        updated_at: new Date().toISOString()
+      }, { onConflict: 'unit_name,assignee_role,assignee_name' });
+      if (error) { alert('Failed to save delegation: ' + error.message); return; }
     }
-    setHierarchyMapping(prev => ({
-      ...prev,
-      [unitName]: {
-        ...prev[unitName],
-        ci: ciName,
-        institutionType,
-        ...(assigneeRole === 'PA' ? { pa: assigneeName } : { aci: assigneeName })
+
+    setHierarchyMapping(prev => {
+      const key = assigneeRole === 'PA' ? 'pas' : 'acis';
+      const existing = prev[unitName] || { ci: ciName, institutionType, district, acis: [], pas: [] };
+      let nextList = existing[key];
+      if (replacingAssignee && replacingAssignee !== assigneeName) {
+        nextList = nextList.map(n => n === replacingAssignee ? assigneeName : n);
+      } else if (!nextList.includes(assigneeName)) {
+        nextList = [...nextList, assigneeName];
       }
-    }));
+      return { ...prev, [unitName]: { ...existing, ci: ciName, institutionType, district, [key]: nextList } };
+    });
     setShowAssignAciModal(false);
     setAssignAciPrefillUnit(null);
     setAssignDelegatePrefillAssignee(null);
+    setAssignDelegateReplacing(null);
     // alert() blocks the main thread synchronously, before the browser gets a
     // chance to paint the modal-closed state — without the defer, the alert
     // popped up in front of the modal still showing "Updating Delegation...",
@@ -2733,38 +2753,36 @@ function Dashboard({ onLogout, session, officerRole }) {
     setTimeout(() => alert(`Delegation Updated: ${assigneeName} has been assigned as ${assigneeRole} to manage ${unitName}.`), 0);
   };
 
-  const handleRevokeDelegate = async (unitName, assigneeRole) => {
-    const confirmed = window.confirm(`Revoke the ${assigneeRole} delegation for ${unitName}? It will show as unassigned until a CI delegates it again.`);
+  const handleRevokeDelegate = async (unitName, assigneeRole, assigneeName) => {
+    const confirmed = window.confirm(`Revoke the ${assigneeRole} delegation for ${assigneeName} on ${unitName}? They will need to be delegated again to restore access.`);
     if (!confirmed) return;
-    const current = hierarchyMapping[unitName] || {};
-    const stillHasOtherRole = assigneeRole === 'PA' ? !!current.aci : !!current.pa;
-    // Only the specific role's column is cleared — the row itself (and the
-    // other role's delegation on the same unit) stays intact unless neither
-    // an ACI nor a PA is assigned to it anymore.
-    const { error } = stillHasOtherRole
-      ? await supabase.from('unit_assignments').update(
-          assigneeRole === 'PA' ? { pa_name: null } : { aci_name: null }
-        ).eq('unit_name', unitName)
-      : await supabase.from('unit_assignments').delete().eq('unit_name', unitName);
+    const { error } = await supabase.from('unit_assignments').delete()
+      .eq('unit_name', unitName).eq('assignee_role', assigneeRole).eq('assignee_name', assigneeName);
     if (error) {
       alert('Failed to revoke delegation: ' + error.message);
       return;
     }
     setHierarchyMapping(prev => {
+      const existing = prev[unitName];
+      if (!existing) return prev;
+      const key = assigneeRole === 'PA' ? 'pas' : 'acis';
+      const otherKey = key === 'pas' ? 'acis' : 'pas';
+      const nextList = existing[key].filter(n => n !== assigneeName);
       const next = { ...prev };
-      if (stillHasOtherRole) {
-        next[unitName] = { ...next[unitName], [assigneeRole === 'PA' ? 'pa' : 'aci']: undefined };
-      } else {
+      if (nextList.length === 0 && existing[otherKey].length === 0) {
         delete next[unitName];
+      } else {
+        next[unitName] = { ...existing, [key]: nextList };
       }
       return next;
     });
   };
 
-  const openReassignDelegate = (unitName, assigneeRole = 'ACI') => {
+  const openReassignDelegate = (unitName, assigneeRole = 'ACI', assigneeName = null) => {
     setAssignAciPrefillUnit(unitName);
     setAssignDelegateRole(assigneeRole);
-    setAssignDelegatePrefillAssignee(null);
+    setAssignDelegatePrefillAssignee(assigneeName);
+    setAssignDelegateReplacing(assigneeName);
     setShowAssignAciModal(true);
   };
 
@@ -2821,8 +2839,8 @@ function Dashboard({ onLogout, session, officerRole }) {
     const claimed = new Set();
     Object.values(hierarchyMapping).forEach(m => {
       if ((m.ci || '') === (myOfficerRecord?.name || '')) return;
-      if (m.aci) claimed.add(m.aci);
-      if (m.pa) claimed.add(m.pa);
+      (m.acis || []).forEach(n => claimed.add(n));
+      (m.pas || []).forEach(n => claimed.add(n));
     });
     return claimed;
   }, [hierarchyMapping, myOfficerRecord]);
@@ -3293,9 +3311,16 @@ function Dashboard({ onLogout, session, officerRole }) {
 
     const { data: assignRes } = await supabase.from('unit_assignments').select('*');
     if (assignRes) {
+      // One row per (unit, role, officer) delegation now — group into per-unit
+      // acis[]/pas[] arrays so a unit's multiple ACI/PA delegations are all
+      // represented instead of just the last one loaded.
       const mapping = {};
       assignRes.forEach(a => {
-        mapping[a.unit_name] = { ci: a.ci_name, aci: a.aci_name, pa: a.pa_name, district: a.district, institutionType: a.institution_type };
+        if (!mapping[a.unit_name]) {
+          mapping[a.unit_name] = { ci: a.ci_name, district: a.district, institutionType: a.institution_type, acis: [], pas: [] };
+        }
+        if (a.assignee_role === 'PA') mapping[a.unit_name].pas.push(a.assignee_name);
+        else mapping[a.unit_name].acis.push(a.assignee_name);
       });
       setHierarchyMapping(mapping);
     }
@@ -3864,7 +3889,8 @@ function Dashboard({ onLogout, session, officerRole }) {
             initialUnit={assignAciPrefillUnit}
             assigneeRole={assignDelegateRole}
             initialAssignee={assignDelegatePrefillAssignee}
-            onClose={()=>{ setShowAssignAciModal(false); setAssignAciPrefillUnit(null); setAssignDelegatePrefillAssignee(null); }}
+            replacingAssignee={assignDelegateReplacing}
+            onClose={()=>{ setShowAssignAciModal(false); setAssignAciPrefillUnit(null); setAssignDelegatePrefillAssignee(null); setAssignDelegateReplacing(null); }}
             onSave={handleAssignDelegate}
           />
         )}
@@ -4291,10 +4317,10 @@ function Dashboard({ onLogout, session, officerRole }) {
                   <button className="btn-ghost" onClick={() => setShowHierarchyTree(!showHierarchyTree)}>
                     <Icon d={I.members} size={14}/> {showHierarchyTree ? 'Hide Governance Tree' : '🌲 View Governance Tree'}
                   </button>
-                  <button className="btn-primary" onClick={() => { setAssignAciPrefillUnit(null); setAssignDelegateRole('ACI'); setAssignDelegatePrefillAssignee(null); setShowAssignAciModal(true); }}>
+                  <button className="btn-primary" onClick={() => { setAssignAciPrefillUnit(null); setAssignDelegateRole('ACI'); setAssignDelegatePrefillAssignee(null); setAssignDelegateReplacing(null); setShowAssignAciModal(true); }}>
                     <Icon d={I.plus} size={14}/> Assign ACI to Unit
                   </button>
-                  <button className="btn-primary" onClick={() => { setAssignAciPrefillUnit(null); setAssignDelegateRole('PA'); setAssignDelegatePrefillAssignee(null); setShowAssignAciModal(true); }}>
+                  <button className="btn-primary" onClick={() => { setAssignAciPrefillUnit(null); setAssignDelegateRole('PA'); setAssignDelegatePrefillAssignee(null); setAssignDelegateReplacing(null); setShowAssignAciModal(true); }}>
                     <Icon d={I.plus} size={14}/> Assign PA to Unit
                   </button>
                   <button className="btn-ghost" onClick={() => setShowAddOfficer(true)}>
@@ -4340,10 +4366,10 @@ function Dashboard({ onLogout, session, officerRole }) {
                         // the rest of their workload.
                         const assignments = [
                           ...Object.entries(scopedHierarchyMapping)
-                            .filter(([, m]) => m.aci === off.name)
+                            .filter(([, m]) => (m.acis || []).includes(off.name))
                             .map(([unitName, m]) => ({ unitName, ci: m.ci, role: 'ACI' })),
                           ...Object.entries(scopedHierarchyMapping)
-                            .filter(([, m]) => m.pa === off.name)
+                            .filter(([, m]) => (m.pas || []).includes(off.name))
                             .map(([unitName, m]) => ({ unitName, ci: m.ci, role: 'PA' })),
                         ];
                         const role = off.role || 'ACI / Field Officer';
@@ -4437,16 +4463,16 @@ function Dashboard({ onLogout, session, officerRole }) {
                                       </button>
                                     )}
                                     {!isCiOfficer && (
-                                      <button type="button" className="menu-item" onClick={() => { setAssignAciPrefillUnit(null); setAssignDelegateRole(isPaOfficer ? 'PA' : 'ACI'); setAssignDelegatePrefillAssignee(off.name); setShowAssignAciModal(true); setOpenOfficerPopover(null); }}>
+                                      <button type="button" className="menu-item" onClick={() => { setAssignAciPrefillUnit(null); setAssignDelegateRole(isPaOfficer ? 'PA' : 'ACI'); setAssignDelegatePrefillAssignee(off.name); setAssignDelegateReplacing(null); setShowAssignAciModal(true); setOpenOfficerPopover(null); }}>
                                         <Icon d={I.domain} size={14} color="#1E40AF"/> Assign {assignments.length > 0 ? 'another' : ''} institution
                                       </button>
                                     )}
                                     {!isCiOfficer && assignments.map(a => (
                                       <div key={`${a.role}_${a.unitName}`}>
-                                        <button type="button" className="menu-item" onClick={() => { openReassignDelegate(a.unitName, a.role); setOpenOfficerPopover(null); }}>
+                                        <button type="button" className="menu-item" onClick={() => { openReassignDelegate(a.unitName, a.role, off.name); setOpenOfficerPopover(null); }}>
                                           <Icon d={I.refresh} size={14} color="#334155"/> Reassign Unit{assignments.length > 1 ? `: ${a.unitName}` : ''}
                                         </button>
-                                        <button type="button" className="menu-item danger" onClick={() => { handleRevokeDelegate(a.unitName, a.role); setOpenOfficerPopover(null); }}>
+                                        <button type="button" className="menu-item danger" onClick={() => { handleRevokeDelegate(a.unitName, a.role, off.name); setOpenOfficerPopover(null); }}>
                                           <Icon d={I.userX} size={14} color="#DC2626"/> Revoke {a.role}{assignments.length > 1 ? `: ${a.unitName}` : ''}
                                         </button>
                                       </div>
@@ -5233,7 +5259,8 @@ function Dashboard({ onLogout, session, officerRole }) {
           initialUnit={assignAciPrefillUnit}
           assigneeRole={assignDelegateRole}
           initialAssignee={assignDelegatePrefillAssignee}
-          onClose={()=>{ setShowAssignAciModal(false); setAssignAciPrefillUnit(null); setAssignDelegatePrefillAssignee(null); }}
+          replacingAssignee={assignDelegateReplacing}
+          onClose={()=>{ setShowAssignAciModal(false); setAssignAciPrefillUnit(null); setAssignDelegatePrefillAssignee(null); setAssignDelegateReplacing(null); }}
           onSave={handleAssignDelegate}
         />
       )}
@@ -5648,7 +5675,7 @@ function SupportModal({ onClose }) {
 }
 
 // ─── AssignAciModal ───────────────────────────────────────────────────────────
-function AssignAciModal({ mpcsRows, milkRows = [], officers, hierarchyMapping, initialUnit, assigneeRole = 'ACI', initialAssignee, onClose, onSave }) {
+function AssignAciModal({ mpcsRows, milkRows = [], officers, hierarchyMapping, initialUnit, assigneeRole = 'ACI', initialAssignee, replacingAssignee, onClose, onSave }) {
   const roleLabel = assigneeRole === 'PA' ? 'PA / Project Assistant' : 'ACI / Field Officer';
   const roleFilterTag = assigneeRole === 'PA' ? 'Project Assistant' : '(ACI)';
 
@@ -5664,11 +5691,14 @@ function AssignAciModal({ mpcsRows, milkRows = [], officers, hierarchyMapping, i
   const initialUnitEntry = initialUnit ? availableUnits.find(u => u.name === initialUnit) : null;
   const [selectedUnit, setSelectedUnit] = useState(initialUnit || '');
   const [selectedType, setSelectedType] = useState(initialUnitEntry?.type || hierarchyMapping[initialUnit]?.institutionType || 'MPCS');
-  const [selectedAssignee, setSelectedAssignee] = useState(
-    initialAssignee || (initialUnit ? (assigneeRole === 'PA' ? hierarchyMapping[initialUnit]?.pa : hierarchyMapping[initialUnit]?.aci) || '' : '')
-  );
+  const [selectedAssignee, setSelectedAssignee] = useState(replacingAssignee || initialAssignee || '');
   const [loading, setLoading] = useState(false);
-  const isReassigning = !!initialUnit;
+  // A unit can now carry any number of ACI/PA delegations at once, so this
+  // modal is only ever "reassigning" a specific existing delegation
+  // (swapping one officer for another, leaving the rest untouched) when
+  // replacingAssignee names that officer — otherwise, even with a unit
+  // prefilled, submitting always ADDS a new delegation alongside it.
+  const isReassigning = !!replacingAssignee;
 
   // Only officers actually provisioned in this role are eligible — assigning
   // a CI as "ACI for a unit" or a PA into an ACI slot would misrepresent who
@@ -5679,7 +5709,7 @@ function AssignAciModal({ mpcsRows, milkRows = [], officers, hierarchyMapping, i
     e.preventDefault();
     if (!selectedUnit || !selectedAssignee) return alert(`Please select both a unit and a ${roleLabel}.`);
     setLoading(true);
-    await onSave(selectedUnit, selectedType, selectedAssignee, assigneeRole);
+    await onSave(selectedUnit, selectedType, selectedAssignee, assigneeRole, replacingAssignee || null);
     setLoading(false);
   };
 
@@ -5836,7 +5866,7 @@ function OfficerHierarchyTree({ hierarchyMapping, userRole, onRevoke, onReassign
     if (!inspectors[ciName]) {
       inspectors[ciName] = { role: 'Cooperative Inspector', jurisdiction: mapping.district || 'Gyalshing District', units: [] };
     }
-    inspectors[ciName].units.push({ unitName, aci: mapping.aci, pa: mapping.pa, district: mapping.district });
+    inspectors[ciName].units.push({ unitName, acis: mapping.acis || [], pas: mapping.pas || [], district: mapping.district });
   });
 
   return (
@@ -5890,38 +5920,33 @@ function OfficerHierarchyTree({ hierarchyMapping, userRole, onRevoke, onReassign
               {info.units.map(u => (
                 <div key={u.unitName} style={{background:'#F8FAFC', border:'1px solid #E2E8F0', padding:'10px 12px', borderRadius:'4px', display:'flex', flexDirection:'column', gap:'4px'}}>
                   <div style={{fontSize:'12px', fontWeight:800, color:'#7F1D1D'}}>🏛️ {u.unitName}</div>
-                  {/* A unit can carry an ACI and a PA delegation independently — showing
-                      only the ACI slot (and saying "Unassigned" whenever it was empty)
-                      used to hide a real PA assignment entirely, and its Reassign/Revoke
-                      buttons always acted on the ACI role regardless of which one was
-                      actually assigned. Each role gets its own row and its own actions now. */}
-                  {!u.aci && !u.pa && (
+                  {/* A unit can now carry any number of ACI and PA delegations at
+                      once, independently of each other — each individual
+                      assignee gets their own row and their own Reassign/Revoke
+                      actions, folded into the same compact pill style used in
+                      the officer table's "⋮" actions menu below. */}
+                  {u.acis.length === 0 && u.pas.length === 0 && (
                     <div style={{fontSize:'11px', color:'#334155', display:'flex', alignItems:'center', gap:'6px', background:'#EFF6FF', padding:'4px 8px', borderRadius:'2px', border:'1px solid #BFDBFE'}}>
                       <Icon d={I.user} size={12} color="#1E40AF"/>
                       <span>Unassigned</span>
                     </div>
                   )}
-                  {/* Reassign/Revoke as small icon-only buttons folded into the same
-                      pill as the assignee's name, matching the compact style used in
-                      the officer table's "⋮" actions menu below — the previous
-                      full-width button pair underneath each pill looked like a
-                      different, older design bolted onto this one. */}
-                  {u.aci && (
-                    <div style={{fontSize:'11px', color:'#334155', display:'flex', alignItems:'center', gap:'6px', background:'#EFF6FF', padding:'4px 4px 4px 8px', borderRadius:'2px', border:'1px solid #BFDBFE'}}>
+                  {u.acis.map((aciName, i) => (
+                    <div key={`aci_${aciName}`} style={{fontSize:'11px', color:'#334155', display:'flex', alignItems:'center', gap:'6px', background:'#EFF6FF', padding:'4px 4px 4px 8px', borderRadius:'2px', border:'1px solid #BFDBFE', marginTop: i > 0 ? '4px' : 0}}>
                       <Icon d={I.user} size={12} color="#1E40AF"/>
-                      <span style={{flex:1}}>Assigned ACI: <strong>{u.aci}</strong></span>
-                      <button type="button" className="icon-btn" title="Reassign" style={{width:'20px', height:'20px', fontSize:'10px'}} onClick={() => onReassign && onReassign(u.unitName, 'ACI')}>✎</button>
-                      <button type="button" className="icon-btn danger" title="Revoke" style={{width:'20px', height:'20px', fontSize:'10px'}} onClick={() => onRevoke && onRevoke(u.unitName, 'ACI')}>✕</button>
+                      <span style={{flex:1}}>Assigned ACI: <strong>{aciName}</strong></span>
+                      <button type="button" className="icon-btn" title="Reassign" style={{width:'20px', height:'20px', fontSize:'10px'}} onClick={() => onReassign && onReassign(u.unitName, 'ACI', aciName)}>✎</button>
+                      <button type="button" className="icon-btn danger" title="Revoke" style={{width:'20px', height:'20px', fontSize:'10px'}} onClick={() => onRevoke && onRevoke(u.unitName, 'ACI', aciName)}>✕</button>
                     </div>
-                  )}
-                  {u.pa && (
-                    <div style={{fontSize:'11px', color:'#334155', display:'flex', alignItems:'center', gap:'6px', background:'#F0FDF4', padding:'4px 4px 4px 8px', borderRadius:'2px', border:'1px solid #BBF7D0', marginTop: u.aci ? '4px' : 0}}>
+                  ))}
+                  {u.pas.map((paName, i) => (
+                    <div key={`pa_${paName}`} style={{fontSize:'11px', color:'#334155', display:'flex', alignItems:'center', gap:'6px', background:'#F0FDF4', padding:'4px 4px 4px 8px', borderRadius:'2px', border:'1px solid #BBF7D0', marginTop: (i > 0 || u.acis.length > 0) ? '4px' : 0}}>
                       <Icon d={I.user} size={12} color="#166534"/>
-                      <span style={{flex:1}}>Assigned PA: <strong>{u.pa}</strong></span>
-                      <button type="button" className="icon-btn" title="Reassign" style={{width:'20px', height:'20px', fontSize:'10px'}} onClick={() => onReassign && onReassign(u.unitName, 'PA')}>✎</button>
-                      <button type="button" className="icon-btn danger" title="Revoke" style={{width:'20px', height:'20px', fontSize:'10px'}} onClick={() => onRevoke && onRevoke(u.unitName, 'PA')}>✕</button>
+                      <span style={{flex:1}}>Assigned PA: <strong>{paName}</strong></span>
+                      <button type="button" className="icon-btn" title="Reassign" style={{width:'20px', height:'20px', fontSize:'10px'}} onClick={() => onReassign && onReassign(u.unitName, 'PA', paName)}>✎</button>
+                      <button type="button" className="icon-btn danger" title="Revoke" style={{width:'20px', height:'20px', fontSize:'10px'}} onClick={() => onRevoke && onRevoke(u.unitName, 'PA', paName)}>✕</button>
                     </div>
-                  )}
+                  ))}
                 </div>
               ))}
             </div>
