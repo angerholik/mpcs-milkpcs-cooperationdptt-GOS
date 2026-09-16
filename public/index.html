@@ -30,6 +30,17 @@
            at the bottom" bug). Falls back to 100% on browsers that don't
            support dvh yet. */
         height: 100dvh;
+        /* The viewport meta's user-scalable=no (below) no longer actually
+           blocks pinch-zoom — Chrome (76+) and Safari both deliberately
+           ignore that restriction now, as a deliberate accessibility
+           decision, regardless of what the page declares. touch-action is
+           the only thing that still works: listing just pan-x/pan-y (and
+           omitting pinch-zoom) disables the pinch gesture at the CSS level
+           while leaving normal scrolling/panning untouched. Without this,
+           a stray pinch anywhere in the app zooms the whole page in with
+           no way back except this fix, leaving the layout looking "pushed
+           out of place" until the page is reloaded. */
+        touch-action: pan-x pan-y;
       }
       /* These styles disable body scrolling if you are using <ScrollView> */
       body {
