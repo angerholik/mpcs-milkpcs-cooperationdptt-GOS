@@ -24,12 +24,18 @@
       html,
       body {
         height: 100%;
-        /* 100dvh tracks the real visible viewport on iOS Safari, so the
-           page doesn't stay sized to the smaller on-screen-keyboard height
-           after the keyboard closes (the classic "shifted up, blank gap
-           at the bottom" bug). Falls back to 100% on browsers that don't
-           support dvh yet. */
+        /* 100dvh is supposed to track the real visible viewport, but once
+           html/body are pinned with position: fixed (below) to stop
+           Safari's own page-scroll-to-reveal-focused-field behavior, Safari
+           stops shrinking dvh to match the keyboard-reduced viewport — the
+           page stays sized for its pre-keyboard height, leaving a dead gap
+           between the app's real content and the browser's own chrome. The
+           --app-vh custom property (set from window.visualViewport.height
+           by the script at the bottom of <body>, the one value that stays
+           accurate through this) overrides this the instant JS runs; 100dvh
+           is only the pre-JS/no-JS fallback. */
         height: 100dvh;
+        height: var(--app-vh, 100dvh);
         /* The viewport meta's user-scalable=no (below) no longer actually
            blocks pinch-zoom — Chrome (76+) and Safari both deliberately
            ignore that restriction now, as a deliberate accessibility
@@ -45,29 +51,37 @@
       /* These styles disable body scrolling if you are using <ScrollView> */
       body {
         overflow: hidden;
-        /* overflow: hidden alone doesn't stop this: when a field gets focus,
-           iOS Safari scrolls the WHOLE PAGE at the browser/viewport level to
-           bring it above the keyboard, and that "scroll to reveal" behavior
-           operates above CSS overflow rules entirely — it's Safari scrolling
-           its own layout viewport, not the body element obeying its own
-           overflow. That's what produces the blank gap at the bottom (the
-           page scrolled up, revealing the browser chrome underneath) and the
-           sideways shift on other screens (the same mechanism scrolling
-           horizontally toward whatever it decided to reveal). Pinning body
-           with position: fixed removes the one thing Safari needs to do
-           that — there's no longer a document-level scroll position for it
-           to move — while the app's own internal ScrollViews inside #root
-           are unaffected and keep scrolling normally. */
+      }
+      /* overflow: hidden on body alone doesn't stop this: when a field gets
+         focus, iOS Safari scrolls the WHOLE PAGE at the browser/viewport
+         level to bring it above the keyboard, and that "scroll to reveal"
+         behavior operates above CSS overflow rules entirely. Critically, the
+         element Safari actually scrolls for this is <html> — the real
+         document.scrollingElement in standards mode — not <body>, so pinning
+         only body (an earlier version of this rule) left html free to still
+         be panned, and the bug persisted. That's what produced the blank gap
+         at the bottom (the page scrolled up, revealing the browser chrome
+         underneath) and the sideways shift on other screens (the same
+         mechanism scrolling horizontally toward whatever it decided to
+         reveal). Pinning BOTH html and body with position: fixed removes the
+         one thing Safari needs to do that on either element — there's no
+         longer a document-level scroll position for it to move — while the
+         app's own internal ScrollViews inside #root are a separate scroll
+         context and keep scrolling normally. */
+      html,
+      body {
         position: fixed;
         top: 0;
         left: 0;
         width: 100%;
+        overflow: hidden;
       }
       /* These styles make the root element full-height */
       #root {
         display: flex;
         height: 100%;
         height: 100dvh;
+        height: var(--app-vh, 100dvh);
         flex: 1;
       }
 
@@ -152,6 +166,25 @@
         document.addEventListener('touchmove', function (e) {
           if (e.touches.length > 1) e.preventDefault();
         }, { passive: false });
+      })();
+
+      // Keeps html/body/#root's actual rendered height locked to the real
+      // visible viewport at all times, including while the on-screen
+      // keyboard is open. 100dvh alone isn't enough once html/body are
+      // pinned with position: fixed (see that rule's comment) — Safari
+      // stops shrinking it to match the keyboard, leaving a dead gap below
+      // the app's content. window.visualViewport.height is the one value
+      // that's always right, so this drives everything off it directly via
+      // a custom property instead of trusting any viewport CSS unit.
+      (function () {
+        if (!window.visualViewport) return;
+        var vv = window.visualViewport;
+        var sync = function () {
+          document.documentElement.style.setProperty('--app-vh', vv.height + 'px');
+        };
+        vv.addEventListener('resize', sync);
+        vv.addEventListener('scroll', sync);
+        sync();
       })();
     </script>
   </body>
