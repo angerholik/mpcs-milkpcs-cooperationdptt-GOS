@@ -124,26 +124,35 @@ if (Platform.OS === 'web' && typeof document !== 'undefined') {
   // on-screen keyboard was last open, and doesn't reliably relayout once it
   // closes — the app is left shifted up with a blank gap at the bottom
   // where the keyboard used to be, until something else forces a reflow.
-  // `100dvh` (set in public/index.html) fixes this on iOS 15.4+, but the
-  // app needs to keep working on much older iOS releases too, so this pins
-  // #root's actual pixel height to the real visible viewport on every
-  // resize — covering iOS 13+ via the standard `visualViewport` API, and
-  // falling back to plain `window.innerHeight` + resize/orientationchange
-  // for iOS 11-12, which predate visualViewport entirely.
-  const applyViewportHeight = () => {
-    const root = document.getElementById('root');
-    if (!root) return;
-    const height = window.visualViewport ? window.visualViewport.height : window.innerHeight;
-    document.documentElement.style.height = `${height}px`;
-    document.body.style.height = `${height}px`;
-    root.style.height = `${height}px`;
-  };
-  applyViewportHeight();
-  if (window.visualViewport) {
-    window.visualViewport.addEventListener('resize', applyViewportHeight);
-  } else {
-    window.addEventListener('resize', applyViewportHeight);
-    window.addEventListener('orientationchange', applyViewportHeight);
+  // `100dvh` (set in public/index.html) fixes this natively on iOS 15.4+,
+  // so this JS fallback — pinning #root's actual pixel height to
+  // visualViewport on every resize — only runs on browsers that don't
+  // support dvh at all (iOS 11-13). On a dvh-supporting browser, an inline
+  // JS height ALWAYS overrides the CSS `100dvh` rule, even if it's stale —
+  // so if this resize listener ever fired with a transitional value (a
+  // real risk: screen navigation, input blur, and the keyboard's own close
+  // animation all racing on a real device), that stale height would get
+  // permanently locked in over a CSS mechanism that would otherwise have
+  // self-corrected. Gating this behind a dvh feature check means modern
+  // iOS is governed by `100dvh` alone, with nothing able to override it
+  // with a stale value.
+  const supportsDvh = typeof CSS !== 'undefined' && CSS.supports && CSS.supports('height', '100dvh');
+  if (!supportsDvh) {
+    const applyViewportHeight = () => {
+      const root = document.getElementById('root');
+      if (!root) return;
+      const height = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+      document.documentElement.style.height = `${height}px`;
+      document.body.style.height = `${height}px`;
+      root.style.height = `${height}px`;
+    };
+    applyViewportHeight();
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener('resize', applyViewportHeight);
+    } else {
+      window.addEventListener('resize', applyViewportHeight);
+      window.addEventListener('orientationchange', applyViewportHeight);
+    }
   }
 }
 
