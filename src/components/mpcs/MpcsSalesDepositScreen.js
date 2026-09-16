@@ -4,7 +4,6 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import BottomNav from '../BottomNav';
 import { webCapWidth } from '../../utils/webStyles';
-import { useKeyboardInset } from '../../hooks/useKeyboardInset';
 
 // Same subtle Kanchenjunga treatment used on every header across the app.
 const headerPhotoFilter = Platform.OS === 'web'
@@ -61,7 +60,6 @@ export default function MpcsSalesDepositScreen({
   const salesVal = parseFloat((sales || '').replace(/,/g, '')) || 0;
   const depositVal = parseFloat((deposit || '').replace(/,/g, '')) || 0;
   const totalTurnover = salesVal;
-  const keyboardInset = useKeyboardInset();
 
   return (
     <View style={styles.container}>
@@ -96,7 +94,7 @@ export default function MpcsSalesDepositScreen({
 
       <ScrollView
         style={styles.scrollContent}
-        contentContainerStyle={[styles.scrollInner, webCapWidth, keyboardInset ? { paddingBottom: 110 + keyboardInset } : null]}
+        contentContainerStyle={[styles.scrollInner, webCapWidth]}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
@@ -196,7 +194,7 @@ export default function MpcsSalesDepositScreen({
       {/* Wizard navigation actions now scroll with the content
           instead of sitting in a fixed footer, which competed with the
           floating BottomNav pill for the same strip at the bottom. */}
-        <View style={[{ flexDirection: 'row', flex: 1, gap: 10 }, webCapWidth]}>
+        <View style={[{ flexDirection: 'row', width: '100%', gap: 10 }, webCapWidth]}>
         <TouchableOpacity style={styles.navBackBtn} onPress={onBack} activeOpacity={0.7}>
           <Text style={styles.buttonTextSecondary}>BACK</Text>
         </TouchableOpacity>

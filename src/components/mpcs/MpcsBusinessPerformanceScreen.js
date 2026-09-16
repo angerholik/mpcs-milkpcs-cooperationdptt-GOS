@@ -227,7 +227,7 @@ export default function MpcsBusinessPerformanceScreen({
       {/* Wizard navigation actions now scroll with the content
           instead of sitting in a fixed footer, which competed with the
           floating BottomNav pill for the same strip at the bottom. */}
-        <View style={[{ flexDirection: 'row', flex: 1, gap: 10 }, webCapWidth]}>
+        <View style={[{ flexDirection: 'row', width: '100%', gap: 10 }, webCapWidth]}>
         <TouchableOpacity style={styles.navBackBtn} onPress={onBack} activeOpacity={0.7}>
           <Text style={styles.buttonTextSecondary}>BACK</Text>
         </TouchableOpacity>

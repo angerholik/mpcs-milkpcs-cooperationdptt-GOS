@@ -34,13 +34,13 @@
            blocks pinch-zoom — Chrome (76+) and Safari both deliberately
            ignore that restriction now, as a deliberate accessibility
            decision, regardless of what the page declares. touch-action is
-           the only thing that still works: listing just pan-x/pan-y (and
-           omitting pinch-zoom) disables the pinch gesture at the CSS level
-           while leaving normal scrolling/panning untouched. Without this,
-           a stray pinch anywhere in the app zooms the whole page in with
-           no way back except this fix, leaving the layout looking "pushed
-           out of place" until the page is reloaded. */
-        touch-action: pan-x pan-y;
+           the only thing that still works. Only pan-y is listed: nothing
+           in the app scrolls horizontally, so pan-x bought nothing but let
+           a stray one-finger horizontal drag pan the whole fixed-size page
+           sideways. overflow-x: hidden below is the second half of closing
+           that off. */
+        touch-action: pan-y;
+        overflow-x: hidden;
       }
       /* These styles disable body scrolling if you are using <ScrollView> */
       body {
@@ -52,6 +52,7 @@
         height: 100%;
         height: 100dvh;
         flex: 1;
+        overflow-x: hidden;
       }
 
       /* Chrome/Safari render an autofilled <input>'s value with an internal
