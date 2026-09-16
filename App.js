@@ -154,6 +154,32 @@ if (Platform.OS === 'web' && typeof document !== 'undefined') {
       window.addEventListener('orientationchange', applyViewportHeight);
     }
   }
+
+  // Temporary on-screen diagnostic (?debug=1) for the real-device "dark
+  // gap below BottomNav, no keyboard involved" report — rather than guess
+  // blindly at which height measurement is wrong, this puts the actual
+  // live numbers on screen so they can be screenshotted straight from the
+  // phone. Remove once that's diagnosed.
+  if (typeof location !== 'undefined' && location.search.includes('debug=1')) {
+    const badge = document.createElement('div');
+    badge.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:999999;background:rgba(0,0,0,0.85);color:#0f0;font:10px/1.4 monospace;padding:4px 6px;pointer-events:none;white-space:pre;';
+    document.body.appendChild(badge);
+    const updateBadge = () => {
+      const root = document.getElementById('root');
+      const rootRect = root ? root.getBoundingClientRect() : null;
+      const htmlRect = document.documentElement.getBoundingClientRect();
+      badge.textContent =
+        `innerH:${window.innerHeight} vv.h:${window.visualViewport ? Math.round(window.visualViewport.height) : 'n/a'} vv.offY:${window.visualViewport ? Math.round(window.visualViewport.offsetTop) : 'n/a'}\n` +
+        `html rect.h:${Math.round(htmlRect.height)} html.clientH:${document.documentElement.clientHeight}\n` +
+        `root rect.h:${rootRect ? Math.round(rootRect.height) : 'n/a'} root rect.bottom:${rootRect ? Math.round(rootRect.bottom) : 'n/a'}`;
+    };
+    updateBadge();
+    window.addEventListener('resize', updateBadge);
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener('resize', updateBadge);
+      window.visualViewport.addEventListener('scroll', updateBadge);
+    }
+  }
 }
 
 // The sealed-return certificate interpolates officer/center names straight into
