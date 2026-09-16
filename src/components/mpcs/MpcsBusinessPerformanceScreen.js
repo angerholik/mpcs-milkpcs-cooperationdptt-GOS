@@ -223,21 +223,6 @@ export default function MpcsBusinessPerformanceScreen({
             </View>
           </View>
 
-          {/* Field 4: Remarks */}
-          <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>Remarks (Optional)</Text>
-            <View style={[styles.inputBox, { height: 74, alignItems: 'flex-start', paddingTop: 10 }]}>
-              <MaterialCommunityIcons name="notebook-outline" size={15} color={COLORS.slate400} style={{ marginRight: 6, marginTop: 2 }} />
-              <TextInput
-                style={[styles.textInput, { height: '100%' }]}
-                value={remarks}
-                onChangeText={setRemarks}
-                placeholder="Enter financial performance notes or remarks..."
-                placeholderTextColor={COLORS.slate300}
-                multiline
-              />
-            </View>
-          </View>
         </View>
       {/* Wizard navigation actions now scroll with the content
           instead of sitting in a fixed footer, which competed with the
