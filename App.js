@@ -2435,6 +2435,16 @@ export default function App() {
             outline: none !important;
             box-shadow: none !important;
             font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif !important;
+            /* Below 16px, iOS Safari auto-zooms the whole page in on focus
+               and (with the app's user-scalable=no viewport) never lets the
+               user zoom back out. This is the fallback for native <input>s
+               with no RN TextInput style of their own to set it on — chiefly
+               the invisible input[type="date"] overlays used for date
+               pickers, otherwise stuck at the browser's ~13px default. Not
+               !important: elements with their own explicit inline font-size
+               (every RN TextInput, including ones intentionally set above
+               16px for emphasis) still win over this default. */
+            font-size: 16px;
           }
           input:focus, textarea:focus, select:focus {
             outline: none !important;
