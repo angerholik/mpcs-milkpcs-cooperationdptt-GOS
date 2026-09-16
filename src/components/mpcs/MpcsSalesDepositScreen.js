@@ -4,6 +4,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import BottomNav from '../BottomNav';
 import { webCapWidth } from '../../utils/webStyles';
+import { useKeyboardInset } from '../../hooks/useKeyboardInset';
 
 // Same subtle Kanchenjunga treatment used on every header across the app.
 const headerPhotoFilter = Platform.OS === 'web'
@@ -60,6 +61,7 @@ export default function MpcsSalesDepositScreen({
   const salesVal = parseFloat((sales || '').replace(/,/g, '')) || 0;
   const depositVal = parseFloat((deposit || '').replace(/,/g, '')) || 0;
   const totalTurnover = salesVal;
+  const keyboardInset = useKeyboardInset();
 
   return (
     <View style={styles.container}>
@@ -94,7 +96,7 @@ export default function MpcsSalesDepositScreen({
 
       <ScrollView
         style={styles.scrollContent}
-        contentContainerStyle={[styles.scrollInner, webCapWidth]}
+        contentContainerStyle={[styles.scrollInner, webCapWidth, keyboardInset ? { paddingBottom: 110 + keyboardInset } : null]}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
