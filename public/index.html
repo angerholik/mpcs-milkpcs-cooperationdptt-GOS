@@ -115,5 +115,27 @@
       <div class="boot-splash-word">CORE</div>
       <div class="boot-splash-spin"></div>
     </div>
+    <script>
+      // Belt-and-suspenders against pinch-zoom, alongside the viewport
+      // meta and the html/body touch-action rule above. Neither of those
+      // reliably stops it on their own: Safari/WebKit fires its own
+      // proprietary gesturestart/gesturechange/gestureend events for a
+      // pinch, which touch-action does not intercept at all, and Chrome
+      // (76+) deliberately ignores the viewport meta's user-scalable/
+      // maximum-scale restrictions regardless of what the page declares.
+      // preventDefault on both the WebKit gesture events and any
+      // multi-touch touchmove is the combination that actually blocks the
+      // pinch gesture itself across engines, rather than trying to stop
+      // browsers from resizing the page after the fact.
+      (function () {
+        var block = function (e) { e.preventDefault(); };
+        document.addEventListener('gesturestart', block, { passive: false });
+        document.addEventListener('gesturechange', block, { passive: false });
+        document.addEventListener('gestureend', block, { passive: false });
+        document.addEventListener('touchmove', function (e) {
+          if (e.touches.length > 1) e.preventDefault();
+        }, { passive: false });
+      })();
+    </script>
   </body>
 </html>
