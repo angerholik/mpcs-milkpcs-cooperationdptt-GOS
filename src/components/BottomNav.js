@@ -1,6 +1,36 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Platform, Animated } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+
+// The nav is absolutely positioned against the full window height (see
+// `wrapper.bottom` below). On web, when the on-screen keyboard opens, the
+// visual viewport shrinks but nothing tells this fixed positioning to
+// follow it — the pill ends up floating mid-screen with a blank gap
+// beneath it instead of sitting above the keyboard, on EVERY mobile
+// browser (this isn't the iOS-Safari-specific zoom bug fixed elsewhere;
+// window.innerHeight vs. visualViewport.height diverges identically on
+// Android Chrome). visualViewport is the standard, reliable way to detect
+// an open on-screen keyboard — focus/blur alone can't tell a text field
+// from a <select> or a programmatic focus that never opens one.
+function useKeyboardVisible() {
+  const [visible, setVisible] = useState(false);
+
+  useEffect(() => {
+    if (Platform.OS !== 'web' || typeof window === 'undefined' || !window.visualViewport) return;
+    const vv = window.visualViewport;
+    const handleResize = () => {
+      // A shrink this large means the keyboard is up — normal browser-chrome
+      // show/hide or an orientation change doesn't shrink the visual
+      // viewport nearly this much.
+      setVisible(vv.height < window.innerHeight * 0.75);
+    };
+    vv.addEventListener('resize', handleResize);
+    handleResize();
+    return () => vv.removeEventListener('resize', handleResize);
+  }, []);
+
+  return visible;
+}
 
 // STITCH Design Tokens (Extracted for Bottom Nav)
 const COLORS = {
@@ -62,12 +92,18 @@ function NavTab({ tab, isActive, onPress }) {
 
 export default function BottomNav({ activeTab = 'home', onTabPress }) {
   const entrance = useRef(new Animated.Value(0)).current;
+  const keyboardVisible = useKeyboardVisible();
 
   useEffect(() => {
     Animated.spring(entrance, { toValue: 1, useNativeDriver: false, speed: 14, bounciness: 8 }).start();
   }, []);
 
   const translateY = entrance.interpolate({ inputRange: [0, 1], outputRange: [40, 0] });
+
+  // Same pattern as native apps collapsing their tab bar during text entry —
+  // simpler and more robust than tracking the keyboard's exact height and
+  // repositioning the pill around it.
+  if (keyboardVisible) return null;
 
   return (
     <Animated.View style={[styles.wrapper, { opacity: entrance, transform: [{ translateY }] }]}>
