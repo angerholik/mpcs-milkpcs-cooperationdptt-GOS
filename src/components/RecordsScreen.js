@@ -472,7 +472,7 @@ const styles = StyleSheet.create({
     borderColor: COLORS.border,
     marginBottom: 16,
   },
-  searchInput: { flex: 1, marginLeft: 8, fontFamily: FONT_FAMILY, fontSize: 13, color: COLORS.textPrimary, fontWeight: '600' },
+  searchInput: { flex: 1, marginLeft: 8, fontFamily: FONT_FAMILY, fontSize: 16, color: COLORS.textPrimary, fontWeight: '600' },
   recordCard: {
     backgroundColor: COLORS.cardBg,
     borderRadius: 12,

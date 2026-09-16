@@ -1007,7 +1007,7 @@ const styles = StyleSheet.create({
   input: {
     flex: 1,
     fontFamily: interFont('500'),
-    fontSize: 15,
+    fontSize: 16,
     color: COLORS.onSurface,
     outlineStyle: 'none',
   },

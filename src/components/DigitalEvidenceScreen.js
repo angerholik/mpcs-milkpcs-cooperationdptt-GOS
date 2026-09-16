@@ -483,7 +483,7 @@ const styles = StyleSheet.create({
   inputIcon: { marginRight: 8 },
   textInput: {
     flex: 1,
-    fontSize: 14,
+    fontSize: 16,
     color: COLORS.slate800,
     fontWeight: '600',
     fontFamily: FONT_FAMILY,

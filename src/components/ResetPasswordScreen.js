@@ -181,7 +181,7 @@ const styles = StyleSheet.create({
   fieldLabel: { fontFamily: FONT_FAMILY, fontSize: 11, fontWeight: '800', color: '#334155', marginBottom: 6, letterSpacing: 0.5 },
   inputInner: { flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: '#e2e8f0', borderRadius: 12, paddingHorizontal: 14, height: 48, backgroundColor: '#f8fafc' },
   inputIcon: { marginRight: 10 },
-  input: { flex: 1, fontFamily: FONT_FAMILY, fontSize: 14, color: '#1b1b1d' },
+  input: { flex: 1, fontFamily: FONT_FAMILY, fontSize: 16, color: '#1b1b1d' },
   successBox: { backgroundColor: '#ecfdf5', padding: 12, borderRadius: 10, borderWidth: 1, borderColor: '#a7f3d0', marginBottom: 14 },
   successText: { fontFamily: FONT_FAMILY, fontSize: 12, fontWeight: '700', color: '#047857', textAlign: 'center' },
   errorBox: { backgroundColor: '#fef2f2', padding: 12, borderRadius: 10, borderWidth: 1, borderColor: '#fca5a5', marginBottom: 14 },

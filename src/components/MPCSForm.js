@@ -1143,7 +1143,7 @@ const styles = StyleSheet.create({
     },
     floatingInputField: {
         flex: 1,
-        fontSize: 14,
+        fontSize: 16,
         fontWeight: '600',
         color: COLORS.textPrimary,
         height: '100%',

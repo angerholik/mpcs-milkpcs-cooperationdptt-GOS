@@ -392,7 +392,7 @@ const styles = StyleSheet.create({
   },
   textInput: {
     flex: 1,
-    fontSize: 14,
+    fontSize: 16,
     color: COLORS.slate800,
     fontWeight: '700',
     fontFamily: FONT_FAMILY,

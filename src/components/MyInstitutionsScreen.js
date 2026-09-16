@@ -848,7 +848,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     height: 44,
     fontFamily: FONT_FAMILY,
-    fontSize: 13,
+    fontSize: 16,
     color: COLORS.onSurface,
     backgroundColor: COLORS.slate50,
     outlineStyle: 'none',

@@ -543,7 +543,7 @@ const styles = StyleSheet.create({
   },
   modalInput: {
     borderWidth: 1, borderColor: COLORS.slate200, borderRadius: 10, paddingHorizontal: 14, height: 42,
-    fontFamily: FONT_FAMILY, fontSize: 13, fontWeight: '500', color: COLORS.slate800, backgroundColor: COLORS.slate50,
+    fontFamily: FONT_FAMILY, fontSize: 16, fontWeight: '500', color: COLORS.slate800, backgroundColor: COLORS.slate50,
     ...(Platform.OS === 'web' && { outlineStyle: 'none' }),
   },
   modalInputReadOnly: {

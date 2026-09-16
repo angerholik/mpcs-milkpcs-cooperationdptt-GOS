@@ -179,7 +179,7 @@ const styles = StyleSheet.create({
     editorInput: {
         flex: 1,
         padding: 16,
-        fontSize: 15,
+        fontSize: 16,
         color: COLORS.textPrimary,
         lineHeight: 24,
         minHeight: 160,
