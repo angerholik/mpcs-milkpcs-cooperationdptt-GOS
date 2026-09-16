@@ -168,37 +168,19 @@
         }, { passive: false });
       })();
 
-      // iOS Safari reacts to the keyboard opening in one of two ways, and
-      // which one it picks is largely outside our control: it can shrink
-      // the visible (visual) viewport, or it can leave the layout viewport
-      // full-size and just PAN the visual viewport up over it to reveal the
-      // focused field — the page itself never resizes, Safari just slides
-      // its window onto a different part of it. The --app-vh sync above
-      // only handles the shrink case. In the pan case, the fixed-position
-      // html/body stay exactly where they are (correctly — nothing asked
-      // them to move) while the visible window slides over them, so the
-      // bottom of the app scrolls out of the top of view and the
-      // now-visible area below it is just empty page background — the
-      // "gap" — with the browser's own chrome sitting at the true bottom
-      // of the (moved) visual viewport, underneath all of it.
-      //
-      // The fix is to actively cancel that pan: translate the whole page by
-      // the exact negative of visualViewport's offset on every change, so
-      // the content stays visually glued to whatever Safari decided to
-      // show, instead of leaving it to scroll out from under the fixed
-      // content. Combined with the --app-vh height sync above (for the
-      // shrink case) this keeps the app pinned to the real visible window
-      // regardless of which strategy Safari uses.
+      // Keeps html/body/#root's actual rendered height locked to the real
+      // visible viewport at all times, including while the on-screen
+      // keyboard is open. 100dvh alone isn't enough once html/body are
+      // pinned with position: fixed (see that rule's comment) — Safari
+      // stops shrinking it to match the keyboard, leaving a dead gap below
+      // the app's content. window.visualViewport.height is the one value
+      // that's always right, so this drives everything off it directly via
+      // a custom property instead of trusting any viewport CSS unit.
       (function () {
         if (!window.visualViewport) return;
         var vv = window.visualViewport;
         var sync = function () {
           document.documentElement.style.setProperty('--app-vh', vv.height + 'px');
-          var offsetX = Math.round(vv.offsetLeft);
-          var offsetY = Math.round(vv.offsetTop);
-          document.body.style.transform = offsetX || offsetY
-            ? 'translate(' + (-offsetX) + 'px, ' + (-offsetY) + 'px)'
-            : '';
         };
         vv.addEventListener('resize', sync);
         vv.addEventListener('scroll', sync);
