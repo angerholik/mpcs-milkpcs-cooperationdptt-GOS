@@ -168,10 +168,20 @@ if (Platform.OS === 'web' && typeof document !== 'undefined') {
       const root = document.getElementById('root');
       const rootRect = root ? root.getBoundingClientRect() : null;
       const htmlRect = document.documentElement.getBoundingClientRect();
+      let chain = '';
+      let el = root && root.firstElementChild;
+      let depth = 0;
+      while (el && depth < 6) {
+        const r = el.getBoundingClientRect();
+        chain += `\nL${depth} <${el.tagName.toLowerCase()}> h:${Math.round(r.height)} bottom:${Math.round(r.bottom)}`;
+        el = el.firstElementChild;
+        depth += 1;
+      }
       badge.textContent =
         `innerH:${window.innerHeight} vv.h:${window.visualViewport ? Math.round(window.visualViewport.height) : 'n/a'} vv.offY:${window.visualViewport ? Math.round(window.visualViewport.offsetTop) : 'n/a'}\n` +
         `html rect.h:${Math.round(htmlRect.height)} html.clientH:${document.documentElement.clientHeight}\n` +
-        `root rect.h:${rootRect ? Math.round(rootRect.height) : 'n/a'} root rect.bottom:${rootRect ? Math.round(rootRect.bottom) : 'n/a'}`;
+        `root rect.h:${rootRect ? Math.round(rootRect.height) : 'n/a'} root rect.bottom:${rootRect ? Math.round(rootRect.bottom) : 'n/a'}` +
+        chain;
     };
     updateBadge();
     window.addEventListener('resize', updateBadge);
@@ -179,6 +189,17 @@ if (Platform.OS === 'web' && typeof document !== 'undefined') {
       window.visualViewport.addEventListener('resize', updateBadge);
       window.visualViewport.addEventListener('scroll', updateBadge);
     }
+    // This script runs before React has mounted anything into #root, so
+    // the first updateBadge() call above always shows an empty DOM chain —
+    // it only self-corrects if a resize event happens to fire afterward,
+    // which isn't guaranteed. Re-run on an interval briefly after boot so
+    // the numbers are accurate without needing a manual resize.
+    let ticks = 0;
+    const bootTimer = setInterval(() => {
+      updateBadge();
+      ticks += 1;
+      if (ticks > 20) clearInterval(bootTimer);
+    }, 250);
   }
 }
 
@@ -4136,6 +4157,19 @@ const styles = StyleSheet.create({
   root: {
     flex: 1,
     backgroundColor: COLORS.background,
+    // bgBlobLeft/bgBlobRight below are deliberately positioned partly
+    // outside this box (bgBlobRight in particular sits at bottom:-150) as
+    // part of the decorative background. On web, #root is itself a
+    // scrollable container (overflow: hidden auto) — without clipping
+    // here, that unclipped overflow silently inflates #root's real
+    // scrollable height past the actual screen height. On a screen with
+    // enough of its own content to scroll anyway (Home) that extra space
+    // is never reached, but on a short screen (Records/Profile/More with
+    // little content) a real touch scroll/bounce can land in that
+    // "phantom" space, showing raw background below the app with no
+    // keyboard involved at all. Clipping here keeps the blobs' visual
+    // effect while stopping them from expanding the page's scroll extent.
+    overflow: 'hidden',
   },
   bgBlobLeft: {
     position: 'absolute',
