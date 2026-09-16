@@ -45,6 +45,23 @@
       /* These styles disable body scrolling if you are using <ScrollView> */
       body {
         overflow: hidden;
+        /* overflow: hidden alone doesn't stop this: when a field gets focus,
+           iOS Safari scrolls the WHOLE PAGE at the browser/viewport level to
+           bring it above the keyboard, and that "scroll to reveal" behavior
+           operates above CSS overflow rules entirely — it's Safari scrolling
+           its own layout viewport, not the body element obeying its own
+           overflow. That's what produces the blank gap at the bottom (the
+           page scrolled up, revealing the browser chrome underneath) and the
+           sideways shift on other screens (the same mechanism scrolling
+           horizontally toward whatever it decided to reveal). Pinning body
+           with position: fixed removes the one thing Safari needs to do
+           that — there's no longer a document-level scroll position for it
+           to move — while the app's own internal ScrollViews inside #root
+           are unaffected and keep scrolling normally. */
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
       }
       /* These styles make the root element full-height */
       #root {
