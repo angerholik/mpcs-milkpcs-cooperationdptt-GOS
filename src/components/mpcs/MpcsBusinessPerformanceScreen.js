@@ -1,45 +1,39 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, TextInput, ScrollView, Platform, Pressable, Image } from 'react-native';
+import { View, Text, StyleSheet, TextInput, ScrollView, Platform, Pressable } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
 import BottomNav from '../BottomNav';
+import MpcsWizardHeader from './MpcsWizardHeader';
 import { webCapWidth } from '../../utils/webStyles';
 
-// Same subtle Kanchenjunga treatment used on every header across the app.
-const headerPhotoFilter = Platform.OS === 'web'
-  ? { opacity: 0.4, filter: 'grayscale(0.35) contrast(1.15) brightness(0.95)', mixBlendMode: 'luminosity' }
-  : { opacity: 0.28 };
-
+// Redesign source: https://claude.ai/artifact/FpC75VnmdTzgcpPmdQGvkx,
+// section "2 · Monthly return", screen "Business Performance" (parameter
+// 4 of 5) — includes the reference's inline sanity-check warning when
+// gross income looks implausible against the registered member count.
 const COLORS = {
-  surface: '#ffffff',
-  bg: '#F8F5F2',
-  slate800: '#1e293b',
-  slate700: '#334155',
-  slate600: '#475569',
-  slate500: '#64748b',
-  slate400: '#94a3b8',
-  slate300: '#cbd5e1',
-  slate200: '#e2e8f0',
-  slate100: '#f1f5f9',
-  slate50: '#f8fafc',
-  primary: '#7a1a1f',
-  primaryLight: '#FEF2F2',
-  emerald700: '#047857',
-  emerald500: '#10b981',
-  emerald50: '#ecfdf5',
-  amber900: '#78350f',
-  amber50: '#fffbeb',
-  red700: '#b91c1c',
-  red50: '#fef2f2',
+  maroon: '#7B1420',
+  bg: '#F5F1EC',
+  surface: '#FFFFFF',
+  ink: '#1E1B18',
+  slate600: '#57534E',
+  slate500: '#78716C',
+  border: '#E7E2DA',
+  calcBg: '#EDE8E0',
+  warnBorder: '#7B1420',
+  warnBg: '#FBEEEF',
 };
 
 const FONT_FAMILY = 'Manrope';
 
-function formatCurrency(val) {
-  const n = parseFloat(val);
-  if (isNaN(n)) return '₹0.00';
-  return '₹' + n.toLocaleString('en-IN', { minimumFractionDigits: 2 });
+function formatWhole(n) {
+  if (!n) return '0';
+  return Math.round(n).toLocaleString('en-IN');
 }
+
+// A cooperative society's monthly gross income averaging more than
+// ₹10,00,000 per active member is almost always a data-entry error (an
+// extra digit or two typed), not a real figure — flag it for a second
+// look rather than silently accepting it.
+const PLAUSIBLE_INCOME_PER_MEMBER = 1000000;
 
 export default function MpcsBusinessPerformanceScreen({
   reportingMonth = "",
@@ -48,72 +42,30 @@ export default function MpcsBusinessPerformanceScreen({
   totalExpenses = "",
   setTotalExpenses,
   totalMembers = "",
-  remarks = "",
-  setRemarks,
   onSaveNext,
   onBack,
   activeTab,
   onTabPress,
-  onNotifyPress,
-  onProfilePress,
-  unreadCount = 0,
 }) {
   const parseNum = (str) => parseFloat((str || '').replace(/,/g, '')) || 0;
   const incomeVal = parseNum(totalIncome);
   const expenseVal = parseNum(totalExpenses);
+  const memberVal = parseNum(totalMembers);
   const diff = incomeVal - expenseVal;
+  const bothFilled = Boolean(totalIncome) && Boolean(totalExpenses);
 
-  let statusText = 'BREAK-EVEN';
-  let statusBg = '#FEF3C7';
-  let statusColor = COLORS.amber900;
-  let statusIcon = 'scale-balance';
-  let cardStyle = styles.breakEvenCard;
-  let displayValue = Math.abs(diff);
-
-  if (diff > 0) {
-    statusText = 'SURPLUS';
-    statusBg = '#D1FAE5';
-    statusColor = COLORS.emerald700;
-    statusIcon = 'chart-line-up';
-    cardStyle = styles.surplusCard;
-  } else if (diff < 0) {
-    statusText = 'DEFICIT';
-    statusBg = '#FEE2E2';
-    statusColor = COLORS.red700;
-    statusIcon = 'chart-line-down';
-    cardStyle = styles.deficitCard;
-  }
+  const showIncomeWarning = incomeVal > 0 && memberVal > 0 && (incomeVal / memberVal) > PLAUSIBLE_INCOME_PER_MEMBER;
+  const crore = (incomeVal / 10000000);
+  const croreLabel = crore >= 1 ? `₹${crore % 1 === 0 ? crore : crore.toFixed(1)} crore` : `₹${formatWhole(incomeVal)}`;
 
   return (
     <View style={styles.container}>
-      {/* ── Top Header ── */}
-      <View style={styles.topBar}>
-        <LinearGradient
-          colors={['#7a1a1f', '#4a1017']}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 0 }}
-          style={StyleSheet.absoluteFillObject}
-        />
-        <Image
-          source={require('../../../assets/core/kanchenjunga.jpg')}
-          style={[StyleSheet.absoluteFillObject, { width: '100%', height: '100%' }, headerPhotoFilter]}
-          resizeMode="cover"
-        />
-        <TouchableOpacity style={styles.backBtn} onPress={onBack} activeOpacity={0.7}>
-          <MaterialCommunityIcons name="arrow-left" size={24} color="#FFFFFF" />
-        </TouchableOpacity>
-        <View style={styles.topBarTitleContainer}>
-          <Text style={styles.moduleTag}>MPCS</Text>
-          <Text style={styles.screenTitleHeader}>Business Performance</Text>
-        </View>
-        <TouchableOpacity style={styles.notifyBtn} onPress={onNotifyPress} activeOpacity={0.7}>
-          <MaterialCommunityIcons name="bell-outline" size={20} color="#FFFFFF" />
-          {unreadCount > 0 && <View style={styles.notifyBadge} />}
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.avatarBtn} onPress={onProfilePress} activeOpacity={0.8}>
-          <Text style={styles.avatarText}>CI</Text>
-        </TouchableOpacity>
-      </View>
+      <MpcsWizardHeader
+        month={(reportingMonth || 'CURRENT MONTH').toUpperCase()}
+        title="Business Performance"
+        step={4}
+        onBack={onBack}
+      />
 
       <ScrollView
         style={styles.scrollContent}
@@ -121,131 +73,79 @@ export default function MpcsBusinessPerformanceScreen({
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
-        {/* Month Indicator Card */}
-        <View style={styles.monthCard}>
-          <LinearGradient
-            colors={['rgba(122,26,31,0.06)', 'rgba(122,26,31,0.02)']}
-            style={StyleSheet.absoluteFillObject}
-          />
-          <View style={styles.monthIconBox}>
-            <MaterialCommunityIcons name="calendar-month-outline" size={20} color={COLORS.primary} />
+        <View style={styles.fieldGroup}>
+          <Text style={styles.fieldLabel}>Gross income</Text>
+          <View style={[styles.inputBox, showIncomeWarning && styles.inputBoxWarn]}>
+            <Text style={styles.currencyPrefix}>₹</Text>
+            <TextInput
+              style={styles.textInput}
+              value={totalIncome}
+              onChangeText={setTotalIncome}
+              placeholder="0"
+              placeholderTextColor={COLORS.slate500}
+              keyboardType="numeric"
+            />
           </View>
-          <View style={{ flex: 1, marginLeft: 10 }}>
-            <Text style={styles.monthLabel}>Reporting Period</Text>
-            <Text style={styles.monthValue}>{reportingMonth || 'Current Month'}</Text>
-          </View>
-          <View style={styles.draftChip}>
-            <Text style={styles.draftChipText}>DRAFT</Text>
+          {showIncomeWarning && (
+            <View style={styles.warningRow}>
+              <MaterialCommunityIcons name="alert-circle-outline" size={16} color={COLORS.maroon} />
+              <Text style={styles.warningText}>
+                That is {croreLabel} against {formatWhole(memberVal)} active members. Check the figure before continuing.
+              </Text>
+            </View>
+          )}
+        </View>
+
+        <View style={styles.fieldGroup}>
+          <Text style={styles.fieldLabel}>Total expenses</Text>
+          <View style={styles.inputBox}>
+            <Text style={styles.currencyPrefix}>₹</Text>
+            <TextInput
+              style={styles.textInput}
+              value={totalExpenses}
+              onChangeText={setTotalExpenses}
+              placeholder="0"
+              placeholderTextColor={COLORS.slate500}
+              keyboardType="numeric"
+            />
           </View>
         </View>
 
-        {/* ── Input Form Card ── */}
-        <View style={styles.card}>
-          <View style={styles.cardHeaderRow}>
-            <View style={styles.cardIconBox}>
-              <MaterialCommunityIcons name="chart-box-outline" size={18} color={COLORS.primary} />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.cardHeaderTitle}>P&L Performance Ledger</Text>
-              <Text style={styles.cardHeaderSub}>Record gross income and operational expenditure</Text>
-            </View>
-          </View>
-
-          {/* Field 1: Gross Income / Revenue */}
-          <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>Gross Income / Revenue (₹)</Text>
-            <View style={styles.inputBox}>
-              <Text style={styles.currencyPrefix}>₹</Text>
-              <TextInput
-                style={styles.textInput}
-                value={totalIncome}
-                onChangeText={setTotalIncome}
-                placeholder="e.g. 1,45,000"
-                placeholderTextColor={COLORS.slate300}
-                keyboardType="numeric"
-              />
-              <MaterialCommunityIcons name="trending-up" size={18} color={COLORS.emerald500} />
-            </View>
-          </View>
-
-          {/* Field 2: Total Expenses */}
-          <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>Total Expenses (₹)</Text>
-            <View style={styles.inputBox}>
-              <Text style={styles.currencyPrefix}>₹</Text>
-              <TextInput
-                style={styles.textInput}
-                value={totalExpenses}
-                onChangeText={setTotalExpenses}
-                placeholder="e.g. 95,000"
-                placeholderTextColor={COLORS.slate300}
-                keyboardType="numeric"
-              />
-              <MaterialCommunityIcons name="trending-down" size={18} color="#EF4444" />
-            </View>
-          </View>
-
-          {/* Auto Derived Net Surplus / Deficit Card */}
-          <View style={[styles.autoCalcCard, cardStyle]}>
-            <View style={{ flex: 1 }}>
-              <Text style={[styles.autoCalcLabel, { color: statusColor }]}>
-                NET SURPLUS / (DEFICIT) (AUTO CALCULATED)
+        <View style={styles.calcCard}>
+          <Text style={styles.calcLabel}>CALCULATED FOR YOU</Text>
+          <View style={styles.calcRow}>
+            <Text style={styles.calcRowLabel}>Net surplus / deficit</Text>
+            {bothFilled ? (
+              <Text style={styles.calcRowValue}>
+                {diff < 0 ? '−' : ''}₹{formatWhole(Math.abs(diff))}
               </Text>
-              <Text style={[styles.autoCalcValue, { color: statusColor }]}>
-                {formatCurrency(displayValue)}
-              </Text>
-            </View>
-
-            <View style={[styles.autoBadge, { backgroundColor: statusBg }]}>
-              <MaterialCommunityIcons
-                name={statusIcon}
-                size={14}
-                color={statusColor}
-              />
-              <Text style={[styles.autoBadgeText, { color: statusColor }]}>
-                {statusText}
-              </Text>
-            </View>
+            ) : (
+              <Text style={styles.calcRowPlaceholder}>Fill both fields above</Text>
+            )}
           </View>
-
-          {/* Field 3: Total Active Members — read-only, sourced from
-              Registered Demographics (Master Data). A free-typed number here
-              previously drifted from the actual demographic breakdown; there
-              is exactly one place membership counts are entered now. */}
-          <View style={[styles.autoCalcCard, { backgroundColor: COLORS.slate50, borderColor: COLORS.slate200 }]}>
-            <View style={{ flex: 1 }}>
-              <Text style={[styles.autoCalcLabel, { color: COLORS.slate500 }]}>TOTAL ACTIVE MEMBERS (FROM DEMOGRAPHICS)</Text>
-              <Text style={[styles.autoCalcValue, { color: COLORS.slate700 }]}>{totalMembers || '0'}</Text>
+          <View style={styles.calcRow}>
+            <View>
+              <Text style={styles.calcRowLabel}>Active members</Text>
+              <Text style={styles.calcRowSub}>From Registered Demographics</Text>
             </View>
-            <View style={[styles.autoBadge, { backgroundColor: COLORS.slate100 }]}>
-              <MaterialCommunityIcons name="account-group-outline" size={14} color={COLORS.slate600} />
-              <Text style={[styles.autoBadgeText, { color: COLORS.slate600 }]}>AUTO</Text>
-            </View>
+            <Text style={styles.calcRowValue}>{totalMembers || 0}</Text>
           </View>
-
         </View>
-      {/* Wizard navigation actions now scroll with the content
-          instead of sitting in a fixed footer, which competed with the
-          floating BottomNav pill for the same strip at the bottom. */}
-        <View style={[{ flexDirection: 'row', width: '100%', gap: 10 }, webCapWidth]}>
-        <TouchableOpacity style={styles.navBackBtn} onPress={onBack} activeOpacity={0.7}>
-          <Text style={styles.buttonTextSecondary}>BACK</Text>
-        </TouchableOpacity>
-        <Pressable
-          style={({ pressed }) => [styles.navNextBtn, pressed && { transform: [{ scale: 0.98 }] }]}
-          onPress={onSaveNext}
-        >
-          <LinearGradient
-            colors={['#7a1a1f', '#4a1017']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
-            style={StyleSheet.absoluteFillObject}
-          />
-          <Text style={styles.buttonTextPrimary}>SAVE & NEXT</Text>
-          <MaterialCommunityIcons name="arrow-right" size={16} color="#ffffff" />
+
+        <View style={styles.footerRow}>
+          <Pressable style={styles.backOutlineBtn} onPress={onBack}>
+            <Text style={styles.backOutlineText}>Back</Text>
+          </Pressable>
+          <Pressable
+            style={({ pressed }) => [styles.primaryBtn, pressed && { opacity: 0.9 }]}
+            onPress={onSaveNext}
+          >
+            <Text style={styles.primaryBtnText}>Save and continue</Text>
+          </Pressable>
+        </View>
+        <Pressable onPress={onBack} hitSlop={8}>
+          <Text style={styles.draftLink}>Save as draft</Text>
         </Pressable>
-        </View>
-
       </ScrollView>
 
       {onTabPress && <BottomNav activeTab={activeTab || 'home'} onTabPress={onTabPress} />}
@@ -255,282 +155,140 @@ export default function MpcsBusinessPerformanceScreen({
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.bg },
-
-  // Header
-  topBar: {
-    position: 'relative',
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    paddingTop: Platform.OS === 'ios' ? 48 : 14,
-    overflow: 'hidden',
-  },
-  backBtn: { padding: 4, zIndex: 1 },
-  topBarTitleContainer: { flex: 1, marginLeft: 12 },
-  notifyBtn: {
-    width: 36,
-    height: 36,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  notifyBadge: {
-    position: 'absolute',
-    top: 6,
-    right: 6,
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#EF4444',
-    borderWidth: 1,
-    borderColor: COLORS.primary,
-  },
-  avatarBtn: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.35)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginLeft: 8,
-  },
-  avatarText: {
-    color: '#FFFFFF',
-    fontSize: 10,
-    fontWeight: '800',
-    fontFamily: FONT_FAMILY,
-  },
-  moduleTag: {
-    color: 'rgba(255,255,255,0.65)',
-    fontSize: 10,
-    fontWeight: '700',
-    fontFamily: FONT_FAMILY,
-    letterSpacing: 1.2,
-    textTransform: 'uppercase',
-  },
-  screenTitleHeader: {
-    color: '#FFFFFF',
-    fontFamily: FONT_FAMILY,
-    fontSize: 17,
-    fontWeight: '800',
-    letterSpacing: -0.3,
-  },
-  stepBadge: {
-    backgroundColor: 'rgba(255,255,255,0.18)',
-    borderRadius: 20,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-  },
-  stepIndicator: {
-    color: 'rgba(255,255,255,0.9)',
-    fontFamily: FONT_FAMILY,
-    fontSize: 11,
-    fontWeight: '700',
-  },
-
-  // Scroll
   scrollContent: { flex: 1 },
-  scrollInner: { padding: 16, paddingBottom: 110, gap: 14 },
+  scrollInner: { padding: 16, paddingBottom: 110, gap: 16 },
 
-  // Month Card
-  monthCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: COLORS.surface,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: COLORS.slate200,
-    padding: 14,
-    overflow: 'hidden',
-  },
-  monthIconBox: {
-    width: 38,
-    height: 38,
-    borderRadius: 10,
-    backgroundColor: COLORS.primaryLight,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  monthLabel: {
-    fontFamily: FONT_FAMILY,
-    fontSize: 10,
-    fontWeight: '600',
-    color: COLORS.slate400,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  monthValue: {
+  fieldGroup: { gap: 6 },
+  fieldLabel: {
     fontFamily: FONT_FAMILY,
     fontSize: 15,
-    fontWeight: '800',
-    color: COLORS.slate800,
-    letterSpacing: -0.2,
-    marginTop: 1,
-  },
-  draftChip: {
-    backgroundColor: COLORS.amber50,
-    borderRadius: 6,
-    paddingHorizontal: 7,
-    paddingVertical: 3,
-    borderWidth: 1,
-    borderColor: '#FDE68A',
-  },
-  draftChipText: {
-    fontFamily: FONT_FAMILY,
-    fontSize: 9,
-    fontWeight: '800',
-    color: COLORS.amber900,
-    letterSpacing: 0.5,
-  },
-
-  // Card
-  card: {
-    backgroundColor: COLORS.surface,
-    borderRadius: 16,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: COLORS.slate200,
-    gap: 14,
-  },
-  cardHeaderRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  cardIconBox: {
-    width: 30,
-    height: 30,
-    borderRadius: 8,
-    backgroundColor: COLORS.primaryLight,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  cardHeaderTitle: {
-    fontFamily: FONT_FAMILY,
-    fontSize: 14,
-    fontWeight: '800',
-    color: COLORS.slate800,
-  },
-  cardHeaderSub: {
-    fontFamily: FONT_FAMILY,
-    fontSize: 11,
-    fontWeight: '500',
-    color: COLORS.slate400,
-    marginTop: 1,
-  },
-
-  // Inputs
-  inputGroup: { gap: 5 },
-  inputLabel: {
-    fontFamily: FONT_FAMILY,
-    fontSize: 11,
-    fontWeight: '600',
-    color: COLORS.slate500,
-    letterSpacing: 0.2,
+    fontWeight: '700',
+    color: COLORS.ink,
   },
   inputBox: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: COLORS.slate50,
+    backgroundColor: COLORS.surface,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    height: 52,
+  },
+  inputBoxWarn: {
+    borderColor: COLORS.warnBorder,
     borderWidth: 1.5,
-    borderColor: COLORS.slate200,
-    borderRadius: 10,
-    paddingHorizontal: 10,
-    height: 44,
   },
   currencyPrefix: {
     fontFamily: FONT_FAMILY,
-    fontSize: 14,
+    fontSize: 18,
     fontWeight: '700',
-    color: COLORS.primary,
-    marginRight: 6,
+    color: COLORS.maroon,
+    marginRight: 8,
   },
   textInput: {
     flex: 1,
     fontFamily: FONT_FAMILY,
-    fontSize: 16,
-    fontWeight: '500',
-    color: COLORS.slate800,
+    fontSize: 18,
+    fontWeight: '700',
+    color: COLORS.ink,
     ...(Platform.OS === 'web' ? { outlineStyle: 'none' } : {}),
   },
-
-  // Auto Calc Surplus Card
-  autoCalcCard: {
+  warningRow: {
     flexDirection: 'row',
-    alignItems: 'center',
-    borderRadius: 12,
-    padding: 12,
-    borderWidth: 1,
+    alignItems: 'flex-start',
+    gap: 6,
   },
-  surplusCard: {
-    backgroundColor: COLORS.emerald50,
-    borderColor: '#A7F3D0',
-  },
-  deficitCard: {
-    backgroundColor: COLORS.red50,
-    borderColor: '#FCA5A5',
-  },
-  breakEvenCard: {
-    backgroundColor: COLORS.amber50,
-    borderColor: '#FDE68A',
-  },
-  autoCalcLabel: {
+  warningText: {
+    flex: 1,
     fontFamily: FONT_FAMILY,
-    fontSize: 9,
+    fontSize: 12,
+    fontWeight: '600',
+    color: COLORS.maroon,
+    lineHeight: 17,
+  },
+
+  calcCard: {
+    backgroundColor: COLORS.calcBg,
+    borderRadius: 14,
+    padding: 14,
+    gap: 12,
+  },
+  calcLabel: {
+    fontFamily: FONT_FAMILY,
+    fontSize: 11,
+    fontWeight: '800',
+    color: COLORS.slate500,
+    letterSpacing: 1,
+  },
+  calcRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  calcRowLabel: {
+    fontFamily: FONT_FAMILY,
+    fontSize: 15,
     fontWeight: '700',
-    textTransform: 'uppercase',
-    letterSpacing: 0.4,
+    color: COLORS.ink,
   },
-  autoCalcValue: {
+  calcRowSub: {
     fontFamily: FONT_FAMILY,
-    fontSize: 18,
-    fontWeight: '800',
-    letterSpacing: -0.5,
-    marginTop: 2,
+    fontSize: 11,
+    fontWeight: '500',
+    color: COLORS.slate500,
   },
-  autoBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    borderRadius: 8,
-    paddingHorizontal: 8,
-    paddingVertical: 5,
-  },
-  autoBadgeText: {
+  calcRowValue: {
     fontFamily: FONT_FAMILY,
-    fontSize: 9,
+    fontSize: 17,
     fontWeight: '800',
-    letterSpacing: 0.5,
+    color: COLORS.ink,
+  },
+  calcRowPlaceholder: {
+    fontFamily: FONT_FAMILY,
+    fontSize: 13,
+    fontWeight: '500',
+    color: COLORS.slate500,
   },
 
-  // Bottom Bar
-  navBackBtn: {
+  footerRow: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  backOutlineBtn: {
     flex: 1,
     paddingVertical: 14,
     borderRadius: 12,
     borderWidth: 1.5,
-    borderColor: COLORS.slate200,
+    borderColor: COLORS.border,
     alignItems: 'center',
+    justifyContent: 'center',
   },
-  buttonTextSecondary: {
-    color: COLORS.slate500,
+  backOutlineText: {
+    fontFamily: FONT_FAMILY,
+    fontSize: 14,
+    fontWeight: '800',
+    color: COLORS.ink,
+  },
+  primaryBtn: {
+    flex: 2,
+    paddingVertical: 14,
+    borderRadius: 12,
+    backgroundColor: COLORS.maroon,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  primaryBtnText: {
+    fontFamily: FONT_FAMILY,
+    fontSize: 14,
+    fontWeight: '800',
+    color: '#ffffff',
+  },
+  draftLink: {
     fontFamily: FONT_FAMILY,
     fontSize: 13,
     fontWeight: '700',
-  },
-  navNextBtn: {
-    flex: 2,
-    flexDirection: 'row',
-    paddingVertical: 14,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    overflow: 'hidden',
-  },
-  buttonTextPrimary: {
-    color: '#FFFFFF',
-    fontFamily: FONT_FAMILY,
-    fontSize: 13,
-    fontWeight: '800',
-    letterSpacing: 0.3,
+    color: COLORS.slate500,
+    textAlign: 'center',
   },
 });

@@ -2,40 +2,29 @@ import React, { useState } from 'react';
 import * as ImagePicker from 'expo-image-picker';
 import * as Location from 'expo-location';
 import {
-  View, Text, StyleSheet, TouchableOpacity, Image,
+  View, Text, StyleSheet, Image,
   ScrollView, Platform, Pressable
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
 import BottomNav from '../BottomNav';
 import LiveCameraCapture from '../LiveCameraCapture';
+import MpcsWizardHeader from './MpcsWizardHeader';
 import { webCapWidth } from '../../utils/webStyles';
 
-// Same subtle Kanchenjunga treatment used on every header across the app.
-const headerPhotoFilter = Platform.OS === 'web'
-  ? { opacity: 0.4, filter: 'grayscale(0.35) contrast(1.15) brightness(0.95)', mixBlendMode: 'luminosity' }
-  : { opacity: 0.28 };
-
+// Redesign source: https://claude.ai/artifact/FpC75VnmdTzgcpPmdQGvkx,
+// section "2 · Monthly return", screens 6b "Evidence, before capture" and
+// 6c "Evidence, after capture".
 const COLORS = {
-  surface: '#ffffff',
-  bg: '#F8F5F2',
-  slate800: '#1e293b',
-  slate700: '#334155',
-  slate600: '#475569',
-  slate500: '#64748b',
-  slate400: '#94a3b8',
-  slate300: '#cbd5e1',
-  slate200: '#e2e8f0',
-  slate100: '#f1f5f9',
-  slate50: '#f8fafc',
-  primary: '#7a1a1f',
-  primaryLight: '#FEF2F2',
+  maroon: '#7B1420',
+  bg: '#F5F1EC',
+  surface: '#FFFFFF',
+  ink: '#1E1B18',
+  slate600: '#57534E',
+  slate500: '#78716C',
+  slate400: '#A8A29E',
+  border: '#E7E2DA',
+  pillBg: '#F6E3E5',
   emerald700: '#047857',
-  emerald500: '#10b981',
-  emerald50: '#ecfdf5',
-  amber900: '#78350f',
-  amber50: '#fffbeb',
-  red50: '#fef2f2',
 };
 
 const FONT_FAMILY = 'Manrope';
@@ -141,34 +130,13 @@ export default function MpcsDigitalEvidenceScreen({
         onCapture={handleLiveCameraCapture}
         onClose={() => setShowLiveCamera(false)}
       />
-      {/* ── Top Header ── */}
-      <View style={styles.topBar}>
-        <LinearGradient
-          colors={['#7a1a1f', '#4a1017']}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 0 }}
-          style={StyleSheet.absoluteFillObject}
-        />
-        <Image
-          source={require('../../../assets/core/kanchenjunga.jpg')}
-          style={[StyleSheet.absoluteFillObject, { width: '100%', height: '100%' }, headerPhotoFilter]}
-          resizeMode="cover"
-        />
-        <TouchableOpacity style={styles.backBtn} onPress={onBack} activeOpacity={0.7}>
-          <MaterialCommunityIcons name="arrow-left" size={24} color="#FFFFFF" />
-        </TouchableOpacity>
-        <View style={styles.topBarTitleContainer}>
-          <Text style={styles.moduleTag}>MPCS</Text>
-          <Text style={styles.screenTitleHeader}>Digital Evidence</Text>
-        </View>
-        <TouchableOpacity style={styles.notifyBtn} onPress={onNotifyPress} activeOpacity={0.7}>
-          <MaterialCommunityIcons name="bell-outline" size={20} color="#FFFFFF" />
-          {unreadCount > 0 && <View style={styles.notifyBadge} />}
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.avatarBtn} onPress={onProfilePress} activeOpacity={0.8}>
-          <Text style={styles.avatarText}>CI</Text>
-        </TouchableOpacity>
-      </View>
+
+      <MpcsWizardHeader
+        month={(reportingMonth || 'CURRENT MONTH').toUpperCase()}
+        title="Digital Evidence"
+        step={2}
+        onBack={onBack}
+      />
 
       <ScrollView
         style={styles.scrollContent}
@@ -176,142 +144,70 @@ export default function MpcsDigitalEvidenceScreen({
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
-        {/* Month Indicator Card */}
-        <View style={styles.monthCard}>
-          <LinearGradient
-            colors={['rgba(122,26,31,0.06)', 'rgba(122,26,31,0.02)']}
-            style={StyleSheet.absoluteFillObject}
-          />
-          <View style={styles.monthIconBox}>
-            <MaterialCommunityIcons name="calendar-month-outline" size={20} color={COLORS.primary} />
-          </View>
-          <View style={{ flex: 1, marginLeft: 10 }}>
-            <Text style={styles.monthLabel}>Reporting Period</Text>
-            <Text style={styles.monthValue}>{reportingMonth || 'Current Month'}</Text>
-          </View>
-          <View style={styles.draftChip}>
-            <Text style={styles.draftChipText}>DRAFT</Text>
-          </View>
-        </View>
-
-        {/* ── Photo Evidence Card ── */}
-        <View style={styles.card}>
-          <View style={styles.cardHeaderRow}>
-            <View style={styles.cardIconBox}>
-              <MaterialCommunityIcons name="camera-outline" size={18} color={COLORS.primary} />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.cardHeaderTitle}>Photo Evidence</Text>
-              <Text style={styles.cardHeaderSub}>Upload geo-tagged operational photo</Text>
-            </View>
-            {imageUri && (
-              <View style={styles.capturedBadge}>
-                <MaterialCommunityIcons name="check-circle" size={13} color={COLORS.emerald700} />
-                <Text style={styles.capturedBadgeText}>CAPTURED</Text>
-              </View>
-            )}
-          </View>
-
-          {imageUri ? (
-            <View style={styles.photoPreviewContainer}>
+        {imageUri ? (
+          <>
+            <View style={styles.photoBox}>
               <Image source={{ uri: imageUri }} style={styles.photoPreview} />
-              <View style={styles.photoOverlayGradient}>
-                <TouchableOpacity style={styles.retakeBtn} onPress={handleCapturePhoto} activeOpacity={0.85}>
-                  <LinearGradient
-                    colors={['#7a1a1f', '#4a1017']}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 0 }}
-                    style={StyleSheet.absoluteFillObject}
-                  />
-                  <MaterialCommunityIcons name="camera-retake-outline" size={16} color="#FFFFFF" />
-                  <Text style={styles.retakeText}>RETAKE PHOTO</Text>
-                </TouchableOpacity>
+            </View>
+
+            <View style={styles.confirmCard}>
+              <MaterialCommunityIcons name="check-circle" size={18} color={COLORS.emerald700} />
+              <View style={{ flex: 1, marginLeft: 8 }}>
+                <Text style={styles.confirmTitle}>Location and time recorded</Text>
+                <Text style={styles.confirmLine}>
+                  {latitude && longitude ? `${Number(latitude).toFixed(4)}° N, ${Number(longitude).toFixed(4)}° E` : 'Not captured yet'}
+                </Text>
+                <Text style={styles.confirmLine}>{timestamp || 'Not captured yet'}</Text>
               </View>
             </View>
-          ) : (
+
+            <View style={styles.footerRow}>
+              <Pressable style={styles.backOutlineBtn} onPress={handleCapturePhoto}>
+                <Text style={styles.backOutlineText}>Retake</Text>
+              </Pressable>
+              <Pressable
+                style={({ pressed }) => [styles.primaryBtn, pressed && { opacity: 0.9 }]}
+                onPress={handleSaveAndNext}
+              >
+                <Text style={styles.primaryBtnText}>Save and continue</Text>
+              </Pressable>
+            </View>
+            <Pressable onPress={onBack} hitSlop={8}>
+              <Text style={styles.draftLink}>Save as draft</Text>
+            </Pressable>
+          </>
+        ) : (
+          <>
             <Pressable
-              style={({ pressed }) => [
-                styles.captureBox,
-                pressed && { backgroundColor: COLORS.slate100 }
-              ]}
+              style={({ pressed }) => [styles.uploadBox, pressed && { opacity: 0.85 }]}
               onPress={handleCapturePhoto}
             >
-              <View style={styles.captureCircle}>
-                <MaterialCommunityIcons name="camera-plus-outline" size={26} color={COLORS.primary} />
+              <View style={styles.uploadIconCircle}>
+                <MaterialCommunityIcons name="camera-outline" size={26} color={COLORS.maroon} />
               </View>
-              <Text style={styles.captureTitle}>
-                {isCapturing ? "Capturing photo..." : "Tap to capture operational photo"}
+              <Text style={styles.uploadTitle}>
+                {isCapturing ? 'Capturing photo…' : 'Take the site photo'}
               </Text>
-              <Text style={styles.captureSub}>Geo-tagged PNG/JPG • Auto timestamped • Live capture only</Text>
+              <Text style={styles.uploadDesc}>
+                The camera records your location and the time automatically. Photos from the gallery cannot be used.
+              </Text>
             </Pressable>
-          )}
-        </View>
 
-        {/* ── GPS & Location Card ── */}
-        <View style={styles.card}>
-          <View style={styles.cardHeaderRow}>
-            <View style={styles.cardIconBox}>
-              <MaterialCommunityIcons name="map-marker-outline" size={18} color={COLORS.primary} />
+            <View style={styles.footerRow}>
+              <Pressable style={styles.backOutlineBtn} onPress={onBack}>
+                <Text style={styles.backOutlineText}>Back</Text>
+              </Pressable>
+              <Pressable
+                style={({ pressed }) => [styles.primaryBtn, pressed && { opacity: 0.9 }]}
+                onPress={handleCapturePhoto}
+              >
+                <MaterialCommunityIcons name="camera" size={16} color="#ffffff" style={{ marginRight: 8 }} />
+                <Text style={styles.primaryBtnText}>Open camera</Text>
+              </Pressable>
             </View>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.cardHeaderTitle}>Location & Timestamp</Text>
-              <Text style={styles.cardHeaderSub}>Auto-filled via GPS telemetry</Text>
-            </View>
-          </View>
-
-          <View style={styles.inputRowHalf}>
-            <View style={styles.inputHalf}>
-              <Text style={styles.inputLabel}>Latitude</Text>
-              <View style={styles.inputBox}>
-                <MaterialCommunityIcons name="crosshairs-gps" size={15} color={COLORS.slate400} style={styles.inputIcon} />
-                <Text style={styles.textInput} numberOfLines={1} ellipsizeMode="tail">
-                  {latitude || 'Not captured yet'}
-                </Text>
-              </View>
-            </View>
-
-            <View style={styles.inputHalf}>
-              <Text style={styles.inputLabel}>Longitude</Text>
-              <View style={styles.inputBox}>
-                <MaterialCommunityIcons name="crosshairs-gps" size={15} color={COLORS.slate400} style={styles.inputIcon} />
-                <Text style={styles.textInput} numberOfLines={1} ellipsizeMode="tail">
-                  {longitude || 'Not captured yet'}
-                </Text>
-              </View>
-            </View>
-          </View>
-
-          {/* Timestamp Box */}
-          <View style={styles.timestampCard}>
-            <MaterialCommunityIcons name="clock-outline" size={16} color={COLORS.primary} />
-            <View style={{ flex: 1, marginLeft: 8 }}>
-              <Text style={styles.timestampLabel}>Captured Timestamp</Text>
-              <Text style={styles.timestampValue}>{timestamp || "Not captured yet"}</Text>
-            </View>
-          </View>
-        </View>
-      {/* Wizard navigation actions now scroll with the content
-          instead of sitting in a fixed footer, which competed with the
-          floating BottomNav pill for the same strip at the bottom. */}
-        <View style={[{ flexDirection: 'row', flex: 1, gap: 10 }, webCapWidth]}>
-        <TouchableOpacity style={styles.navBackBtn} onPress={onBack} activeOpacity={0.7}>
-          <Text style={styles.buttonTextSecondary}>BACK</Text>
-        </TouchableOpacity>
-        <Pressable
-          style={({ pressed }) => [styles.navNextBtn, pressed && { transform: [{ scale: 0.98 }] }]}
-          onPress={handleSaveAndNext}
-        >
-          <LinearGradient
-            colors={['#7a1a1f', '#4a1017']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
-            style={StyleSheet.absoluteFillObject}
-          />
-          <Text style={styles.buttonTextPrimary}>SAVE & NEXT</Text>
-          <MaterialCommunityIcons name="arrow-right" size={16} color="#ffffff" />
-        </Pressable>
-        </View>
-
+            <Text style={styles.hintText}>Continue is available once the photo is taken</Text>
+          </>
+        )}
       </ScrollView>
 
       {onTabPress && <BottomNav activeTab={activeTab || 'home'} onTabPress={onTabPress} />}
@@ -321,342 +217,124 @@ export default function MpcsDigitalEvidenceScreen({
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.bg },
-
-  // Header
-  topBar: {
-    position: 'relative',
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    paddingTop: Platform.OS === 'ios' ? 48 : 14,
-    overflow: 'hidden',
-  },
-  backBtn: { padding: 4, zIndex: 1 },
-  topBarTitleContainer: { flex: 1, marginLeft: 12 },
-  notifyBtn: {
-    width: 36,
-    height: 36,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  notifyBadge: {
-    position: 'absolute',
-    top: 6,
-    right: 6,
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#EF4444',
-    borderWidth: 1,
-    borderColor: COLORS.primary,
-  },
-  avatarBtn: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.35)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginLeft: 8,
-  },
-  avatarText: {
-    color: '#FFFFFF',
-    fontSize: 10,
-    fontWeight: '800',
-    fontFamily: FONT_FAMILY,
-  },
-  moduleTag: {
-    color: 'rgba(255,255,255,0.65)',
-    fontSize: 10,
-    fontWeight: '700',
-    fontFamily: FONT_FAMILY,
-    letterSpacing: 1.2,
-    textTransform: 'uppercase',
-  },
-  screenTitleHeader: {
-    color: '#FFFFFF',
-    fontFamily: FONT_FAMILY,
-    fontSize: 17,
-    fontWeight: '800',
-    letterSpacing: -0.3,
-  },
-  stepBadge: {
-    backgroundColor: 'rgba(255,255,255,0.18)',
-    borderRadius: 20,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-  },
-  stepIndicator: {
-    color: 'rgba(255,255,255,0.9)',
-    fontFamily: FONT_FAMILY,
-    fontSize: 11,
-    fontWeight: '700',
-  },
-
-  // Scroll
   scrollContent: { flex: 1 },
   scrollInner: { padding: 16, paddingBottom: 110, gap: 14 },
 
-  // Month Card
-  monthCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: COLORS.surface,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: COLORS.slate200,
-    padding: 14,
-    overflow: 'hidden',
-  },
-  monthIconBox: {
-    width: 38,
-    height: 38,
-    borderRadius: 10,
-    backgroundColor: COLORS.primaryLight,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  monthLabel: {
-    fontFamily: FONT_FAMILY,
-    fontSize: 10,
-    fontWeight: '600',
-    color: COLORS.slate400,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  monthValue: {
-    fontFamily: FONT_FAMILY,
-    fontSize: 15,
-    fontWeight: '800',
-    color: COLORS.slate800,
-    letterSpacing: -0.2,
-    marginTop: 1,
-  },
-  draftChip: {
-    backgroundColor: COLORS.amber50,
-    borderRadius: 6,
-    paddingHorizontal: 7,
-    paddingVertical: 3,
-    borderWidth: 1,
-    borderColor: '#FDE68A',
-  },
-  draftChipText: {
-    fontFamily: FONT_FAMILY,
-    fontSize: 9,
-    fontWeight: '800',
-    color: COLORS.amber900,
-    letterSpacing: 0.5,
-  },
-
-  // Card
-  card: {
-    backgroundColor: COLORS.surface,
-    borderRadius: 16,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: COLORS.slate200,
-    gap: 14,
-  },
-  cardHeaderRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  cardIconBox: {
-    width: 30,
-    height: 30,
-    borderRadius: 8,
-    backgroundColor: COLORS.primaryLight,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  cardHeaderTitle: {
-    fontFamily: FONT_FAMILY,
-    fontSize: 14,
-    fontWeight: '800',
-    color: COLORS.slate800,
-  },
-  cardHeaderSub: {
-    fontFamily: FONT_FAMILY,
-    fontSize: 11,
-    fontWeight: '500',
-    color: COLORS.slate400,
-    marginTop: 1,
-  },
-  capturedBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    backgroundColor: COLORS.emerald50,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: 'rgba(16,185,129,0.3)',
-  },
-  capturedBadgeText: {
-    fontFamily: FONT_FAMILY,
-    fontSize: 9,
-    fontWeight: '800',
-    color: COLORS.emerald700,
-    letterSpacing: 0.4,
-  },
-
-  // Photo Box
-  captureBox: {
-    borderRadius: 14,
-    borderWidth: 2,
-    borderColor: COLORS.slate200,
+  uploadBox: {
+    borderRadius: 18,
+    borderWidth: 1.5,
+    borderColor: COLORS.border,
     borderStyle: 'dashed',
-    padding: 24,
+    paddingVertical: 48,
+    paddingHorizontal: 24,
+    alignItems: 'center',
+    backgroundColor: COLORS.surface,
+  },
+  uploadIconCircle: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: COLORS.pillBg,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: COLORS.slate50,
-    gap: 8,
+    marginBottom: 16,
   },
-  captureCircle: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-    backgroundColor: COLORS.primaryLight,
-    alignItems: 'center',
-    justifyContent: 'center',
+  uploadTitle: {
+    fontFamily: FONT_FAMILY,
+    fontSize: 18,
+    fontWeight: '800',
+    color: COLORS.ink,
+    marginBottom: 8,
   },
-  captureTitle: {
+  uploadDesc: {
     fontFamily: FONT_FAMILY,
     fontSize: 13,
-    fontWeight: '700',
-    color: COLORS.slate700,
+    fontWeight: '500',
+    color: COLORS.slate600,
+    textAlign: 'center',
+    lineHeight: 18,
   },
-  captureSub: {
-    fontFamily: FONT_FAMILY,
-    fontSize: 11,
-    color: COLORS.slate400,
-  },
-  photoPreviewContainer: {
-    borderRadius: 14,
+
+  photoBox: {
+    borderRadius: 18,
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: COLORS.slate200,
-    position: 'relative',
+    borderColor: COLORS.border,
   },
   photoPreview: {
     width: '100%',
-    height: 200,
-    borderRadius: 14,
-  },
-  photoOverlayGradient: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    padding: 12,
-    backgroundColor: 'rgba(0,0,0,0.4)',
-    alignItems: 'center',
-  },
-  retakeBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-    overflow: 'hidden',
-  },
-  retakeText: {
-    fontFamily: FONT_FAMILY,
-    fontSize: 11,
-    fontWeight: '800',
-    color: '#FFFFFF',
-    letterSpacing: 0.5,
+    height: 260,
   },
 
-  // Inputs
-  inputRowHalf: { flexDirection: 'row', gap: 10 },
-  inputHalf: { flex: 1, gap: 5 },
-  inputLabel: {
-    fontFamily: FONT_FAMILY,
-    fontSize: 11,
-    fontWeight: '600',
-    color: COLORS.slate500,
-    letterSpacing: 0.2,
-  },
-  inputBox: {
+  confirmCard: {
     flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: COLORS.slate50,
-    borderWidth: 1.5,
-    borderColor: COLORS.slate200,
-    borderRadius: 10,
-    paddingHorizontal: 10,
-    height: 44,
-    overflow: 'hidden',
-  },
-  inputIcon: { marginRight: 6 },
-  textInput: {
-    flex: 1,
-    fontFamily: FONT_FAMILY,
-    fontSize: 16,
-    fontWeight: '500',
-    color: COLORS.slate800,
-    ...(Platform.OS === 'web' ? { outlineStyle: 'none' } : {}),
-  },
-
-  // Timestamp
-  timestampCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: COLORS.primaryLight,
-    borderRadius: 10,
-    padding: 10,
+    alignItems: 'flex-start',
+    backgroundColor: COLORS.surface,
+    borderRadius: 18,
     borderWidth: 1,
-    borderColor: 'rgba(122, 26, 31, 0.15)',
+    borderColor: COLORS.border,
+    padding: 16,
   },
-  timestampLabel: {
+  confirmTitle: {
     fontFamily: FONT_FAMILY,
-    fontSize: 9,
-    fontWeight: '700',
-    color: COLORS.slate400,
-    textTransform: 'uppercase',
-    letterSpacing: 0.4,
-  },
-  timestampValue: {
-    fontFamily: FONT_FAMILY,
-    fontSize: 12,
+    fontSize: 15,
     fontWeight: '800',
-    color: COLORS.primary,
-    marginTop: 1,
+    color: COLORS.ink,
+    marginBottom: 4,
+  },
+  confirmLine: {
+    fontFamily: FONT_FAMILY,
+    fontSize: 13,
+    fontWeight: '500',
+    color: COLORS.slate600,
   },
 
-  // Bottom Bar
-  navBackBtn: {
+  footerRow: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  backOutlineBtn: {
     flex: 1,
     paddingVertical: 14,
     borderRadius: 12,
     borderWidth: 1.5,
-    borderColor: COLORS.slate200,
+    borderColor: COLORS.border,
     alignItems: 'center',
+    justifyContent: 'center',
   },
-  buttonTextSecondary: {
-    color: COLORS.slate500,
+  backOutlineText: {
     fontFamily: FONT_FAMILY,
-    fontSize: 13,
-    fontWeight: '700',
+    fontSize: 14,
+    fontWeight: '800',
+    color: COLORS.ink,
   },
-  navNextBtn: {
+  primaryBtn: {
     flex: 2,
     flexDirection: 'row',
     paddingVertical: 14,
     borderRadius: 12,
+    backgroundColor: COLORS.maroon,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
-    overflow: 'hidden',
   },
-  buttonTextPrimary: {
-    color: '#FFFFFF',
+  primaryBtnText: {
+    fontFamily: FONT_FAMILY,
+    fontSize: 14,
+    fontWeight: '800',
+    color: '#ffffff',
+  },
+  hintText: {
+    fontFamily: FONT_FAMILY,
+    fontSize: 12,
+    fontWeight: '500',
+    color: COLORS.slate500,
+    textAlign: 'center',
+  },
+  draftLink: {
     fontFamily: FONT_FAMILY,
     fontSize: 13,
-    fontWeight: '800',
-    letterSpacing: 0.3,
+    fontWeight: '700',
+    color: COLORS.slate500,
+    textAlign: 'center',
   },
 });
