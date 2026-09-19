@@ -43,6 +43,7 @@ import MoreScreen from './src/components/MoreScreen';
 import SyncStatusScreen from './src/components/SyncStatusScreen';
 import MyInstitutionsScreen from './src/components/MyInstitutionsScreen';
 import MemberDataScreen from './src/components/MemberDataScreen';
+import MpcsMembersScreen from './src/components/mpcs/MpcsMembersScreen';
 import LoanBeneficiaryListScreen from './src/components/LoanBeneficiaryListScreen';
 
 // MPCS Module Screen Components
@@ -4045,15 +4046,16 @@ export default function App() {
                     )}
 
                     {currentMobileScreen === 'MPCS_MEMBERS' && (
-                      <MemberDataScreen
+                      <MpcsMembersScreen
                         societyName={selectedSociety?.name || centerName?.trim()}
-                        societyType="MPCS"
                         inspectorEmail={userProfile?.email}
                         onBack={() => setCurrentMobileScreen('HOME')}
                         onMemberDataChanged={() => stampMasterDataUpdated('members')}
-                      onNotifyPress={() => setShowHistory(true)}
-                      onProfilePress={() => setActiveBottomTab('more')}
-                      unreadCount={activeAlert ? 1 : 0}
+                        activeTab={activeBottomTab}
+                        onTabPress={(tab) => {
+                          setActiveBottomTab(tab);
+                          if (tab === 'home') setCurrentMobileScreen('HOME');
+                        }}
                       />
                     )}
 
