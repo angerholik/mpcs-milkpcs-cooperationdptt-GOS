@@ -3505,6 +3505,7 @@ export default function App() {
                     {currentMobileScreen === 'MPCS_CSC_TRANS' && (
                       <MpcsCscTransactionsScreen
                         societyName={selectedSociety?.name || centerName?.trim() || ''}
+                        reportingMonth={reportingMonth || ''}
                         cscIsActive={!!cscDetailsData?.isCscActive}
                         onBack={() => setCurrentMobileScreen('HOME')}
                       activeTab="home"
@@ -3521,6 +3522,7 @@ export default function App() {
                     {currentMobileScreen === 'MPCS_DAILY_TRANS' && (
                       <MpcsDailyTransactionScreen
                         societyName={selectedSociety?.name || centerName?.trim() || ''}
+                        reportingMonth={reportingMonth || ''}
                         onBack={() => setCurrentMobileScreen('HOME')}
                       activeTab="home"
                       onTabPress={(tab) => {

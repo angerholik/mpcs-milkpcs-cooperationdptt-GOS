@@ -98,6 +98,30 @@ export default function MoreScreen({
     // wiring drift out of sync with each other over time. All three are
     // dropped from this menu entirely; Master Data Directory is the one
     // place to reach them now.
+    //
+    // Cash Book and CSC Transactions are different: they're not master
+    // records, they're day-to-day ledgers with no fixed spot in the
+    // monthly wizard. The redesigned MPCS Home dropped the Quick Actions
+    // shortcut grid that used to be their only entry point, so this menu
+    // is now the one place to reach them.
+    ...(activeModule === 'MPCS' ? [
+      {
+        id: 'MPCS_DAILY_TRANS',
+        label: 'Cash Book',
+        sub: 'Record day-to-day cash entries',
+        icon: 'notebook-outline',
+        color: '#7a1a1f',
+        bgColor: '#fdf1f1',
+      },
+      {
+        id: 'MPCS_CSC_TRANS',
+        label: 'CSC Transactions',
+        sub: 'Log Common Service Center transactions',
+        icon: 'laptop',
+        color: '#0369a1',
+        bgColor: '#e0f2fe',
+      },
+    ] : []),
     {
       id: 'BULLETINS',
       label: 'Departmental Bulletins',
