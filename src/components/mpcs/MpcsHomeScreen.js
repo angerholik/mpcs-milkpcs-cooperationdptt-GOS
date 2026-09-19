@@ -222,14 +222,17 @@ export default function HomeScreen({
 
         {internalTab === 'master' && (
           <>
-            <View style={styles.card}>
+            <Pressable
+              style={styles.card}
+              onPress={() => onNavigateScreen && onNavigateScreen('MPCS_MASTER_DATA')}
+            >
               <View style={styles.masterSummaryRow}>
                 <Text style={styles.masterSummaryCount}>{masterRecords.length} master records</Text>
                 {masterNeedsUpdate.length > 0 && (
                   <Text style={styles.masterSummaryNeed}>{masterNeedsUpdate.length} need update</Text>
                 )}
               </View>
-            </View>
+            </Pressable>
 
             {masterNeedsUpdate.length > 0 && (
               <>

@@ -54,6 +54,7 @@ import MpcsCscTransactionsScreen from './src/components/mpcs/MpcsCscTransactions
 import MpcsDailyTransactionScreen from './src/components/mpcs/MpcsDailyTransactionScreen';
 import MpcsActivitiesLogScreen from './src/components/mpcs/MpcsActivitiesLogScreen';
 import MpcsInstitutionalProfileScreen from './src/components/mpcs/MpcsInstitutionalProfileScreen';
+import MpcsMasterDataScreen from './src/components/mpcs/MpcsMasterDataScreen';
 import MpcsProfileSummaryScreen from './src/components/mpcs/MpcsProfileSummaryScreen';
 import MpcsRegisteredDemographicsScreen from './src/components/mpcs/MpcsRegisteredDemographicsScreen';
 import MpcsComplianceAuditScreen from './src/components/mpcs/MpcsComplianceAuditScreen';
@@ -3358,6 +3359,28 @@ export default function App() {
                         role={getUserRole()}
                         activeTab={activeBottomTab}
                         onTabPress={(tab) => setActiveBottomTab(tab)}
+                      />
+                    )}
+
+                    {currentMobileScreen === 'MPCS_MASTER_DATA' && (
+                      <MpcsMasterDataScreen
+                        societyName={selectedSociety?.name || centerName?.trim() || ''}
+                        panCard={panCard || selectedSociety?.panCard || ''}
+                        regNumber={selectedSociety?.regNo || registrationNumber || ''}
+                        regDate={regDate || selectedSociety?.regDate || ''}
+                        demographicsData={demographicsData}
+                        complianceData={complianceData}
+                        financialsData={financialsData}
+                        dividendData={dividendData}
+                        shareCapitalData={shareCapitalData}
+                        loanData={loanData}
+                        onNavigateScreen={(scr) => { setMasterDataViewReturnTab('home'); setCurrentMobileScreen(scr); }}
+                        onBack={() => setCurrentMobileScreen('HOME')}
+                        activeTab={activeBottomTab}
+                        onTabPress={(tab) => { setActiveBottomTab(tab); if (tab === 'home') setCurrentMobileScreen('HOME'); }}
+                        onNotifyPress={() => setShowHistory(true)}
+                        onProfilePress={() => setActiveBottomTab('more')}
+                        unreadCount={activeAlert ? 1 : 0}
                       />
                     )}
 
