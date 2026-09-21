@@ -1242,6 +1242,11 @@ export default function App() {
     saveMasterStateToStorage({ shareCapitalData: data });
     stampMasterDataUpdated('shareCapital');
   };
+  const handleSaveMpcsLoan = (data) => {
+    setLoanData(data);
+    saveMasterStateToStorage({ loanData: data });
+    stampMasterDataUpdated('loan');
+  };
 
   const loadMasterStateFromStorage = async (targetSocName = null, explicitEmail = null) => {
     try {
@@ -3475,10 +3480,10 @@ export default function App() {
                         onSaveFinancials={handleSaveMpcsFinancials}
                         onSaveDividend={handleSaveMpcsDividend}
                         onSaveShareCapital={handleSaveMpcsShareCapital}
-                        onOpenLoan={() => {
-                          setMasterDataViewReturnTab('home');
-                          setMpcsLoanBackTarget('MPCS_MASTER_DATA');
-                          setCurrentMobileScreen('MPCS_LOAN');
+                        onSaveLoan={handleSaveMpcsLoan}
+                        onManageBeneficiaries={() => {
+                          setLoanBeneficiariesBackTarget('MPCS_MASTER_DATA');
+                          setCurrentMobileScreen('MPCS_LOAN_BENEFICIARIES');
                         }}
                         onBack={() => setCurrentMobileScreen('HOME')}
                         activeTab={activeBottomTab}

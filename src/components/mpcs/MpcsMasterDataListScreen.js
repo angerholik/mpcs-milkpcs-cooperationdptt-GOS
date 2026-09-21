@@ -84,10 +84,9 @@ const DEMOGRAPHIC_CATEGORIES = ['SC', 'ST', 'OBC', 'Others'];
 // "View" to see what's on record (read-only), tap "Update" from there to
 // edit, or tap "Add" to go straight to the form when nothing's recorded
 // yet. Each record saves on its own — no shared final submit. Loan Details
-// is the 7th row but stays a real navigation to the existing
-// MpcsLoanSetupScreen rather than an inline form — that screen already
-// handles the loan type/beneficiaries/cleared flow (and its own
-// read+edit toggle) end to end.
+// is the 7th row and behaves the same as the other six (inline expand,
+// not a separate screen); only "Manage beneficiaries" — a real sub-list,
+// not a handful of fields — still navigates to its own screen.
 export default function MpcsMasterDataListScreen({
   societyName = '',
   panCard = '',
@@ -110,7 +109,8 @@ export default function MpcsMasterDataListScreen({
   onSaveFinancials,
   onSaveDividend,
   onSaveShareCapital,
-  onOpenLoan,
+  onSaveLoan,
+  onManageBeneficiaries,
   onBack,
   activeTab = 'home',
   onTabPress,
@@ -155,7 +155,6 @@ export default function MpcsMasterDataListScreen({
   const recordedCount = records.filter(r => r.updated).length;
 
   const openRow = (key, recorded) => {
-    if (key === 'loan') { onOpenLoan && onOpenLoan(); return; }
     setBanner(null);
     setExpanded({ key, mode: recorded ? 'view' : 'edit' });
   };
@@ -227,12 +226,15 @@ export default function MpcsMasterDataListScreen({
                     onCancelEdit={() => cancelEdit(r.key, recorded)}
                     profileInitial={{ societyName, panCard, regNumber, regDate, presidentName, presidentMobile, managerName, managerMobile }}
                     demographicsInitial={demographicsData}
+                    loanInitial={loanData}
                     complianceInitial={complianceData}
                     financialsInitial={financialsData}
                     dividendInitial={dividendData}
                     shareCapitalInitial={shareCapitalData}
+                    onManageBeneficiaries={onManageBeneficiaries}
                     onSaveProfile={(data, prev) => finishSave('profile', r.title, (d) => onSaveProfile && onSaveProfile(d || data), prev)}
                     onSaveDemographics={(data, prev) => finishSave('demographics', r.title, (d) => onSaveDemographics && onSaveDemographics(d || data), prev)}
+                    onSaveLoan={(data, prev) => finishSave('loan', r.title, (d) => onSaveLoan && onSaveLoan(d || data), prev)}
                     onSaveCompliance={(data, prev) => finishSave('compliance', r.title, (d) => onSaveCompliance && onSaveCompliance(d || data), prev)}
                     onSaveFinancials={(data, prev) => finishSave('financials', r.title, (d) => onSaveFinancials && onSaveFinancials(d || data), prev)}
                     onSaveDividend={(data, prev) => finishSave('dividend', r.title, (d) => onSaveDividend && onSaveDividend(d || data), prev)}
@@ -248,9 +250,7 @@ export default function MpcsMasterDataListScreen({
                           : 'Never updated'}
                       </Text>
                     </View>
-                    {r.key === 'loan' ? (
-                      <MaterialCommunityIcons name="chevron-right" size={20} color={COLORS.slate400} />
-                    ) : recorded ? (
+                    {recorded ? (
                       <Text style={styles.viewLink}>View</Text>
                     ) : (
                       <Text style={styles.addLink}>Add</Text>
@@ -270,8 +270,8 @@ export default function MpcsMasterDataListScreen({
 
 function RecordPanel({
   recordKey, title, mode, fy, onCollapse, onGoToEdit, onCancelEdit,
-  profileInitial, demographicsInitial, complianceInitial, financialsInitial, dividendInitial, shareCapitalInitial,
-  onSaveProfile, onSaveDemographics, onSaveCompliance, onSaveFinancials, onSaveDividend, onSaveShareCapital,
+  profileInitial, demographicsInitial, loanInitial, complianceInitial, financialsInitial, dividendInitial, shareCapitalInitial,
+  onSaveProfile, onSaveDemographics, onSaveLoan, onManageBeneficiaries, onSaveCompliance, onSaveFinancials, onSaveDividend, onSaveShareCapital,
 }) {
   return (
     <View style={styles.editCard}>
@@ -293,6 +293,7 @@ function RecordPanel({
         <>
           {recordKey === 'profile' && <ProfileRead {...profileInitial} onUpdate={onGoToEdit} />}
           {recordKey === 'demographics' && <DemographicsRead demographicsData={demographicsInitial} onUpdate={onGoToEdit} />}
+          {recordKey === 'loan' && <LoanRead loanData={loanInitial} onUpdate={onGoToEdit} onManageBeneficiaries={onManageBeneficiaries} />}
           {recordKey === 'compliance' && <ComplianceRead complianceData={complianceInitial} fy={fy} onUpdate={onGoToEdit} />}
           {recordKey === 'financials' && <FinancialsRead financialsData={financialsInitial} fy={fy} onUpdate={onGoToEdit} />}
           {recordKey === 'dividend' && (
@@ -309,6 +310,7 @@ function RecordPanel({
         <>
           {recordKey === 'profile' && <ProfileForm initial={profileInitial} onCancel={onCancelEdit} onSave={onSaveProfile} />}
           {recordKey === 'demographics' && <DemographicsForm initial={demographicsInitial} onCancel={onCancelEdit} onSave={onSaveDemographics} />}
+          {recordKey === 'loan' && <LoanForm initial={loanInitial} onCancel={onCancelEdit} onSave={onSaveLoan} />}
           {recordKey === 'compliance' && <ComplianceForm initial={complianceInitial} fy={fy} onCancel={onCancelEdit} onSave={onSaveCompliance} />}
           {recordKey === 'financials' && <FinancialsForm initial={financialsInitial} onCancel={onCancelEdit} onSave={onSaveFinancials} />}
           {recordKey === 'dividend' && <DividendForm initial={dividendInitial} onCancel={onCancelEdit} onSave={onSaveDividend} />}
@@ -398,6 +400,31 @@ function DemographicsRead({ demographicsData, onUpdate }) {
       </View>
       {blankCategories.length > 0 && blankCategories.length < DEMOGRAPHIC_CATEGORIES.length && (
         <Text style={styles.footnoteInCard}>{joinWithAnd(blankCategories)} left blank: none in the society.</Text>
+      )}
+    </View>
+  );
+}
+
+function LoanRead({ loanData, onUpdate, onManageBeneficiaries }) {
+  const rows = [
+    { label: 'Loan type', value: loanData?.loanType },
+    { label: 'Sanction date', value: loanData?.sanctionDate },
+    { label: 'Amount extended', value: isFilled(loanData?.loanExtended) ? `₹${Number(loanData.loanExtended).toLocaleString('en-IN')}` : '' },
+    { label: 'Number of beneficiaries', value: loanData?.beneficiaries },
+  ];
+  return (
+    <View style={styles.readCard}>
+      {rows.map(r => (
+        <View key={r.label} style={styles.detailRowInline}>
+          <Text style={styles.fieldLabel}>{r.label.toUpperCase()}</Text>
+          <Text style={styles.fieldValue}>{fmt(r.value)}</Text>
+        </View>
+      ))}
+      {onManageBeneficiaries && (
+        <Pressable style={styles.manageRow} onPress={onManageBeneficiaries}>
+          <Text style={styles.manageRowText}>Manage beneficiaries</Text>
+          <MaterialCommunityIcons name="chevron-right" size={18} color={COLORS.slate400} />
+        </Pressable>
       )}
     </View>
   );
@@ -592,6 +619,27 @@ function DemographicsForm({ initial, onCancel, onSave }) {
           </View>
         </View>
       ))}
+    </FormBody>
+  );
+}
+
+function LoanForm({ initial, onCancel, onSave }) {
+  const prev = {
+    hasLoan: initial?.hasLoan || false, loanType: initial?.loanType || '',
+    sanctionDate: initial?.sanctionDate || '', beneficiaries: initial?.beneficiaries || '',
+    loanExtended: initial?.loanExtended || '', loanCleared: initial?.loanCleared || false,
+  };
+  const [form, setForm] = useState(prev);
+  const set = (k) => (v) => setForm(p => ({ ...p, [k]: v }));
+  // Editing and saving a loan record is itself the "yes, this society has
+  // a loan" answer — same rule the old dedicated Loan Setup screen used.
+  const handleSave = () => onSave({ ...form, hasLoan: true }, prev);
+  return (
+    <FormBody onCancel={onCancel} onSave={handleSave}>
+      <Field label="Loan type" value={form.loanType} onChangeText={set('loanType')} placeholder="e.g. Cash Credit Limit" />
+      <DateField label="Sanction date" value={form.sanctionDate} onChangeText={set('sanctionDate')} />
+      <Field label="Amount extended (₹)" value={form.loanExtended} onChangeText={set('loanExtended')} keyboardType="numeric" />
+      <Field label="Number of beneficiaries" value={form.beneficiaries} onChangeText={set('beneficiaries')} keyboardType="numeric" />
     </FormBody>
   );
 }
@@ -813,6 +861,8 @@ const styles = StyleSheet.create({
   footnoteInCard: { fontFamily: FONT_FAMILY, fontSize: 12, fontWeight: '500', color: COLORS.slate500, marginTop: 10 },
 
   recordRow: { backgroundColor: COLORS.bg, borderRadius: 14, padding: 14 },
+  manageRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 10, paddingTop: 12, borderTopWidth: 1, borderTopColor: COLORS.border },
+  manageRowText: { fontFamily: FONT_FAMILY, fontSize: 14, fontWeight: '700', color: COLORS.ink },
 
   pendingPill: { backgroundColor: COLORS.amber50, borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4 },
   pendingPillText: { fontFamily: FONT_FAMILY, fontSize: 10, fontWeight: '800', color: COLORS.amber700, letterSpacing: 0.5 },
