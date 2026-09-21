@@ -34,6 +34,11 @@ const formatRs = (n) => {
   return isNaN(num) ? '—' : `₹${Math.round(num).toLocaleString('en-IN')}`;
 };
 
+const formatWhole = (n) => {
+  const num = Number(n) || 0;
+  return Math.round(num).toLocaleString('en-IN');
+};
+
 const escapeHtml = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
 // RN's Alert.alert is a silent no-op on web — without this, a failed save
@@ -72,6 +77,7 @@ const csvCell = (v) => {
 // CSV/PDF export cover the roster.
 export default function MpcsLoanBeneficiariesScreen({
   societyName = '',
+  loanExtended = '',
   onBack,
   onBeneficiariesChanged,
 }) {
@@ -112,6 +118,19 @@ export default function MpcsLoanBeneficiariesScreen({
   const hasName = form.beneficiaryName.trim().length > 0;
   const hasAmount = form.amountTaken !== '' && !isNaN(parseFloat(form.amountTaken));
   const canSave = hasName && hasAmount;
+
+  // The loan's "Amount extended" is a pool every beneficiary draws from —
+  // what's already taken by everyone else on this loan sets the ceiling
+  // for what's left to hand out. Excludes the beneficiary being edited so
+  // editing someone's own row doesn't count their old amount against them.
+  const extendedTotal = parseFloat(loanExtended) || 0;
+  const totalAllocated = beneficiaries.reduce((sum, b) => sum + (parseFloat(b.amount_taken) || 0), 0);
+  const takenByOthers = beneficiaries
+    .filter(b => b.id !== editingId)
+    .reduce((sum, b) => sum + (parseFloat(b.amount_taken) || 0), 0);
+  const remainingEligible = Math.max(extendedTotal - takenByOthers, 0);
+  const takenValue = parseFloat(form.amountTaken) || 0;
+  const overAllocated = extendedTotal > 0 && takenValue > remainingEligible;
 
   const missingLabel = !hasName && !hasAmount
     ? 'Name and amount needed'
@@ -347,7 +366,7 @@ export default function MpcsLoanBeneficiariesScreen({
               <View style={styles.rowHalf}>
                 <View style={styles.fieldHalf}>
                   <Text style={styles.fieldLabel}>Amount taken</Text>
-                  <View style={styles.inputBox}>
+                  <View style={[styles.inputBox, overAllocated && styles.inputBoxWarn]}>
                     <Text style={styles.currencyPrefix}>₹</Text>
                     <TextInput
                       style={styles.textInput}
@@ -358,6 +377,13 @@ export default function MpcsLoanBeneficiariesScreen({
                       keyboardType="numeric"
                     />
                   </View>
+                  {extendedTotal > 0 && (
+                    <Text style={overAllocated ? styles.warnNote : styles.optionalNote}>
+                      {overAllocated
+                        ? `Only ₹${formatWhole(remainingEligible)} left of the ₹${formatWhole(extendedTotal)} extended.`
+                        : `Up to ₹${formatWhole(remainingEligible)} left on this loan.`}
+                    </Text>
+                  )}
                 </View>
                 <View style={styles.fieldHalf}>
                   <Text style={styles.fieldLabel}>Repaid so far</Text>
@@ -416,6 +442,11 @@ export default function MpcsLoanBeneficiariesScreen({
               <Text style={styles.sectionLabel}>ON THIS LOAN</Text>
               <Text style={styles.sectionCount}>{beneficiaries.length}</Text>
             </View>
+            {extendedTotal > 0 && beneficiaries.length > 0 && (
+              <Text style={styles.allocationNote}>
+                ₹{formatWhole(totalAllocated)} of ₹{formatWhole(extendedTotal)} extended already allocated
+              </Text>
+            )}
 
             {loading ? (
               <View style={styles.emptyCard}>
@@ -531,6 +562,7 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
   },
   sectionCount: { fontFamily: FONT_FAMILY, fontSize: 13, fontWeight: '800', color: COLORS.maroon },
+  allocationNote: { fontFamily: FONT_FAMILY, fontSize: 12, fontWeight: '500', color: COLORS.slate500, marginTop: -8 },
 
   emptyCard: {
     backgroundColor: COLORS.surface,
@@ -610,6 +642,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     height: 50,
   },
+  inputBoxWarn: { borderColor: COLORS.maroon, borderWidth: 1.5 },
   currencyPrefix: { fontFamily: FONT_FAMILY, fontSize: 16, fontWeight: '700', color: COLORS.maroon, marginRight: 6 },
   textInput: {
     flex: 1,
@@ -620,6 +653,7 @@ const styles = StyleSheet.create({
     ...(Platform.OS === 'web' ? { outlineStyle: 'none' } : {}),
   },
   optionalNote: { fontFamily: FONT_FAMILY, fontSize: 12, fontWeight: '500', color: COLORS.slate500 },
+  warnNote: { fontFamily: FONT_FAMILY, fontSize: 12, fontWeight: '700', color: COLORS.maroon },
 
   rowHalf: { flexDirection: 'row', gap: 10 },
   fieldHalf: { flex: 1, gap: 6 },

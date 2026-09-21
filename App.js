@@ -4034,6 +4034,7 @@ export default function App() {
                     {currentMobileScreen === 'MPCS_LOAN_BENEFICIARIES' && (
                       <MpcsLoanBeneficiariesScreen
                         societyName={selectedSociety?.name || centerName?.trim()}
+                        loanExtended={loanData?.loanExtended || ''}
                         onBack={() => setCurrentMobileScreen(loanBeneficiariesBackTarget)}
                         onBeneficiariesChanged={() => stampMasterDataUpdated('loanBeneficiaries')}
                       />
