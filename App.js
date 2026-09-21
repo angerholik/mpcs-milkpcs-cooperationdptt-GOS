@@ -1186,16 +1186,22 @@ export default function App() {
     if (selectedSociety) {
       setSelectedSociety(prev => ({
         ...prev,
-        name: data.societyName || prev?.name,
-        regNo: data.regNumber || prev?.regNo,
-        panCard: data.panCard || prev?.panCard,
-        regDate: data.regDate || prev?.regDate
+        name: data.societyName !== undefined ? data.societyName : prev?.name,
+        regNo: data.regNumber !== undefined ? data.regNumber : prev?.regNo,
+        panCard: data.panCard !== undefined ? data.panCard : prev?.panCard,
+        regDate: data.regDate !== undefined ? data.regDate : prev?.regDate
       }));
     }
     if (institutionsList && institutionsList.length > 0 && selectedSociety?.id) {
       setInstitutionsList(prev => prev.map(inst =>
         inst.id === selectedSociety.id
-          ? { ...inst, name: data.societyName || inst.name, regNo: data.regNumber || inst.regNo, panCard: data.panCard || inst.panCard, regDate: data.regDate || inst.regDate }
+          ? {
+              ...inst,
+              name: data.societyName !== undefined ? data.societyName : inst.name,
+              regNo: data.regNumber !== undefined ? data.regNumber : inst.regNo,
+              panCard: data.panCard !== undefined ? data.panCard : inst.panCard,
+              regDate: data.regDate !== undefined ? data.regDate : inst.regDate
+            }
           : inst
       ));
     }
