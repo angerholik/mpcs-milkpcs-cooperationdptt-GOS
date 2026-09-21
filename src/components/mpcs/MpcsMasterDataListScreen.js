@@ -90,14 +90,35 @@ export default function MpcsMasterDataListScreen({
   const totalMembers = demographicsData.reduce((s, r) => s + (parseInt(r.male) || 0) + (parseInt(r.female) || 0), 0);
   const loanState = loanData?.loanCleared ? 'loan cleared' : loanData?.hasLoan ? 'loan active' : 'no loan';
 
+  const auditDone = complianceData?.auditStatus === 'Done' || complianceData?.auditStatus === 'Completed';
+  const agmDone = complianceData?.agmStatus === 'Done' || complianceData?.agmStatus === 'Completed';
+  const complianceDetail = masterDataUpdated.compliance
+    ? `audit ${auditDone ? 'done' : 'pending'} · AGM ${agmDone ? 'done' : 'pending'}`
+    : '';
+
+  const financialsAllFilled = isFilled(financialsData?.annualTurnover) && isFilled(financialsData?.totalIncome) && isFilled(financialsData?.totalExpenses);
+  const financialsDetail = financialsAllFilled
+    ? `₹${Number(financialsData.annualTurnover).toLocaleString('en-IN')} turnover`
+    : '';
+
+  const dividendDistributed = isFilled(dividendData?.dividendAmount) || isFilled(dividendData?.dividendRate);
+  const dividendDetail = dividendDistributed
+    ? `₹${Number(dividendData.dividendAmount || 0).toLocaleString('en-IN')} distributed`
+    : dividendData?.dividendAnnounced === 'No' ? 'no distribution' : '';
+
+  const shareCapitalAllFilled = isFilled(shareCapitalData?.authorizedCapital) && isFilled(shareCapitalData?.paidUpCapital) && isFilled(shareCapitalData?.totalDeposits);
+  const shareCapitalDetail = shareCapitalAllFilled
+    ? `₹${Number(shareCapitalData.authorizedCapital).toLocaleString('en-IN')} authorised`
+    : '';
+
   const records = [
     { key: 'profile', title: 'Society identification', updated: masterDataUpdated.instProfile, detail: '' },
     { key: 'demographics', title: 'Registered demographics', updated: masterDataUpdated.demographics, detail: totalMembers ? `${totalMembers} members` : '' },
     { key: 'loan', title: 'Loan details', updated: masterDataUpdated.loan, detail: loanData?.hasLoan !== undefined ? loanState : '' },
-    { key: 'compliance', title: 'Compliance and audit', updated: masterDataUpdated.compliance, detail: '' },
-    { key: 'financials', title: 'Financial performance', updated: masterDataUpdated.financials, detail: '' },
-    { key: 'dividend', title: 'Dividend details', updated: masterDataUpdated.dividend, detail: '' },
-    { key: 'shareCapital', title: 'Share capital', updated: masterDataUpdated.shareCapital, detail: '' },
+    { key: 'compliance', title: 'Compliance and audit', updated: masterDataUpdated.compliance, detail: complianceDetail },
+    { key: 'financials', title: 'Financial performance', updated: masterDataUpdated.financials, detail: financialsDetail },
+    { key: 'dividend', title: 'Dividend details', updated: masterDataUpdated.dividend, detail: dividendDetail },
+    { key: 'shareCapital', title: 'Share capital', updated: masterDataUpdated.shareCapital, detail: shareCapitalDetail },
   ];
   const recordedCount = records.filter(r => r.updated).length;
 
@@ -351,8 +372,8 @@ function DemographicsRead({ demographicsData, onUpdate }) {
 }
 
 function ComplianceRead({ complianceData, fy, onUpdate }) {
-  const auditDone = isFilled(complianceData?.auditYear) || isFilled(complianceData?.auditDate);
-  const agmDone = isFilled(complianceData?.agmYear) || isFilled(complianceData?.agmDate);
+  const auditDone = complianceData?.auditStatus === 'Done' || complianceData?.auditStatus === 'Completed';
+  const agmDone = complianceData?.agmStatus === 'Done' || complianceData?.agmStatus === 'Completed';
   return (
     <>
       <View style={styles.readCard}>
