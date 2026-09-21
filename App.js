@@ -56,7 +56,7 @@ import MpcsCscTransactionsScreen from './src/components/mpcs/MpcsCscTransactions
 import MpcsDailyTransactionScreen from './src/components/mpcs/MpcsDailyTransactionScreen';
 import MpcsActivitiesLogScreen from './src/components/mpcs/MpcsActivitiesLogScreen';
 import MpcsInstitutionalProfileScreen from './src/components/mpcs/MpcsInstitutionalProfileScreen';
-import MpcsMasterDataScreen from './src/components/mpcs/MpcsMasterDataScreen';
+import MpcsMasterDataListScreen from './src/components/mpcs/MpcsMasterDataListScreen';
 import MpcsProfileSummaryScreen from './src/components/mpcs/MpcsProfileSummaryScreen';
 import MpcsRegisteredDemographicsScreen from './src/components/mpcs/MpcsRegisteredDemographicsScreen';
 import MpcsComplianceAuditScreen from './src/components/mpcs/MpcsComplianceAuditScreen';
@@ -1170,6 +1170,71 @@ export default function App() {
       saveMasterStateToStorage({ masterDataTimestamps: updated });
       return updated;
     });
+  };
+
+  // Shared save handlers for MpcsMasterDataListScreen's six inline-editable
+  // records (Loan is the 7th but navigates to its own screen instead).
+  const handleSaveMpcsProfile = (data) => {
+    if (data.societyName !== undefined) setCenterName(data.societyName);
+    if (data.panCard !== undefined) setPanCard(data.panCard);
+    if (data.regDate !== undefined) setRegDate(data.regDate);
+    if (data.regNumber !== undefined) setRegistrationNumber(data.regNumber);
+    if (data.presidentName !== undefined) setPresidentName(data.presidentName);
+    if (data.presidentMobile !== undefined) setPresidentMobile(data.presidentMobile);
+    if (data.secretaryName !== undefined) setManagerName(data.secretaryName);
+    if (data.secretaryMobile !== undefined) setManagerMobile(data.secretaryMobile);
+    if (selectedSociety) {
+      setSelectedSociety(prev => ({
+        ...prev,
+        name: data.societyName || prev?.name,
+        regNo: data.regNumber || prev?.regNo,
+        panCard: data.panCard || prev?.panCard,
+        regDate: data.regDate || prev?.regDate
+      }));
+    }
+    if (institutionsList && institutionsList.length > 0 && selectedSociety?.id) {
+      setInstitutionsList(prev => prev.map(inst =>
+        inst.id === selectedSociety.id
+          ? { ...inst, name: data.societyName || inst.name, regNo: data.regNumber || inst.regNo, panCard: data.panCard || inst.panCard, regDate: data.regDate || inst.regDate }
+          : inst
+      ));
+    }
+    saveMasterStateToStorage({
+      centerName: data.societyName,
+      panCard: data.panCard,
+      regDate: data.regDate,
+      registrationNumber: data.regNumber,
+      presidentName: data.presidentName,
+      presidentMobile: data.presidentMobile,
+      managerName: data.secretaryName,
+      managerMobile: data.secretaryMobile
+    });
+    stampMasterDataUpdated('instProfile');
+  };
+  const handleSaveMpcsDemographics = (data) => {
+    setDemographicsData(data);
+    saveMasterStateToStorage({ demographicsData: data });
+    stampMasterDataUpdated('demographics');
+  };
+  const handleSaveMpcsCompliance = (data) => {
+    setComplianceData(data);
+    saveMasterStateToStorage({ complianceData: data });
+    stampMasterDataUpdated('compliance');
+  };
+  const handleSaveMpcsFinancials = (data) => {
+    setFinancialsData(data);
+    saveMasterStateToStorage({ financialsData: data });
+    stampMasterDataUpdated('financials');
+  };
+  const handleSaveMpcsDividend = (data) => {
+    setDividendData(data);
+    saveMasterStateToStorage({ dividendData: data });
+    stampMasterDataUpdated('dividend');
+  };
+  const handleSaveMpcsShareCapital = (data) => {
+    setShareCapitalData(data);
+    saveMasterStateToStorage({ shareCapitalData: data });
+    stampMasterDataUpdated('shareCapital');
   };
 
   const loadMasterStateFromStorage = async (targetSocName = null, explicitEmail = null) => {
@@ -3282,7 +3347,7 @@ export default function App() {
                     }
                     onEditMasterData={() => {
                       setMasterDataViewReturnTab('profile');
-                      setCurrentMobileScreen('MPCS_PROFILE_VIEW');
+                      setCurrentMobileScreen('MPCS_MASTER_DATA');
                       setActiveBottomTab('home');
                     }}
                     activeTab="profile"
@@ -3382,23 +3447,32 @@ export default function App() {
                     )}
 
                     {currentMobileScreen === 'MPCS_MASTER_DATA' && (
-                      <MpcsMasterDataScreen
+                      <MpcsMasterDataListScreen
                         societyName={selectedSociety?.name || centerName?.trim() || ''}
                         panCard={panCard || selectedSociety?.panCard || ''}
                         regNumber={selectedSociety?.regNo || registrationNumber || ''}
                         regDate={regDate || selectedSociety?.regDate || ''}
+                        presidentName={presidentName || ''}
+                        presidentMobile={presidentMobile || ''}
+                        managerName={managerName || ''}
+                        managerMobile={managerMobile || ''}
                         demographicsData={demographicsData}
                         complianceData={complianceData}
                         financialsData={financialsData}
                         dividendData={dividendData}
                         shareCapitalData={shareCapitalData}
                         loanData={loanData}
-                        onNavigateScreen={(scr) => { setMasterDataViewReturnTab('home'); setCurrentMobileScreen(scr); }}
-                        onSetLoanHasLoan={(val) => {
-                          const updated = { ...loanData, hasLoan: val };
-                          setLoanData(updated);
-                          saveMasterStateToStorage({ loanData: updated });
-                          stampMasterDataUpdated('loan');
+                        masterDataUpdated={masterDataTimestamps}
+                        onSaveProfile={handleSaveMpcsProfile}
+                        onSaveDemographics={handleSaveMpcsDemographics}
+                        onSaveCompliance={handleSaveMpcsCompliance}
+                        onSaveFinancials={handleSaveMpcsFinancials}
+                        onSaveDividend={handleSaveMpcsDividend}
+                        onSaveShareCapital={handleSaveMpcsShareCapital}
+                        onOpenLoan={() => {
+                          setMasterDataViewReturnTab('home');
+                          setMpcsLoanBackTarget('MPCS_MASTER_DATA');
+                          setCurrentMobileScreen('MPCS_LOAN');
                         }}
                         onBack={() => setCurrentMobileScreen('HOME')}
                         activeTab={activeBottomTab}
@@ -3640,70 +3714,6 @@ export default function App() {
                       />
                     )}
 
-                    {/* Opened from the More menu to check/edit just this section —
-                        no Save & Continue, Back returns to the More menu instead of
-                        chaining into Registered Demographics. */}
-                    {currentMobileScreen === 'MPCS_PROFILE_VIEW' && (
-                      <MpcsInstitutionalProfileScreen
-                        societyName={selectedSociety?.name || centerName?.trim() || ''}
-                        panCard={panCard || selectedSociety?.panCard || ''}
-                        regNumber={selectedSociety?.regNo || registrationNumber || ''}
-                        regDate={regDate || selectedSociety?.regDate || ''}
-                        presidentName={presidentName || ''}
-                        presidentMobile={presidentMobile || ''}
-                        secretaryName={managerName || ''}
-                        secretaryMobile={managerMobile || ''}
-                        onSaveProfile={(data) => {
-                          if (data.societyName !== undefined) setCenterName(data.societyName);
-                          if (data.panCard !== undefined) setPanCard(data.panCard);
-                          if (data.regDate !== undefined) setRegDate(data.regDate);
-                          if (data.regNumber !== undefined) setRegistrationNumber(data.regNumber);
-                          if (data.presidentName !== undefined) setPresidentName(data.presidentName);
-                          if (data.presidentMobile !== undefined) setPresidentMobile(data.presidentMobile);
-                          if (data.secretaryName !== undefined) setManagerName(data.secretaryName);
-                          if (data.secretaryMobile !== undefined) setManagerMobile(data.secretaryMobile);
-
-                          if (selectedSociety) {
-                            setSelectedSociety(prev => ({
-                              ...prev,
-                              name: data.societyName || prev?.name,
-                              regNo: data.regNumber || prev?.regNo,
-                              panCard: data.panCard || prev?.panCard,
-                              regDate: data.regDate || prev?.regDate
-                            }));
-                          }
-                          if (institutionsList && institutionsList.length > 0 && selectedSociety?.id) {
-                            setInstitutionsList(prev => prev.map(inst =>
-                              inst.id === selectedSociety.id
-                                ? { ...inst, name: data.societyName || inst.name, regNo: data.regNumber || inst.regNo, panCard: data.panCard || inst.panCard, regDate: data.regDate || inst.regDate }
-                                : inst
-                            ));
-                          }
-                          saveMasterStateToStorage({
-                            centerName: data.societyName,
-                            panCard: data.panCard,
-                            regDate: data.regDate,
-                            registrationNumber: data.regNumber,
-                            presidentName: data.presidentName,
-                            presidentMobile: data.presidentMobile,
-                            managerName: data.secretaryName,
-                            managerMobile: data.secretaryMobile
-                          });
-                          stampMasterDataUpdated('instProfile');
-                        }}
-                        onNext={() => setCurrentMobileScreen('MPCS_DEMOGRAPHICS_VIEW')}
-                        onBack={() => { setCurrentMobileScreen('HOME'); setActiveBottomTab(masterDataViewReturnTab); }}
-                      activeTab={masterDataViewReturnTab}
-                      onTabPress={(tab) => {
-                        setActiveBottomTab(tab);
-                        if (tab === 'home') setCurrentMobileScreen('HOME');
-                      }}
-                      onNotifyPress={() => setShowHistory(true)}
-                      onProfilePress={() => setActiveBottomTab('more')}
-                      unreadCount={activeAlert ? 1 : 0}
-                      />
-                    )}
-
                     {currentMobileScreen === 'MPCS_DEMOGRAPHICS' && (
                       <MpcsRegisteredDemographicsScreen
                         initialDemographics={demographicsData.length > 0 ? demographicsData : undefined}
@@ -3715,29 +3725,6 @@ export default function App() {
                         onNext={() => setCurrentMobileScreen('MPCS_COMPLIANCE')}
                         onBack={() => setCurrentMobileScreen('MPCS_INST_PROFILE')}
                       activeTab="home"
-                      onTabPress={(tab) => {
-                        setActiveBottomTab(tab);
-                        if (tab === 'home') setCurrentMobileScreen('HOME');
-                      }}
-                      onNotifyPress={() => setShowHistory(true)}
-                      onProfilePress={() => setActiveBottomTab('more')}
-                      unreadCount={activeAlert ? 1 : 0}
-                      />
-                    )}
-
-                    {/* Opened from the More menu — no Save & Continue, Back
-                        returns to the More menu instead of chaining onward. */}
-                    {currentMobileScreen === 'MPCS_DEMOGRAPHICS_VIEW' && (
-                      <MpcsRegisteredDemographicsScreen
-                        initialDemographics={demographicsData.length > 0 ? demographicsData : undefined}
-                        onSaveDemographics={(data) => {
-                          setDemographicsData(data);
-                          saveMasterStateToStorage({ demographicsData: data });
-                          stampMasterDataUpdated('demographics');
-                        }}
-                        onNext={() => setCurrentMobileScreen('MPCS_COMPLIANCE_VIEW')}
-                        onBack={() => setCurrentMobileScreen('MPCS_PROFILE_VIEW')}
-                      activeTab={masterDataViewReturnTab}
                       onTabPress={(tab) => {
                         setActiveBottomTab(tab);
                         if (tab === 'home') setCurrentMobileScreen('HOME');
@@ -3774,32 +3761,6 @@ export default function App() {
                       />
                     )}
 
-                    {currentMobileScreen === 'MPCS_COMPLIANCE_VIEW' && (
-                      <MpcsComplianceAuditScreen
-                        initialAuditYear={complianceData?.auditYear || ''}
-                        initialAuditDate={complianceData?.auditDate || ''}
-                        initialAuditStatus={complianceData?.auditStatus || 'Pending'}
-                        initialAgmYear={complianceData?.agmYear || ''}
-                        initialAgmDate={complianceData?.agmDate || ''}
-                        initialAgmStatus={complianceData?.agmStatus || 'Pending'}
-                        onSaveCompliance={(data) => {
-                          setComplianceData(data);
-                          saveMasterStateToStorage({ complianceData: data });
-                          stampMasterDataUpdated('compliance');
-                        }}
-                        onNext={() => setCurrentMobileScreen('MPCS_FINANCIALS_VIEW')}
-                        onBack={() => setCurrentMobileScreen('MPCS_DEMOGRAPHICS_VIEW')}
-                      activeTab={masterDataViewReturnTab}
-                      onTabPress={(tab) => {
-                        setActiveBottomTab(tab);
-                        if (tab === 'home') setCurrentMobileScreen('HOME');
-                      }}
-                      onNotifyPress={() => setShowHistory(true)}
-                      onProfilePress={() => setActiveBottomTab('more')}
-                      unreadCount={activeAlert ? 1 : 0}
-                      />
-                    )}
-
                     {currentMobileScreen === 'MPCS_FINANCIALS' && (
                       <MpcsFinancialPerformanceScreen
                         initialTurnover={financialsData?.annualTurnover || ''}
@@ -3816,32 +3777,6 @@ export default function App() {
                         onNext={() => setCurrentMobileScreen('MPCS_DIVIDEND')}
                         onBack={() => setCurrentMobileScreen('MPCS_COMPLIANCE')}
                       activeTab="home"
-                      onTabPress={(tab) => {
-                        setActiveBottomTab(tab);
-                        if (tab === 'home') setCurrentMobileScreen('HOME');
-                      }}
-                      onNotifyPress={() => setShowHistory(true)}
-                      onProfilePress={() => setActiveBottomTab('more')}
-                      unreadCount={activeAlert ? 1 : 0}
-                      />
-                    )}
-
-                    {currentMobileScreen === 'MPCS_FINANCIALS_VIEW' && (
-                      <MpcsFinancialPerformanceScreen
-                        initialTurnover={financialsData?.annualTurnover || ''}
-                        initialIncome={financialsData?.totalIncome || ''}
-                        initialExpenses={financialsData?.totalExpenses || ''}
-                        initialNetProfit={financialsData?.netProfit || ''}
-                        initialProfitability={financialsData?.profitability || ''}
-                        initialProfitOrLoss={financialsData?.profitOrLoss || ''}
-                        onSaveFinancials={(data) => {
-                          setFinancialsData(data);
-                          saveMasterStateToStorage({ financialsData: data });
-                          stampMasterDataUpdated('financials');
-                        }}
-                        onNext={() => setCurrentMobileScreen('MPCS_DIVIDEND_VIEW')}
-                        onBack={() => setCurrentMobileScreen('MPCS_COMPLIANCE_VIEW')}
-                      activeTab={masterDataViewReturnTab}
                       onTabPress={(tab) => {
                         setActiveBottomTab(tab);
                         if (tab === 'home') setCurrentMobileScreen('HOME');
@@ -3877,31 +3812,6 @@ export default function App() {
                       />
                     )}
 
-                    {currentMobileScreen === 'MPCS_DIVIDEND_VIEW' && (
-                      <MpcsDividendDetailsScreen
-                        initialPolicy={dividendData?.dividendPolicy || ''}
-                        initialAnnounced={dividendData?.dividendAnnounced || ''}
-                        initialRate={dividendData?.dividendRate || ''}
-                        initialAmount={dividendData?.dividendAmount || ''}
-                        initialDate={dividendData?.distributionDate || ''}
-                        onSaveDividend={(data) => {
-                          setDividendData(data);
-                          saveMasterStateToStorage({ dividendData: data });
-                          stampMasterDataUpdated('dividend');
-                        }}
-                        onNext={() => setCurrentMobileScreen('MPCS_SHARE_CAPITAL_VIEW')}
-                        onBack={() => setCurrentMobileScreen('MPCS_FINANCIALS_VIEW')}
-                      activeTab={masterDataViewReturnTab}
-                      onTabPress={(tab) => {
-                        setActiveBottomTab(tab);
-                        if (tab === 'home') setCurrentMobileScreen('HOME');
-                      }}
-                      onNotifyPress={() => setShowHistory(true)}
-                      onProfilePress={() => setActiveBottomTab('more')}
-                      unreadCount={activeAlert ? 1 : 0}
-                      />
-                    )}
-
                     {currentMobileScreen === 'MPCS_SHARE_CAPITAL' && (
                       <MpcsShareCapitalScreen
                         initialAuthorized={shareCapitalData?.authorizedCapital || ''}
@@ -3916,30 +3826,6 @@ export default function App() {
                         onNext={() => setCurrentMobileScreen('MPCS_CSC_DETAILS')}
                         onBack={() => setCurrentMobileScreen('MPCS_DIVIDEND')}
                       activeTab="home"
-                      onTabPress={(tab) => {
-                        setActiveBottomTab(tab);
-                        if (tab === 'home') setCurrentMobileScreen('HOME');
-                      }}
-                      onNotifyPress={() => setShowHistory(true)}
-                      onProfilePress={() => setActiveBottomTab('more')}
-                      unreadCount={activeAlert ? 1 : 0}
-                      />
-                    )}
-
-                    {currentMobileScreen === 'MPCS_SHARE_CAPITAL_VIEW' && (
-                      <MpcsShareCapitalScreen
-                        initialAuthorized={shareCapitalData?.authorizedCapital || ''}
-                        initialPaidUp={shareCapitalData?.paidUpCapital || ''}
-                        initialDeposits={shareCapitalData?.totalDeposits || ''}
-                        initialDate={shareCapitalData?.asOfDate || ''}
-                        onSaveShareCapital={(data) => {
-                          setShareCapitalData(data);
-                          saveMasterStateToStorage({ shareCapitalData: data });
-                          stampMasterDataUpdated('shareCapital');
-                        }}
-                        onNext={() => setCurrentMobileScreen('MPCS_CSC_DETAILS_VIEW')}
-                        onBack={() => setCurrentMobileScreen('MPCS_DIVIDEND_VIEW')}
-                      activeTab={masterDataViewReturnTab}
                       onTabPress={(tab) => {
                         setActiveBottomTab(tab);
                         if (tab === 'home') setCurrentMobileScreen('HOME');

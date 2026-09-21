@@ -97,15 +97,16 @@ export default function HomeScreen({
     { id: 'MPCS_LOAN_STATUS', title: 'Loan Status', done: loanIsActive && loanStatus?.startsWith('COMPLETED'), na: !loanIsActive },
   ];
 
+  // All 7 records now live on one screen (MpcsMasterDataListScreen), so
+  // every row here just opens it — CSC Details isn't part of that list.
   const masterRecords = [
-    { id: 'MPCS_PROFILE_VIEW', title: 'Institutional Profile', updated: masterDataUpdated.instProfile },
-    { id: 'MPCS_DEMOGRAPHICS_VIEW', title: 'Registered Demographics', updated: masterDataUpdated.demographics },
-    { id: 'MPCS_COMPLIANCE_VIEW', title: 'Compliance Audit', updated: masterDataUpdated.compliance },
-    { id: 'MPCS_FINANCIALS_VIEW', title: 'Financial Performance', updated: masterDataUpdated.financials },
-    { id: 'MPCS_DIVIDEND_VIEW', title: 'Dividend Details', updated: masterDataUpdated.dividend },
-    { id: 'MPCS_SHARE_CAPITAL_VIEW', title: 'Share Capital', updated: masterDataUpdated.shareCapital },
-    { id: 'MPCS_CSC_DETAILS_VIEW', title: 'CSC Details', updated: masterDataUpdated.csc },
-    { id: 'MPCS_LOAN', title: 'Loan Details', updated: masterDataUpdated.loan },
+    { id: 'MPCS_MASTER_DATA', title: 'Institutional Profile', updated: masterDataUpdated.instProfile },
+    { id: 'MPCS_MASTER_DATA', title: 'Registered Demographics', updated: masterDataUpdated.demographics },
+    { id: 'MPCS_MASTER_DATA', title: 'Loan Details', updated: masterDataUpdated.loan },
+    { id: 'MPCS_MASTER_DATA', title: 'Compliance Audit', updated: masterDataUpdated.compliance },
+    { id: 'MPCS_MASTER_DATA', title: 'Financial Performance', updated: masterDataUpdated.financials },
+    { id: 'MPCS_MASTER_DATA', title: 'Dividend Details', updated: masterDataUpdated.dividend },
+    { id: 'MPCS_MASTER_DATA', title: 'Share Capital', updated: masterDataUpdated.shareCapital },
   ];
   const masterNeedsUpdate = masterRecords.filter((r) => !r.updated);
 
@@ -240,7 +241,7 @@ export default function HomeScreen({
                 <View style={styles.listCard}>
                   {masterNeedsUpdate.map((r, i) => (
                     <Pressable
-                      key={r.id}
+                      key={r.title}
                       style={[styles.listRow, i === masterNeedsUpdate.length - 1 && styles.listRowLast]}
                       onPress={() => onNavigateScreen && onNavigateScreen(r.id)}
                     >
