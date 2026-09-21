@@ -1,53 +1,38 @@
 import React, { useState, useEffect } from 'react';
 import { getMilkSectionData, saveMilkSectionData } from '../../utils/monthlySyncManager';
-import { View, Text, StyleSheet, TouchableOpacity, TextInput, ScrollView, Platform, Pressable, Alert, Image } from 'react-native';
+import { View, Text, StyleSheet, TextInput, ScrollView, Platform, Pressable, Alert } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
 import BottomNav from '../BottomNav';
+import MpcsWizardHeader from './MpcsWizardHeader';
 import { webCapWidth } from '../../utils/webStyles';
 
-// Same subtle Kanchenjunga treatment used on every header across the app.
-const headerPhotoFilter = Platform.OS === 'web'
-  ? { opacity: 0.4, filter: 'grayscale(0.35) contrast(1.15) brightness(0.95)', mixBlendMode: 'luminosity' }
-  : { opacity: 0.28 };
-
 const COLORS = {
-  surface: '#ffffff',
-  bg: '#F8F5F2',
-  slate800: '#1e293b',
-  slate700: '#334155',
-  slate600: '#475569',
-  slate500: '#64748b',
-  slate400: '#94a3b8',
-  slate300: '#cbd5e1',
-  slate200: '#e2e8f0',
-  slate100: '#f1f5f9',
-  slate50: '#f8fafc',
-  primary: '#7a1a1f',
-  primaryLight: '#FEF2F2',
-  emerald700: '#047857',
-  emerald500: '#10b981',
-  emerald50: '#ecfdf5',
-  amber900: '#78350f',
-  amber50: '#fffbeb',
-  red50: '#fef2f2',
+  maroon: '#7B1420',
+  bg: '#F5F1EC',
+  surface: '#FFFFFF',
+  ink: '#1E1B18',
+  slate600: '#57534E',
+  slate500: '#78716C',
+  border: '#E7E2DA',
+  calcBg: '#EDE8E0',
 };
 
 const FONT_FAMILY = 'Manrope';
 
-function formatCurrency(val) {
+function formatWhole(val) {
   const n = parseFloat((val || '').toString().replace(/,/g, ''));
-  if (isNaN(n)) return '₹0.00';
-  return '₹' + n.toLocaleString('en-IN', { minimumFractionDigits: 2 });
+  if (!n) return '0';
+  return Math.round(n).toLocaleString('en-IN');
 }
 
 // Monthly: whether this month's loan recovery has been reported. The loan's
 // existence, type, sanction date, and amount extended are Master Data (set
 // once on the Loan Details screen) — this screen only tracks the recurring
-// repayment status against that master record, the same split already used
-// for Milk PCS's loan tracking (see ComplianceScreen.js). Follows the same
-// visual theme as the other Monthly Data screens (Sales & Deposit etc.)
-// rather than the Master Data edit-modal pattern.
+// repayment status against that master record. Data entry here doesn't wait
+// on Master data being filled in first: a CI can log what was recovered in
+// the field, then set the loan record up back at the office, so every
+// field below degrades gracefully (a "Set it" link, a placeholder message)
+// instead of blocking on masterHasLoan the way the old three-state screen did.
 export default function MpcsLoanStatusScreen({
   societyName = "",
   reportingMonth = "",
@@ -58,15 +43,13 @@ export default function MpcsLoanStatusScreen({
   onLoanCleared,
   onSaveNext,
   onBack,
+  onOpenLoanSetup,
   activeTab,
   onTabPress,
-  onNotifyPress,
-  onProfilePress,
-  unreadCount = 0,
 }) {
   const [loanRecovered, setLoanRecovered] = useState('');
 
-  const loanIsActive = masterHasLoan && !masterLoanCleared;
+  const loanConfigured = masterHasLoan && Boolean(masterLoanExtended);
 
   // Outstanding is derived, never entered directly: always
   // (amount extended at loan setup) - (recovered to date).
@@ -86,7 +69,7 @@ export default function MpcsLoanStatusScreen({
   }, [societyName, reportingMonth]);
 
   const handleSaveNext = async () => {
-    const isCompleted = !loanIsActive || !!loanRecovered;
+    const isCompleted = masterLoanCleared || !!loanRecovered;
     await saveMilkSectionData(societyName, reportingMonth, 'mpcs_loan', {
       loanRecovered,
       loanOutstanding,
@@ -95,7 +78,8 @@ export default function MpcsLoanStatusScreen({
     if (onSaveNext) onSaveNext();
   };
 
-  const confirmMarkCleared = () => {
+  const toggleCleared = () => {
+    if (masterLoanCleared) return;
     const doClear = () => { if (onLoanCleared) onLoanCleared(); };
     if (Platform.OS === 'web') {
       if (window.confirm('Mark this loan as fully cleared? It will no longer appear as an active loan.')) doClear();
@@ -107,36 +91,20 @@ export default function MpcsLoanStatusScreen({
     }
   };
 
+  const recordStatusText = masterLoanCleared
+    ? 'Cleared'
+    : loanConfigured
+      ? `${masterLoanType || 'Loan'} · ₹${formatWhole(masterLoanExtended)} extended`
+      : 'Not set in Master data';
+
   return (
     <View style={styles.container}>
-      {/* Top Header */}
-      <View style={styles.topBar}>
-        <LinearGradient
-          colors={['#7a1a1f', '#4a1017']}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 0 }}
-          style={StyleSheet.absoluteFillObject}
-        />
-        <Image
-          source={require('../../../assets/core/kanchenjunga.jpg')}
-          style={[StyleSheet.absoluteFillObject, { width: '100%', height: '100%' }, headerPhotoFilter]}
-          resizeMode="cover"
-        />
-        <TouchableOpacity style={styles.backBtn} onPress={onBack} activeOpacity={0.7}>
-          <MaterialCommunityIcons name="arrow-left" size={24} color="#FFFFFF" />
-        </TouchableOpacity>
-        <View style={styles.topBarTitleContainer}>
-          <Text style={styles.moduleTag}>MPCS</Text>
-          <Text style={styles.screenTitleHeader}>Monthly Loan Status</Text>
-        </View>
-        <TouchableOpacity style={styles.notifyBtn} onPress={onNotifyPress} activeOpacity={0.7}>
-          <MaterialCommunityIcons name="bell-outline" size={20} color="#FFFFFF" />
-          {unreadCount > 0 && <View style={styles.notifyBadge} />}
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.avatarBtn} onPress={onProfilePress} activeOpacity={0.8}>
-          <Text style={styles.avatarText}>CI</Text>
-        </TouchableOpacity>
-      </View>
+      <MpcsWizardHeader
+        month={(reportingMonth || 'CURRENT MONTH').toUpperCase()}
+        title="Loan Status"
+        step={5}
+        onBack={onBack}
+      />
 
       <ScrollView
         style={styles.scrollContent}
@@ -144,111 +112,79 @@ export default function MpcsLoanStatusScreen({
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
-        {/* Month Indicator Card */}
-        <View style={styles.monthCard}>
-          <LinearGradient
-            colors={['rgba(122,26,31,0.06)', 'rgba(122,26,31,0.02)']}
-            style={StyleSheet.absoluteFillObject}
-          />
-          <View style={styles.monthIconBox}>
-            <MaterialCommunityIcons name="calendar-month-outline" size={20} color={COLORS.primary} />
+        <View style={styles.recordRow}>
+          <View>
+            <Text style={styles.recordLabel}>Loan on record</Text>
+            <Text style={styles.recordValue}>{recordStatusText}</Text>
           </View>
-          <View style={{ flex: 1, marginLeft: 10 }}>
-            <Text style={styles.monthLabel}>Reporting Period</Text>
-            <Text style={styles.monthValue}>{reportingMonth || 'Current Month'}</Text>
+          {!loanConfigured && !masterLoanCleared && onOpenLoanSetup && (
+            <Pressable onPress={onOpenLoanSetup} hitSlop={8}>
+              <Text style={styles.setItLink}>Set it</Text>
+            </Pressable>
+          )}
+        </View>
+
+        <View style={styles.fieldGroup}>
+          <Text style={styles.fieldLabel}>Recovered to date</Text>
+          <View style={styles.inputBox}>
+            <Text style={styles.currencyPrefix}>₹</Text>
+            <TextInput
+              style={styles.textInput}
+              value={loanRecovered}
+              onChangeText={setLoanRecovered}
+              placeholder="0"
+              placeholderTextColor={COLORS.slate500}
+              keyboardType="numeric"
+            />
           </View>
-          <View style={styles.draftChip}>
-            <Text style={styles.draftChipText}>DRAFT</Text>
+          <Text style={styles.helperText}>Total recovered since the loan was extended.</Text>
+        </View>
+
+        <View style={styles.calcCard}>
+          <Text style={styles.calcLabel}>CALCULATED FOR YOU</Text>
+          <View style={styles.calcRow}>
+            <Text style={styles.calcRowLabel}>Outstanding balance</Text>
+            {loanConfigured ? (
+              <Text style={styles.calcRowValue}>₹{formatWhole(loanOutstanding)}</Text>
+            ) : (
+              <Text style={styles.calcRowPlaceholder}>Needs the loan amount</Text>
+            )}
+          </View>
+          <View style={styles.calcDivider} />
+          <View style={styles.calcRow}>
+            <View>
+              <Text style={styles.calcRowLabel}>Amount extended</Text>
+              <Text style={styles.calcRowSub}>From Master data</Text>
+            </View>
+            <Text style={styles.calcRowValue}>{masterLoanExtended ? `₹${formatWhole(masterLoanExtended)}` : '—'}</Text>
           </View>
         </View>
 
-        {!masterHasLoan ? (
-          <View style={styles.card}>
-            <View style={{ alignItems: 'center', paddingVertical: 10, gap: 4 }}>
-              <MaterialCommunityIcons name="bank-off-outline" size={32} color={COLORS.slate400} />
-              <Text style={{ fontFamily: FONT_FAMILY, fontSize: 13, fontWeight: '700', color: COLORS.slate600 }}>No Active Loan</Text>
-              <Text style={{ fontFamily: FONT_FAMILY, fontSize: 11, color: COLORS.slate400, textAlign: 'center' }}>
-                This society has no loan on record. Set one up on the Loan Details Master Data screen if that changes.
-              </Text>
-            </View>
+        <Pressable style={styles.checkRow} onPress={toggleCleared}>
+          <View style={[styles.checkbox, masterLoanCleared && styles.checkboxChecked]}>
+            {masterLoanCleared && <MaterialCommunityIcons name="check" size={14} color="#ffffff" />}
           </View>
-        ) : masterLoanCleared ? (
-          <View style={styles.card}>
-            <View style={{ alignItems: 'center', paddingVertical: 10, gap: 4 }}>
-              <MaterialCommunityIcons name="check-decagram-outline" size={32} color={COLORS.emerald700} />
-              <Text style={{ fontFamily: FONT_FAMILY, fontSize: 13, fontWeight: '700', color: COLORS.emerald700 }}>Loan Cleared</Text>
-              <Text style={{ fontFamily: FONT_FAMILY, fontSize: 11, color: COLORS.slate400, textAlign: 'center' }}>
-                This loan has been marked fully cleared. Nothing to report this month.
-              </Text>
-            </View>
-          </View>
-        ) : (
-          <View style={styles.card}>
-            <View style={styles.cardHeaderRow}>
-              <View style={styles.cardIconBox}>
-                <MaterialCommunityIcons name="cash-refund" size={18} color={COLORS.primary} />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.cardHeaderTitle}>Loan Recovery Ledger</Text>
-                <Text style={styles.cardHeaderSub}>{masterLoanType || 'Loan type not set'} — ₹{masterLoanExtended || 0} extended</Text>
-              </View>
-            </View>
-
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Recovered to Date (₹)</Text>
-              <View style={styles.inputBox}>
-                <Text style={styles.currencyPrefix}>₹</Text>
-                <TextInput
-                  style={styles.textInput}
-                  value={loanRecovered}
-                  onChangeText={setLoanRecovered}
-                  placeholder="e.g. 25,000"
-                  placeholderTextColor={COLORS.slate300}
-                  keyboardType="numeric"
-                />
-                <MaterialCommunityIcons name="cash-multiple" size={16} color={COLORS.slate400} />
-              </View>
-            </View>
-
-            <View style={styles.summaryStrip}>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.summaryLabel}>OUTSTANDING BALANCE (AUTO)</Text>
-                <Text style={styles.summaryValue}>{formatCurrency(loanOutstanding)}</Text>
-              </View>
-              <View style={styles.autoBadge}>
-                <MaterialCommunityIcons name="calculator-variant-outline" size={14} color={COLORS.emerald700} />
-                <Text style={styles.autoBadgeText}>AUTO</Text>
-              </View>
-            </View>
-
-            <TouchableOpacity style={styles.clearLoanBtn} onPress={confirmMarkCleared} activeOpacity={0.7}>
-              <MaterialCommunityIcons name="check-circle-outline" size={16} color={COLORS.emerald700} />
-              <Text style={styles.clearLoanText}>Mark Loan as Cleared</Text>
-            </TouchableOpacity>
-          </View>
-        )}
-      {/* Wizard navigation actions now scroll with the content
-          instead of sitting in a fixed footer, which competed with the
-          floating BottomNav pill for the same strip at the bottom. */}
-        <View style={[{ flexDirection: 'row', flex: 1, gap: 10 }, webCapWidth]}>
-        <TouchableOpacity style={styles.navBackBtn} onPress={onBack} activeOpacity={0.7}>
-          <Text style={styles.buttonTextSecondary}>BACK</Text>
-        </TouchableOpacity>
-        <Pressable
-          style={({ pressed }) => [styles.navNextBtn, pressed && { transform: [{ scale: 0.98 }] }]}
-          onPress={handleSaveNext}
-        >
-          <LinearGradient
-            colors={['#7a1a1f', '#4a1017']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
-            style={StyleSheet.absoluteFillObject}
-          />
-          <Text style={styles.buttonTextPrimary}>SAVE & NEXT</Text>
-          <MaterialCommunityIcons name="arrow-right" size={16} color="#ffffff" />
+          <Text style={styles.checkRowLabel}>Loan fully cleared</Text>
+          <Text style={styles.checkRowSub}>Closes the ledger</Text>
         </Pressable>
+
+        <View style={styles.divider} />
+
+        <View style={styles.footerRow}>
+          <Pressable style={styles.backOutlineBtn} onPress={onBack}>
+            <Text style={styles.backOutlineText}>Back</Text>
+          </Pressable>
+          <Pressable
+            style={({ pressed }) => [styles.primaryBtn, pressed && { opacity: 0.9 }]}
+            onPress={handleSaveNext}
+          >
+            <Text style={styles.primaryBtnText}>Save and continue</Text>
+          </Pressable>
         </View>
 
+        <Pressable onPress={onBack} hitSlop={8}>
+          <Text style={styles.draftLink}>Save as draft</Text>
+        </Pressable>
       </ScrollView>
 
       {onTabPress && <BottomNav activeTab={activeTab || 'home'} onTabPress={onTabPress} />}
@@ -258,269 +194,92 @@ export default function MpcsLoanStatusScreen({
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.bg },
-
-  topBar: {
-    position: 'relative',
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    paddingTop: Platform.OS === 'ios' ? 48 : 14,
-    overflow: 'hidden',
-  },
-  backBtn: { padding: 4, zIndex: 1 },
-  topBarTitleContainer: { flex: 1, marginLeft: 12 },
-  notifyBtn: {
-    width: 36,
-    height: 36,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  notifyBadge: {
-    position: 'absolute',
-    top: 6,
-    right: 6,
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#EF4444',
-    borderWidth: 1,
-    borderColor: COLORS.primary,
-  },
-  avatarBtn: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.35)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginLeft: 8,
-  },
-  avatarText: {
-    color: '#FFFFFF',
-    fontSize: 10,
-    fontWeight: '800',
-    fontFamily: FONT_FAMILY,
-  },
-  moduleTag: {
-    color: 'rgba(255,255,255,0.65)',
-    fontSize: 10,
-    fontWeight: '700',
-    fontFamily: FONT_FAMILY,
-    letterSpacing: 1.2,
-    textTransform: 'uppercase',
-  },
-  screenTitleHeader: {
-    color: '#FFFFFF',
-    fontFamily: FONT_FAMILY,
-    fontSize: 17,
-    fontWeight: '800',
-    letterSpacing: -0.3,
-  },
-
   scrollContent: { flex: 1 },
-  scrollInner: { padding: 16, paddingBottom: 110, gap: 14 },
+  scrollInner: { padding: 16, paddingBottom: 110, gap: 16 },
 
-  monthCard: {
+  recordRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
     backgroundColor: COLORS.surface,
-    borderRadius: 14,
+    borderRadius: 18,
     borderWidth: 1,
-    borderColor: COLORS.slate200,
-    padding: 14,
-    overflow: 'hidden',
-  },
-  monthIconBox: {
-    width: 38,
-    height: 38,
-    borderRadius: 10,
-    backgroundColor: COLORS.primaryLight,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  monthLabel: {
-    fontFamily: FONT_FAMILY,
-    fontSize: 10,
-    fontWeight: '600',
-    color: COLORS.slate400,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  monthValue: {
-    fontFamily: FONT_FAMILY,
-    fontSize: 15,
-    fontWeight: '800',
-    color: COLORS.slate800,
-    letterSpacing: -0.2,
-    marginTop: 1,
-  },
-  draftChip: {
-    backgroundColor: COLORS.amber50,
-    borderRadius: 6,
-    paddingHorizontal: 7,
-    paddingVertical: 3,
-    borderWidth: 1,
-    borderColor: '#FDE68A',
-  },
-  draftChipText: {
-    fontFamily: FONT_FAMILY,
-    fontSize: 9,
-    fontWeight: '800',
-    color: COLORS.amber900,
-    letterSpacing: 0.5,
-  },
-
-  card: {
-    backgroundColor: COLORS.surface,
-    borderRadius: 16,
+    borderColor: COLORS.border,
     padding: 16,
-    borderWidth: 1,
-    borderColor: COLORS.slate200,
-    gap: 14,
   },
-  cardHeaderRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  cardIconBox: {
-    width: 30,
-    height: 30,
-    borderRadius: 8,
-    backgroundColor: COLORS.primaryLight,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  cardHeaderTitle: {
-    fontFamily: FONT_FAMILY,
-    fontSize: 14,
-    fontWeight: '800',
-    color: COLORS.slate800,
-  },
-  cardHeaderSub: {
-    fontFamily: FONT_FAMILY,
-    fontSize: 11,
-    fontWeight: '500',
-    color: COLORS.slate400,
-    marginTop: 1,
-  },
+  recordLabel: { fontFamily: FONT_FAMILY, fontSize: 13, fontWeight: '500', color: COLORS.slate500 },
+  recordValue: { fontFamily: FONT_FAMILY, fontSize: 16, fontWeight: '700', color: COLORS.ink, marginTop: 2 },
+  setItLink: { fontFamily: FONT_FAMILY, fontSize: 14, fontWeight: '800', color: COLORS.maroon },
 
-  inputGroup: { gap: 5 },
-  inputLabel: {
-    fontFamily: FONT_FAMILY,
-    fontSize: 11,
-    fontWeight: '600',
-    color: COLORS.slate500,
-    letterSpacing: 0.2,
-  },
+  fieldGroup: { gap: 6 },
+  fieldLabel: { fontFamily: FONT_FAMILY, fontSize: 15, fontWeight: '700', color: COLORS.ink },
   inputBox: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: COLORS.slate50,
-    borderWidth: 1.5,
-    borderColor: COLORS.slate200,
-    borderRadius: 10,
-    paddingHorizontal: 10,
-    height: 44,
+    backgroundColor: COLORS.surface,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    height: 52,
   },
-  currencyPrefix: {
-    fontFamily: FONT_FAMILY,
-    fontSize: 14,
-    fontWeight: '700',
-    color: COLORS.primary,
-    marginRight: 6,
-  },
+  currencyPrefix: { fontFamily: FONT_FAMILY, fontSize: 18, fontWeight: '700', color: COLORS.maroon, marginRight: 8 },
   textInput: {
     flex: 1,
     fontFamily: FONT_FAMILY,
-    fontSize: 16,
-    fontWeight: '500',
-    color: COLORS.slate800,
+    fontSize: 18,
+    fontWeight: '700',
+    color: COLORS.ink,
     ...(Platform.OS === 'web' ? { outlineStyle: 'none' } : {}),
   },
+  helperText: { fontFamily: FONT_FAMILY, fontSize: 12, fontWeight: '500', color: COLORS.slate500 },
 
-  summaryStrip: {
+  calcCard: { backgroundColor: COLORS.calcBg, borderRadius: 14, padding: 14, gap: 12 },
+  calcLabel: { fontFamily: FONT_FAMILY, fontSize: 11, fontWeight: '800', color: COLORS.slate500, letterSpacing: 1 },
+  calcRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  calcDivider: { height: 1, backgroundColor: COLORS.border },
+  calcRowLabel: { fontFamily: FONT_FAMILY, fontSize: 15, fontWeight: '700', color: COLORS.ink },
+  calcRowSub: { fontFamily: FONT_FAMILY, fontSize: 11, fontWeight: '500', color: COLORS.slate500 },
+  calcRowValue: { fontFamily: FONT_FAMILY, fontSize: 17, fontWeight: '800', color: COLORS.ink },
+  calcRowPlaceholder: { fontFamily: FONT_FAMILY, fontSize: 13, fontWeight: '600', color: COLORS.slate500 },
+
+  checkRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: COLORS.emerald50,
-    borderRadius: 10,
-    padding: 12,
+    gap: 12,
+    backgroundColor: COLORS.surface,
+    borderRadius: 18,
     borderWidth: 1,
-    borderColor: '#A7F3D0',
+    borderColor: COLORS.border,
+    padding: 16,
   },
-  summaryLabel: {
-    fontFamily: FONT_FAMILY,
-    fontSize: 10,
-    fontWeight: '600',
-    color: COLORS.emerald700,
-    textTransform: 'uppercase',
-    letterSpacing: 0.3,
-  },
-  summaryValue: {
-    fontFamily: FONT_FAMILY,
-    fontSize: 18,
-    fontWeight: '800',
-    color: COLORS.emerald700,
-    letterSpacing: -0.5,
-    marginTop: 2,
-  },
-  autoBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    backgroundColor: '#D1FAE5',
-    borderRadius: 8,
-    paddingHorizontal: 8,
-    paddingVertical: 5,
-  },
-  autoBadgeText: {
-    fontFamily: FONT_FAMILY,
-    fontSize: 9,
-    fontWeight: '800',
-    color: COLORS.emerald700,
-    letterSpacing: 0.5,
-  },
-
-  clearLoanBtn: {
-    flexDirection: 'row',
+  checkbox: {
+    width: 22,
+    height: 22,
+    borderRadius: 6,
+    borderWidth: 1.5,
+    borderColor: COLORS.border,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 6,
-    paddingVertical: 10,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: 'rgba(16,185,129,0.3)',
-    backgroundColor: COLORS.emerald50,
   },
-  clearLoanText: { fontFamily: FONT_FAMILY, fontSize: 12, fontWeight: '700', color: COLORS.emerald700 },
-  navBackBtn: {
+  checkboxChecked: { backgroundColor: COLORS.maroon, borderColor: COLORS.maroon },
+  checkRowLabel: { flex: 1, fontFamily: FONT_FAMILY, fontSize: 15, fontWeight: '700', color: COLORS.ink },
+  checkRowSub: { fontFamily: FONT_FAMILY, fontSize: 13, fontWeight: '500', color: COLORS.slate500 },
+
+  divider: { height: 1, backgroundColor: COLORS.border },
+
+  footerRow: { flexDirection: 'row', gap: 10 },
+  backOutlineBtn: {
     flex: 1,
     paddingVertical: 14,
     borderRadius: 12,
     borderWidth: 1.5,
-    borderColor: COLORS.slate200,
-    alignItems: 'center',
-  },
-  buttonTextSecondary: {
-    color: COLORS.slate500,
-    fontFamily: FONT_FAMILY,
-    fontSize: 13,
-    fontWeight: '700',
-  },
-  navNextBtn: {
-    flex: 2,
-    flexDirection: 'row',
-    paddingVertical: 14,
-    borderRadius: 12,
+    borderColor: COLORS.border,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
-    overflow: 'hidden',
   },
-  buttonTextPrimary: {
-    color: '#FFFFFF',
-    fontFamily: FONT_FAMILY,
-    fontSize: 13,
-    fontWeight: '800',
-    letterSpacing: 0.3,
-  },
+  backOutlineText: { fontFamily: FONT_FAMILY, fontSize: 14, fontWeight: '800', color: COLORS.ink },
+  primaryBtn: { flex: 2, paddingVertical: 14, borderRadius: 12, backgroundColor: COLORS.maroon, alignItems: 'center', justifyContent: 'center' },
+  primaryBtnText: { fontFamily: FONT_FAMILY, fontSize: 14, fontWeight: '800', color: '#ffffff' },
+  draftLink: { fontFamily: FONT_FAMILY, fontSize: 13, fontWeight: '700', color: COLORS.slate500, textAlign: 'center' },
 });

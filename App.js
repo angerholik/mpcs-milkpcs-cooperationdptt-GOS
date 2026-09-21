@@ -45,6 +45,7 @@ import MyInstitutionsScreen from './src/components/MyInstitutionsScreen';
 import MemberDataScreen from './src/components/MemberDataScreen';
 import MpcsMembersScreen from './src/components/mpcs/MpcsMembersScreen';
 import LoanBeneficiaryListScreen from './src/components/LoanBeneficiaryListScreen';
+import MpcsLoanBeneficiariesScreen from './src/components/mpcs/MpcsLoanBeneficiariesScreen';
 
 // MPCS Module Screen Components
 import MpcsHomeScreen from './src/components/mpcs/MpcsHomeScreen';
@@ -490,6 +491,16 @@ export default function App() {
       : false
   );
   const [passwordRecoveryActive, setPasswordRecoveryActive] = useState(passwordRecoveryRef.current);
+
+  // Which user id handleUserAuthSuccess has already run its one-time
+  // "restore last screen" flow for. Supabase's client can emit a second
+  // SIGNED_IN (or resolve a second in-flight getSession()) for the same
+  // already-active session — observed here firing mid-task after a
+  // background Supabase call (e.g. registering an institution), which
+  // silently yanked the user back to HOME via handleSelectSociety even
+  // though they'd already navigated deeper into the monthly-return wizard.
+  // A ref survives re-renders without retriggering the effect that reads it.
+  const authRestoredForUserRef = React.useRef(null);
 
   // Hands off from public/index.html's static boot splash to the real UI
   // once we're actually ready to show it — not the moment the RN app
@@ -1385,6 +1396,11 @@ export default function App() {
     const activeEmail = usr.email || getUserEmail();
     setUserProfile(usr);
     setSession({ user: usr });
+    // A second SIGNED_IN (or a second getSession() resolution) for a user
+    // already restored this page load must not repeat the screen-restore
+    // below — see authRestoredForUserRef's declaration for why.
+    if (authRestoredForUserRef.current === usr.id) return;
+    authRestoredForUserRef.current = usr.id;
     if (activeEmail) {
       const institutions = await loadInstitutionsForUser(activeEmail);
       // Resolve the society to restore from persistent storage rather than
@@ -1433,6 +1449,7 @@ export default function App() {
     setSelectedSociety(null);
     resetAllFormFields();
     setCurrentMobileScreen('MY_INSTITUTIONS');
+    authRestoredForUserRef.current = null;
   };
 
   useEffect(() => {
@@ -1475,6 +1492,7 @@ export default function App() {
         handleUserAuthSuccess(sbSession.user);
       } else if (event === 'SIGNED_OUT') {
         passwordRecoveryRef.current = false;
+        authRestoredForUserRef.current = null;
         setPasswordRecoveryActive(false);
         setSession(null);
         setUserProfile(null);
@@ -3376,12 +3394,15 @@ export default function App() {
                         shareCapitalData={shareCapitalData}
                         loanData={loanData}
                         onNavigateScreen={(scr) => { setMasterDataViewReturnTab('home'); setCurrentMobileScreen(scr); }}
+                        onSetLoanHasLoan={(val) => {
+                          const updated = { ...loanData, hasLoan: val };
+                          setLoanData(updated);
+                          saveMasterStateToStorage({ loanData: updated });
+                          stampMasterDataUpdated('loan');
+                        }}
                         onBack={() => setCurrentMobileScreen('HOME')}
                         activeTab={activeBottomTab}
                         onTabPress={(tab) => { setActiveBottomTab(tab); if (tab === 'home') setCurrentMobileScreen('HOME'); }}
-                        onNotifyPress={() => setShowHistory(true)}
-                        onProfilePress={() => setActiveBottomTab('more')}
-                        unreadCount={activeAlert ? 1 : 0}
                       />
                     )}
 
@@ -4007,21 +4028,14 @@ export default function App() {
                         setActiveBottomTab(tab);
                         if (tab === 'home') setCurrentMobileScreen('HOME');
                       }}
-                      onNotifyPress={() => setShowHistory(true)}
-                      onProfilePress={() => setActiveBottomTab('more')}
-                      unreadCount={activeAlert ? 1 : 0}
                       />
                     )}
 
                     {currentMobileScreen === 'MPCS_LOAN_BENEFICIARIES' && (
-                      <LoanBeneficiaryListScreen
+                      <MpcsLoanBeneficiariesScreen
                         societyName={selectedSociety?.name || centerName?.trim()}
-                        societyType="MPCS"
                         onBack={() => setCurrentMobileScreen(loanBeneficiariesBackTarget)}
                         onBeneficiariesChanged={() => stampMasterDataUpdated('loanBeneficiaries')}
-                      onNotifyPress={() => setShowHistory(true)}
-                      onProfilePress={() => setActiveBottomTab('more')}
-                      unreadCount={activeAlert ? 1 : 0}
                       />
                     )}
 
@@ -4078,14 +4092,24 @@ export default function App() {
                           setCurrentMobileScreen('MPCS_REVIEW');
                         }}
                         onBack={() => setCurrentMobileScreen('MPCS_REVIEW')}
+                        onOpenLoanSetup={() => {
+                          // "Set it" is a Yes answer by itself — without this
+                          // the Loan Setup screen (which no longer has its
+                          // own Yes/No toggle; that question is answered on
+                          // the Master Data list) would save loan details
+                          // with hasLoan still false, and this screen would
+                          // keep reporting "Not set" even after they're filled in.
+                          const updated = { ...loanData, hasLoan: true };
+                          setLoanData(updated);
+                          saveMasterStateToStorage({ loanData: updated });
+                          setMpcsLoanBackTarget('MPCS_LOAN_STATUS');
+                          setCurrentMobileScreen('MPCS_LOAN');
+                        }}
                       activeTab="home"
                       onTabPress={(tab) => {
                         setActiveBottomTab(tab);
                         if (tab === 'home') setCurrentMobileScreen('HOME');
                       }}
-                      onNotifyPress={() => setShowHistory(true)}
-                      onProfilePress={() => setActiveBottomTab('more')}
-                      unreadCount={activeAlert ? 1 : 0}
                       />
                     )}
 
@@ -4099,9 +4123,6 @@ export default function App() {
                         onNavigateSection={(screenKey) => setCurrentMobileScreen(screenKey)}
                         onSubmitReturn={() => generatePDF(null)}
                         onBack={() => setCurrentMobileScreen('HOME')}
-                      onNotifyPress={() => setShowHistory(true)}
-                      onProfilePress={() => setActiveBottomTab('more')}
-                      unreadCount={activeAlert ? 1 : 0}
                       />
                     )}
                   </>

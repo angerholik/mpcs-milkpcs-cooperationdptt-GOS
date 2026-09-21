@@ -41,12 +41,10 @@ export default function MpcsMasterDataScreen({
   shareCapitalData = {},
   loanData = {},
   onNavigateScreen,
+  onSetLoanHasLoan,
   onBack,
   activeTab = 'home',
   onTabPress,
-  onNotifyPress,
-  onProfilePress,
-  unreadCount = 0,
 }) {
   const totalMale = demographicsData.reduce((acc, row) => acc + (parseInt(row.male) || 0), 0);
   const totalFemale = demographicsData.reduce((acc, row) => acc + (parseInt(row.female) || 0), 0);
@@ -197,23 +195,10 @@ export default function MpcsMasterDataScreen({
     {
       id: 'MPCS_LOAN',
       title: 'Loan details',
+      // Always "filled" for the verification-gate count once answered either
+      // way — the loan record's own type/amount fields stay optional when
+      // the answer is No, so they can't be what gates verification.
       filled: loanData?.hasLoan !== undefined,
-      emptyDesc: 'No loan has been recorded for this society.',
-      addLabel: 'Add loan details',
-      render: () => (
-        <View style={styles.grid2}>
-          <View style={styles.gridCell}>
-            <Text style={styles.fieldLabel}>Has active loan</Text>
-            <Text style={styles.fieldValue}>{loanData?.hasLoan ? 'Yes' : 'No'}</Text>
-          </View>
-          {loanData?.hasLoan ? (
-            <View style={styles.gridCell}>
-              <Text style={styles.fieldLabel}>Loan type</Text>
-              <Text style={styles.fieldValue}>{fmt(loanData?.loanType)}</Text>
-            </View>
-          ) : null}
-        </View>
-      ),
     },
   ];
 
@@ -248,13 +233,39 @@ export default function MpcsMasterDataScreen({
           <View style={styles.card} key={s.id}>
             <View style={styles.cardHeaderRow}>
               <Text style={styles.cardTitle}>{s.title}</Text>
-              {s.filled && (
+              {s.filled && s.id !== 'MPCS_LOAN' && (
                 <Pressable onPress={() => onNavigateScreen && onNavigateScreen(s.id)} hitSlop={8}>
                   <Text style={styles.editLink}>Edit</Text>
                 </Pressable>
               )}
             </View>
-            {s.filled ? (
+            {s.id === 'MPCS_LOAN' ? (
+              <>
+                <Text style={styles.quickQuestionText}>Has active loan</Text>
+                <View style={styles.quickToggleTrack}>
+                  <Pressable
+                    style={[styles.quickToggleHalf, loanData?.hasLoan === true && styles.quickToggleHalfActive]}
+                    onPress={() => onSetLoanHasLoan && onSetLoanHasLoan(true)}
+                  >
+                    <Text style={[styles.quickToggleText, loanData?.hasLoan === true && styles.quickToggleTextActive]}>Yes</Text>
+                  </Pressable>
+                  <Pressable
+                    style={[styles.quickToggleHalf, loanData?.hasLoan === false && styles.quickToggleHalfActive]}
+                    onPress={() => onSetLoanHasLoan && onSetLoanHasLoan(false)}
+                  >
+                    <Text style={[styles.quickToggleText, loanData?.hasLoan === false && styles.quickToggleTextActive]}>No loan</Text>
+                  </Pressable>
+                </View>
+                {loanData?.hasLoan === true && (
+                  <Pressable
+                    style={({ pressed }) => [styles.addBtn, { marginTop: 12 }, pressed && { opacity: 0.85 }]}
+                    onPress={() => onNavigateScreen && onNavigateScreen('MPCS_LOAN')}
+                  >
+                    <Text style={styles.addBtnText}>{loanData?.loanType ? 'Edit loan details' : 'Add loan details'}</Text>
+                  </Pressable>
+                )}
+              </>
+            ) : s.filled ? (
               s.render()
             ) : (
               <>
@@ -384,6 +395,38 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '800',
     color: COLORS.maroon,
+  },
+  quickQuestionText: {
+    fontFamily: FONT_FAMILY,
+    fontSize: 14,
+    fontWeight: '700',
+    color: COLORS.ink,
+    marginBottom: 10,
+  },
+  quickToggleTrack: {
+    flexDirection: 'row',
+    backgroundColor: COLORS.bg,
+    borderRadius: 12,
+    padding: 4,
+  },
+  quickToggleHalf: {
+    flex: 1,
+    paddingVertical: 11,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 10,
+  },
+  quickToggleHalfActive: {
+    backgroundColor: COLORS.surface,
+  },
+  quickToggleText: {
+    fontFamily: FONT_FAMILY,
+    fontSize: 14,
+    fontWeight: '700',
+    color: COLORS.slate600,
+  },
+  quickToggleTextActive: {
+    color: COLORS.ink,
   },
   grid2: {
     flexDirection: 'row',
