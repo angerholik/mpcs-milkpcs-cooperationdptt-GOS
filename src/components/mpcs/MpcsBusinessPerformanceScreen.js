@@ -47,7 +47,11 @@ export default function MpcsBusinessPerformanceScreen({
   activeTab,
   onTabPress,
 }) {
-  const parseNum = (str) => parseFloat((str || '').replace(/,/g, '')) || 0;
+  // totalMembers arrives as a real number (a demographics sum from App.js),
+  // not a string like totalIncome/totalExpenses — (str || '').replace(...)
+  // called .replace on that number directly whenever it was non-zero and
+  // crashed with no error boundary above it, which unmounts the whole app.
+  const parseNum = (str) => parseFloat(String(str ?? '').replace(/,/g, '')) || 0;
   const incomeVal = parseNum(totalIncome);
   const expenseVal = parseNum(totalExpenses);
   const memberVal = parseNum(totalMembers);
