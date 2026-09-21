@@ -41,6 +41,38 @@ function formatUpdated(iso) {
   }
 }
 
+const MONTH_MAP = { Jan: '01', Feb: '02', Mar: '03', Apr: '04', May: '05', Jun: '06', Jul: '07', Aug: '08', Sep: '09', Oct: '10', Nov: '11', Dec: '12' };
+const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+// Same "DD Mon YYYY" <-> ISO conversion used by the other MPCS date fields
+// (MpcsComplianceAuditScreen, MpcsDividendDetailsScreen, etc.) — kept local
+// since none of those export it.
+function formatToIsoDate(displayStr) {
+  if (!displayStr) return '';
+  if (displayStr.includes('-') && displayStr.length === 10) return displayStr;
+  const parts = displayStr.trim().split(' ');
+  if (parts.length === 3) {
+    const day = parts[0].padStart(2, '0');
+    const month = MONTH_MAP[parts[1]] || '01';
+    const year = parts[2];
+    return `${year}-${month}-${day}`;
+  }
+  return '';
+}
+
+function formatFromIsoDate(isoStr) {
+  if (!isoStr) return '';
+  const parts = isoStr.split('-');
+  if (parts.length === 3) {
+    const year = parts[0];
+    const monthIdx = parseInt(parts[1], 10) - 1;
+    const day = parseInt(parts[2], 10);
+    const monthName = MONTH_NAMES[monthIdx] || 'Jan';
+    return `${day} ${monthName} ${year}`;
+  }
+  return isoStr;
+}
+
 function joinWithAnd(arr) {
   if (arr.length === 1) return arr[0];
   return `${arr.slice(0, -1).join(', ')} and ${arr[arr.length - 1]}`;
@@ -521,7 +553,7 @@ function ProfileForm({ initial, onCancel, onSave }) {
     <FormBody onCancel={onCancel} onSave={() => onSave(form, prev)}>
       <Field label="Society name" value={form.societyName} onChangeText={set('societyName')} />
       <Field label="Registration number" value={form.regNumber} onChangeText={set('regNumber')} />
-      <Field label="Date of registration" value={form.regDate} onChangeText={set('regDate')} placeholder="DD Mon YYYY" />
+      <DateField label="Date of registration" value={form.regDate} onChangeText={set('regDate')} />
       <Field label="PAN" value={form.panCard} onChangeText={set('panCard')} autoCapitalize="characters" />
       <Field label="President name" value={form.presidentName} onChangeText={set('presidentName')} />
       <Field label="President mobile" value={form.presidentMobile} onChangeText={set('presidentMobile')} keyboardType="numeric" />
@@ -591,7 +623,7 @@ function ComplianceForm({ initial, fy, onCancel, onSave }) {
     <FormBody onCancel={onCancel} onSave={() => onSave(form, prev)}>
       <View style={styles.rowHalf}>
         <View style={styles.fieldHalf}><Field label="Audit year" value={form.auditYear} onChangeText={set('auditYear')} /></View>
-        <View style={styles.fieldHalf}><Field label="Audit date" value={form.auditDate} onChangeText={set('auditDate')} placeholder="DD/MM/YYYY" /></View>
+        <View style={styles.fieldHalf}><DateField label="Audit date" value={form.auditDate} onChangeText={set('auditDate')} /></View>
       </View>
       <View style={styles.fieldGroup}>
         <Text style={styles.inputLabel}>Audit status</Text>
@@ -599,7 +631,7 @@ function ComplianceForm({ initial, fy, onCancel, onSave }) {
       </View>
       <View style={styles.rowHalf}>
         <View style={styles.fieldHalf}><Field label="AGM year" value={form.agmYear} onChangeText={set('agmYear')} /></View>
-        <View style={styles.fieldHalf}><Field label="AGM date" value={form.agmDate} onChangeText={set('agmDate')} placeholder="DD/MM/YYYY" /></View>
+        <View style={styles.fieldHalf}><DateField label="AGM date" value={form.agmDate} onChangeText={set('agmDate')} /></View>
       </View>
       <View style={styles.fieldGroup}>
         <Text style={styles.inputLabel}>AGM status</Text>
@@ -637,7 +669,7 @@ function DividendForm({ initial, onCancel, onSave }) {
       <Field label="Dividend policy" value={form.dividendPolicy} onChangeText={set('dividendPolicy')} multiline />
       <Field label="Rate" value={form.dividendRate} onChangeText={set('dividendRate')} placeholder="e.g. 8%" />
       <Field label="Amount (₹)" value={form.dividendAmount} onChangeText={set('dividendAmount')} keyboardType="numeric" />
-      <Field label="Distribution date" value={form.distributionDate} onChangeText={set('distributionDate')} placeholder="DD Mon YYYY" />
+      <DateField label="Distribution date" value={form.distributionDate} onChangeText={set('distributionDate')} />
     </FormBody>
   );
 }
@@ -654,7 +686,7 @@ function ShareCapitalForm({ initial, onCancel, onSave }) {
       <Field label="Authorised share capital (₹)" value={form.authorizedCapital} onChangeText={set('authorizedCapital')} keyboardType="numeric" />
       <Field label="Paid-up share capital (₹)" value={form.paidUpCapital} onChangeText={set('paidUpCapital')} keyboardType="numeric" />
       <Field label="Total member deposits (₹)" value={form.totalDeposits} onChangeText={set('totalDeposits')} keyboardType="numeric" />
-      <Field label="As on date" value={form.asOfDate} onChangeText={set('asOfDate')} placeholder="DD Mon YYYY" />
+      <DateField label="As on date" value={form.asOfDate} onChangeText={set('asOfDate')} />
     </FormBody>
   );
 }
@@ -677,6 +709,41 @@ function Field({ label, value, onChangeText, placeholder, keyboardType, autoCapi
           multiline={multiline}
         />
       </View>
+    </View>
+  );
+}
+
+// Real date picker on web (native <input type="date">); DD Mon YYYY text
+// entry on iOS/Android, same fallback the rest of the app uses since
+// @react-native-community/datetimepicker isn't wired up anywhere yet.
+function DateField({ label, value, onChangeText, placeholder }) {
+  return (
+    <View style={styles.fieldGroup}>
+      <Text style={styles.inputLabel}>{label}</Text>
+      {Platform.OS === 'web' ? (
+        <View style={styles.inputBox}>
+          <input
+            type="date"
+            value={formatToIsoDate(value)}
+            onChange={(e) => onChangeText(formatFromIsoDate(e.target.value))}
+            style={{
+              width: '100%', height: '100%', border: 'none', outline: 'none',
+              background: 'transparent', fontFamily: FONT_FAMILY, fontSize: '16px',
+              fontWeight: '600', color: COLORS.ink, cursor: 'pointer',
+            }}
+          />
+        </View>
+      ) : (
+        <View style={styles.inputBox}>
+          <TextInput
+            style={styles.textInput}
+            value={value}
+            onChangeText={onChangeText}
+            placeholder={placeholder || 'DD Mon YYYY'}
+            placeholderTextColor={COLORS.slate400}
+          />
+        </View>
+      )}
     </View>
   );
 }
