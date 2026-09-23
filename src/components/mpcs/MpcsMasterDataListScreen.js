@@ -415,6 +415,17 @@ function DemographicsRead({ demographicsData, onUpdate }) {
 }
 
 function LoanRead({ loanData, onUpdate, onManageBeneficiaries }) {
+  if (!loanData?.hasLoan) {
+    return (
+      <View style={styles.readCard}>
+        <View style={styles.cardHeaderRow}>
+          <Text style={styles.cardTitle}>Loan status</Text>
+          <View style={styles.pendingPill}><Text style={styles.pendingPillText}>NO LOAN</Text></View>
+        </View>
+        <Text style={styles.cardDesc}>This society does not have a loan on record.</Text>
+      </View>
+    );
+  }
   const rows = [
     { label: 'Loan type', value: loanData?.loanType },
     { label: 'Sanction date', value: loanData?.sanctionDate },
@@ -576,6 +587,17 @@ function ShareCapitalRead({ shareCapitalData, onUpdate }) {
 
 function CscRead({ cscData, onUpdate }) {
   const active = !!cscData?.isCscActive;
+  if (!active) {
+    return (
+      <View style={styles.readCard}>
+        <View style={styles.cardHeaderRow}>
+          <Text style={styles.cardTitle}>CSC status</Text>
+          <View style={styles.pendingPill}><Text style={styles.pendingPillText}>INACTIVE</Text></View>
+        </View>
+        <Text style={styles.cardDesc}>This society does not offer CSC services.</Text>
+      </View>
+    );
+  }
   const fields = [
     { label: 'Operator name', value: cscData?.cscOperatorName },
     { label: 'CSC ID', value: cscData?.cscId },
@@ -588,9 +610,7 @@ function CscRead({ cscData, onUpdate }) {
     <View style={styles.readCard}>
       <View style={styles.cardHeaderRow}>
         <Text style={styles.cardTitle}>CSC status</Text>
-        <View style={active ? styles.donePill : styles.pendingPill}>
-          <Text style={active ? styles.donePillText : styles.pendingPillText}>{active ? 'ACTIVE' : 'INACTIVE'}</Text>
-        </View>
+        <View style={styles.donePill}><Text style={styles.donePillText}>ACTIVE</Text></View>
       </View>
       <View style={{ gap: 10, marginTop: 8 }}>
         {fields.map(f => (
@@ -670,15 +690,20 @@ function LoanForm({ initial, onCancel, onSave }) {
   };
   const [form, setForm] = useState(prev);
   const set = (k) => (v) => setForm(p => ({ ...p, [k]: v }));
-  // Editing and saving a loan record is itself the "yes, this society has
-  // a loan" answer — same rule the old dedicated Loan Setup screen used.
-  const handleSave = () => onSave({ ...form, hasLoan: true }, prev);
   return (
-    <FormBody onCancel={onCancel} onSave={handleSave}>
-      <Field label="Loan type" value={form.loanType} onChangeText={set('loanType')} placeholder="e.g. Cash Credit Limit" />
-      <DateField label="Sanction date" value={form.sanctionDate} onChangeText={set('sanctionDate')} />
-      <Field label="Amount extended (₹)" value={form.loanExtended} onChangeText={set('loanExtended')} keyboardType="numeric" />
-      <Field label="Number of beneficiaries" value={form.beneficiaries} onChangeText={set('beneficiaries')} keyboardType="numeric" />
+    <FormBody onCancel={onCancel} onSave={() => onSave(form, prev)}>
+      <View style={styles.fieldGroup}>
+        <Text style={styles.inputLabel}>Does this society have a loan?</Text>
+        <StatusToggle value={form.hasLoan ? 'Yes' : 'No'} onChange={(v) => set('hasLoan')(v === 'Yes')} options={['Yes', 'No']} />
+      </View>
+      {form.hasLoan && (
+        <>
+          <Field label="Loan type" value={form.loanType} onChangeText={set('loanType')} placeholder="e.g. Cash Credit Limit" />
+          <DateField label="Sanction date" value={form.sanctionDate} onChangeText={set('sanctionDate')} />
+          <Field label="Amount extended (₹)" value={form.loanExtended} onChangeText={set('loanExtended')} keyboardType="numeric" />
+          <Field label="Number of beneficiaries" value={form.beneficiaries} onChangeText={set('beneficiaries')} keyboardType="numeric" />
+        </>
+      )}
     </FormBody>
   );
 }
@@ -790,19 +815,23 @@ function CscForm({ initial, onCancel, onSave }) {
   return (
     <FormBody onCancel={onCancel} onSave={() => onSave(form, prev)}>
       <View style={styles.fieldGroup}>
-        <Text style={styles.inputLabel}>CSC status</Text>
+        <Text style={styles.inputLabel}>Does this society offer CSC services?</Text>
         <StatusToggle
           value={form.isCscActive ? 'Active' : 'Inactive'}
           onChange={(v) => set('isCscActive')(v === 'Active')}
           options={['Active', 'Inactive']}
         />
       </View>
-      <Field label="Operator name" value={form.cscOperatorName} onChangeText={set('cscOperatorName')} />
-      <Field label="CSC ID" value={form.cscId} onChangeText={set('cscId')} />
-      <Field label="Center name" value={form.cscCenterName} onChangeText={set('cscCenterName')} />
-      <Field label="Mobile number" value={form.mobileNumber} onChangeText={set('mobileNumber')} keyboardType="numeric" />
-      <Field label="Email ID" value={form.emailId} onChangeText={set('emailId')} autoCapitalize="none" />
-      <Field label="Active services" value={form.activeServicesCount} onChangeText={set('activeServicesCount')} keyboardType="numeric" />
+      {form.isCscActive && (
+        <>
+          <Field label="Operator name" value={form.cscOperatorName} onChangeText={set('cscOperatorName')} />
+          <Field label="CSC ID" value={form.cscId} onChangeText={set('cscId')} />
+          <Field label="Center name" value={form.cscCenterName} onChangeText={set('cscCenterName')} />
+          <Field label="Mobile number" value={form.mobileNumber} onChangeText={set('mobileNumber')} keyboardType="numeric" />
+          <Field label="Email ID" value={form.emailId} onChangeText={set('emailId')} autoCapitalize="none" />
+          <Field label="Active services" value={form.activeServicesCount} onChangeText={set('activeServicesCount')} keyboardType="numeric" />
+        </>
+      )}
     </FormBody>
   );
 }
