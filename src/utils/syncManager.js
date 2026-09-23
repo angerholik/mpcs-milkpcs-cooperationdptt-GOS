@@ -1,14 +1,18 @@
 import { Platform } from 'react-native';
 import NetInfo from '@react-native-community/netinfo';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { saveMilkPcsSubmission, saveMpcsSubmission } from '../supabase';
+import { saveMilkPcsSubmission, saveMpcsSubmission, supabase, uploadPhoto } from '../supabase';
 
 const QUEUE_KEY = 'submission_queue';
 
 /**
  * Adds a submission to the offline queue.
- * @param {string} type - 'MILK_PCS' | 'MPCS'
- * @param {object} data - Form data
+ * @param {string} type - 'MILK_PCS' | 'MPCS' | 'RPC_ASSIGN'
+ * @param {object} data - Form data. For 'RPC_ASSIGN', { institutionName }.
+ *   For 'MILK_PCS'/'MPCS', an unuploaded photo goes in `imageBase64` — the
+ *   photo itself (not just the DB row) is retried on the next processQueue
+ *   pass, since a captured evidence photo is much harder to recapture than
+ *   any other field is to retype.
  */
 export const queueSubmission = async (type, data) => {
     try {
@@ -60,11 +64,28 @@ export const processQueue = async (onStatusChange) => {
         for (const item of queue) {
             try {
                 let error = null;
-                if (item.type === 'MILK_PCS') {
-                    const result = await saveMilkPcsSubmission(item.data);
+                if (item.type === 'RPC_ASSIGN') {
+                    const result = await supabase.rpc('self_assign_institution', { p_institution_name: item.data.institutionName });
                     error = result.error;
-                } else if (item.type === 'MPCS') {
-                    const result = await saveMpcsSubmission(item.data);
+                } else if (item.type === 'MILK_PCS' || item.type === 'MPCS') {
+                    // A captured evidence photo that failed to upload rides
+                    // along as raw base64 instead of a URL — re-attempt the
+                    // upload itself before the DB write, since a photo is
+                    // far harder to recapture in the field than any other
+                    // value here is to retype. If the photo still won't
+                    // upload, the whole item stays queued rather than
+                    // silently inserting the row with no photo attached.
+                    if (item.data.imageBase64 && !item.data.photoUrl) {
+                        const uploadedUrl = await uploadPhoto(item.data.imageBase64);
+                        if (!uploadedUrl) {
+                            throw new Error('Photo re-upload still failing');
+                        }
+                        item.data.photoUrl = uploadedUrl;
+                        delete item.data.imageBase64;
+                    }
+                    const result = item.type === 'MILK_PCS'
+                        ? await saveMilkPcsSubmission(item.data)
+                        : await saveMpcsSubmission(item.data);
                     error = result.error;
                 }
 

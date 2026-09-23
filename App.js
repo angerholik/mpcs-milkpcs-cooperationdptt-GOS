@@ -2423,15 +2423,32 @@ export default function App() {
           }
       } else {
           let uploadedPhotoUrl = null;
+          let photoUploadFailed = false;
           const submitPhotoBase64 = evData?.imageBase64 || imageBase64;
           if (submitPhotoBase64) {
             try {
               uploadedPhotoUrl = await uploadPhoto(submitPhotoBase64);
+              if (!uploadedPhotoUrl) photoUploadFailed = true;
             } catch(e) {
               console.warn('Photo upload exception:', e);
+              photoUploadFailed = true;
             }
           }
-          
+
+          if (photoUploadFailed) {
+            // A failed photo upload used to be silently swallowed — the
+            // submission proceeded anyway with photoUrl: null, so the
+            // "successfully submitted" toast fired while the captured
+            // evidence photo (much harder to recapture in the field than
+            // any typed field is to redo) was quietly gone. Queue the whole
+            // submission with the raw photo still attached instead, so
+            // processQueue retries the upload itself before the DB write.
+            console.error('Photo upload failed, queuing submission with photo for retry');
+            showToast('⚠️ Photo upload failed — queued to retry with your report', true);
+            await queueSubmission(activeView === 'MPCS' ? 'MPCS' : 'MILK_PCS', { ...submissionData, imageBase64: submitPhotoBase64 });
+            setPendingSyncCount(prev => prev + 1);
+            isOfflineSaved = true;
+          } else {
           if (activeView === 'MPCS') {
             const res = await saveMpcsSubmission({
               ...submissionData,
@@ -2497,12 +2514,16 @@ export default function App() {
           if (sbError) {
              console.error('Submission error:', sbError);
              showToast(`⚠️ Error: ${sbError.message || 'Supabase insert failed'}`, true);
-             await queueSubmission(activeView === 'MPCS' ? 'MPCS' : 'MILK_PCS', submissionData);
+             // uploadedPhotoUrl (if any) already succeeded — carry it along so
+             // the retry doesn't need to re-upload the photo, only redo the
+             // DB write that actually failed.
+             await queueSubmission(activeView === 'MPCS' ? 'MPCS' : 'MILK_PCS', { ...submissionData, photoUrl: uploadedPhotoUrl || undefined });
              setPendingSyncCount(prev => prev + 1);
              isOfflineSaved = true;
           } else {
              isCloudSaved = true;
              showToast('✅ Submission successfully inserted to Admin database!');
+          }
           }
       }
 
@@ -2686,10 +2707,22 @@ export default function App() {
                     // anything that CI had registered themselves. Done
                     // before the submission insert below so the very next
                     // .select() on that insert already sees it as scoped.
+                    // A failed RPC here used to just be console.warn'd and
+                    // dropped — the CI's own institution would silently stay
+                    // unscoped under RLS with no retry and no visible sign
+                    // anything was wrong. Queue it like every other write
+                    // that can fail offline, so it's retried the same way.
                     try {
-                      await supabase.rpc('self_assign_institution', { p_institution_name: newInst.name });
+                      const { error: rpcError } = await supabase.rpc('self_assign_institution', { p_institution_name: newInst.name });
+                      if (rpcError) {
+                        console.warn('self_assign_institution failed, queuing for retry:', rpcError.message || rpcError);
+                        await queueSubmission('RPC_ASSIGN', { institutionName: newInst.name });
+                        getQueueStatus().then(setPendingSyncCount);
+                      }
                     } catch (e) {
-                      console.warn('self_assign_institution failed:', e);
+                      console.warn('self_assign_institution exception, queuing for retry:', e);
+                      await queueSubmission('RPC_ASSIGN', { institutionName: newInst.name });
+                      getQueueStatus().then(setPendingSyncCount);
                     }
 
                     // Persist new institution record to Supabase backend immediately.
@@ -2700,10 +2733,16 @@ export default function App() {
                     // commonly: registered while offline) means the row never
                     // reached Supabase in the first place and would otherwise
                     // look identical to "access revoked" on the next load.
+                    //
+                    // A failed save here used to be console.warn'd and left
+                    // stuck forever — nothing ever re-attempted it, so an
+                    // institution registered offline never actually reached
+                    // Supabase. Queue it into the same submission_queue every
+                    // other write failure now uses instead.
                     let cloudError = null;
                     try {
                       if (newInst.type === 'MPCS') {
-                        const res = await saveMpcsSubmission({
+                        const mpcsRegPayload = {
                           societyName: newInst.name,
                           registrationNumber: newInst.regNo,
                           gpu: newInst.gpu || newInst.district || '',
@@ -2712,23 +2751,38 @@ export default function App() {
                           inspectorEmail: session?.user?.email,
                           totalMembers: 0,
                           annualTurnover: 0
-                        });
+                        };
+                        const res = await saveMpcsSubmission(mpcsRegPayload);
                         cloudError = res?.error || null;
+                        if (cloudError) {
+                          await queueSubmission('MPCS', mpcsRegPayload);
+                          getQueueStatus().then(setPendingSyncCount);
+                        }
                       } else {
-                        const res = await saveMilkPcsSubmission({
+                        const milkRegPayload = {
                           centerName: newInst.name,
                           centerId: newInst.name,
                           registrationNumber: newInst.regNo,
                           district: newInst.gpu || newInst.district || '',
                           reportedBy: getUserDisplayName() || 'Cooperative Inspector'
-                        });
+                        };
+                        const res = await saveMilkPcsSubmission(milkRegPayload);
                         cloudError = res?.error || null;
+                        if (cloudError) {
+                          await queueSubmission('MILK_PCS', milkRegPayload);
+                          getQueueStatus().then(setPendingSyncCount);
+                        }
                       }
                     } catch (e) {
                       cloudError = e;
+                      const fallbackPayload = newInst.type === 'MPCS'
+                        ? { societyName: newInst.name, registrationNumber: newInst.regNo, gpu: newInst.gpu || newInst.district || '', district: newInst.gpu || newInst.district || '', reportedBy: getUserDisplayName() || 'Cooperative Inspector', inspectorEmail: session?.user?.email, totalMembers: 0, annualTurnover: 0 }
+                        : { centerName: newInst.name, centerId: newInst.name, registrationNumber: newInst.regNo, district: newInst.gpu || newInst.district || '', reportedBy: getUserDisplayName() || 'Cooperative Inspector' };
+                      await queueSubmission(newInst.type === 'MPCS' ? 'MPCS' : 'MILK_PCS', fallbackPayload);
+                      getQueueStatus().then(setPendingSyncCount);
                     }
                     if (cloudError) {
-                      console.warn('Initial cloud registration warning:', cloudError);
+                      console.warn('Initial cloud registration warning, queued for retry:', cloudError);
                     }
                     setInstitutionsList((prev) => {
                       const next = prev.map((i) => (i.id === newInst.id ? { ...i, synced: !cloudError } : i));
