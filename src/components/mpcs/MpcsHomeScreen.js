@@ -97,8 +97,8 @@ export default function HomeScreen({
     { id: 'MPCS_LOAN_STATUS', title: 'Loan Status', done: loanIsActive && loanStatus?.startsWith('COMPLETED'), na: !loanIsActive },
   ];
 
-  // All 7 records now live on one screen (MpcsMasterDataListScreen), so
-  // every row here just opens it — CSC Details isn't part of that list.
+  // All 8 records now live on one screen (MpcsMasterDataListScreen), so
+  // every row here just opens it.
   const masterRecords = [
     { id: 'MPCS_MASTER_DATA', title: 'Institutional Profile', updated: masterDataUpdated.instProfile },
     { id: 'MPCS_MASTER_DATA', title: 'Registered Demographics', updated: masterDataUpdated.demographics },
@@ -107,6 +107,7 @@ export default function HomeScreen({
     { id: 'MPCS_MASTER_DATA', title: 'Financial Performance', updated: masterDataUpdated.financials },
     { id: 'MPCS_MASTER_DATA', title: 'Dividend Details', updated: masterDataUpdated.dividend },
     { id: 'MPCS_MASTER_DATA', title: 'Share Capital', updated: masterDataUpdated.shareCapital },
+    { id: 'MPCS_MASTER_DATA', title: 'CSC Details', updated: masterDataUpdated.csc },
   ];
   const masterNeedsUpdate = masterRecords.filter((r) => !r.updated);
 

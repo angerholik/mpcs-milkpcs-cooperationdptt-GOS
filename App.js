@@ -1247,6 +1247,11 @@ export default function App() {
     saveMasterStateToStorage({ loanData: data });
     stampMasterDataUpdated('loan');
   };
+  const handleSaveMpcsCscDetails = (data) => {
+    setCscDetailsData(data);
+    saveMasterStateToStorage({ cscDetailsData: data });
+    stampMasterDataUpdated('csc');
+  };
 
   const loadMasterStateFromStorage = async (targetSocName = null, explicitEmail = null) => {
     try {
@@ -3473,6 +3478,7 @@ export default function App() {
                         dividendData={dividendData}
                         shareCapitalData={shareCapitalData}
                         loanData={loanData}
+                        cscDetailsData={cscDetailsData}
                         masterDataUpdated={masterDataTimestamps}
                         onSaveProfile={handleSaveMpcsProfile}
                         onSaveDemographics={handleSaveMpcsDemographics}
@@ -3481,6 +3487,7 @@ export default function App() {
                         onSaveDividend={handleSaveMpcsDividend}
                         onSaveShareCapital={handleSaveMpcsShareCapital}
                         onSaveLoan={handleSaveMpcsLoan}
+                        onSaveCscDetails={handleSaveMpcsCscDetails}
                         onManageBeneficiaries={() => {
                           setLoanBeneficiariesBackTarget('MPCS_MASTER_DATA');
                           setCurrentMobileScreen('MPCS_LOAN_BENEFICIARIES');

@@ -84,9 +84,9 @@ const DEMOGRAPHIC_CATEGORIES = ['SC', 'ST', 'OBC', 'Others'];
 // "View" to see what's on record (read-only), tap "Update" from there to
 // edit, or tap "Add" to go straight to the form when nothing's recorded
 // yet. Each record saves on its own — no shared final submit. Loan Details
-// is the 7th row and behaves the same as the other six (inline expand,
-// not a separate screen); only "Manage beneficiaries" — a real sub-list,
-// not a handful of fields — still navigates to its own screen.
+// and CSC Details behave the same as the other six (inline expand, not a
+// separate screen); only "Manage beneficiaries" — a real sub-list, not a
+// handful of fields — still navigates to its own screen.
 export default function MpcsMasterDataListScreen({
   societyName = '',
   panCard = '',
@@ -102,6 +102,7 @@ export default function MpcsMasterDataListScreen({
   dividendData = {},
   shareCapitalData = {},
   loanData = {},
+  cscDetailsData = {},
   masterDataUpdated = {},
   onSaveProfile,
   onSaveDemographics,
@@ -110,6 +111,7 @@ export default function MpcsMasterDataListScreen({
   onSaveDividend,
   onSaveShareCapital,
   onSaveLoan,
+  onSaveCscDetails,
   onManageBeneficiaries,
   onBack,
   activeTab = 'home',
@@ -143,6 +145,8 @@ export default function MpcsMasterDataListScreen({
     ? `₹${Number(shareCapitalData.authorizedCapital).toLocaleString('en-IN')} authorised`
     : '';
 
+  const cscDetail = masterDataUpdated.csc ? (cscDetailsData?.isCscActive ? 'active' : 'inactive') : '';
+
   const records = [
     { key: 'profile', title: 'Society identification', updated: masterDataUpdated.instProfile, detail: '' },
     { key: 'demographics', title: 'Registered demographics', updated: masterDataUpdated.demographics, detail: totalMembers ? `${totalMembers} members` : '' },
@@ -151,6 +155,7 @@ export default function MpcsMasterDataListScreen({
     { key: 'financials', title: 'Financial performance', updated: masterDataUpdated.financials, detail: financialsDetail },
     { key: 'dividend', title: 'Dividend details', updated: masterDataUpdated.dividend, detail: dividendDetail },
     { key: 'shareCapital', title: 'Share capital', updated: masterDataUpdated.shareCapital, detail: shareCapitalDetail },
+    { key: 'csc', title: 'CSC details', updated: masterDataUpdated.csc, detail: cscDetail },
   ];
   const recordedCount = records.filter(r => r.updated).length;
 
@@ -231,6 +236,7 @@ export default function MpcsMasterDataListScreen({
                     financialsInitial={financialsData}
                     dividendInitial={dividendData}
                     shareCapitalInitial={shareCapitalData}
+                    cscInitial={cscDetailsData}
                     onManageBeneficiaries={onManageBeneficiaries}
                     onSaveProfile={(data, prev) => finishSave('profile', r.title, (d) => onSaveProfile && onSaveProfile(d || data), prev)}
                     onSaveDemographics={(data, prev) => finishSave('demographics', r.title, (d) => onSaveDemographics && onSaveDemographics(d || data), prev)}
@@ -239,6 +245,7 @@ export default function MpcsMasterDataListScreen({
                     onSaveFinancials={(data, prev) => finishSave('financials', r.title, (d) => onSaveFinancials && onSaveFinancials(d || data), prev)}
                     onSaveDividend={(data, prev) => finishSave('dividend', r.title, (d) => onSaveDividend && onSaveDividend(d || data), prev)}
                     onSaveShareCapital={(data, prev) => finishSave('shareCapital', r.title, (d) => onSaveShareCapital && onSaveShareCapital(d || data), prev)}
+                    onSaveCscDetails={(data, prev) => finishSave('csc', r.title, (d) => onSaveCscDetails && onSaveCscDetails(d || data), prev)}
                   />
                 ) : (
                   <Pressable style={styles.row} onPress={() => openRow(r.key, recorded)}>
@@ -270,8 +277,8 @@ export default function MpcsMasterDataListScreen({
 
 function RecordPanel({
   recordKey, title, mode, fy, onCollapse, onGoToEdit, onCancelEdit,
-  profileInitial, demographicsInitial, loanInitial, complianceInitial, financialsInitial, dividendInitial, shareCapitalInitial,
-  onSaveProfile, onSaveDemographics, onSaveLoan, onManageBeneficiaries, onSaveCompliance, onSaveFinancials, onSaveDividend, onSaveShareCapital,
+  profileInitial, demographicsInitial, loanInitial, complianceInitial, financialsInitial, dividendInitial, shareCapitalInitial, cscInitial,
+  onSaveProfile, onSaveDemographics, onSaveLoan, onManageBeneficiaries, onSaveCompliance, onSaveFinancials, onSaveDividend, onSaveShareCapital, onSaveCscDetails,
 }) {
   return (
     <View style={styles.editCard}>
@@ -305,6 +312,7 @@ function RecordPanel({
             />
           )}
           {recordKey === 'shareCapital' && <ShareCapitalRead shareCapitalData={shareCapitalInitial} onUpdate={onGoToEdit} />}
+          {recordKey === 'csc' && <CscRead cscData={cscInitial} onUpdate={onGoToEdit} />}
         </>
       ) : (
         <>
@@ -314,6 +322,7 @@ function RecordPanel({
           {recordKey === 'compliance' && <ComplianceForm initial={complianceInitial} fy={fy} onCancel={onCancelEdit} onSave={onSaveCompliance} />}
           {recordKey === 'financials' && <FinancialsForm initial={financialsInitial} onCancel={onCancelEdit} onSave={onSaveFinancials} />}
           {recordKey === 'dividend' && <DividendForm initial={dividendInitial} onCancel={onCancelEdit} onSave={onSaveDividend} />}
+          {recordKey === 'csc' && <CscForm initial={cscInitial} onCancel={onCancelEdit} onSave={onSaveCscDetails} />}
           {recordKey === 'shareCapital' && <ShareCapitalForm initial={shareCapitalInitial} onCancel={onCancelEdit} onSave={onSaveShareCapital} />}
         </>
       )}
@@ -565,6 +574,36 @@ function ShareCapitalRead({ shareCapitalData, onUpdate }) {
   );
 }
 
+function CscRead({ cscData, onUpdate }) {
+  const active = !!cscData?.isCscActive;
+  const fields = [
+    { label: 'Operator name', value: cscData?.cscOperatorName },
+    { label: 'CSC ID', value: cscData?.cscId },
+    { label: 'Center name', value: cscData?.cscCenterName },
+    { label: 'Mobile number', value: cscData?.mobileNumber },
+    { label: 'Email ID', value: cscData?.emailId },
+    { label: 'Active services', value: cscData?.activeServicesCount },
+  ];
+  return (
+    <View style={styles.readCard}>
+      <View style={styles.cardHeaderRow}>
+        <Text style={styles.cardTitle}>CSC status</Text>
+        <View style={active ? styles.donePill : styles.pendingPill}>
+          <Text style={active ? styles.donePillText : styles.pendingPillText}>{active ? 'ACTIVE' : 'INACTIVE'}</Text>
+        </View>
+      </View>
+      <View style={{ gap: 10, marginTop: 8 }}>
+        {fields.map(f => (
+          <View key={f.label} style={styles.detailRowInline}>
+            <Text style={styles.fieldLabel}>{f.label.toUpperCase()}</Text>
+            <Text style={styles.fieldValue}>{fmt(f.value)}</Text>
+          </View>
+        ))}
+      </View>
+    </View>
+  );
+}
+
 // ─── Per-record edit forms ──────────────────────────────────────────────
 
 function ProfileForm({ initial, onCancel, onSave }) {
@@ -644,10 +683,10 @@ function LoanForm({ initial, onCancel, onSave }) {
   );
 }
 
-function StatusToggle({ value, onChange }) {
+function StatusToggle({ value, onChange, options }) {
   return (
     <View style={styles.statusToggle}>
-      {['Done', 'Pending'].map(opt => (
+      {(options || ['Done', 'Pending']).map(opt => (
         <Pressable
           key={opt}
           style={[styles.statusOption, value === opt && styles.statusOptionActive]}
@@ -735,6 +774,35 @@ function ShareCapitalForm({ initial, onCancel, onSave }) {
       <Field label="Paid-up share capital (₹)" value={form.paidUpCapital} onChangeText={set('paidUpCapital')} keyboardType="numeric" />
       <Field label="Total member deposits (₹)" value={form.totalDeposits} onChangeText={set('totalDeposits')} keyboardType="numeric" />
       <DateField label="As on date" value={form.asOfDate} onChangeText={set('asOfDate')} />
+    </FormBody>
+  );
+}
+
+function CscForm({ initial, onCancel, onSave }) {
+  const prev = {
+    isCscActive: initial?.isCscActive || false, cscOperatorName: initial?.cscOperatorName || '',
+    cscId: initial?.cscId || '', cscCenterName: initial?.cscCenterName || '',
+    mobileNumber: initial?.mobileNumber || '', emailId: initial?.emailId || '',
+    activeServicesCount: initial?.activeServicesCount || '',
+  };
+  const [form, setForm] = useState(prev);
+  const set = (k) => (v) => setForm(p => ({ ...p, [k]: v }));
+  return (
+    <FormBody onCancel={onCancel} onSave={() => onSave(form, prev)}>
+      <View style={styles.fieldGroup}>
+        <Text style={styles.inputLabel}>CSC status</Text>
+        <StatusToggle
+          value={form.isCscActive ? 'Active' : 'Inactive'}
+          onChange={(v) => set('isCscActive')(v === 'Active')}
+          options={['Active', 'Inactive']}
+        />
+      </View>
+      <Field label="Operator name" value={form.cscOperatorName} onChangeText={set('cscOperatorName')} />
+      <Field label="CSC ID" value={form.cscId} onChangeText={set('cscId')} />
+      <Field label="Center name" value={form.cscCenterName} onChangeText={set('cscCenterName')} />
+      <Field label="Mobile number" value={form.mobileNumber} onChangeText={set('mobileNumber')} keyboardType="numeric" />
+      <Field label="Email ID" value={form.emailId} onChangeText={set('emailId')} autoCapitalize="none" />
+      <Field label="Active services" value={form.activeServicesCount} onChangeText={set('activeServicesCount')} keyboardType="numeric" />
     </FormBody>
   );
 }
