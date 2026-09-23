@@ -4,6 +4,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import BottomNav from '../BottomNav';
 import { webCapWidth } from '../../utils/webStyles';
 import { getMpcsCscTransactions, saveMpcsCscTransaction, deleteMpcsCscTransaction } from '../../supabase';
+import { queueSubmission } from '../../utils/syncManager';
 
 // Redesign source: https://claude.ai/artifact/FpC75VnmdTzgcpPmdQGvkx,
 // section "4 · Daily ledger", screens 7e/7d "CSC transactions" —
@@ -81,17 +82,25 @@ export default function MpcsCscTransactionsScreen({
   const pendingDeleteRef = useRef(null);
   useEffect(() => { pendingDeleteRef.current = pendingDelete; }, [pendingDelete]);
   useEffect(() => () => {
+    // A failed delete here used to be silently dropped — queue it for
+    // retry like every other write that can fail offline.
     if (pendingDeleteRef.current) {
       clearTimeout(pendingDeleteRef.current.timer);
-      deleteMpcsCscTransaction(pendingDeleteRef.current.id);
+      const txId = pendingDeleteRef.current.id;
+      deleteMpcsCscTransaction(txId).then(({ error }) => {
+        if (error) queueSubmission('DELETE_CSC_TX', { transactionId: txId });
+      });
     }
   }, []);
 
   const loadTransactions = useCallback(async () => {
     if (!societyName) { setLoading(false); return; }
     setLoading(true);
-    const { data } = await getMpcsCscTransactions(societyName);
-    setTransactions(data || []);
+    // A failed fetch (offline, flaky connection) used to wipe the visibly
+    // loaded ledger back to an empty list — keep whatever's already
+    // showing instead of clobbering it with an empty result.
+    const { data, error } = await getMpcsCscTransactions(societyName);
+    if (!error) setTransactions(data || []);
     setLoading(false);
   }, [societyName]);
 
@@ -123,10 +132,15 @@ export default function MpcsCscTransactionsScreen({
     setMenuOpenId(null);
     if (pendingDelete) {
       clearTimeout(pendingDelete.timer);
-      deleteMpcsCscTransaction(pendingDelete.id);
+      const prevId = pendingDelete.id;
+      deleteMpcsCscTransaction(prevId).then(({ error }) => {
+        if (error) queueSubmission('DELETE_CSC_TX', { transactionId: prevId });
+      });
     }
-    const timer = setTimeout(() => {
-      deleteMpcsCscTransaction(tx.id).then(loadTransactions);
+    const timer = setTimeout(async () => {
+      const { error } = await deleteMpcsCscTransaction(tx.id);
+      if (error) await queueSubmission('DELETE_CSC_TX', { transactionId: tx.id });
+      loadTransactions();
       setPendingDelete((cur) => (cur && cur.id === tx.id ? null : cur));
     }, UNDO_WINDOW_MS);
     setPendingDelete({ id: tx.id, timer });

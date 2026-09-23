@@ -4,6 +4,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import BottomNav from '../BottomNav';
 import { webCapWidth } from '../../utils/webStyles';
 import { getMpcsDailyTransactions, saveMpcsDailyTransaction, deleteMpcsDailyTransaction } from '../../supabase';
+import { queueSubmission } from '../../utils/syncManager';
 
 // Redesign source: https://claude.ai/artifact/FpC75VnmdTzgcpPmdQGvkx,
 // section "4 · Daily ledger", screen 7a "Cash book" — "Row menu and undo
@@ -74,9 +75,14 @@ export default function MpcsDailyTransactionScreen({
   useEffect(() => () => {
     // Commit any still-pending delete if the screen unmounts before the
     // undo window closes, rather than leaking a timer that never fires.
+    // A failed delete here used to be silently dropped — queue it for
+    // retry like every other write that can fail offline.
     if (pendingDeleteRef.current) {
       clearTimeout(pendingDeleteRef.current.timer);
-      deleteMpcsDailyTransaction(pendingDeleteRef.current.id);
+      const txId = pendingDeleteRef.current.id;
+      deleteMpcsDailyTransaction(txId).then(({ error }) => {
+        if (error) queueSubmission('DELETE_DAILY_TX', { transactionId: txId });
+      });
     }
   }, []);
 
@@ -85,8 +91,13 @@ export default function MpcsDailyTransactionScreen({
   const loadTransactions = useCallback(async () => {
     if (!societyName) { setLoading(false); return; }
     setLoading(true);
-    const { data } = await getMpcsDailyTransactions(societyName);
-    setTransactions(data || []);
+    // A failed fetch (offline, flaky connection) used to wipe the visibly
+    // loaded ledger back to an empty list — real, already-saved entries
+    // would vanish from the screen even though nothing happened to them
+    // server-side. Keep whatever's already showing instead of clobbering
+    // it with an empty result.
+    const { data, error } = await getMpcsDailyTransactions(societyName);
+    if (!error) setTransactions(data || []);
     setLoading(false);
   }, [societyName]);
 
@@ -119,10 +130,15 @@ export default function MpcsDailyTransactionScreen({
     setMenuOpenId(null);
     if (pendingDelete) {
       clearTimeout(pendingDelete.timer);
-      deleteMpcsDailyTransaction(pendingDelete.id);
+      const prevId = pendingDelete.id;
+      deleteMpcsDailyTransaction(prevId).then(({ error }) => {
+        if (error) queueSubmission('DELETE_DAILY_TX', { transactionId: prevId });
+      });
     }
-    const timer = setTimeout(() => {
-      deleteMpcsDailyTransaction(tx.id).then(loadTransactions);
+    const timer = setTimeout(async () => {
+      const { error } = await deleteMpcsDailyTransaction(tx.id);
+      if (error) await queueSubmission('DELETE_DAILY_TX', { transactionId: tx.id });
+      loadTransactions();
       setPendingDelete((cur) => (cur && cur.id === tx.id ? null : cur));
     }, UNDO_WINDOW_MS);
     setPendingDelete({ id: tx.id, no: tx.transaction_no, timer });
