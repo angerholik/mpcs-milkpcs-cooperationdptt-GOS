@@ -1053,6 +1053,16 @@ export default function App() {
       // other's Supabase find-existing-then-insert/update calls and let an
       // earlier-triggered-but-slower-to-resolve sync clobber a later, more
       // complete one with stale data (see cloudSyncQueue comment above).
+      //
+      // A failed push (offline, flaky connection) used to just be
+      // console.warn'd and dropped — the record stayed durable on-device
+      // (AsyncStorage.setItem above already succeeded) but had no path back
+      // to Supabase and no visible trace anywhere in the UI. Each branch
+      // below now queues its payload into the same submission_queue the
+      // Monthly Review & Submit flow already uses on failure, so a stuck
+      // Master Data save gets picked up by the existing pending-sync
+      // indicator and retried by the existing NetInfo-triggered processQueue
+      // instead of vanishing into a log line no one reads.
       cloudSyncQueue = cloudSyncQueue.then(async () => {
       try {
         const gpuVal = selectedSociety?.gpu || selectedSociety?.district || '';
@@ -1073,7 +1083,7 @@ export default function App() {
           const evData = await getMilkSectionData(activeSocName, repMonth, 'evidence');
           const loanIsActive = !!stateObj.masterHasLoan && !stateObj.masterLoanCleared;
 
-          await saveMilkPcsSubmission({
+          const milkPayload = {
             centerName: activeSocName,
             centerId: stateObj.registrationNumber || selectedSociety?.regNo || '',
             district: gpuVal,
@@ -1112,9 +1122,21 @@ export default function App() {
             litres: opsData?.litres || '',
             balance: opsData?.balance || '',
             withdrawal: opsData?.withdrawal || ''
-          });
+          };
+          try {
+            const { error } = await saveMilkPcsSubmission(milkPayload);
+            if (error) {
+              console.warn('Master data cloud sync failed, queuing for retry:', error.message || error);
+              await queueSubmission('MILK_PCS', milkPayload);
+              getQueueStatus().then(setPendingSyncCount);
+            }
+          } catch (cloudErr) {
+            console.warn('Master data cloud sync exception, queuing for retry:', cloudErr);
+            await queueSubmission('MILK_PCS', milkPayload);
+            getQueueStatus().then(setPendingSyncCount);
+          }
         } else {
-          await saveMpcsSubmission({
+          const mpcsPayload = {
             societyName: activeSocName,
             registrationNumber: stateObj.registrationNumber || selectedSociety?.regNo || '',
             gpu: gpuVal,
@@ -1149,10 +1171,22 @@ export default function App() {
             imageBase64: imageBase64 || undefined,
             capturedAt: timestamp || undefined,
             ...stateObj
-          });
+          };
+          try {
+            const { error } = await saveMpcsSubmission(mpcsPayload);
+            if (error) {
+              console.warn('Master data cloud sync failed, queuing for retry:', error.message || error);
+              await queueSubmission('MPCS', mpcsPayload);
+              getQueueStatus().then(setPendingSyncCount);
+            }
+          } catch (cloudErr) {
+            console.warn('Master data cloud sync exception, queuing for retry:', cloudErr);
+            await queueSubmission('MPCS', mpcsPayload);
+            getQueueStatus().then(setPendingSyncCount);
+          }
         }
-      } catch (cloudErr) {
-        console.warn('Auto cloud sync exception:', cloudErr);
+      } catch (e) {
+        console.warn('Master data cloud sync setup failed:', e);
       }
       });
     } catch (e) {
