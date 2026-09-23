@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TextInput, ScrollView, Platform, Pressable } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, TextInput, ScrollView, Platform, Pressable, Alert } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import BottomNav from '../BottomNav';
 import { webCapWidth } from '../../utils/webStyles';
@@ -80,6 +80,19 @@ function joinWithAnd(arr) {
 
 const DEMOGRAPHIC_CATEGORIES = ['SC', 'ST', 'OBC', 'Others'];
 
+// Confirms before an action would silently drop an in-progress edit
+// (collapsing, switching records, or leaving the screen).
+function confirmDiscard(onConfirm) {
+  if (Platform.OS === 'web') {
+    if (window.confirm('Discard unsaved changes to this record?')) onConfirm();
+  } else {
+    Alert.alert('Discard unsaved changes?', 'Your edits to this record have not been saved.', [
+      { text: 'Keep editing', style: 'cancel' },
+      { text: 'Discard', style: 'destructive', onPress: onConfirm },
+    ]);
+  }
+}
+
 // Single scrollable list where each record is its own accordion row: tap
 // "View" to see what's on record (read-only), tap "Update" from there to
 // edit, or tap "Add" to go straight to the form when nothing's recorded
@@ -119,7 +132,12 @@ export default function MpcsMasterDataListScreen({
 }) {
   const [expanded, setExpanded] = useState(null); // { key, mode: 'view' | 'edit' }
   const [banner, setBanner] = useState(null); // { message, undo }
+  const [isDirty, setIsDirty] = useState(false);
   const fy = lastCompletedFY();
+
+  // Any change of record/mode starts a clean slate — real edits re-flag
+  // themselves via onDirtyChange as soon as the form's local state diverges.
+  useEffect(() => { setIsDirty(false); }, [expanded?.key, expanded?.mode]);
 
   const totalMembers = demographicsData.reduce((s, r) => s + (parseInt(r.male) || 0) + (parseInt(r.female) || 0), 0);
   const loanState = loanData?.loanCleared ? 'loan cleared' : loanData?.hasLoan ? 'loan active' : 'no loan';
@@ -160,12 +178,19 @@ export default function MpcsMasterDataListScreen({
   const recordedCount = records.filter(r => r.updated).length;
 
   const openRow = (key, recorded) => {
-    setBanner(null);
-    setExpanded({ key, mode: recorded ? 'view' : 'edit' });
+    const proceed = () => { setBanner(null); setExpanded({ key, mode: recorded ? 'view' : 'edit' }); };
+    if (isDirty) confirmDiscard(proceed); else proceed();
   };
-  const collapse = () => setExpanded(null);
+  const collapse = () => {
+    if (isDirty) confirmDiscard(() => setExpanded(null)); else setExpanded(null);
+  };
   const goToEdit = (key) => setExpanded({ key, mode: 'edit' });
-  const cancelEdit = (key, recorded) => setExpanded(recorded ? { key, mode: 'view' } : null);
+  const cancelEdit = (key, recorded) => {
+    const proceed = () => setExpanded(recorded ? { key, mode: 'view' } : null);
+    if (isDirty) confirmDiscard(proceed); else proceed();
+  };
+  const guardedBack = () => { if (isDirty) confirmDiscard(() => onBack && onBack()); else onBack && onBack(); };
+  const guardedTabPress = (tab) => { if (isDirty) confirmDiscard(() => onTabPress(tab)); else onTabPress && onTabPress(tab); };
 
   const finishSave = (key, title, save, prevData) => {
     save();
@@ -181,7 +206,7 @@ export default function MpcsMasterDataListScreen({
     <View style={styles.container}>
       <View style={styles.header}>
         <View style={styles.topRow}>
-          <Pressable onPress={onBack} hitSlop={8} style={styles.backBtn}>
+          <Pressable onPress={guardedBack} hitSlop={8} style={styles.backBtn}>
             <MaterialCommunityIcons name="arrow-left" size={22} color="#ffffff" />
           </Pressable>
           <View style={{ flex: 1 }}>
@@ -229,6 +254,7 @@ export default function MpcsMasterDataListScreen({
                     onCollapse={collapse}
                     onGoToEdit={() => goToEdit(r.key)}
                     onCancelEdit={() => cancelEdit(r.key, recorded)}
+                    onDirtyChange={setIsDirty}
                     profileInitial={{ societyName, panCard, regNumber, regDate, presidentName, presidentMobile, managerName, managerMobile }}
                     demographicsInitial={demographicsData}
                     loanInitial={loanData}
@@ -270,13 +296,13 @@ export default function MpcsMasterDataListScreen({
         </View>
       </ScrollView>
 
-      {onTabPress && <BottomNav activeTab={activeTab} onTabPress={onTabPress} />}
+      {onTabPress && <BottomNav activeTab={activeTab} onTabPress={guardedTabPress} />}
     </View>
   );
 }
 
 function RecordPanel({
-  recordKey, title, mode, fy, onCollapse, onGoToEdit, onCancelEdit,
+  recordKey, title, mode, fy, onCollapse, onGoToEdit, onCancelEdit, onDirtyChange,
   profileInitial, demographicsInitial, loanInitial, complianceInitial, financialsInitial, dividendInitial, shareCapitalInitial, cscInitial,
   onSaveProfile, onSaveDemographics, onSaveLoan, onManageBeneficiaries, onSaveCompliance, onSaveFinancials, onSaveDividend, onSaveShareCapital, onSaveCscDetails,
 }) {
@@ -316,14 +342,14 @@ function RecordPanel({
         </>
       ) : (
         <>
-          {recordKey === 'profile' && <ProfileForm initial={profileInitial} onCancel={onCancelEdit} onSave={onSaveProfile} />}
-          {recordKey === 'demographics' && <DemographicsForm initial={demographicsInitial} onCancel={onCancelEdit} onSave={onSaveDemographics} />}
-          {recordKey === 'loan' && <LoanForm initial={loanInitial} onCancel={onCancelEdit} onSave={onSaveLoan} />}
-          {recordKey === 'compliance' && <ComplianceForm initial={complianceInitial} fy={fy} onCancel={onCancelEdit} onSave={onSaveCompliance} />}
-          {recordKey === 'financials' && <FinancialsForm initial={financialsInitial} onCancel={onCancelEdit} onSave={onSaveFinancials} />}
-          {recordKey === 'dividend' && <DividendForm initial={dividendInitial} onCancel={onCancelEdit} onSave={onSaveDividend} />}
-          {recordKey === 'csc' && <CscForm initial={cscInitial} onCancel={onCancelEdit} onSave={onSaveCscDetails} />}
-          {recordKey === 'shareCapital' && <ShareCapitalForm initial={shareCapitalInitial} onCancel={onCancelEdit} onSave={onSaveShareCapital} />}
+          {recordKey === 'profile' && <ProfileForm initial={profileInitial} onCancel={onCancelEdit} onSave={onSaveProfile} onDirtyChange={onDirtyChange} />}
+          {recordKey === 'demographics' && <DemographicsForm initial={demographicsInitial} onCancel={onCancelEdit} onSave={onSaveDemographics} onDirtyChange={onDirtyChange} />}
+          {recordKey === 'loan' && <LoanForm initial={loanInitial} onCancel={onCancelEdit} onSave={onSaveLoan} onDirtyChange={onDirtyChange} />}
+          {recordKey === 'compliance' && <ComplianceForm initial={complianceInitial} fy={fy} onCancel={onCancelEdit} onSave={onSaveCompliance} onDirtyChange={onDirtyChange} />}
+          {recordKey === 'financials' && <FinancialsForm initial={financialsInitial} onCancel={onCancelEdit} onSave={onSaveFinancials} onDirtyChange={onDirtyChange} />}
+          {recordKey === 'dividend' && <DividendForm initial={dividendInitial} onCancel={onCancelEdit} onSave={onSaveDividend} onDirtyChange={onDirtyChange} />}
+          {recordKey === 'csc' && <CscForm initial={cscInitial} onCancel={onCancelEdit} onSave={onSaveCscDetails} onDirtyChange={onDirtyChange} />}
+          {recordKey === 'shareCapital' && <ShareCapitalForm initial={shareCapitalInitial} onCancel={onCancelEdit} onSave={onSaveShareCapital} onDirtyChange={onDirtyChange} />}
         </>
       )}
     </View>
@@ -626,7 +652,7 @@ function CscRead({ cscData, onUpdate }) {
 
 // ─── Per-record edit forms ──────────────────────────────────────────────
 
-function ProfileForm({ initial, onCancel, onSave }) {
+function ProfileForm({ initial, onCancel, onSave, onDirtyChange }) {
   const prev = {
     societyName: initial.societyName || '', panCard: initial.panCard || '',
     regNumber: initial.regNumber || '', regDate: initial.regDate || '',
@@ -635,6 +661,7 @@ function ProfileForm({ initial, onCancel, onSave }) {
   };
   const [form, setForm] = useState(prev);
   const set = (k) => (v) => setForm(p => ({ ...p, [k]: v }));
+  useEffect(() => { onDirtyChange && onDirtyChange(JSON.stringify(form) !== JSON.stringify(prev)); }, [form]);
   return (
     <FormBody onCancel={onCancel} onSave={() => onSave(form, prev)}>
       <Field label="Society name" value={form.societyName} onChangeText={set('societyName')} />
@@ -649,7 +676,7 @@ function ProfileForm({ initial, onCancel, onSave }) {
   );
 }
 
-function DemographicsForm({ initial, onCancel, onSave }) {
+function DemographicsForm({ initial, onCancel, onSave, onDirtyChange }) {
   const byCategory = {};
   (initial || []).forEach(row => { byCategory[row.category] = row; });
   const prev = DEMOGRAPHIC_CATEGORIES.map(cat => ({
@@ -657,6 +684,7 @@ function DemographicsForm({ initial, onCancel, onSave }) {
   }));
   const [rows, setRows] = useState(prev);
   const setCell = (cat, key) => (v) => setRows(p => p.map(r => r.category === cat ? { ...r, [key]: v } : r));
+  useEffect(() => { onDirtyChange && onDirtyChange(JSON.stringify(rows) !== JSON.stringify(prev)); }, [rows]);
   const handleSave = () => {
     onSave(rows.map(r => ({ ...r, total: String((parseInt(r.male) || 0) + (parseInt(r.female) || 0)) })), prev);
   };
@@ -682,7 +710,7 @@ function DemographicsForm({ initial, onCancel, onSave }) {
   );
 }
 
-function LoanForm({ initial, onCancel, onSave }) {
+function LoanForm({ initial, onCancel, onSave, onDirtyChange }) {
   const prev = {
     hasLoan: initial?.hasLoan || false, loanType: initial?.loanType || '',
     sanctionDate: initial?.sanctionDate || '', beneficiaries: initial?.beneficiaries || '',
@@ -690,6 +718,7 @@ function LoanForm({ initial, onCancel, onSave }) {
   };
   const [form, setForm] = useState(prev);
   const set = (k) => (v) => setForm(p => ({ ...p, [k]: v }));
+  useEffect(() => { onDirtyChange && onDirtyChange(JSON.stringify(form) !== JSON.stringify(prev)); }, [form]);
   return (
     <FormBody onCancel={onCancel} onSave={() => onSave(form, prev)}>
       <View style={styles.fieldGroup}>
@@ -724,13 +753,14 @@ function StatusToggle({ value, onChange, options }) {
   );
 }
 
-function ComplianceForm({ initial, fy, onCancel, onSave }) {
+function ComplianceForm({ initial, fy, onCancel, onSave, onDirtyChange }) {
   const prev = {
     auditYear: initial?.auditYear || fy, auditDate: initial?.auditDate || '', auditStatus: initial?.auditStatus || 'Pending',
     agmYear: initial?.agmYear || fy, agmDate: initial?.agmDate || '', agmStatus: initial?.agmStatus || 'Pending',
   };
   const [form, setForm] = useState(prev);
   const set = (k) => (v) => setForm(p => ({ ...p, [k]: v }));
+  useEffect(() => { onDirtyChange && onDirtyChange(JSON.stringify(form) !== JSON.stringify(prev)); }, [form]);
   return (
     <FormBody onCancel={onCancel} onSave={() => onSave(form, prev)}>
       <View style={styles.rowHalf}>
@@ -753,12 +783,13 @@ function ComplianceForm({ initial, fy, onCancel, onSave }) {
   );
 }
 
-function FinancialsForm({ initial, onCancel, onSave }) {
+function FinancialsForm({ initial, onCancel, onSave, onDirtyChange }) {
   const prev = {
     annualTurnover: initial?.annualTurnover || '', totalIncome: initial?.totalIncome || '', totalExpenses: initial?.totalExpenses || '',
   };
   const [form, setForm] = useState(prev);
   const set = (k) => (v) => setForm(p => ({ ...p, [k]: v }));
+  useEffect(() => { onDirtyChange && onDirtyChange(JSON.stringify(form) !== JSON.stringify(prev)); }, [form]);
   return (
     <FormBody onCancel={onCancel} onSave={() => onSave(form, prev)}>
       <Field label="Annual turnover (₹)" value={form.annualTurnover} onChangeText={set('annualTurnover')} keyboardType="numeric" />
@@ -768,7 +799,7 @@ function FinancialsForm({ initial, onCancel, onSave }) {
   );
 }
 
-function DividendForm({ initial, onCancel, onSave }) {
+function DividendForm({ initial, onCancel, onSave, onDirtyChange }) {
   const prev = {
     dividendPolicy: initial?.dividendPolicy || '', dividendRate: initial?.dividendRate || '',
     dividendAmount: initial?.dividendAmount || '', distributionDate: initial?.distributionDate || '',
@@ -776,6 +807,7 @@ function DividendForm({ initial, onCancel, onSave }) {
   };
   const [form, setForm] = useState(prev);
   const set = (k) => (v) => setForm(p => ({ ...p, [k]: v }));
+  useEffect(() => { onDirtyChange && onDirtyChange(JSON.stringify(form) !== JSON.stringify(prev)); }, [form]);
   return (
     <FormBody onCancel={onCancel} onSave={() => onSave(form, prev)}>
       <Field label="Dividend policy" value={form.dividendPolicy} onChangeText={set('dividendPolicy')} multiline />
@@ -786,13 +818,14 @@ function DividendForm({ initial, onCancel, onSave }) {
   );
 }
 
-function ShareCapitalForm({ initial, onCancel, onSave }) {
+function ShareCapitalForm({ initial, onCancel, onSave, onDirtyChange }) {
   const prev = {
     authorizedCapital: initial?.authorizedCapital || '', paidUpCapital: initial?.paidUpCapital || '',
     totalDeposits: initial?.totalDeposits || '', asOfDate: initial?.asOfDate || '',
   };
   const [form, setForm] = useState(prev);
   const set = (k) => (v) => setForm(p => ({ ...p, [k]: v }));
+  useEffect(() => { onDirtyChange && onDirtyChange(JSON.stringify(form) !== JSON.stringify(prev)); }, [form]);
   return (
     <FormBody onCancel={onCancel} onSave={() => onSave(form, prev)}>
       <Field label="Authorised share capital (₹)" value={form.authorizedCapital} onChangeText={set('authorizedCapital')} keyboardType="numeric" />
@@ -803,7 +836,7 @@ function ShareCapitalForm({ initial, onCancel, onSave }) {
   );
 }
 
-function CscForm({ initial, onCancel, onSave }) {
+function CscForm({ initial, onCancel, onSave, onDirtyChange }) {
   const prev = {
     isCscActive: initial?.isCscActive || false, cscOperatorName: initial?.cscOperatorName || '',
     cscId: initial?.cscId || '', cscCenterName: initial?.cscCenterName || '',
@@ -812,6 +845,7 @@ function CscForm({ initial, onCancel, onSave }) {
   };
   const [form, setForm] = useState(prev);
   const set = (k) => (v) => setForm(p => ({ ...p, [k]: v }));
+  useEffect(() => { onDirtyChange && onDirtyChange(JSON.stringify(form) !== JSON.stringify(prev)); }, [form]);
   return (
     <FormBody onCancel={onCancel} onSave={() => onSave(form, prev)}>
       <View style={styles.fieldGroup}>
