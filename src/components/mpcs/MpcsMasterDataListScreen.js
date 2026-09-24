@@ -247,7 +247,7 @@ export default function MpcsMasterDataListScreen({
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
-        <Text style={styles.helperText}>Each record saves on its own. Verification starts once all seven are in.</Text>
+        <Text style={styles.helperText}>Each record saves on its own. Verification starts once all {records.length} are in.</Text>
 
         {banner && (
           <View style={styles.banner}>
