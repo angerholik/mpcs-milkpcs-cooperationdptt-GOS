@@ -219,6 +219,29 @@ export default function HomeScreen({
                 </Pressable>
               ))}
             </View>
+
+            {/* Cash Book / CSC Transactions are day-to-day ledgers with no
+                fixed spot in the monthly wizard above — the highest-frequency
+                data entry in the app, previously reachable only two taps deep
+                via More. Shortcut here on the tab actually opened most often,
+                full entry still also lives in More as a fallback path. */}
+            <Text style={styles.sectionLabel}>DAILY LEDGERS</Text>
+            <View style={styles.listCard}>
+              <Pressable style={styles.listRow} onPress={() => onNavigateScreen && onNavigateScreen('MPCS_DAILY_TRANS')}>
+                <View style={styles.ledgerIconBox}>
+                  <MaterialCommunityIcons name="notebook-outline" size={18} color={COLORS.maroon} />
+                </View>
+                <Text style={styles.listRowTitle}>Cash Book</Text>
+                <MaterialCommunityIcons name="chevron-right" size={18} color={COLORS.slate400} />
+              </Pressable>
+              <Pressable style={[styles.listRow, styles.listRowLast]} onPress={() => onNavigateScreen && onNavigateScreen('MPCS_CSC_TRANS')}>
+                <View style={[styles.ledgerIconBox, { backgroundColor: '#EFF6FF' }]}>
+                  <MaterialCommunityIcons name="laptop" size={18} color="#0369A1" />
+                </View>
+                <Text style={styles.listRowTitle}>CSC Transactions</Text>
+                <MaterialCommunityIcons name="chevron-right" size={18} color={COLORS.slate400} />
+              </Pressable>
+            </View>
           </>
         )}
 
@@ -530,6 +553,14 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '700',
     color: COLORS.slate400,
+  },
+  ledgerIconBox: {
+    width: 34,
+    height: 34,
+    borderRadius: 10,
+    backgroundColor: COLORS.amber50,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   openPill: {
     backgroundColor: COLORS.pillBg,
