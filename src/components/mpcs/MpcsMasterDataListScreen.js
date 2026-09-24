@@ -80,6 +80,15 @@ function joinWithAnd(arr) {
 
 const DEMOGRAPHIC_CATEGORIES = ['SC', 'ST', 'OBC', 'Others'];
 
+// Field-level format checks. All treat a blank value as valid — these fields
+// are optional; only a value that was actually typed gets held to a format.
+const PAN_RE = /^[A-Z]{5}[0-9]{4}[A-Z]$/;
+const MOBILE_RE = /^[6-9]\d{9}$/;
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const panError = (v) => (!v || PAN_RE.test(v) ? '' : '10 characters: 5 letters, 4 digits, 1 letter (e.g. ABCDE1234F).');
+const mobileError = (v) => (!v || MOBILE_RE.test(v) ? '' : '10 digits, starting 6-9.');
+const emailError = (v) => (!v || EMAIL_RE.test(v) ? '' : 'Enter a valid email address.');
+
 // Confirms before an action would silently drop an in-progress edit
 // (collapsing, switching records, or leaving the screen).
 function confirmDiscard(onConfirm) {
@@ -662,16 +671,20 @@ function ProfileForm({ initial, onCancel, onSave, onDirtyChange }) {
   const [form, setForm] = useState(prev);
   const set = (k) => (v) => setForm(p => ({ ...p, [k]: v }));
   useEffect(() => { onDirtyChange && onDirtyChange(JSON.stringify(form) !== JSON.stringify(prev)); }, [form]);
+  const panErr = panError(form.panCard);
+  const presMobileErr = mobileError(form.presidentMobile);
+  const mgrMobileErr = mobileError(form.secretaryMobile);
+  const hasErrors = !!(panErr || presMobileErr || mgrMobileErr);
   return (
-    <FormBody onCancel={onCancel} onSave={() => onSave(form, prev)}>
+    <FormBody onCancel={onCancel} onSave={() => { if (!hasErrors) onSave(form, prev); }}>
       <Field label="Society name" value={form.societyName} onChangeText={set('societyName')} />
       <Field label="Registration number" value={form.regNumber} onChangeText={set('regNumber')} />
       <DateField label="Date of registration" value={form.regDate} onChangeText={set('regDate')} />
-      <Field label="PAN" value={form.panCard} onChangeText={set('panCard')} autoCapitalize="characters" />
+      <Field label="PAN" value={form.panCard} onChangeText={set('panCard')} autoCapitalize="characters" error={panErr} />
       <Field label="President name" value={form.presidentName} onChangeText={set('presidentName')} />
-      <Field label="President mobile" value={form.presidentMobile} onChangeText={set('presidentMobile')} keyboardType="numeric" />
+      <Field label="President mobile" value={form.presidentMobile} onChangeText={set('presidentMobile')} keyboardType="numeric" error={presMobileErr} />
       <Field label="Manager name" value={form.secretaryName} onChangeText={set('secretaryName')} />
-      <Field label="Manager mobile" value={form.secretaryMobile} onChangeText={set('secretaryMobile')} keyboardType="numeric" />
+      <Field label="Manager mobile" value={form.secretaryMobile} onChangeText={set('secretaryMobile')} keyboardType="numeric" error={mgrMobileErr} />
     </FormBody>
   );
 }
@@ -846,8 +859,11 @@ function CscForm({ initial, onCancel, onSave, onDirtyChange }) {
   const [form, setForm] = useState(prev);
   const set = (k) => (v) => setForm(p => ({ ...p, [k]: v }));
   useEffect(() => { onDirtyChange && onDirtyChange(JSON.stringify(form) !== JSON.stringify(prev)); }, [form]);
+  const mobileErr = mobileError(form.mobileNumber);
+  const emailErr = emailError(form.emailId);
+  const hasErrors = form.isCscActive && !!(mobileErr || emailErr);
   return (
-    <FormBody onCancel={onCancel} onSave={() => onSave(form, prev)}>
+    <FormBody onCancel={onCancel} onSave={() => { if (!hasErrors) onSave(form, prev); }}>
       <View style={styles.fieldGroup}>
         <Text style={styles.inputLabel}>Does this society offer CSC services?</Text>
         <StatusToggle
@@ -861,8 +877,8 @@ function CscForm({ initial, onCancel, onSave, onDirtyChange }) {
           <Field label="Operator name" value={form.cscOperatorName} onChangeText={set('cscOperatorName')} />
           <Field label="CSC ID" value={form.cscId} onChangeText={set('cscId')} />
           <Field label="Center name" value={form.cscCenterName} onChangeText={set('cscCenterName')} />
-          <Field label="Mobile number" value={form.mobileNumber} onChangeText={set('mobileNumber')} keyboardType="numeric" />
-          <Field label="Email ID" value={form.emailId} onChangeText={set('emailId')} autoCapitalize="none" />
+          <Field label="Mobile number" value={form.mobileNumber} onChangeText={set('mobileNumber')} keyboardType="numeric" error={mobileErr} />
+          <Field label="Email ID" value={form.emailId} onChangeText={set('emailId')} autoCapitalize="none" error={emailErr} />
           <Field label="Active services" value={form.activeServicesCount} onChangeText={set('activeServicesCount')} keyboardType="numeric" />
         </>
       )}
@@ -872,11 +888,11 @@ function CscForm({ initial, onCancel, onSave, onDirtyChange }) {
 
 // ─── Shared bits ────────────────────────────────────────────────────────
 
-function Field({ label, value, onChangeText, placeholder, keyboardType, autoCapitalize, multiline, prefix }) {
+function Field({ label, value, onChangeText, placeholder, keyboardType, autoCapitalize, multiline, prefix, error }) {
   return (
     <View style={styles.fieldGroup}>
       <Text style={styles.inputLabel}>{label}</Text>
-      <View style={[styles.inputBox, multiline && { height: 80, alignItems: 'flex-start', paddingVertical: 12 }]}>
+      <View style={[styles.inputBox, multiline && { height: 80, alignItems: 'flex-start', paddingVertical: 12 }, error && styles.inputBoxError]}>
         {prefix && <Text style={styles.inputPrefix}>{prefix}</Text>}
         <TextInput
           style={styles.textInput}
@@ -889,6 +905,7 @@ function Field({ label, value, onChangeText, placeholder, keyboardType, autoCapi
           multiline={multiline}
         />
       </View>
+      {!!error && <Text style={styles.fieldError}>{error}</Text>}
     </View>
   );
 }
@@ -1013,6 +1030,8 @@ const styles = StyleSheet.create({
 
   inputLabel: { fontFamily: FONT_FAMILY, fontSize: 13, fontWeight: '700', color: COLORS.ink },
   inputBox: { flexDirection: 'row', alignItems: 'center', backgroundColor: COLORS.bg, borderWidth: 1, borderColor: COLORS.border, borderRadius: 12, paddingHorizontal: 14, height: 48 },
+  inputBoxError: { borderColor: '#DC2626' },
+  fieldError: { fontFamily: FONT_FAMILY, fontSize: 12, fontWeight: '600', color: '#DC2626', marginTop: 2 },
   inputPrefix: { fontFamily: FONT_FAMILY, fontSize: 16, fontWeight: '800', color: COLORS.maroon, marginRight: 6 },
   textInput: { flex: 1, fontFamily: FONT_FAMILY, fontSize: 16, fontWeight: '600', color: COLORS.ink, ...(Platform.OS === 'web' ? { outlineStyle: 'none' } : {}) },
   rowHalf: { flexDirection: 'row', gap: 10 },
