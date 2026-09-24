@@ -194,6 +194,15 @@ export default function MpcsMasterDataListScreen({
   ];
   const recordedCount = records.filter(r => r.updated).length;
 
+  // Groups the flat 8-record list into labeled sections so the screen
+  // isn't one long undifferentiated scroll — purely a display grouping,
+  // doesn't change how any individual record saves.
+  const SECTIONS = [
+    { title: 'Society info', keys: ['profile', 'demographics', 'compliance'] },
+    { title: 'Financials', keys: ['financials', 'dividend', 'shareCapital'] },
+    { title: 'Optional services', keys: ['loan', 'csc'] },
+  ];
+
   const openRow = (key, recorded) => {
     // Deliberately leaves the previous save's undo banner up — tapping
     // straight into the next record (the common flow while filling all 8)
@@ -259,12 +268,17 @@ export default function MpcsMasterDataListScreen({
           </View>
         )}
 
-        <View style={styles.listCard}>
-          {records.map((r, i) => {
+        {SECTIONS.map((section) => {
+          const sectionRecords = section.keys.map(k => records.find(r => r.key === k)).filter(Boolean);
+          return (
+          <View key={section.title} style={{ gap: 10 }}>
+            <Text style={styles.sectionTitle}>{section.title}</Text>
+            <View style={styles.listCard}>
+              {sectionRecords.map((r, i) => {
             const isOpen = expanded?.key === r.key;
             const recorded = !!r.updated;
             return (
-              <View key={r.key} style={[styles.rowWrap, i !== records.length - 1 && !isOpen && styles.rowBorder]}>
+              <View key={r.key} style={[styles.rowWrap, i !== sectionRecords.length - 1 && !isOpen && styles.rowBorder]}>
                 {isOpen ? (
                   <RecordPanel
                     recordKey={r.key}
@@ -312,8 +326,11 @@ export default function MpcsMasterDataListScreen({
                 )}
               </View>
             );
-          })}
-        </View>
+              })}
+            </View>
+          </View>
+          );
+        })}
       </ScrollView>
 
       {onTabPress && <BottomNav activeTab={activeTab} onTabPress={guardedTabPress} />}
@@ -987,6 +1004,7 @@ const styles = StyleSheet.create({
   scrollInner: { padding: 16, paddingBottom: 110, gap: 14 },
 
   helperText: { fontFamily: FONT_FAMILY, fontSize: 13, fontWeight: '500', color: COLORS.slate600, lineHeight: 19 },
+  sectionTitle: { fontFamily: FONT_FAMILY, fontSize: 12, fontWeight: '800', color: COLORS.slate500, letterSpacing: 0.6, textTransform: 'uppercase' },
 
   banner: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: COLORS.greenBg, borderRadius: 12, padding: 12 },
   bannerText: { flex: 1, fontFamily: FONT_FAMILY, fontSize: 13, fontWeight: '600', color: COLORS.green700 },
