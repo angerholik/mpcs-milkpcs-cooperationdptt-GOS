@@ -32,7 +32,10 @@ function useKeyboardVisible() {
   return visible;
 }
 
-// STITCH Design Tokens (Extracted for Bottom Nav)
+// Same exact brand.50/800 hex values as the reference mockup's bottom
+// nav (bg-brand-50 text-brand-800 on the active tab) — kept in sync with
+// MpcsHomeScreen's COLORS.brand50/brand800 since this nav renders on the
+// same screen.
 const COLORS = {
   surface: '#ffffff',
   slate800: '#1e293b',
@@ -40,8 +43,8 @@ const COLORS = {
   slate200: '#e2e8f0',
   slate100: '#f1f5f9',
   slate50: '#f8fafc',
-  primary: '#7a1a1f',
-  primaryPale: 'rgba(122,26,31,0.08)',
+  primary: '#4D1414',
+  primaryPale: '#FDF2F2',
 };
 
 const FONT_FAMILY = 'Manrope';
