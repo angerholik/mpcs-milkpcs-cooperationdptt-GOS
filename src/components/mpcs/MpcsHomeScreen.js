@@ -1,16 +1,20 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Pressable, ScrollView, Platform, StatusBar } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { webCapWidth } from '../../utils/webStyles';
 import BottomNav from '../BottomNav';
+import { getMpcsDailyTransactions, getMpcsCscTransactions } from '../../supabase';
 
-// Redesign source: Claude Design canvas "Design improvements for task
-// dashboard" (https://claude.ai/artifact/FpC75VnmdTzgcpPmdQGvkx), section
-// "1 · Home" (screens 4a/4b/4c). Design tokens from that canvas's own notes:
-// maroon #7B1420 for identity/selection/primary action, green only for a
-// real surplus, amber only for a blocked state, derived values grey; 1px
-// borders, 18px radii, no shadows; "Pending"/"Done" language, em dash for
-// no value.
+// Redesign source: a reference mockup the user supplied directly (gradient
+// header with ambient glow, colored per-parameter icon badges, 2-column
+// Daily Ledgers grid with a live stat line). Deliberately keeps this
+// gradient/photo-adjacent treatment scoped to Home only — Master Data,
+// Cash Book, CSC Transactions, Profile, and More all moved to a flat
+// maroon/cream system earlier in this pass, and that decision stands;
+// Home is the one screen where richer decoration was explicitly requested.
+// Every stat shown here is real data from the same tables the Cash
+// Book/CSC Transactions screens themselves read — no placeholder numbers.
 const COLORS = {
   maroon: '#7B1420',
   maroonDark: '#4A0D14',
@@ -25,6 +29,13 @@ const COLORS = {
   pillBg: '#F6E3E5',
   amber50: '#FFF7ED',
   amber700: '#B45309',
+  rose50: '#FFF1F2',
+  rose600: '#E11D48',
+  emerald50: '#ECFDF5',
+  emerald600: '#059669',
+  sky50: '#F0F9FF',
+  sky700: '#0369A1',
+  slateBg: '#F1F5F9',
 };
 
 const FONT_FAMILY = 'Manrope';
@@ -39,19 +50,21 @@ const formatGpuLabel = (value) => {
   return /\bgpu\b/i.test(value) ? value : `${value} GPU`;
 };
 
-// "Needs update" is the same fallback formatLastUpdated already used before
-// this redesign — reused here to decide which Master Data rows surface in
-// the new "NEEDS UPDATE" list, instead of threading a new prop through.
-const formatLastUpdated = (isoString) => {
-  if (!isoString) return 'Needs update';
-  const d = new Date(isoString);
-  if (isNaN(d.getTime())) return 'Needs update';
-  return d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
-};
+const formatWhole = (n) => Math.round(n || 0).toLocaleString('en-IN');
 
 const NEXT_ACTION_BUTTON_LABEL = {
-  'image-outline': 'Open camera',
+  'camera-outline': 'Open camera',
   'file-check-outline': 'Review',
+};
+
+// Fixed icon/color per parameter type (not per completion state) — matches
+// how the reference mockup differentiates rows, and gives Digital Evidence/
+// Sales/Performance/Loan a consistent identity whether open or done.
+const PARAM_STYLE = {
+  MPCS_EVIDENCE: { icon: 'camera-outline', bg: COLORS.rose50, fg: COLORS.rose600 },
+  MPCS_SALES: { icon: 'wallet-outline', bg: COLORS.emerald50, fg: COLORS.emerald600 },
+  MPCS_BUSINESS: { icon: 'chart-bar', bg: COLORS.sky50, fg: COLORS.sky700 },
+  MPCS_LOAN_STATUS: { icon: 'bank-outline', bg: COLORS.slateBg, fg: COLORS.slate500 },
 };
 
 export default function HomeScreen({
@@ -81,20 +94,49 @@ export default function HomeScreen({
 }) {
   const [internalTab, setInternalTab] = useState('monthly');
   const [alertVisible, setAlertVisible] = useState(true);
+  const [cashBookStats, setCashBookStats] = useState(null); // { count, total }
+  const [cscStats, setCscStats] = useState(null); // { count, commission }
+
+  const activeSocietyName = selectedSociety?.name || societyName;
+
+  // Same tables the Cash Book / CSC Transactions screens themselves read —
+  // this just summarizes what's already there, it doesn't compute anything
+  // those screens don't already show.
+  useEffect(() => {
+    let cancelled = false;
+    if (!activeSocietyName) return undefined;
+    (async () => {
+      const [{ data: daily }, { data: csc }] = await Promise.all([
+        getMpcsDailyTransactions(activeSocietyName),
+        getMpcsCscTransactions(activeSocietyName),
+      ]);
+      if (cancelled) return;
+      setCashBookStats({
+        count: daily.length,
+        total: daily.reduce((s, t) => s + (parseFloat(t.amount) || 0), 0),
+      });
+      setCscStats({
+        count: csc.length,
+        commission: csc.reduce((s, t) => s + (parseFloat(t.commission) || 0), 0),
+      });
+    })();
+    return () => { cancelled = true; };
+  }, [activeSocietyName]);
 
   const nextAction = (!isEvidenceCaptured(evidenceStatus) && !evidenceStatus?.includes('Valid'))
-    ? { icon: 'image-outline', title: 'Digital Evidence', desc: 'Live photo and GPS fix, captured at the premises.', screen: 'MPCS_EVIDENCE' }
+    ? { icon: 'camera-outline', title: 'Digital Evidence', desc: 'Live photo and GPS fix, captured at the premises.', screen: 'MPCS_EVIDENCE', id: 'MPCS_EVIDENCE' }
     : !salesStatus?.startsWith('COMPLETED')
-      ? { icon: 'wallet-outline', title: 'Monthly Sales / Deposit', desc: 'Record daily sales and verify bank deposits.', screen: 'MPCS_SALES' }
+      ? { icon: 'wallet-outline', title: 'Monthly Sales / Deposit', desc: 'Record daily sales and verify bank deposits.', screen: 'MPCS_SALES', id: 'MPCS_SALES' }
       : !businessStatus?.startsWith('COMPLETED')
-        ? { icon: 'chart-bar', title: 'Business Performance', desc: 'Record gross income and operational expenditure.', screen: 'MPCS_BUSINESS' }
-        : { icon: 'file-check-outline', title: 'Review & Submit Return', desc: 'All monthly parameters are ready for final submission.', screen: 'MPCS_REVIEW' };
+        ? { icon: 'chart-bar', title: 'Business Performance', desc: 'Record gross income and operational expenditure.', screen: 'MPCS_BUSINESS', id: 'MPCS_BUSINESS' }
+        : { icon: 'file-check-outline', title: 'Review & Submit Return', desc: 'All monthly parameters are ready for final submission.', screen: 'MPCS_REVIEW', id: 'MPCS_REVIEW' };
+  const nextActionStyle = PARAM_STYLE[nextAction.id] || { bg: COLORS.pillBg, fg: COLORS.maroon };
 
   const monthlyParams = [
-    { id: 'MPCS_EVIDENCE', title: 'Digital Evidence', done: isEvidenceCaptured(evidenceStatus), na: false },
-    { id: 'MPCS_SALES', title: 'Sales & Deposit', done: salesStatus?.startsWith('COMPLETED'), na: false },
-    { id: 'MPCS_BUSINESS', title: 'Business Performance', done: businessStatus?.startsWith('COMPLETED'), na: false },
-    { id: 'MPCS_LOAN_STATUS', title: 'Loan Status', done: loanIsActive && loanStatus?.startsWith('COMPLETED'), na: !loanIsActive },
+    { id: 'MPCS_EVIDENCE', title: 'Digital Evidence', desc: 'Photo & geolocation', done: isEvidenceCaptured(evidenceStatus), na: false },
+    { id: 'MPCS_SALES', title: 'Sales & Deposit', desc: 'Ledger & accounts reconciled', done: salesStatus?.startsWith('COMPLETED'), na: false },
+    { id: 'MPCS_BUSINESS', title: 'Business Performance', desc: 'Gross income & expenditure', done: businessStatus?.startsWith('COMPLETED'), na: false },
+    { id: 'MPCS_LOAN_STATUS', title: 'Loan Status', desc: loanIsActive ? 'Awaiting credit sign-off' : 'No active loan', done: loanIsActive && loanStatus?.startsWith('COMPLETED'), na: !loanIsActive },
   ];
 
   // All 8 records now live on one screen (MpcsMasterDataListScreen), so
@@ -113,11 +155,26 @@ export default function HomeScreen({
 
   const roleInitials = (role || 'CI').slice(0, 2).toUpperCase();
 
+  const cashBookSub = cashBookStats
+    ? `${cashBookStats.count} ${cashBookStats.count === 1 ? 'entry' : 'entries'} · ₹${formatWhole(cashBookStats.total)}`
+    : 'Tap to open';
+  const cscSub = cscStats
+    ? `${cscStats.count} ${cscStats.count === 1 ? 'entry' : 'entries'} · ₹${formatWhole(cscStats.commission)} commission`
+    : 'Tap to open';
+
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor={COLORS.maroon} />
+      <StatusBar barStyle="light-content" backgroundColor={COLORS.maroonDark} />
 
-      <View style={styles.header}>
+      <LinearGradient
+        colors={[COLORS.maroon, '#5C1313', COLORS.maroonDark]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 0, y: 1 }}
+        style={styles.header}
+      >
+        <View style={styles.headerBlobTop} pointerEvents="none" />
+        <View style={styles.headerBlobBottom} pointerEvents="none" />
+
         <View style={styles.headerTopRow}>
           <Pressable onPress={onManageInstitutions} hitSlop={8}>
             <Text style={styles.headerWordmark}>CORE</Text>
@@ -135,10 +192,15 @@ export default function HomeScreen({
         <Text style={styles.headerTitle} numberOfLines={1}>
           {selectedSociety?.name || societyName || 'Society Name Missing'}
         </Text>
-        <Text style={styles.headerSubtitle}>
-          {formatGpuLabel(district) || 'Location Not Set'} · {reportStatus}
-        </Text>
-      </View>
+        <View style={styles.headerMetaRow}>
+          <View style={styles.headerMetaChip}>
+            <MaterialCommunityIcons name="map-marker-outline" size={13} color={COLORS.amber50} />
+            <Text style={styles.headerMetaChipText}>{formatGpuLabel(district) || 'Location Not Set'}</Text>
+          </View>
+          <Text style={styles.headerMetaDot}>•</Text>
+          <Text style={styles.headerMetaStatus}>{reportStatus}</Text>
+        </View>
+      </LinearGradient>
 
       <View style={styles.tabBar}>
         {[
@@ -153,6 +215,7 @@ export default function HomeScreen({
             activeOpacity={0.85}
           >
             <Text style={[styles.tabText, internalTab === t.key && styles.tabTextActive]}>{t.label}</Text>
+            {internalTab === t.key && <View style={styles.tabDot} />}
           </TouchableOpacity>
         ))}
       </View>
@@ -175,20 +238,39 @@ export default function HomeScreen({
           <>
             <View style={styles.card}>
               <View style={styles.progressHeaderRow}>
-                <Text style={styles.progressMonth}>{reportingMonth || 'Current Month'}</Text>
-                <Text style={styles.progressFraction}>{completedCount}/{totalCount}</Text>
+                <View>
+                  <Text style={styles.progressLabel}>Audit Cycle</Text>
+                  <Text style={styles.progressMonth}>{reportingMonth || 'Current Month'}</Text>
+                </View>
+                <Text style={styles.progressFraction}>{completedCount}<Text style={styles.progressFractionSlash}> / {totalCount}</Text></Text>
               </View>
               <View style={styles.segmentRow}>
                 {Array.from({ length: totalCount }).map((_, i) => (
                   <View key={i} style={[styles.segment, i < completedCount && styles.segmentDone]} />
                 ))}
               </View>
+              {totalCount > 0 && (
+                <Text style={styles.progressFootnote}>
+                  {completedCount === totalCount
+                    ? 'All parameters ready'
+                    : `${totalCount - completedCount} parameter${totalCount - completedCount === 1 ? '' : 's'} pending`}
+                </Text>
+              )}
             </View>
 
-            <Text style={styles.sectionLabel}>ON SITE NOW</Text>
+            <View style={styles.sectionHeaderRow}>
+              <Text style={styles.sectionLabel}>ON SITE NOW</Text>
+            </View>
             <View style={styles.onSiteCard}>
-              <Text style={styles.onSiteTitle}>{nextAction.title}</Text>
-              <Text style={styles.onSiteDesc}>{nextAction.desc}</Text>
+              <View style={styles.onSiteTopRow}>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.onSiteTitle}>{nextAction.title}</Text>
+                  <Text style={styles.onSiteDesc}>{nextAction.desc}</Text>
+                </View>
+                <View style={[styles.onSiteIconBox, { backgroundColor: nextActionStyle.bg }]}>
+                  <MaterialCommunityIcons name={nextAction.icon} size={20} color={nextActionStyle.fg} />
+                </View>
+              </View>
               <Pressable
                 style={({ pressed }) => [styles.onSiteBtn, pressed && { opacity: 0.9 }]}
                 onPress={() => onNavigateScreen && onNavigateScreen(nextAction.screen)}
@@ -197,49 +279,72 @@ export default function HomeScreen({
               </Pressable>
             </View>
 
-            <Text style={styles.sectionLabel}>PARAMETERS</Text>
+            <View style={styles.sectionHeaderRow}>
+              <Text style={styles.sectionLabel}>PARAMETERS</Text>
+              <Text style={styles.sectionCount}>{monthlyParams.length} items</Text>
+            </View>
             <View style={styles.listCard}>
-              {monthlyParams.map((p, i) => (
-                <Pressable
-                  key={p.id}
-                  style={[styles.listRow, i === monthlyParams.length - 1 && styles.listRowLast]}
-                  onPress={() => onNavigateScreen && onNavigateScreen(p.id)}
-                >
-                  <Text style={styles.listRowTitle}>{p.title}</Text>
-                  {p.na ? (
-                    <Text style={styles.listRowDash}>—</Text>
-                  ) : p.done ? (
-                    <Text style={styles.listRowDone}>Done</Text>
-                  ) : (
-                    <View style={styles.openPill}>
-                      <Text style={styles.openPillText}>OPEN</Text>
+              {monthlyParams.map((p, i) => {
+                const style = PARAM_STYLE[p.id] || { icon: 'circle-outline', bg: COLORS.slateBg, fg: COLORS.slate500 };
+                return (
+                  <Pressable
+                    key={p.id}
+                    style={[styles.listRow, i === monthlyParams.length - 1 && styles.listRowLast]}
+                    onPress={() => onNavigateScreen && onNavigateScreen(p.id)}
+                  >
+                    <View style={[styles.paramIconBox, { backgroundColor: style.bg }]}>
+                      <MaterialCommunityIcons name={style.icon} size={19} color={style.fg} />
                     </View>
-                  )}
-                  <MaterialCommunityIcons name="chevron-right" size={18} color={COLORS.slate400} />
-                </Pressable>
-              ))}
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.listRowTitle}>{p.title}</Text>
+                      <Text style={styles.listRowDesc}>{p.desc}</Text>
+                    </View>
+                    {p.na ? (
+                      <Text style={styles.listRowDash}>—</Text>
+                    ) : p.done ? (
+                      <View style={styles.doneBadge}>
+                        <MaterialCommunityIcons name="check" size={12} color={COLORS.emerald600} />
+                        <Text style={styles.doneBadgeText}>Done</Text>
+                      </View>
+                    ) : (
+                      <View style={styles.openPill}>
+                        <Text style={styles.openPillText}>OPEN</Text>
+                      </View>
+                    )}
+                    <MaterialCommunityIcons name="chevron-right" size={18} color={COLORS.slate400} />
+                  </Pressable>
+                );
+              })}
             </View>
 
             {/* Cash Book / CSC Transactions are day-to-day ledgers with no
                 fixed spot in the monthly wizard above — the highest-frequency
                 data entry in the app, previously reachable only two taps deep
                 via More. Shortcut here on the tab actually opened most often,
-                full entry still also lives in More as a fallback path. */}
+                full entry still also lives in More as a fallback path. Stat
+                lines are real counts/totals from the same tables those
+                screens read, not placeholder numbers. */}
             <Text style={styles.sectionLabel}>DAILY LEDGERS</Text>
-            <View style={styles.listCard}>
-              <Pressable style={styles.listRow} onPress={() => onNavigateScreen && onNavigateScreen('MPCS_DAILY_TRANS')}>
-                <View style={styles.ledgerIconBox}>
-                  <MaterialCommunityIcons name="notebook-outline" size={18} color={COLORS.maroon} />
+            <View style={styles.ledgerGrid}>
+              <Pressable style={styles.ledgerCard} onPress={() => onNavigateScreen && onNavigateScreen('MPCS_DAILY_TRANS')}>
+                <View style={styles.ledgerCardTopRow}>
+                  <View style={[styles.ledgerIconBox, { backgroundColor: COLORS.rose50 }]}>
+                    <MaterialCommunityIcons name="notebook-outline" size={19} color={COLORS.maroon} />
+                  </View>
+                  <MaterialCommunityIcons name="chevron-right" size={16} color={COLORS.slate400} />
                 </View>
-                <Text style={styles.listRowTitle}>Cash Book</Text>
-                <MaterialCommunityIcons name="chevron-right" size={18} color={COLORS.slate400} />
+                <Text style={styles.ledgerCardTitle}>Cash Book</Text>
+                <Text style={styles.ledgerCardSub}>{cashBookSub}</Text>
               </Pressable>
-              <Pressable style={[styles.listRow, styles.listRowLast]} onPress={() => onNavigateScreen && onNavigateScreen('MPCS_CSC_TRANS')}>
-                <View style={[styles.ledgerIconBox, { backgroundColor: '#EFF6FF' }]}>
-                  <MaterialCommunityIcons name="laptop" size={18} color="#0369A1" />
+              <Pressable style={styles.ledgerCard} onPress={() => onNavigateScreen && onNavigateScreen('MPCS_CSC_TRANS')}>
+                <View style={styles.ledgerCardTopRow}>
+                  <View style={[styles.ledgerIconBox, { backgroundColor: COLORS.sky50 }]}>
+                    <MaterialCommunityIcons name="laptop" size={19} color={COLORS.sky700} />
+                  </View>
+                  <MaterialCommunityIcons name="chevron-right" size={16} color={COLORS.slate400} />
                 </View>
-                <Text style={styles.listRowTitle}>CSC Transactions</Text>
-                <MaterialCommunityIcons name="chevron-right" size={18} color={COLORS.slate400} />
+                <Text style={styles.ledgerCardTitle}>CSC Transactions</Text>
+                <Text style={styles.ledgerCardSub}>{cscSub}</Text>
               </Pressable>
             </View>
           </>
@@ -269,7 +374,7 @@ export default function HomeScreen({
                       style={[styles.listRow, i === masterNeedsUpdate.length - 1 && styles.listRowLast]}
                       onPress={() => onNavigateScreen && onNavigateScreen(r.id)}
                     >
-                      <Text style={styles.listRowTitle}>{r.title}</Text>
+                      <Text style={[styles.listRowTitle, { flex: 1 }]}>{r.title}</Text>
                       <View style={styles.openPill}>
                         <Text style={styles.openPillText}>UPDATE</Text>
                       </View>
@@ -308,10 +413,28 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.bg,
   },
   header: {
-    backgroundColor: COLORS.maroon,
     paddingHorizontal: 16,
     paddingTop: 14,
-    paddingBottom: 20,
+    paddingBottom: 22,
+    overflow: 'hidden',
+  },
+  headerBlobTop: {
+    position: 'absolute',
+    top: -60,
+    right: -50,
+    width: 200,
+    height: 200,
+    borderRadius: 100,
+    backgroundColor: 'rgba(255,255,255,0.06)',
+  },
+  headerBlobBottom: {
+    position: 'absolute',
+    bottom: -50,
+    left: '20%',
+    width: 160,
+    height: 160,
+    borderRadius: 80,
+    backgroundColor: 'rgba(225,29,72,0.08)',
   },
   headerTopRow: {
     flexDirection: 'row',
@@ -335,6 +458,9 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.12)',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -366,15 +492,40 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: '800',
     color: '#ffffff',
-    marginBottom: 4,
+    marginBottom: 8,
   },
-  headerSubtitle: {
+  headerMetaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  headerMetaChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: 'rgba(0,0,0,0.2)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  headerMetaChipText: {
+    fontFamily: FONT_FAMILY,
+    fontSize: 11,
+    fontWeight: '600',
+    color: 'rgba(255,255,255,0.85)',
+  },
+  headerMetaDot: {
+    color: 'rgba(255,255,255,0.35)',
+    fontWeight: '300',
+  },
+  headerMetaStatus: {
     fontFamily: FONT_FAMILY,
     fontSize: 11,
     fontWeight: '700',
-    color: 'rgba(255,255,255,0.65)',
+    color: 'rgba(255,255,255,0.9)',
     letterSpacing: 0.6,
-    textTransform: 'uppercase',
   },
   tabBar: {
     flexDirection: 'row',
@@ -386,8 +537,11 @@ const styles = StyleSheet.create({
   },
   tabBtn: {
     flex: 1,
+    flexDirection: 'row',
     paddingVertical: 10,
     alignItems: 'center',
+    justifyContent: 'center',
+    gap: 5,
     borderRadius: 10,
   },
   tabBtnActive: {
@@ -401,6 +555,12 @@ const styles = StyleSheet.create({
   },
   tabTextActive: {
     color: COLORS.maroon,
+  },
+  tabDot: {
+    width: 5,
+    height: 5,
+    borderRadius: 2.5,
+    backgroundColor: COLORS.maroon,
   },
   scrollContent: {
     flex: 1,
@@ -445,8 +605,17 @@ const styles = StyleSheet.create({
   progressHeaderRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     marginBottom: 14,
+  },
+  progressLabel: {
+    fontFamily: FONT_FAMILY,
+    fontSize: 11,
+    fontWeight: '700',
+    color: COLORS.slate400,
+    letterSpacing: 0.6,
+    textTransform: 'uppercase',
+    marginBottom: 2,
   },
   progressMonth: {
     fontFamily: FONT_FAMILY,
@@ -456,9 +625,14 @@ const styles = StyleSheet.create({
   },
   progressFraction: {
     fontFamily: FONT_FAMILY,
-    fontSize: 20,
+    fontSize: 22,
     fontWeight: '800',
     color: COLORS.maroon,
+  },
+  progressFractionSlash: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: COLORS.slate400,
   },
   segmentRow: {
     flexDirection: 'row',
@@ -473,6 +647,20 @@ const styles = StyleSheet.create({
   segmentDone: {
     backgroundColor: COLORS.maroon,
   },
+  progressFootnote: {
+    fontFamily: FONT_FAMILY,
+    fontSize: 11,
+    fontWeight: '600',
+    color: COLORS.slate500,
+    marginTop: 8,
+  },
+  sectionHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 4,
+    marginBottom: -2,
+  },
   sectionLabel: {
     fontFamily: FONT_FAMILY,
     fontSize: 11,
@@ -482,12 +670,31 @@ const styles = StyleSheet.create({
     marginTop: 4,
     marginBottom: -2,
   },
+  sectionCount: {
+    fontFamily: FONT_FAMILY,
+    fontSize: 11,
+    fontWeight: '600',
+    color: COLORS.slate500,
+  },
   onSiteCard: {
     backgroundColor: COLORS.surface,
     borderRadius: 18,
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: COLORS.maroon,
     padding: 16,
+  },
+  onSiteTopRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 10,
+    marginBottom: 14,
+  },
+  onSiteIconBox: {
+    width: 42,
+    height: 42,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   onSiteTitle: {
     fontFamily: FONT_FAMILY,
@@ -502,7 +709,6 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     color: COLORS.slate600,
     lineHeight: 18,
-    marginBottom: 14,
   },
   onSiteBtn: {
     backgroundColor: COLORS.maroon,
@@ -526,27 +732,34 @@ const styles = StyleSheet.create({
   listRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    gap: 12,
     paddingHorizontal: 16,
-    paddingVertical: 16,
+    paddingVertical: 14,
     borderBottomWidth: 1,
     borderBottomColor: COLORS.border,
   },
   listRowLast: {
     borderBottomWidth: 0,
   },
+  paramIconBox: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   listRowTitle: {
-    flex: 1,
     fontFamily: FONT_FAMILY,
     fontSize: 15,
     fontWeight: '700',
     color: COLORS.ink,
   },
-  listRowDone: {
+  listRowDesc: {
     fontFamily: FONT_FAMILY,
-    fontSize: 12,
-    fontWeight: '700',
-    color: COLORS.slate500,
+    fontSize: 11,
+    fontWeight: '500',
+    color: COLORS.slate400,
+    marginTop: 1,
   },
   listRowDash: {
     fontFamily: FONT_FAMILY,
@@ -554,13 +767,58 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: COLORS.slate400,
   },
-  ledgerIconBox: {
-    width: 34,
-    height: 34,
+  doneBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: COLORS.emerald50,
+    paddingHorizontal: 9,
+    paddingVertical: 4,
     borderRadius: 10,
-    backgroundColor: COLORS.amber50,
+  },
+  doneBadgeText: {
+    fontFamily: FONT_FAMILY,
+    fontSize: 11,
+    fontWeight: '700',
+    color: COLORS.emerald600,
+  },
+  ledgerGrid: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  ledgerCard: {
+    flex: 1,
+    backgroundColor: COLORS.surface,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    padding: 14,
+  },
+  ledgerCardTopRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 14,
+  },
+  ledgerIconBox: {
+    width: 38,
+    height: 38,
+    borderRadius: 11,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  ledgerCardTitle: {
+    fontFamily: FONT_FAMILY,
+    fontSize: 14,
+    fontWeight: '800',
+    color: COLORS.ink,
+  },
+  ledgerCardSub: {
+    fontFamily: FONT_FAMILY,
+    fontSize: 11,
+    fontWeight: '600',
+    color: COLORS.slate500,
+    marginTop: 6,
   },
   openPill: {
     backgroundColor: COLORS.pillBg,
