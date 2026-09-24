@@ -3449,9 +3449,17 @@ export default function App() {
                         ? demographicsData.reduce((s, d) => s + (parseInt(d.male || 0) + parseInt(d.female || 0)), 0)
                         : 0
                     }
+                    masterDataUpdated={masterDataTimestamps}
+                    pendingSyncCount={pendingSyncCount}
+                    isSyncing={isSyncing}
                     onEditMasterData={() => {
                       setMasterDataViewReturnTab('profile');
                       setCurrentMobileScreen('MPCS_MASTER_DATA');
+                      setActiveBottomTab('home');
+                    }}
+                    onViewSyncStatus={() => {
+                      setMasterDataViewReturnTab('profile');
+                      setCurrentMobileScreen('SYNC_STATUS');
                       setActiveBottomTab('home');
                     }}
                     activeTab="profile"

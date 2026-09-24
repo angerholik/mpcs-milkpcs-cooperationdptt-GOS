@@ -34,6 +34,11 @@ const COLORS = {
 
 const FONT_FAMILY = 'Manrope';
 
+// Must match the 8 keys MpcsMasterDataListScreen's own `records` array uses
+// (profile/demographics/loan/compliance/financials/dividend/shareCapital/csc)
+// — this only counts completeness, it doesn't duplicate any editing logic.
+const MASTER_DATA_KEYS = ['instProfile', 'demographics', 'loan', 'compliance', 'financials', 'dividend', 'shareCapital', 'csc'];
+
 // Read-only glance view for the Profile tab — one card, no editing. Editing
 // happens in Master Data (the "Save & Continue" chain), which this screen
 // links out to rather than duplicating. Having Profile/More/Master Data each
@@ -52,7 +57,11 @@ export default function MpcsProfileSummaryScreen({
   agmStatus = "",
   agmDate = "",
   totalMembers = 0,
+  masterDataUpdated = {},
+  pendingSyncCount = 0,
+  isSyncing = false,
   onEditMasterData,
+  onViewSyncStatus,
   activeTab,
   onTabPress,
   onNotifyPress,
@@ -60,6 +69,40 @@ export default function MpcsProfileSummaryScreen({
   unreadCount = 0,
 }) {
   const complianceIsDone = (status) => (status || '').toLowerCase() === 'completed';
+
+  const recordedCount = MASTER_DATA_KEYS.filter(k => masterDataUpdated?.[k]).length;
+  const masterDataComplete = recordedCount === MASTER_DATA_KEYS.length;
+  const auditDone = complianceIsDone(auditStatus);
+  const agmDone = complianceIsDone(agmStatus);
+  const complianceComplete = auditDone && agmDone;
+  const syncClear = pendingSyncCount === 0 && !isSyncing;
+
+  const actionItems = [
+    {
+      key: 'master',
+      icon: 'clipboard-list-outline',
+      title: 'Master data',
+      subtitle: masterDataComplete ? 'All 8 records saved' : `${recordedCount} of ${MASTER_DATA_KEYS.length} records saved`,
+      done: masterDataComplete,
+      onPress: onEditMasterData,
+    },
+    {
+      key: 'compliance',
+      icon: 'gavel',
+      title: 'Compliance',
+      subtitle: `Audit ${auditDone ? 'done' : 'pending'} · AGM ${agmDone ? 'done' : 'pending'}`,
+      done: complianceComplete,
+      onPress: onEditMasterData,
+    },
+    {
+      key: 'sync',
+      icon: 'cloud-sync-outline',
+      title: 'Offline sync',
+      subtitle: isSyncing ? 'Syncing now…' : syncClear ? 'Everything synced' : `${pendingSyncCount} submission${pendingSyncCount === 1 ? '' : 's'} waiting to sync`,
+      done: syncClear,
+      onPress: onViewSyncStatus,
+    },
+  ];
 
   return (
     <View style={styles.container}>
@@ -99,6 +142,32 @@ export default function MpcsProfileSummaryScreen({
         contentContainerStyle={[styles.scrollInner, webCapWidth]}
         showsVerticalScrollIndicator={false}
       >
+        <Text style={styles.actionItemsLabel}>NEEDS YOUR ATTENTION</Text>
+        <View style={styles.card}>
+          {actionItems.map((item, i) => (
+            <TouchableOpacity
+              key={item.key}
+              style={[styles.actionRow, i !== actionItems.length - 1 && styles.actionRowBorder]}
+              onPress={item.onPress}
+              activeOpacity={item.onPress ? 0.7 : 1}
+              disabled={!item.onPress}
+            >
+              <View style={[styles.actionIconBox, item.done && styles.actionIconBoxDone]}>
+                <MaterialCommunityIcons name={item.icon} size={17} color={item.done ? COLORS.emerald700 : COLORS.primary} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.actionTitle}>{item.title}</Text>
+                <Text style={styles.actionSubtitle}>{item.subtitle}</Text>
+              </View>
+              {item.done ? (
+                <MaterialCommunityIcons name="check-circle" size={18} color={COLORS.emerald700} />
+              ) : item.onPress ? (
+                <MaterialCommunityIcons name="chevron-right" size={20} color={COLORS.slate400} />
+              ) : null}
+            </TouchableOpacity>
+          ))}
+        </View>
+
         <View style={styles.card}>
           <View style={styles.cardHeaderRow}>
             <View style={styles.cardIconBox}>
@@ -250,6 +319,45 @@ const styles = StyleSheet.create({
     padding: 12,
     gap: 12,
     paddingBottom: 110,
+  },
+  actionItemsLabel: {
+    fontFamily: FONT_FAMILY,
+    fontSize: 11,
+    fontWeight: '800',
+    color: COLORS.slate500,
+    letterSpacing: 1,
+  },
+  actionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingVertical: 12,
+  },
+  actionRowBorder: {
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.slate100,
+  },
+  actionIconBox: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: COLORS.amber50,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  actionIconBoxDone: { backgroundColor: COLORS.emerald50 },
+  actionTitle: {
+    fontFamily: FONT_FAMILY,
+    fontSize: 13,
+    fontWeight: '800',
+    color: COLORS.slate800,
+  },
+  actionSubtitle: {
+    fontFamily: FONT_FAMILY,
+    fontSize: 12,
+    fontWeight: '500',
+    color: COLORS.slate500,
+    marginTop: 2,
   },
   card: {
     backgroundColor: COLORS.surface,
