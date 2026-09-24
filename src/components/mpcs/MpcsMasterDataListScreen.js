@@ -198,9 +198,9 @@ export default function MpcsMasterDataListScreen({
   // isn't one long undifferentiated scroll — purely a display grouping,
   // doesn't change how any individual record saves.
   const SECTIONS = [
-    { title: 'Society info', keys: ['profile', 'demographics', 'compliance'] },
-    { title: 'Financials', keys: ['financials', 'dividend', 'shareCapital'] },
-    { title: 'Optional services', keys: ['loan', 'csc'] },
+    { title: 'Society info', icon: 'domain', keys: ['profile', 'demographics', 'compliance'] },
+    { title: 'Financials', icon: 'chart-line', keys: ['financials', 'dividend', 'shareCapital'] },
+    { title: 'Optional services', icon: 'tune-variant', keys: ['loan', 'csc'] },
   ];
 
   const openRow = (key, recorded) => {
@@ -270,9 +270,16 @@ export default function MpcsMasterDataListScreen({
 
         {SECTIONS.map((section) => {
           const sectionRecords = section.keys.map(k => records.find(r => r.key === k)).filter(Boolean);
+          const sectionDone = sectionRecords.filter(r => r.updated).length;
           return (
           <View key={section.title} style={{ gap: 10 }}>
-            <Text style={styles.sectionTitle}>{section.title}</Text>
+            <View style={styles.sectionHeaderRow}>
+              <View style={[styles.sectionIconBadge, sectionDone === sectionRecords.length && styles.sectionIconBadgeDone]}>
+                <MaterialCommunityIcons name={section.icon} size={13} color={sectionDone === sectionRecords.length ? COLORS.green700 : COLORS.maroon} />
+              </View>
+              <Text style={styles.sectionTitle}>{section.title}</Text>
+              <Text style={styles.sectionCount}>{sectionDone}/{sectionRecords.length}</Text>
+            </View>
             <View style={styles.listCard}>
               {sectionRecords.map((r, i) => {
             const isOpen = expanded?.key === r.key;
@@ -1004,7 +1011,11 @@ const styles = StyleSheet.create({
   scrollInner: { padding: 16, paddingBottom: 110, gap: 14 },
 
   helperText: { fontFamily: FONT_FAMILY, fontSize: 13, fontWeight: '500', color: COLORS.slate600, lineHeight: 19 },
-  sectionTitle: { fontFamily: FONT_FAMILY, fontSize: 12, fontWeight: '800', color: COLORS.slate500, letterSpacing: 0.6, textTransform: 'uppercase' },
+  sectionHeaderRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 2 },
+  sectionIconBadge: { width: 24, height: 24, borderRadius: 12, backgroundColor: COLORS.amber50, alignItems: 'center', justifyContent: 'center' },
+  sectionIconBadgeDone: { backgroundColor: COLORS.greenBg },
+  sectionTitle: { flex: 1, fontFamily: FONT_FAMILY, fontSize: 14, fontWeight: '800', color: COLORS.ink, letterSpacing: 0.1 },
+  sectionCount: { fontFamily: FONT_FAMILY, fontSize: 12, fontWeight: '700', color: COLORS.slate500 },
 
   banner: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: COLORS.greenBg, borderRadius: 12, padding: 12 },
   bannerText: { flex: 1, fontFamily: FONT_FAMILY, fontSize: 13, fontWeight: '600', color: COLORS.green700 },
