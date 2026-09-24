@@ -148,6 +148,14 @@ export default function MpcsMasterDataListScreen({
   // themselves via onDirtyChange as soon as the form's local state diverges.
   useEffect(() => { setIsDirty(false); }, [expanded?.key, expanded?.mode]);
 
+  // Auto-dismiss the save/undo banner after a few seconds rather than
+  // leaving it up forever — replacing it (a new save) resets the clock.
+  useEffect(() => {
+    if (!banner) return;
+    const t = setTimeout(() => setBanner(null), 6000);
+    return () => clearTimeout(t);
+  }, [banner]);
+
   const totalMembers = demographicsData.reduce((s, r) => s + (parseInt(r.male) || 0) + (parseInt(r.female) || 0), 0);
   const loanState = loanData?.loanCleared ? 'loan cleared' : loanData?.hasLoan ? 'loan active' : 'no loan';
 
@@ -187,7 +195,10 @@ export default function MpcsMasterDataListScreen({
   const recordedCount = records.filter(r => r.updated).length;
 
   const openRow = (key, recorded) => {
-    const proceed = () => { setBanner(null); setExpanded({ key, mode: recorded ? 'view' : 'edit' }); };
+    // Deliberately leaves the previous save's undo banner up — tapping
+    // straight into the next record (the common flow while filling all 8)
+    // shouldn't kill the ability to undo the one you just finished.
+    const proceed = () => setExpanded({ key, mode: recorded ? 'view' : 'edit' });
     if (isDirty) confirmDiscard(proceed); else proceed();
   };
   const collapse = () => {
