@@ -1,53 +1,38 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Pressable, ScrollView, Image, Platform, Linking } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Pressable, ScrollView, Platform, Linking } from 'react-native';
 import { MaterialIcons, MaterialCommunityIcons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
 import { webCapWidth } from '../utils/webStyles';
 import HeaderNav from './HeaderNav';
 import BottomNav from './BottomNav';
 
-// Same Kanchenjunga photo used in every header, at a much lower opacity so
-// it reads as a faint page watermark behind the (mostly white/card-covered)
-// scroll content rather than competing with it.
-const pageBgPhotoFilter = Platform.OS === 'web'
-  ? { opacity: 0.05, filter: 'grayscale(1) contrast(1.1)' }
-  : { opacity: 0.035 };
-
-// STITCH Design Tokens (Matching Dashboard Overview)
+// Same palette as MpcsMasterDataListScreen / the redesigned Profile screen —
+// flat maroon/cream, no gradients, no photo, no shadowed cards. This screen
+// used to run its own gradient officer card + page-watermark photo +
+// decorative blobs + slate/emerald scale left over from an earlier design
+// pass; brought in line so More doesn't look like a different app from
+// Master Data/Cash Book/CSC/Profile. (HeaderNav above this screen still
+// carries its own photo — it's shared with Home/Records and out of scope
+// here.)
 const COLORS = {
-  background: "#fcf8fa",
-  surface: "#ffffff",
-  primary: "#7a1a1f",
-  primaryDark: "#4a1017",
-  onSurface: "#1b1b1d",
-  slate800: "#1e293b",
-  slate700: "#334155",
-  slate600: "#475569",
-  slate500: "#64748b",
-  slate400: "#94a3b8",
-  slate300: "#cbd5e1",
-  slate200: "#e2e8f0",
-  slate100: "#f1f5f9",
-  slate50: "#f8fafc",
-  amber50: "#fffbeb",
-  amber100: "#fef3c7",
-  amber600: "#d97706",
-  amber700: "#b45309",
-  emerald50: "#ecfdf5",
-  emerald100: "#d1fae5",
-  emerald500: "#10b981",
-  emerald600: "#059669",
-  emerald700: "#047857",
-  red50: "#fef2f2",
-  red100: "#fee2e2",
-  red600: "#dc2626",
+  maroon: '#7B1420',
+  bg: '#F5F1EC',
+  surface: '#FFFFFF',
+  ink: '#1E1B18',
+  slate600: '#57534E',
+  slate500: '#78716C',
+  slate400: '#A8A29E',
+  border: '#E7E2DA',
+  green700: '#15803D',
+  amber50: '#FFF7ED',
+  amber700: '#B45309',
+  blue50: '#EFF6FF',
+  blue700: '#0369A1',
+  red600: '#DC2626',
+  redBg: '#FEF2F2',
+  redBorder: '#FEE2E2',
 };
 
-const FONT_FAMILY = Platform.select({
-  web: 'Manrope, Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-  ios: 'System',
-  android: 'Roboto',
-});
+const FONT_FAMILY = 'Manrope';
 
 const ROLE_LABELS = {
   CI: 'Cooperative Inspector',
@@ -110,16 +95,16 @@ export default function MoreScreen({
         label: 'Cash Book',
         sub: 'Record day-to-day cash entries',
         icon: 'notebook-outline',
-        color: '#7a1a1f',
-        bgColor: '#fdf1f1',
+        color: COLORS.maroon,
+        bgColor: COLORS.amber50,
       },
       {
         id: 'MPCS_CSC_TRANS',
         label: 'CSC Transactions',
         sub: 'Log Common Service Center transactions',
         icon: 'laptop',
-        color: '#0369a1',
-        bgColor: '#e0f2fe',
+        color: COLORS.blue700,
+        bgColor: COLORS.blue50,
       },
     ] : []),
     {
@@ -127,16 +112,16 @@ export default function MoreScreen({
       label: 'Departmental Bulletins',
       sub: 'View official directives & notifications',
       icon: 'bell-ring-outline',
-      color: '#b45309',
-      bgColor: '#fffbeb',
+      color: COLORS.amber700,
+      bgColor: COLORS.amber50,
     },
     {
       id: 'SYNC_STATUS',
       label: 'Offline Engine Status',
       sub: 'Realtime cloud database sync status',
       icon: 'cloud-sync-outline',
-      color: '#0284c7',
-      bgColor: '#f0f9ff',
+      color: COLORS.blue700,
+      bgColor: COLORS.blue50,
     },
     // Admin dashboard is a separate web app (same Supabase project), so this
     // opens it in the device browser rather than navigating in-app — only a
@@ -147,8 +132,8 @@ export default function MoreScreen({
       label: 'Open Admin Dashboard',
       sub: 'District oversight & reporting, in your browser',
       icon: 'open-in-new',
-      color: '#7a1a1f',
-      bgColor: '#fdf1f1',
+      color: COLORS.maroon,
+      bgColor: COLORS.amber50,
     }] : []),
   ];
 
@@ -158,12 +143,6 @@ export default function MoreScreen({
 
   return (
     <View style={styles.container}>
-      <Image
-        source={require('../../assets/core/kanchenjunga.jpg')}
-        style={[StyleSheet.absoluteFillObject, { width: '100%', height: '100%' }, pageBgPhotoFilter]}
-        resizeMode="cover"
-        pointerEvents="none"
-      />
       <HeaderNav
         activeModule={activeModule}
         selectedSociety={selectedSociety}
@@ -178,18 +157,8 @@ export default function MoreScreen({
         role={role}
       />
 
-      {/* Ambient Decorative Background Blobs (Matches Dashboard Overview) */}
-      <View style={styles.bgBlobTop} pointerEvents="none" />
-      <View style={styles.bgBlobBottomLeft} pointerEvents="none" />
-
       <ScrollView style={styles.scrollContent} contentContainerStyle={[styles.scrollInner, webCapWidth]} showsVerticalScrollIndicator={false}>
-        {/* Officer Profile Card with Gradient */}
-        <LinearGradient
-          colors={['#7a1a1f', '#4a1017']}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 0 }}
-          style={styles.officerCard}
-        >
+        <View style={styles.officerCard}>
           <View style={styles.avatarBox}>
             <Text style={styles.avatarText}>{initials}</Text>
           </View>
@@ -204,11 +173,11 @@ export default function MoreScreen({
               <Text style={styles.statusChipText}>System Online • Supabase Sync Active</Text>
             </View>
           </View>
-        </LinearGradient>
+        </View>
 
         {/* Menu Options Group */}
         <View style={styles.sectionHeaderRow}>
-          <Text style={styles.sectionHeading}>MODULE & SYSTEM OPTIONS</Text>
+          <Text style={styles.sectionHeading}>Module & system options</Text>
         </View>
 
         <View style={styles.menuContainer}>
@@ -219,7 +188,7 @@ export default function MoreScreen({
                 styles.menuRow,
                 index === menuOptions.length - 1 && { borderBottomWidth: 0 },
                 Platform.OS === 'web' && { transition: 'all 0.25s ease' },
-                hovered && { backgroundColor: COLORS.slate50 }
+                hovered && { backgroundColor: COLORS.bg }
               ]}
               onPress={() => {
                 if (opt.id === 'BULLETINS') {
@@ -237,17 +206,17 @@ export default function MoreScreen({
                     <MaterialCommunityIcons name={opt.icon} size={22} color={opt.color} />
                   </View>
                   <View style={styles.menuTextGroup}>
-                    <Text style={[styles.menuLabel, hovered && { color: COLORS.primary }]}>{opt.label}</Text>
+                    <Text style={[styles.menuLabel, hovered && { color: COLORS.maroon }]}>{opt.label}</Text>
                     <Text style={styles.menuSub}>{opt.sub}</Text>
                   </View>
                   <View style={[
                     styles.chevronCircle,
-                    hovered && { backgroundColor: COLORS.primary, borderColor: 'transparent' }
+                    hovered && { backgroundColor: COLORS.maroon, borderColor: 'transparent' }
                   ]}>
-                    <MaterialCommunityIcons 
-                      name="arrow-right" 
-                      size={16} 
-                      color={hovered ? '#ffffff' : COLORS.slate400} 
+                    <MaterialCommunityIcons
+                      name="arrow-right"
+                      size={16}
+                      color={hovered ? '#ffffff' : COLORS.slate400}
                       style={hovered && Platform.OS === 'web' ? { transform: [{ translateX: 2 }] } : null}
                     />
                   </View>
@@ -268,7 +237,7 @@ export default function MoreScreen({
           style={({ hovered, pressed }) => [
             styles.signOutBtn,
             pressed && { transform: [{ scale: 0.98 }] },
-            hovered && { backgroundColor: '#fee2e2', borderColor: '#fca5a5' }
+            hovered && { backgroundColor: COLORS.redBorder, borderColor: '#fca5a5' }
           ]}
           onPress={onSignOut}
         >
@@ -288,48 +257,18 @@ export default function MoreScreen({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
-    position: 'relative',
-    overflow: 'hidden',
-  },
-  
-  // Ambient Blobs (Matches Dashboard Overview)
-  bgBlobTop: {
-    position: 'absolute',
-    top: -40,
-    right: -40,
-    width: 240,
-    height: 240,
-    borderRadius: 120,
-    backgroundColor: 'rgba(122, 26, 31, 0.06)',
-    zIndex: -1,
-  },
-  bgBlobBottomLeft: {
-    position: 'absolute',
-    bottom: 80,
-    left: -50,
-    width: 220,
-    height: 220,
-    borderRadius: 110,
-    backgroundColor: 'rgba(180, 83, 9, 0.05)',
-    zIndex: -1,
+    backgroundColor: COLORS.bg,
   },
 
   scrollContent: { flex: 1 },
-  scrollInner: { padding: 14, gap: 14 },
+  scrollInner: { padding: 16, gap: 14 },
 
   officerCard: {
-    borderRadius: 16,
+    backgroundColor: COLORS.maroon,
+    borderRadius: 18,
     padding: 16,
     flexDirection: 'row',
     alignItems: 'center',
-    shadowColor: COLORS.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 10,
-    elevation: 4,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
   },
   avatarBox: {
     width: 50,
@@ -338,13 +277,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
   },
-  avatarText: { fontFamily: FONT_FAMILY, fontSize: 18, fontWeight: '800', color: COLORS.primary },
+  avatarText: { fontFamily: FONT_FAMILY, fontSize: 18, fontWeight: '800', color: COLORS.maroon },
   officerMeta: { marginLeft: 14, flex: 1 },
   officerName: { fontFamily: FONT_FAMILY, fontSize: 17, fontWeight: '800', color: '#FFFFFF', letterSpacing: 0.2 },
   officerRole: { fontFamily: FONT_FAMILY, fontSize: 11, color: 'rgba(255,255,255,0.8)', marginTop: 2, fontWeight: '500' },
@@ -361,16 +295,7 @@ const styles = StyleSheet.create({
     marginTop: 8,
     alignSelf: 'flex-start',
   },
-  activeDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: COLORS.emerald500,
-    shadowColor: COLORS.emerald500,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.8,
-    shadowRadius: 4,
-  },
+  activeDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: COLORS.green700 },
   statusChipText: { fontFamily: FONT_FAMILY, fontSize: 10, color: '#FFFFFF', fontWeight: '700' },
 
   sectionHeaderRow: { paddingHorizontal: 2, marginTop: 4 },
@@ -378,28 +303,24 @@ const styles = StyleSheet.create({
     fontFamily: FONT_FAMILY,
     fontSize: 12,
     fontWeight: '800',
-    color: COLORS.slate700,
-    letterSpacing: 1.2,
+    color: COLORS.slate500,
+    letterSpacing: 0.6,
+    textTransform: 'uppercase',
   },
-  
+
   menuContainer: {
     backgroundColor: COLORS.surface,
-    borderRadius: 16,
+    borderRadius: 18,
     borderWidth: 1,
-    borderColor: COLORS.slate200,
+    borderColor: COLORS.border,
     overflow: 'hidden',
-    shadowColor: '#0f172a',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.04,
-    shadowRadius: 8,
-    elevation: 2,
   },
   menuRow: {
     flexDirection: 'row',
     alignItems: 'center',
     padding: 14,
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.slate100,
+    borderBottomColor: COLORS.border,
   },
   iconBox: {
     width: 42,
@@ -409,30 +330,30 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   menuTextGroup: { flex: 1, marginLeft: 14 },
-  menuLabel: { fontFamily: FONT_FAMILY, fontSize: 15, fontWeight: '800', color: COLORS.onSurface },
+  menuLabel: { fontFamily: FONT_FAMILY, fontSize: 15, fontWeight: '800', color: COLORS.ink },
   menuSub: { fontFamily: FONT_FAMILY, fontSize: 11, color: COLORS.slate500, marginTop: 2, fontWeight: '500' },
-  
+
   chevronCircle: {
     width: 30,
     height: 30,
     borderRadius: 15,
-    backgroundColor: COLORS.slate50,
+    backgroundColor: COLORS.bg,
     borderWidth: 1,
-    borderColor: COLORS.slate100,
+    borderColor: COLORS.border,
     alignItems: 'center',
     justifyContent: 'center',
   },
 
   footerBlock: { alignItems: 'center', paddingTop: 8, paddingBottom: 16, gap: 4 },
   footerLine: { fontFamily: FONT_FAMILY, fontSize: 10, fontWeight: '500', color: COLORS.slate400 },
-  footerLineMuted: { fontFamily: FONT_FAMILY, fontSize: 9, fontWeight: '400', color: 'rgba(148,163,184,0.8)' },
+  footerLineMuted: { fontFamily: FONT_FAMILY, fontSize: 9, fontWeight: '400', color: COLORS.slate400 },
   signOutBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: COLORS.red50,
+    backgroundColor: COLORS.redBg,
     borderWidth: 1,
-    borderColor: COLORS.red100,
+    borderColor: COLORS.redBorder,
     paddingVertical: 15,
     borderRadius: 14,
     gap: 8,
