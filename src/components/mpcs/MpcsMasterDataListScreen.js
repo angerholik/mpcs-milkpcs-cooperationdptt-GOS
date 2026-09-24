@@ -729,7 +729,7 @@ function LoanForm({ initial, onCancel, onSave, onDirtyChange }) {
         <>
           <Field label="Loan type" value={form.loanType} onChangeText={set('loanType')} placeholder="e.g. Cash Credit Limit" />
           <DateField label="Sanction date" value={form.sanctionDate} onChangeText={set('sanctionDate')} />
-          <Field label="Amount extended (₹)" value={form.loanExtended} onChangeText={set('loanExtended')} keyboardType="numeric" />
+          <Field label="Amount extended" value={form.loanExtended} onChangeText={set('loanExtended')} keyboardType="numeric" prefix="₹" />
           <Field label="Number of beneficiaries" value={form.beneficiaries} onChangeText={set('beneficiaries')} keyboardType="numeric" />
         </>
       )}
@@ -792,9 +792,9 @@ function FinancialsForm({ initial, onCancel, onSave, onDirtyChange }) {
   useEffect(() => { onDirtyChange && onDirtyChange(JSON.stringify(form) !== JSON.stringify(prev)); }, [form]);
   return (
     <FormBody onCancel={onCancel} onSave={() => onSave(form, prev)}>
-      <Field label="Annual turnover (₹)" value={form.annualTurnover} onChangeText={set('annualTurnover')} keyboardType="numeric" />
-      <Field label="Gross income (₹)" value={form.totalIncome} onChangeText={set('totalIncome')} keyboardType="numeric" />
-      <Field label="Total expenses (₹)" value={form.totalExpenses} onChangeText={set('totalExpenses')} keyboardType="numeric" />
+      <Field label="Annual turnover" value={form.annualTurnover} onChangeText={set('annualTurnover')} keyboardType="numeric" prefix="₹" />
+      <Field label="Gross income" value={form.totalIncome} onChangeText={set('totalIncome')} keyboardType="numeric" prefix="₹" />
+      <Field label="Total expenses" value={form.totalExpenses} onChangeText={set('totalExpenses')} keyboardType="numeric" prefix="₹" />
     </FormBody>
   );
 }
@@ -812,7 +812,7 @@ function DividendForm({ initial, onCancel, onSave, onDirtyChange }) {
     <FormBody onCancel={onCancel} onSave={() => onSave(form, prev)}>
       <Field label="Dividend policy" value={form.dividendPolicy} onChangeText={set('dividendPolicy')} multiline />
       <Field label="Rate" value={form.dividendRate} onChangeText={set('dividendRate')} placeholder="e.g. 8%" />
-      <Field label="Amount (₹)" value={form.dividendAmount} onChangeText={set('dividendAmount')} keyboardType="numeric" />
+      <Field label="Amount" value={form.dividendAmount} onChangeText={set('dividendAmount')} keyboardType="numeric" prefix="₹" />
       <DateField label="Distribution date" value={form.distributionDate} onChangeText={set('distributionDate')} />
     </FormBody>
   );
@@ -828,9 +828,9 @@ function ShareCapitalForm({ initial, onCancel, onSave, onDirtyChange }) {
   useEffect(() => { onDirtyChange && onDirtyChange(JSON.stringify(form) !== JSON.stringify(prev)); }, [form]);
   return (
     <FormBody onCancel={onCancel} onSave={() => onSave(form, prev)}>
-      <Field label="Authorised share capital (₹)" value={form.authorizedCapital} onChangeText={set('authorizedCapital')} keyboardType="numeric" />
-      <Field label="Paid-up share capital (₹)" value={form.paidUpCapital} onChangeText={set('paidUpCapital')} keyboardType="numeric" />
-      <Field label="Total member deposits (₹)" value={form.totalDeposits} onChangeText={set('totalDeposits')} keyboardType="numeric" />
+      <Field label="Authorised share capital" value={form.authorizedCapital} onChangeText={set('authorizedCapital')} keyboardType="numeric" prefix="₹" />
+      <Field label="Paid-up share capital" value={form.paidUpCapital} onChangeText={set('paidUpCapital')} keyboardType="numeric" prefix="₹" />
+      <Field label="Total member deposits" value={form.totalDeposits} onChangeText={set('totalDeposits')} keyboardType="numeric" prefix="₹" />
       <DateField label="As on date" value={form.asOfDate} onChangeText={set('asOfDate')} />
     </FormBody>
   );
@@ -872,11 +872,12 @@ function CscForm({ initial, onCancel, onSave, onDirtyChange }) {
 
 // ─── Shared bits ────────────────────────────────────────────────────────
 
-function Field({ label, value, onChangeText, placeholder, keyboardType, autoCapitalize, multiline }) {
+function Field({ label, value, onChangeText, placeholder, keyboardType, autoCapitalize, multiline, prefix }) {
   return (
     <View style={styles.fieldGroup}>
       <Text style={styles.inputLabel}>{label}</Text>
       <View style={[styles.inputBox, multiline && { height: 80, alignItems: 'flex-start', paddingVertical: 12 }]}>
+        {prefix && <Text style={styles.inputPrefix}>{prefix}</Text>}
         <TextInput
           style={styles.textInput}
           value={value}
@@ -1012,6 +1013,7 @@ const styles = StyleSheet.create({
 
   inputLabel: { fontFamily: FONT_FAMILY, fontSize: 13, fontWeight: '700', color: COLORS.ink },
   inputBox: { flexDirection: 'row', alignItems: 'center', backgroundColor: COLORS.bg, borderWidth: 1, borderColor: COLORS.border, borderRadius: 12, paddingHorizontal: 14, height: 48 },
+  inputPrefix: { fontFamily: FONT_FAMILY, fontSize: 16, fontWeight: '800', color: COLORS.maroon, marginRight: 6 },
   textInput: { flex: 1, fontFamily: FONT_FAMILY, fontSize: 16, fontWeight: '600', color: COLORS.ink, ...(Platform.OS === 'web' ? { outlineStyle: 'none' } : {}) },
   rowHalf: { flexDirection: 'row', gap: 10 },
   fieldHalf: { flex: 1, gap: 6 },
