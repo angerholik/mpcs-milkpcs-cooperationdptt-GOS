@@ -265,19 +265,6 @@ export default function HomeScreen({
     { id: 'MPCS_LOAN_STATUS', title: 'Loan Status', desc: loanIsActive ? 'Awaiting credit sign-off' : 'No active loan', done: loanIsActive && loanStatus?.startsWith('COMPLETED'), na: !loanIsActive },
   ];
 
-  // All 8 records now live on one screen (MpcsMasterDataListScreen), so
-  // every row here just opens it.
-  const masterRecords = [
-    { id: 'MPCS_MASTER_DATA', title: 'Institutional Profile', updated: masterDataUpdated.instProfile },
-    { id: 'MPCS_MASTER_DATA', title: 'Registered Demographics', updated: masterDataUpdated.demographics },
-    { id: 'MPCS_MASTER_DATA', title: 'Loan Details', updated: masterDataUpdated.loan },
-    { id: 'MPCS_MASTER_DATA', title: 'Compliance Audit', updated: masterDataUpdated.compliance },
-    { id: 'MPCS_MASTER_DATA', title: 'Financial Performance', updated: masterDataUpdated.financials },
-    { id: 'MPCS_MASTER_DATA', title: 'Dividend Details', updated: masterDataUpdated.dividend },
-    { id: 'MPCS_MASTER_DATA', title: 'Share Capital', updated: masterDataUpdated.shareCapital },
-    { id: 'MPCS_MASTER_DATA', title: 'CSC Details', updated: masterDataUpdated.csc },
-  ];
-  const masterNeedsUpdate = masterRecords.filter((r) => !r.updated);
 
   const roleInitials = (role || 'CI').slice(0, 2).toUpperCase();
   const readyPercent = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
@@ -340,7 +327,12 @@ export default function HomeScreen({
             { key: 'master', label: 'Master' },
             { key: 'member', label: 'Member' },
           ].map((t) => (
-            <TabButton key={t.key} label={t.label} active={internalTab === t.key} onPress={() => setInternalTab(t.key)} />
+            <TabButton
+              key={t.key}
+              label={t.label}
+              active={internalTab === t.key}
+              onPress={() => (t.key === 'master' ? onNavigateScreen && onNavigateScreen('MPCS_MASTER_DATA') : setInternalTab(t.key))}
+            />
           ))}
         </View>
 
@@ -510,52 +502,6 @@ export default function HomeScreen({
                 <Text style={styles.ledgerCardSub}>{cscSub}</Text>
               </PressScale>
             </View>
-          </>
-        )}
-
-        {internalTab === 'master' && (
-          <>
-            <PressScale
-              scaleTo={0.98}
-              style={({ pressed, hovered }) => [styles.card, hovered && { backgroundColor: 'rgba(248,250,252,0.6)' }, pressed && { backgroundColor: COLORS.slate50 }]}
-              onPress={() => onNavigateScreen && onNavigateScreen('MPCS_MASTER_DATA')}
-            >
-              <View style={styles.masterSummaryRow}>
-                <Text style={styles.masterSummaryCount}>{masterRecords.length} master records</Text>
-                {masterNeedsUpdate.length > 0 && (
-                  <Text style={styles.masterSummaryNeed}>{masterNeedsUpdate.length} need update</Text>
-                )}
-              </View>
-            </PressScale>
-
-            {masterNeedsUpdate.length > 0 && (
-              <>
-                <View style={styles.sectionHeaderRow}>
-                  <Text style={styles.sectionLabel}>Needs Update</Text>
-                </View>
-                <View style={styles.listCard}>
-                  {masterNeedsUpdate.map((r, i) => (
-                    <PressScale
-                      key={r.title}
-                      scaleTo={0.985}
-                      style={({ pressed, hovered }) => [
-                        styles.listRow,
-                        i === masterNeedsUpdate.length - 1 && styles.listRowLast,
-                        hovered && { backgroundColor: 'rgba(248,250,252,0.6)' },
-                        pressed && { backgroundColor: COLORS.slate100 },
-                      ]}
-                      onPress={() => onNavigateScreen && onNavigateScreen(r.id)}
-                    >
-                      <Text style={[styles.listRowTitle, { flex: 1 }]}>{r.title}</Text>
-                      <View style={styles.openPill}>
-                        <Text style={styles.openPillText}>UPDATE</Text>
-                      </View>
-                      <MaterialCommunityIcons name="chevron-right" size={16} color={COLORS.slate400} />
-                    </PressScale>
-                  ))}
-                </View>
-              </>
-            )}
           </>
         )}
 
@@ -1117,11 +1063,5 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '800',
     color: COLORS.ink,
-  },
-  masterSummaryNeed: {
-    fontFamily: FONT_FAMILY,
-    fontSize: 13,
-    fontWeight: '700',
-    color: COLORS.brand700,
   },
 });
