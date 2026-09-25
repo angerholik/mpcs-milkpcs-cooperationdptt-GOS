@@ -90,12 +90,12 @@ const lightShadow = { shadowColor: '#0F172A', shadowOffset: { width: 0, height: 
 // `<Pressable style={({pressed}) => [...]}>` — `style` carries the full
 // visual style (static + pressed-state) exactly as it would on Pressable
 // itself; this just also animates a scale transform smoothly on press.
-function PressScale({ style, children, scaleTo = 0.97, onPress, ...rest }) {
+function PressScale({ style, outerStyle, children, scaleTo = 0.97, onPress, ...rest }) {
   const scale = useRef(new Animated.Value(1)).current;
   const pressIn = () => Animated.spring(scale, { toValue: scaleTo, useNativeDriver: true, speed: 60, bounciness: 0 }).start();
   const pressOut = () => Animated.spring(scale, { toValue: 1, useNativeDriver: true, speed: 16, bounciness: 6 }).start();
   return (
-    <Pressable onPress={onPress} onPressIn={pressIn} onPressOut={pressOut} {...rest}>
+    <Pressable onPress={onPress} onPressIn={pressIn} onPressOut={pressOut} style={outerStyle} {...rest}>
       {(state) => (
         <Animated.View style={[typeof style === 'function' ? style(state) : style, { transform: [{ scale }] }]}>
           {typeof children === 'function' ? children(state) : children}
@@ -127,7 +127,7 @@ const NEXT_ACTION_BUTTON_LABEL = {
 // open or done; Loan Status stays slate when not applicable).
 const PARAM_STYLE = {
   MPCS_EVIDENCE: { icon: 'image-outline', bg: COLORS.rose50, border: 'rgba(254,205,213,0.6)', fg: COLORS.rose500 },
-  MPCS_SALES: { icon: 'chart-donut', bg: COLORS.emerald50, border: COLORS.emerald200, fg: COLORS.emerald600 },
+  MPCS_SALES: { icon: 'currency-usd', bg: COLORS.emerald50, border: COLORS.emerald200, fg: COLORS.emerald600 },
   MPCS_BUSINESS: { icon: 'chart-bar', bg: COLORS.emerald50, border: COLORS.emerald200, fg: COLORS.emerald600 },
   MPCS_LOAN_STATUS: { icon: 'file-document-outline', bg: COLORS.slate100, border: 'rgba(226,232,240,0.8)', fg: COLORS.slate500 },
 };
@@ -305,7 +305,6 @@ export default function HomeScreen({
 
         <View style={styles.headerTopRow}>
           <Pressable onPress={onManageInstitutions} hitSlop={8} style={styles.headerBrandGroup}>
-            <View style={styles.headerBrandBox} />
             <Text style={styles.headerWordmark}>CORE</Text>
           </Pressable>
           <View style={styles.headerActions}>
@@ -313,10 +312,8 @@ export default function HomeScreen({
               <MaterialCommunityIcons name="bell-outline" size={18} color="rgba(255,255,255,0.9)" />
               {activeAlert ? <Animated.View style={[styles.headerDot, bellPulse]} /> : null}
             </PressScale>
-            <PressScale onPress={onProfilePress} hitSlop={8} scaleTo={0.9}>
-              <LinearGradient colors={[COLORS.amber200, '#FB7185']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.headerAvatar}>
-                <Text style={styles.headerAvatarText}>{roleInitials}</Text>
-              </LinearGradient>
+            <PressScale onPress={onProfilePress} hitSlop={8} scaleTo={0.9} style={styles.headerAvatar}>
+              <Text style={styles.headerAvatarText}>{roleInitials}</Text>
             </PressScale>
           </View>
         </View>
@@ -408,7 +405,7 @@ export default function HomeScreen({
                 </View>
               </View>
               <PressScale
-                style={({ pressed }) => [styles.onSiteBtn, pressed && { opacity: 0.92 }]}
+                style={({ pressed, hovered }) => [styles.onSiteBtn, hovered && { backgroundColor: COLORS.brand800 }, pressed && { opacity: 0.92 }]}
                 scaleTo={0.98}
                 onPress={() => onNavigateScreen && onNavigateScreen(nextAction.screen)}
               >
@@ -428,35 +425,40 @@ export default function HomeScreen({
                   <PressScale
                     key={p.id}
                     scaleTo={0.985}
-                    style={({ pressed }) => [
+                    style={({ pressed, hovered }) => [
                       styles.listRow,
                       i === monthlyParams.length - 1 && styles.listRowLast,
+                      hovered && { backgroundColor: 'rgba(248,250,252,0.6)' },
                       pressed && { backgroundColor: COLORS.slate100 },
                     ]}
                     onPress={() => onNavigateScreen && onNavigateScreen(p.id)}
                   >
-                    <View style={[styles.paramIconBox, { backgroundColor: style.bg, borderColor: style.border }]}>
-                      <MaterialCommunityIcons name={style.icon} size={19} color={style.fg} />
-                    </View>
-                    <View style={{ flex: 1 }}>
-                      <Text style={styles.listRowTitle}>{p.title}</Text>
-                      <Text style={styles.listRowDesc}>{p.desc}</Text>
-                    </View>
-                    {p.na ? (
-                      <View style={styles.dashPill}>
-                        <Text style={styles.dashPillText}>—</Text>
-                      </View>
-                    ) : p.done ? (
-                      <View style={styles.doneBadge}>
-                        <MaterialCommunityIcons name="check" size={11} color={COLORS.emerald700} />
-                        <Text style={styles.doneBadgeText}>Done</Text>
-                      </View>
-                    ) : (
-                      <View style={styles.openPill}>
-                        <Text style={styles.openPillText}>OPEN</Text>
-                      </View>
+                    {({ hovered }) => (
+                      <>
+                        <View style={[styles.paramIconBox, { backgroundColor: style.bg, borderColor: style.border }]}>
+                          <MaterialCommunityIcons name={style.icon} size={19} color={style.fg} />
+                        </View>
+                        <View style={{ flex: 1 }}>
+                          <Text style={[styles.listRowTitle, hovered && { color: COLORS.brand700 }]}>{p.title}</Text>
+                          <Text style={styles.listRowDesc}>{p.desc}</Text>
+                        </View>
+                        {p.na ? (
+                          <View style={styles.dashPill}>
+                            <Text style={styles.dashPillText}>—</Text>
+                          </View>
+                        ) : p.done ? (
+                          <View style={styles.doneBadge}>
+                            <MaterialCommunityIcons name="check" size={11} color={COLORS.emerald700} />
+                            <Text style={styles.doneBadgeText}>Done</Text>
+                          </View>
+                        ) : (
+                          <View style={styles.openPill}>
+                            <Text style={styles.openPillText}>OPEN</Text>
+                          </View>
+                        )}
+                        <MaterialCommunityIcons name="chevron-right" size={16} color={COLORS.slate400} style={hovered && { transform: [{ translateX: 2 }] }} />
+                      </>
                     )}
-                    <MaterialCommunityIcons name="chevron-right" size={16} color={COLORS.slate400} />
                   </PressScale>
                 );
               })}
@@ -471,23 +473,33 @@ export default function HomeScreen({
                 screens read, not placeholder numbers. */}
             <View style={styles.sectionHeaderRow}>
               <Text style={styles.sectionLabel}>Daily Ledgers</Text>
-              <PressScale onPress={handleSyncToday} hitSlop={8} scaleTo={0.92} style={styles.syncBtn}>
+              <PressScale onPress={handleSyncToday} hitSlop={8} scaleTo={0.92} style={({ hovered }) => [styles.syncBtn, hovered && { opacity: 0.75 }]}>
                 <Text style={styles.syncBtnText}>{ledgersRefreshing ? 'Syncing…' : 'Sync Today'}</Text>
                 <MaterialCommunityIcons name="sync" size={12} color={COLORS.brand700} />
               </PressScale>
             </View>
             <View style={styles.ledgerGrid}>
-              <PressScale scaleTo={0.97} style={({ pressed }) => [styles.ledgerCard, pressed && { backgroundColor: COLORS.slate50 }]} onPress={() => onNavigateScreen && onNavigateScreen('MPCS_DAILY_TRANS')}>
+              <PressScale
+                scaleTo={0.97}
+                outerStyle={{ flex: 1 }}
+                style={({ pressed, hovered }) => [styles.ledgerCard, hovered && { backgroundColor: 'rgba(248,250,252,0.5)' }, pressed && { backgroundColor: COLORS.slate50 }]}
+                onPress={() => onNavigateScreen && onNavigateScreen('MPCS_DAILY_TRANS')}
+              >
                 <View style={styles.ledgerCardTopRow}>
                   <View style={[styles.ledgerIconBox, { backgroundColor: COLORS.rose50, borderColor: 'rgba(254,205,213,0.6)' }]}>
                     <MaterialCommunityIcons name="book-open-variant" size={19} color={COLORS.brand700} />
                   </View>
                   <MaterialCommunityIcons name="chevron-right" size={16} color={COLORS.slate400} />
                 </View>
-                <Text style={styles.ledgerCardTitle}>Cash Book</Text>
+                <Text style={[styles.ledgerCardTitle, { color: COLORS.brand700 }]}>Cash Book</Text>
                 <Text style={styles.ledgerCardSub}>{cashBookSub}</Text>
               </PressScale>
-              <PressScale scaleTo={0.97} style={({ pressed }) => [styles.ledgerCard, pressed && { backgroundColor: COLORS.slate50 }]} onPress={() => onNavigateScreen && onNavigateScreen('MPCS_CSC_TRANS')}>
+              <PressScale
+                scaleTo={0.97}
+                outerStyle={{ flex: 1 }}
+                style={({ pressed, hovered }) => [styles.ledgerCard, hovered && { backgroundColor: 'rgba(248,250,252,0.5)' }, pressed && { backgroundColor: COLORS.slate50 }]}
+                onPress={() => onNavigateScreen && onNavigateScreen('MPCS_CSC_TRANS')}
+              >
                 <View style={styles.ledgerCardTopRow}>
                   <View style={[styles.ledgerIconBox, { backgroundColor: COLORS.sky50, borderColor: COLORS.sky100 }]}>
                     <MaterialCommunityIcons name="laptop" size={19} color={COLORS.sky700} />
@@ -505,7 +517,7 @@ export default function HomeScreen({
           <>
             <PressScale
               scaleTo={0.98}
-              style={({ pressed }) => [styles.card, pressed && { backgroundColor: COLORS.slate50 }]}
+              style={({ pressed, hovered }) => [styles.card, hovered && { backgroundColor: 'rgba(248,250,252,0.6)' }, pressed && { backgroundColor: COLORS.slate50 }]}
               onPress={() => onNavigateScreen && onNavigateScreen('MPCS_MASTER_DATA')}
             >
               <View style={styles.masterSummaryRow}>
@@ -526,9 +538,10 @@ export default function HomeScreen({
                     <PressScale
                       key={r.title}
                       scaleTo={0.985}
-                      style={({ pressed }) => [
+                      style={({ pressed, hovered }) => [
                         styles.listRow,
                         i === masterNeedsUpdate.length - 1 && styles.listRowLast,
+                        hovered && { backgroundColor: 'rgba(248,250,252,0.6)' },
                         pressed && { backgroundColor: COLORS.slate100 },
                       ]}
                       onPress={() => onNavigateScreen && onNavigateScreen(r.id)}
@@ -549,7 +562,7 @@ export default function HomeScreen({
         {internalTab === 'member' && (
           <PressScale
             scaleTo={0.98}
-            style={({ pressed }) => [styles.card, pressed && { backgroundColor: COLORS.slate50 }]}
+            style={({ pressed, hovered }) => [styles.card, hovered && { backgroundColor: 'rgba(248,250,252,0.6)' }, pressed && { backgroundColor: COLORS.slate50 }]}
             onPress={() => onNavigateScreen && onNavigateScreen('MPCS_MEMBERS')}
           >
             <View style={styles.masterSummaryRow}>
@@ -656,6 +669,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderWidth: 2,
     borderColor: 'rgba(255,255,255,0.25)',
+    backgroundColor: 'rgba(255,255,255,0.15)',
   },
   headerAvatarText: {
     fontFamily: FONT_FAMILY,
@@ -990,17 +1004,17 @@ const styles = StyleSheet.create({
   },
   listRowTitle: {
     fontFamily: FONT_FAMILY,
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: '800',
     color: COLORS.ink,
-    letterSpacing: -0.2,
+    letterSpacing: -0.3,
   },
   listRowDesc: {
     fontFamily: FONT_FAMILY,
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: '400',
     color: COLORS.slate400,
-    marginTop: 2,
+    marginTop: 3,
   },
   dashPill: {
     width: 36,
@@ -1052,7 +1066,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: 16,
+    marginBottom: 10,
   },
   ledgerIconBox: {
     width: 44,
@@ -1074,7 +1088,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '500',
     color: COLORS.slate400,
-    marginTop: 12,
+    marginTop: 4,
     lineHeight: 17,
   },
   openPill: {
