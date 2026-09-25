@@ -19,6 +19,27 @@ const COLORS = {
   amber700: '#B45309',
 };
 
+// Per-section accordion header styling — matches the reference mockup's
+// tri-color accordion (green/blue/purple headers), keyed by section title.
+const SECTION_META = {
+  'Society info': { icon: 'bank', headerBg: '#EBF9F5', iconBg: '#D1F2E8', iconColor: '#00897B', badgeBg: '#D6F5EB', badgeColor: '#00897B' },
+  'Financials': { icon: 'chart-bar', headerBg: '#EDF5FF', iconBg: '#D9EBFF', iconColor: '#1D4ED8', badgeBg: '#DBEAFE', badgeColor: '#1D4ED8' },
+  'Optional services': { icon: 'view-grid-outline', headerBg: '#F3F0FF', iconBg: '#E4DCFF', iconColor: '#6D28D9', badgeBg: '#EAE4FF', badgeColor: '#6D28D9' },
+};
+
+// Per-record leading icon + tint, one per master-data record, matching the
+// reference mockup's color-coded icon chips.
+const RECORD_ICON = {
+  profile: { icon: 'file-document-outline', bg: '#E8F1FD', color: '#2563EB' },
+  demographics: { icon: 'account-group-outline', bg: '#EDE9FE', color: '#6366F1' },
+  compliance: { icon: 'shield-check-outline', bg: '#FEF3C7', color: '#EA580C' },
+  financials: { icon: 'chart-bar', bg: '#DCFCE7', color: '#16A34A' },
+  dividend: { icon: 'database-outline', bg: '#FEE2E2', color: '#E11D48' },
+  shareCapital: { icon: 'chart-pie', bg: '#FEF9C3', color: '#CA8A04' },
+  loan: { icon: 'hand-coin-outline', bg: '#E0F7FA', color: '#00838F' },
+  csc: { icon: 'laptop', bg: '#FCE7F3', color: '#BE185D' },
+};
+
 const FONT_FAMILY = 'Manrope';
 
 const fmt = (v) => (v === undefined || v === null || v === '' ? '—' : v);
@@ -142,6 +163,8 @@ export default function MpcsMasterDataListScreen({
   const [expanded, setExpanded] = useState(null); // { key, mode: 'view' | 'edit' }
   const [banner, setBanner] = useState(null); // { message, undo }
   const [isDirty, setIsDirty] = useState(false);
+  const [collapsedSections, setCollapsedSections] = useState({});
+  const toggleSection = (title) => setCollapsedSections((p) => ({ ...p, [title]: !p[title] }));
   const fy = lastCompletedFY();
 
   // Any change of record/mode starts a clean slate — real edits re-flag
@@ -256,7 +279,10 @@ export default function MpcsMasterDataListScreen({
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
-        <Text style={styles.helperText}>Each record saves on its own. Verification starts once all {records.length} are in.</Text>
+        <View style={styles.infoBanner}>
+          <MaterialCommunityIcons name="alert-circle-outline" size={20} color="#A8192A" style={{ marginTop: 1 }} />
+          <Text style={styles.infoBannerText}>Each record saves on its own. Verification starts once all {records.length} are in.</Text>
+        </View>
 
         {banner && (
           <View style={styles.banner}>
@@ -271,19 +297,30 @@ export default function MpcsMasterDataListScreen({
         {SECTIONS.map((section) => {
           const sectionRecords = section.keys.map(k => records.find(r => r.key === k)).filter(Boolean);
           const sectionDone = sectionRecords.filter(r => r.updated).length;
+          const meta = SECTION_META[section.title];
+          const isCollapsed = !!collapsedSections[section.title];
           return (
-          <View key={section.title} style={{ gap: 10 }}>
-            <View style={styles.sectionHeaderRow}>
-              <View style={[styles.sectionIconBadge, sectionDone === sectionRecords.length && styles.sectionIconBadgeDone]}>
-                <MaterialCommunityIcons name={section.icon} size={13} color={sectionDone === sectionRecords.length ? COLORS.green700 : COLORS.maroon} />
+          <View key={section.title} style={styles.sectionCard}>
+            <Pressable style={[styles.sectionHeaderBtn, { backgroundColor: meta.headerBg }]} onPress={() => toggleSection(section.title)}>
+              <View style={styles.sectionHeaderLeft}>
+                <View style={[styles.sectionIconBadge, { backgroundColor: meta.iconBg }]}>
+                  <MaterialCommunityIcons name={meta.icon} size={17} color={meta.iconColor} />
+                </View>
+                <Text style={styles.sectionTitle}>{section.title}</Text>
               </View>
-              <Text style={styles.sectionTitle}>{section.title}</Text>
-              <Text style={styles.sectionCount}>{sectionDone}/{sectionRecords.length}</Text>
-            </View>
-            <View style={styles.listCard}>
+              <View style={styles.sectionHeaderRight}>
+                <View style={[styles.sectionCountBadge, { backgroundColor: meta.badgeBg }]}>
+                  <Text style={[styles.sectionCountText, { color: meta.badgeColor }]}>{sectionDone}/{sectionRecords.length}</Text>
+                </View>
+                <MaterialCommunityIcons name={isCollapsed ? 'chevron-down' : 'chevron-up'} size={18} color={meta.badgeColor} />
+              </View>
+            </Pressable>
+            {!isCollapsed && (
+              <View>
               {sectionRecords.map((r, i) => {
             const isOpen = expanded?.key === r.key;
             const recorded = !!r.updated;
+            const icon = RECORD_ICON[r.key];
             return (
               <View key={r.key} style={[styles.rowWrap, i !== sectionRecords.length - 1 && !isOpen && styles.rowBorder]}>
                 {isOpen ? (
@@ -316,6 +353,9 @@ export default function MpcsMasterDataListScreen({
                   />
                 ) : (
                   <Pressable style={styles.row} onPress={() => openRow(r.key, recorded)}>
+                    <View style={[styles.rowIconBox, { backgroundColor: icon.bg }]}>
+                      <MaterialCommunityIcons name={icon.icon} size={19} color={icon.color} />
+                    </View>
                     <View style={{ flex: 1 }}>
                       <Text style={styles.rowTitle}>{r.title}</Text>
                       <Text style={styles.rowSubtitle}>
@@ -324,17 +364,17 @@ export default function MpcsMasterDataListScreen({
                           : 'Never updated'}
                       </Text>
                     </View>
-                    {recorded ? (
-                      <Text style={styles.viewLink}>View</Text>
-                    ) : (
-                      <Text style={styles.addLink}>Add</Text>
-                    )}
+                    <View style={styles.viewPill}>
+                      <Text style={[styles.viewPillText, !recorded && { color: COLORS.maroon }]}>{recorded ? 'View' : 'Add'}</Text>
+                      <MaterialCommunityIcons name="chevron-right" size={12} color={recorded ? COLORS.slate500 : COLORS.maroon} />
+                    </View>
                   </Pressable>
                 )}
               </View>
             );
               })}
-            </View>
+              </View>
+            )}
           </View>
           );
         })}
@@ -1003,32 +1043,37 @@ const styles = StyleSheet.create({
   topRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
   backBtn: { width: 28, height: 28, justifyContent: 'center' },
   title: { fontFamily: FONT_FAMILY, fontSize: 22, fontWeight: '800', color: '#ffffff' },
-  subtitle: { fontFamily: FONT_FAMILY, fontSize: 11, fontWeight: '700', color: 'rgba(255,255,255,0.75)', letterSpacing: 0.6, marginTop: 4 },
-  avatarCircle: { width: 36, height: 36, borderRadius: 18, backgroundColor: 'rgba(255,255,255,0.15)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.3)', alignItems: 'center', justifyContent: 'center' },
+  subtitle: { fontFamily: FONT_FAMILY, fontSize: 11, fontWeight: '700', color: 'rgba(254,205,211,0.9)', letterSpacing: 0.6, marginTop: 4 },
+  avatarCircle: { width: 36, height: 36, borderRadius: 18, backgroundColor: 'rgba(0,0,0,0.2)', borderWidth: 1, borderColor: 'rgba(253,164,175,0.4)', alignItems: 'center', justifyContent: 'center' },
   avatarText: { fontFamily: FONT_FAMILY, fontSize: 12, fontWeight: '800', color: '#ffffff' },
 
   scrollContent: { flex: 1 },
   scrollInner: { padding: 16, paddingBottom: 110, gap: 14 },
 
-  helperText: { fontFamily: FONT_FAMILY, fontSize: 13, fontWeight: '500', color: COLORS.slate600, lineHeight: 19 },
-  sectionHeaderRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 2 },
-  sectionIconBadge: { width: 24, height: 24, borderRadius: 12, backgroundColor: COLORS.amber50, alignItems: 'center', justifyContent: 'center' },
-  sectionIconBadgeDone: { backgroundColor: COLORS.greenBg },
-  sectionTitle: { flex: 1, fontFamily: FONT_FAMILY, fontSize: 14, fontWeight: '800', color: COLORS.ink, letterSpacing: 0.1 },
-  sectionCount: { fontFamily: FONT_FAMILY, fontSize: 12, fontWeight: '700', color: COLORS.slate500 },
+  infoBanner: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, backgroundColor: '#FDF2F4', borderWidth: 1, borderColor: '#FADCE2', borderRadius: 16, padding: 14 },
+  infoBannerText: { flex: 1, fontFamily: FONT_FAMILY, fontSize: 13.5, fontWeight: '400', color: '#2E384D', lineHeight: 19 },
+
+  sectionCard: { backgroundColor: COLORS.surface, borderRadius: 18, borderWidth: 1, borderColor: COLORS.border, overflow: 'hidden' },
+  sectionHeaderBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 14, paddingVertical: 14 },
+  sectionHeaderLeft: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  sectionIconBadge: { width: 32, height: 32, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
+  sectionTitle: { fontFamily: FONT_FAMILY, fontSize: 15, fontWeight: '800', color: COLORS.ink },
+  sectionHeaderRight: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  sectionCountBadge: { paddingHorizontal: 10, paddingVertical: 3, borderRadius: 999 },
+  sectionCountText: { fontFamily: FONT_FAMILY, fontSize: 12, fontWeight: '700' },
 
   banner: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: COLORS.greenBg, borderRadius: 12, padding: 12 },
   bannerText: { flex: 1, fontFamily: FONT_FAMILY, fontSize: 13, fontWeight: '600', color: COLORS.green700 },
   bannerUndo: { fontFamily: FONT_FAMILY, fontSize: 13, fontWeight: '800', color: COLORS.green700, textDecorationLine: 'underline' },
 
-  listCard: { backgroundColor: COLORS.surface, borderRadius: 18, borderWidth: 1, borderColor: COLORS.border, overflow: 'hidden' },
   rowWrap: {},
   rowBorder: { borderBottomWidth: 1, borderBottomColor: COLORS.border },
-  row: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 16, paddingVertical: 16 },
-  rowTitle: { fontFamily: FONT_FAMILY, fontSize: 15, fontWeight: '800', color: COLORS.ink },
+  row: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 14, paddingVertical: 14 },
+  rowIconBox: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  rowTitle: { fontFamily: FONT_FAMILY, fontSize: 14, fontWeight: '700', color: COLORS.ink },
   rowSubtitle: { fontFamily: FONT_FAMILY, fontSize: 12, fontWeight: '500', color: COLORS.slate500, marginTop: 2 },
-  addLink: { fontFamily: FONT_FAMILY, fontSize: 13, fontWeight: '800', color: COLORS.maroon },
-  viewLink: { fontFamily: FONT_FAMILY, fontSize: 13, fontWeight: '800', color: COLORS.ink },
+  viewPill: { flexDirection: 'row', alignItems: 'center', gap: 4, borderWidth: 1, borderColor: COLORS.border, borderRadius: 10, paddingHorizontal: 10, paddingVertical: 7, backgroundColor: COLORS.surface },
+  viewPillText: { fontFamily: FONT_FAMILY, fontSize: 12, fontWeight: '600', color: COLORS.ink },
 
   editCard: { borderWidth: 1.5, borderColor: COLORS.maroon, borderRadius: 14, padding: 16, margin: 10, gap: 12 },
   editHeaderRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
