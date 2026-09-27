@@ -8,7 +8,7 @@ import { fetchLoanBeneficiaries, saveLoanBeneficiary, updateLoanBeneficiary, del
 
 const COLORS = {
   maroon: '#7B1420',
-  bg: '#F5F1EC',
+  bg: '#F4F5F7',
   surface: '#FFFFFF',
   ink: '#1E1B18',
   slate600: '#57534E',
@@ -253,7 +253,7 @@ export default function MpcsLoanBeneficiariesScreen({
             p.sub { color: #57534E; font-size: 12px; margin-top: 0; margin-bottom: 20px; }
             table { width: 100%; border-collapse: collapse; }
             th, td { border: 1px solid #E7E2DA; padding: 8px 10px; font-size: 12px; text-align: left; }
-            th { background: #F5F1EC; text-transform: uppercase; letter-spacing: 0.4px; font-size: 10px; color: #57534E; }
+            th { background: #F4F5F7; text-transform: uppercase; letter-spacing: 0.4px; font-size: 10px; color: #57534E; }
           </style>
         </head>
         <body>

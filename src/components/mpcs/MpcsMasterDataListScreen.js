@@ -6,7 +6,7 @@ import { webCapWidth } from '../../utils/webStyles';
 
 const COLORS = {
   maroon: '#7B1420',
-  bg: '#F5F1EC',
+  bg: '#F4F5F7',
   surface: '#FFFFFF',
   ink: '#1E1B18',
   slate600: '#57534E',
@@ -22,22 +22,22 @@ const COLORS = {
 // Per-section accordion header styling — matches the reference mockup's
 // tri-color accordion (green/blue/purple headers), keyed by section title.
 const SECTION_META = {
-  'Society info': { icon: 'bank', headerBg: '#EBF9F5', iconBg: '#D1F2E8', iconColor: '#00897B', badgeBg: '#D6F5EB', badgeColor: '#00897B' },
-  'Financials': { icon: 'chart-bar', headerBg: '#EDF5FF', iconBg: '#D9EBFF', iconColor: '#1D4ED8', badgeBg: '#DBEAFE', badgeColor: '#1D4ED8' },
-  'Optional services': { icon: 'view-grid-outline', headerBg: '#F3F0FF', iconBg: '#E4DCFF', iconColor: '#6D28D9', badgeBg: '#EAE4FF', badgeColor: '#6D28D9' },
+  'Society info': { icon: 'bank', desc: 'Basic details, membership and compliance', headerBg: '#EBF9F5', iconBg: '#D1F2E8', iconColor: '#00897B', badgeBg: '#D6F5EB', badgeColor: '#00897B' },
+  'Financials': { icon: 'chart-bar', desc: 'Turnover, dividends and capital', headerBg: '#EDF5FF', iconBg: '#D9EBFF', iconColor: '#1D4ED8', badgeBg: '#DBEAFE', badgeColor: '#1D4ED8' },
+  'Optional services': { icon: 'view-grid-outline', desc: 'Loan and CSC service details', headerBg: '#F3F0FF', iconBg: '#E4DCFF', iconColor: '#6D28D9', badgeBg: '#EAE4FF', badgeColor: '#6D28D9' },
 };
 
 // Per-record leading icon + tint, one per master-data record, matching the
 // reference mockup's color-coded icon chips.
 const RECORD_ICON = {
-  profile: { icon: 'file-document-outline', bg: '#E8F1FD', color: '#2563EB' },
-  demographics: { icon: 'account-group-outline', bg: '#EDE9FE', color: '#6366F1' },
-  compliance: { icon: 'shield-check-outline', bg: '#FEF3C7', color: '#EA580C' },
-  financials: { icon: 'chart-bar', bg: '#DCFCE7', color: '#16A34A' },
-  dividend: { icon: 'database-outline', bg: '#FEE2E2', color: '#E11D48' },
-  shareCapital: { icon: 'chart-pie', bg: '#FEF9C3', color: '#CA8A04' },
-  loan: { icon: 'hand-coin-outline', bg: '#E0F7FA', color: '#00838F' },
-  csc: { icon: 'laptop', bg: '#FCE7F3', color: '#BE185D' },
+  profile: { icon: 'file-document-outline', bg: '#E8F1FD', color: '#2563EB', desc: 'Basic registration details of the society' },
+  demographics: { icon: 'account-group-outline', bg: '#EDE9FE', color: '#6366F1', desc: 'Member headcount by category' },
+  compliance: { icon: 'shield-check-outline', bg: '#FEF3C7', color: '#EA580C', desc: 'Audit and AGM status for the year' },
+  financials: { icon: 'chart-bar', bg: '#DCFCE7', color: '#16A34A', desc: 'Annual turnover, income and expenses' },
+  dividend: { icon: 'database-outline', bg: '#FEE2E2', color: '#E11D48', desc: 'Dividend distributed to members' },
+  shareCapital: { icon: 'chart-pie', bg: '#FEF9C3', color: '#CA8A04', desc: 'Authorised capital and member deposits' },
+  loan: { icon: 'hand-coin-outline', bg: '#E0F7FA', color: '#00838F', desc: 'Active loans and beneficiaries' },
+  csc: { icon: 'laptop', bg: '#FCE7F3', color: '#BE185D', desc: 'Common Service Centre operator details' },
 };
 
 const FONT_FAMILY = 'Manrope';
@@ -306,7 +306,10 @@ export default function MpcsMasterDataListScreen({
                 <View style={[styles.sectionIconBadge, { backgroundColor: meta.iconBg }]}>
                   <MaterialCommunityIcons name={meta.icon} size={17} color={meta.iconColor} />
                 </View>
-                <Text style={styles.sectionTitle}>{section.title}</Text>
+                <View style={{ flex: 1, minWidth: 0 }}>
+                  <Text style={styles.sectionTitle}>{section.title}</Text>
+                  <Text style={styles.sectionDesc} numberOfLines={1}>{meta.desc}</Text>
+                </View>
               </View>
               <View style={styles.sectionHeaderRight}>
                 <View style={[styles.sectionCountBadge, { backgroundColor: meta.badgeBg }]}>
@@ -390,10 +393,19 @@ function RecordPanel({
   profileInitial, demographicsInitial, loanInitial, complianceInitial, financialsInitial, dividendInitial, shareCapitalInitial, cscInitial,
   onSaveProfile, onSaveDemographics, onSaveLoan, onManageBeneficiaries, onSaveCompliance, onSaveFinancials, onSaveDividend, onSaveShareCapital, onSaveCscDetails,
 }) {
+  const icon = RECORD_ICON[recordKey];
   return (
     <View style={styles.editCard}>
       <View style={styles.editHeaderRow}>
-        <Text style={styles.editTitle}>{title}</Text>
+        <View style={styles.editHeaderLeft}>
+          <View style={[styles.editIconBox, { backgroundColor: icon.bg }]}>
+            <MaterialCommunityIcons name={icon.icon} size={18} color={icon.color} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.editTitle}>{title}</Text>
+            <Text style={styles.editDesc}>{icon.desc}</Text>
+          </View>
+        </View>
         <View style={styles.editHeaderActions}>
           {mode === 'view' && (
             <Pressable onPress={onGoToEdit} hitSlop={8}>
@@ -752,14 +764,18 @@ function ProfileForm({ initial, onCancel, onSave, onDirtyChange }) {
   const hasErrors = !!(panErr || presMobileErr || mgrMobileErr);
   return (
     <FormBody onCancel={onCancel} onSave={() => { if (!hasErrors) onSave(form, prev); }}>
-      <Field label="Society name" value={form.societyName} onChangeText={set('societyName')} />
-      <Field label="Registration number" value={form.regNumber} onChangeText={set('regNumber')} />
-      <DateField label="Date of registration" value={form.regDate} onChangeText={set('regDate')} />
-      <Field label="PAN" value={form.panCard} onChangeText={set('panCard')} autoCapitalize="characters" error={panErr} />
-      <Field label="President name" value={form.presidentName} onChangeText={set('presidentName')} />
-      <Field label="President mobile" value={form.presidentMobile} onChangeText={set('presidentMobile')} keyboardType="numeric" error={presMobileErr} />
-      <Field label="Manager name" value={form.secretaryName} onChangeText={set('secretaryName')} />
-      <Field label="Manager mobile" value={form.secretaryMobile} onChangeText={set('secretaryMobile')} keyboardType="numeric" error={mgrMobileErr} />
+      <Field label="Society name" value={form.societyName} onChangeText={set('societyName')} required />
+      <Field label="Registration number" value={form.regNumber} onChangeText={set('regNumber')} required />
+      <DateField label="Date of registration" value={form.regDate} onChangeText={set('regDate')} required />
+      <Field label="PAN" value={form.panCard} onChangeText={set('panCard')} placeholder="Enter PAN number (if available)" autoCapitalize="characters" error={panErr} />
+      <View style={styles.rowHalf}>
+        <View style={styles.fieldHalf}><Field label="President name" value={form.presidentName} onChangeText={set('presidentName')} placeholder="Enter president name" /></View>
+        <View style={styles.fieldHalf}><Field label="President mobile" value={form.presidentMobile} onChangeText={set('presidentMobile')} placeholder="10 digit number" keyboardType="numeric" prefix="+91" error={presMobileErr} /></View>
+      </View>
+      <View style={styles.rowHalf}>
+        <View style={styles.fieldHalf}><Field label="Manager name" value={form.secretaryName} onChangeText={set('secretaryName')} placeholder="Enter manager name" /></View>
+        <View style={styles.fieldHalf}><Field label="Manager mobile" value={form.secretaryMobile} onChangeText={set('secretaryMobile')} placeholder="10 digit number" keyboardType="numeric" prefix="+91" error={mgrMobileErr} /></View>
+      </View>
     </FormBody>
   );
 }
@@ -963,12 +979,18 @@ function CscForm({ initial, onCancel, onSave, onDirtyChange }) {
 
 // ─── Shared bits ────────────────────────────────────────────────────────
 
-function Field({ label, value, onChangeText, placeholder, keyboardType, autoCapitalize, multiline, prefix, error }) {
+function Field({ label, value, onChangeText, placeholder, keyboardType, autoCapitalize, multiline, prefix, error, required }) {
+  const [focused, setFocused] = useState(false);
   return (
     <View style={styles.fieldGroup}>
-      <Text style={styles.inputLabel}>{label}</Text>
-      <View style={[styles.inputBox, multiline && { height: 80, alignItems: 'flex-start', paddingVertical: 12 }, error && styles.inputBoxError]}>
-        {prefix && <Text style={styles.inputPrefix}>{prefix}</Text>}
+      <Text style={styles.inputLabel}>{label}{required ? <Text style={styles.inputRequired}> *</Text> : null}</Text>
+      <View style={[styles.inputBox, multiline && { height: 80, alignItems: 'flex-start', paddingVertical: 12 }, focused && styles.inputBoxFocused, error && styles.inputBoxError]}>
+        {prefix && (
+          <>
+            <Text style={styles.inputPrefix}>{prefix}</Text>
+            <View style={styles.inputPrefixDivider} />
+          </>
+        )}
         <TextInput
           style={styles.textInput}
           value={value}
@@ -978,6 +1000,8 @@ function Field({ label, value, onChangeText, placeholder, keyboardType, autoCapi
           keyboardType={keyboardType || 'default'}
           autoCapitalize={autoCapitalize}
           multiline={multiline}
+          onFocus={() => setFocused(true)}
+          onBlur={() => setFocused(false)}
         />
       </View>
       {!!error && <Text style={styles.fieldError}>{error}</Text>}
@@ -988,16 +1012,19 @@ function Field({ label, value, onChangeText, placeholder, keyboardType, autoCapi
 // Real date picker on web (native <input type="date">); DD Mon YYYY text
 // entry on iOS/Android, same fallback the rest of the app uses since
 // @react-native-community/datetimepicker isn't wired up anywhere yet.
-function DateField({ label, value, onChangeText, placeholder }) {
+function DateField({ label, value, onChangeText, placeholder, required }) {
+  const [focused, setFocused] = useState(false);
   return (
     <View style={styles.fieldGroup}>
-      <Text style={styles.inputLabel}>{label}</Text>
+      <Text style={styles.inputLabel}>{label}{required ? <Text style={styles.inputRequired}> *</Text> : null}</Text>
       {Platform.OS === 'web' ? (
-        <View style={styles.inputBox}>
+        <View style={[styles.inputBox, focused && styles.inputBoxFocused]}>
           <input
             type="date"
             value={formatToIsoDate(value)}
             onChange={(e) => onChangeText(formatFromIsoDate(e.target.value))}
+            onFocus={() => setFocused(true)}
+            onBlur={() => setFocused(false)}
             style={{
               width: '100%', height: '100%', border: 'none', outline: 'none',
               background: 'transparent', fontFamily: FONT_FAMILY, fontSize: '16px',
@@ -1006,13 +1033,15 @@ function DateField({ label, value, onChangeText, placeholder }) {
           />
         </View>
       ) : (
-        <View style={styles.inputBox}>
+        <View style={[styles.inputBox, focused && styles.inputBoxFocused]}>
           <TextInput
             style={styles.textInput}
             value={value}
             onChangeText={onChangeText}
             placeholder={placeholder || 'DD Mon YYYY'}
             placeholderTextColor={COLORS.slate400}
+            onFocus={() => setFocused(true)}
+            onBlur={() => setFocused(false)}
           />
         </View>
       )}
@@ -1025,10 +1054,10 @@ function FormBody({ onCancel, onSave, children }) {
     <View style={{ gap: 14 }}>
       {children}
       <View style={{ flexDirection: 'row', gap: 10, marginTop: 2 }}>
-        <Pressable style={styles.outlineBtn} onPress={onCancel}>
+        <Pressable style={({ pressed }) => [styles.outlineBtn, pressed && { backgroundColor: COLORS.bg }]} onPress={onCancel}>
           <Text style={styles.outlineBtnText}>Cancel</Text>
         </Pressable>
-        <Pressable style={[styles.saveBtn, { flex: 1 }]} onPress={onSave}>
+        <Pressable style={({ pressed }) => [styles.saveBtn, { flex: 1 }, pressed && { opacity: 0.85 }]} onPress={onSave}>
           <Text style={styles.saveBtnText}>Save this record</Text>
         </Pressable>
       </View>
@@ -1055,9 +1084,10 @@ const styles = StyleSheet.create({
 
   sectionCard: { backgroundColor: COLORS.surface, borderRadius: 18, borderWidth: 1, borderColor: COLORS.border, overflow: 'hidden' },
   sectionHeaderBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 14, paddingVertical: 14 },
-  sectionHeaderLeft: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  sectionIconBadge: { width: 32, height: 32, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
+  sectionHeaderLeft: { flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1, paddingRight: 10 },
+  sectionIconBadge: { width: 36, height: 36, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
   sectionTitle: { fontFamily: FONT_FAMILY, fontSize: 15, fontWeight: '800', color: COLORS.ink },
+  sectionDesc: { fontFamily: FONT_FAMILY, fontSize: 12, fontWeight: '500', color: COLORS.slate500, marginTop: 1 },
   sectionHeaderRight: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   sectionCountBadge: { paddingHorizontal: 10, paddingVertical: 3, borderRadius: 999 },
   sectionCountText: { fontFamily: FONT_FAMILY, fontSize: 12, fontWeight: '700' },
@@ -1075,10 +1105,26 @@ const styles = StyleSheet.create({
   viewPill: { flexDirection: 'row', alignItems: 'center', gap: 4, borderWidth: 1, borderColor: COLORS.border, borderRadius: 10, paddingHorizontal: 10, paddingVertical: 7, backgroundColor: COLORS.surface },
   viewPillText: { fontFamily: FONT_FAMILY, fontSize: 12, fontWeight: '600', color: COLORS.ink },
 
-  editCard: { borderWidth: 1.5, borderColor: COLORS.maroon, borderRadius: 14, padding: 16, margin: 10, gap: 12 },
-  editHeaderRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  editHeaderActions: { flexDirection: 'row', alignItems: 'center', gap: 16 },
-  editTitle: { fontFamily: FONT_FAMILY, fontSize: 16, fontWeight: '800', color: COLORS.ink },
+  editCard: {
+    backgroundColor: COLORS.surface,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: 16,
+    padding: 18,
+    margin: 10,
+    gap: 14,
+    shadowColor: '#1E1B18',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.08,
+    shadowRadius: 16,
+    elevation: 4,
+  },
+  editHeaderRow: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', paddingBottom: 14, borderBottomWidth: 1, borderBottomColor: COLORS.border },
+  editHeaderLeft: { flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1, paddingRight: 10 },
+  editIconBox: { width: 36, height: 36, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
+  editHeaderActions: { flexDirection: 'row', alignItems: 'center', gap: 16, marginTop: 2 },
+  editTitle: { fontFamily: FONT_FAMILY, fontSize: 16, fontWeight: '800', color: COLORS.ink, letterSpacing: -0.2 },
+  editDesc: { fontFamily: FONT_FAMILY, fontSize: 12, fontWeight: '500', color: COLORS.slate500, marginTop: 1 },
   updateLink: { fontFamily: FONT_FAMILY, fontSize: 13, fontWeight: '800', color: COLORS.maroon },
 
   readCard: { backgroundColor: COLORS.bg, borderRadius: 14, padding: 14 },
@@ -1113,11 +1159,14 @@ const styles = StyleSheet.create({
   tableTotalRow: { borderTopWidth: 1, borderTopColor: COLORS.border, paddingTop: 10 },
   tableTotalCell: { flex: 1, fontFamily: FONT_FAMILY, fontSize: 14, fontWeight: '800', color: COLORS.ink },
 
-  inputLabel: { fontFamily: FONT_FAMILY, fontSize: 13, fontWeight: '700', color: COLORS.ink },
-  inputBox: { flexDirection: 'row', alignItems: 'center', backgroundColor: COLORS.bg, borderWidth: 1, borderColor: COLORS.border, borderRadius: 12, paddingHorizontal: 14, height: 48 },
+  inputLabel: { fontFamily: FONT_FAMILY, fontSize: 13, fontWeight: '600', color: COLORS.slate600 },
+  inputRequired: { color: '#DC2626' },
+  inputBox: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#F3F4F7', borderWidth: 1, borderColor: '#E2E4EA', borderRadius: 12, paddingHorizontal: 14, height: 48 },
+  inputBoxFocused: { borderColor: COLORS.maroon, backgroundColor: COLORS.surface, shadowColor: COLORS.maroon, shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.12, shadowRadius: 6, elevation: 2 },
   inputBoxError: { borderColor: '#DC2626' },
   fieldError: { fontFamily: FONT_FAMILY, fontSize: 12, fontWeight: '600', color: '#DC2626', marginTop: 2 },
-  inputPrefix: { fontFamily: FONT_FAMILY, fontSize: 16, fontWeight: '800', color: COLORS.maroon, marginRight: 6 },
+  inputPrefix: { fontFamily: FONT_FAMILY, fontSize: 16, fontWeight: '700', color: COLORS.ink },
+  inputPrefixDivider: { width: 1, height: 20, backgroundColor: '#D5D8DE', marginHorizontal: 10 },
   textInput: { flex: 1, fontFamily: FONT_FAMILY, fontSize: 16, fontWeight: '600', color: COLORS.ink, ...(Platform.OS === 'web' ? { outlineStyle: 'none' } : {}) },
   rowHalf: { flexDirection: 'row', gap: 10 },
   fieldHalf: { flex: 1, gap: 6 },
@@ -1131,6 +1180,16 @@ const styles = StyleSheet.create({
   outlineBtn: { flex: 1, borderWidth: 1.5, borderColor: COLORS.border, borderRadius: 12, paddingVertical: 13, alignItems: 'center' },
   outlineBtnInline: { alignSelf: 'flex-start', borderWidth: 1.5, borderColor: COLORS.border, borderRadius: 10, paddingHorizontal: 14, paddingVertical: 9, marginTop: 10 },
   outlineBtnText: { fontFamily: FONT_FAMILY, fontSize: 14, fontWeight: '800', color: COLORS.ink },
-  saveBtn: { backgroundColor: COLORS.maroon, borderRadius: 12, paddingVertical: 13, alignItems: 'center' },
+  saveBtn: {
+    backgroundColor: COLORS.maroon,
+    borderRadius: 12,
+    paddingVertical: 13,
+    alignItems: 'center',
+    shadowColor: COLORS.maroon,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 10,
+    elevation: 3,
+  },
   saveBtnText: { fontFamily: FONT_FAMILY, fontSize: 14, fontWeight: '800', color: '#ffffff' },
 });

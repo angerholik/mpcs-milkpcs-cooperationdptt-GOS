@@ -11,7 +11,7 @@ import BottomNav from '../BottomNav';
 // in line so Profile doesn't look like a different app from Master Data.
 const COLORS = {
   maroon: '#7B1420',
-  bg: '#F5F1EC',
+  bg: '#F4F5F7',
   surface: '#FFFFFF',
   ink: '#1E1B18',
   slate600: '#57534E',

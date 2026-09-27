@@ -14,7 +14,7 @@ import { fetchMembers, saveMember, updateMember, deleteMember, resolveMemberFlag
 // was already nullable server-side, only the old UI's canSave forced it).
 const COLORS = {
   maroon: '#7B1420',
-  bg: '#F5F1EC',
+  bg: '#F4F5F7',
   surface: '#FFFFFF',
   ink: '#1E1B18',
   slate600: '#57534E',

@@ -12,7 +12,7 @@ import { queueSubmission } from '../../utils/syncManager';
 // inline trash icon that deletes immediately.
 const COLORS = {
   maroon: '#7B1420',
-  bg: '#F5F1EC',
+  bg: '#F4F5F7',
   surface: '#FFFFFF',
   ink: '#1E1B18',
   slate600: '#57534E',
