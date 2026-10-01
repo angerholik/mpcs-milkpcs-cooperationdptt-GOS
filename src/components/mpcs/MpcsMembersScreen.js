@@ -68,6 +68,7 @@ export default function MpcsMembersScreen({
   const [resolvingMember, setResolvingMember] = useState(null);
   const [resolutionNote, setResolutionNote] = useState('');
   const [resolving, setResolving] = useState(false);
+  const [viewingMember, setViewingMember] = useState(null);
 
   const loadMembers = useCallback(async () => {
     setLoading(true);
@@ -226,12 +227,14 @@ export default function MpcsMembersScreen({
         ) : (
           <>
             <View style={styles.listCard}>
-              {filtered.map((m) => (
-                <View key={m.id} style={styles.listRow}>
-                  <View style={styles.avatar}>
+              {filtered.map((m, i) => {
+                const isLast = i === filtered.length - 1;
+                return (
+                <View key={m.id} style={[styles.listRow, menuOpenId === m.id && styles.listRowRaised]}>
+                  <Pressable style={styles.avatar} onPress={() => setViewingMember(m)}>
                     <Text style={styles.avatarText}>{initialsOf(m.member_name)}</Text>
-                  </View>
-                  <View style={{ flex: 1 }}>
+                  </Pressable>
+                  <Pressable style={{ flex: 1 }} onPress={() => setViewingMember(m)}>
                     <Text style={styles.listRowTitle} numberOfLines={1}>{m.member_name}</Text>
                     <Text style={styles.listRowSub}>
                       {m.ward_name || 'No ward'} · joined {joinedLabel(m.created_at)}
@@ -241,7 +244,7 @@ export default function MpcsMembersScreen({
                         <Text style={styles.flagLink}>🚩 Flagged{m.flag_reason ? `: ${m.flag_reason}` : ''} — Mark reviewed</Text>
                       </Pressable>
                     )}
-                  </View>
+                  </Pressable>
                   {!m.aadhaar_number && (
                     <View style={styles.incompletePill}>
                       <Text style={styles.incompletePillText}>INCOMPLETE</Text>
@@ -256,7 +259,7 @@ export default function MpcsMembersScreen({
                       <MaterialCommunityIcons name="dots-vertical" size={18} color={COLORS.slate500} />
                     </Pressable>
                     {menuOpenId === m.id && (
-                      <View style={styles.rowMenu}>
+                      <View style={[styles.rowMenu, isLast && styles.rowMenuUp]}>
                         <Pressable style={styles.rowMenuItem} onPress={() => handleEdit(m)}>
                           <MaterialCommunityIcons name="pencil-outline" size={15} color={COLORS.ink} />
                           <Text style={styles.rowMenuItemText}>Edit</Text>
@@ -269,7 +272,8 @@ export default function MpcsMembersScreen({
                     )}
                   </View>
                 </View>
-              ))}
+                );
+              })}
             </View>
             <Text style={styles.showingCaption}>Showing {filtered.length} of {members.length}</Text>
           </>
@@ -399,6 +403,60 @@ export default function MpcsMembersScreen({
         </View>
       )}
 
+      {viewingMember && (
+        <View style={styles.overlay}>
+          <Pressable style={StyleSheet.absoluteFillObject} onPress={() => setViewingMember(null)} />
+          <View style={styles.sheet}>
+            <View style={styles.detailHeaderRow}>
+              <View style={styles.avatar}>
+                <Text style={styles.avatarText}>{initialsOf(viewingMember.member_name)}</Text>
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.sheetTitle}>{viewingMember.member_name}</Text>
+                <Text style={styles.sheetDesc}>{viewingMember.ward_name || 'No ward'} · joined {joinedLabel(viewingMember.created_at)}</Text>
+              </View>
+            </View>
+
+            <View style={styles.detailList}>
+              <View style={styles.detailRow}>
+                <Text style={styles.detailLabel}>Aadhaar number</Text>
+                <Text style={styles.detailValue}>{formatAadhaar(viewingMember.aadhaar_number)}</Text>
+              </View>
+              <View style={styles.detailRow}>
+                <Text style={styles.detailLabel}>Mobile</Text>
+                <Text style={styles.detailValue}>{viewingMember.mobile_number || '—'}</Text>
+              </View>
+              <View style={styles.detailRow}>
+                <Text style={styles.detailLabel}>Ward</Text>
+                <Text style={styles.detailValue}>{viewingMember.ward_name || '—'}</Text>
+              </View>
+              <View style={styles.detailRow}>
+                <Text style={styles.detailLabel}>Address</Text>
+                <Text style={styles.detailValue}>{viewingMember.address || '—'}</Text>
+              </View>
+              {viewingMember.flagged && (
+                <View style={styles.detailRow}>
+                  <Text style={styles.detailLabel}>Flagged</Text>
+                  <Text style={[styles.detailValue, { color: COLORS.amber700 }]}>{viewingMember.flag_reason || 'Yes'}</Text>
+                </View>
+              )}
+            </View>
+
+            <View style={styles.row}>
+              <Pressable style={styles.backOutlineBtn} onPress={() => setViewingMember(null)}>
+                <Text style={styles.backOutlineText}>Close</Text>
+              </Pressable>
+              <Pressable
+                style={[styles.addBtn, { flex: 2 }]}
+                onPress={() => { const m = viewingMember; setViewingMember(null); handleEdit(m); }}
+              >
+                <Text style={styles.addBtnText}>Edit member</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      )}
+
       {onTabPress && <BottomNav activeTab={activeTab || 'home'} onTabPress={onTabPress} />}
     </View>
   );
@@ -509,7 +567,12 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     borderBottomWidth: 1,
     borderBottomColor: COLORS.border,
+    zIndex: 1,
   },
+  // Without this, the open dropdown menu is painted behind whichever row
+  // comes next in the list (later siblings win ties on z-index:auto), so
+  // Edit/Delete taps land on the row below instead of the menu item.
+  listRowRaised: { zIndex: 20 },
   avatar: {
     width: 40,
     height: 40,
@@ -580,6 +643,10 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.12,
     shadowRadius: 6,
   },
+  // listCard clips overflow for its rounded corners, so the last row's
+  // menu would otherwise be cut off opening downward past the card's
+  // bottom edge — flip it to open upward instead.
+  rowMenuUp: { top: undefined, bottom: 32 },
   rowMenuItem: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -724,5 +791,30 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     color: COLORS.slate600,
     lineHeight: 18,
+  },
+  detailHeaderRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  detailList: { gap: 2 },
+  detailRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    gap: 12,
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
+  },
+  detailLabel: {
+    fontFamily: FONT_FAMILY,
+    fontSize: 13,
+    fontWeight: '600',
+    color: COLORS.slate500,
+  },
+  detailValue: {
+    flex: 1,
+    textAlign: 'right',
+    fontFamily: FONT_FAMILY,
+    fontSize: 13,
+    fontWeight: '700',
+    color: COLORS.ink,
   },
 });
