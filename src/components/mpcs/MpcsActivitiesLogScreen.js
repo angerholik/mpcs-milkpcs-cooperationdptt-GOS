@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, TextInput, ScrollView, Platform, Pressable, Image } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, TextInput, ScrollView, Platform, Pressable, Image, Alert } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import BottomNav from '../BottomNav';
@@ -77,8 +77,15 @@ export default function MpcsActivitiesLogScreen({
   };
 
   const handleDeleteActivity = (id) => {
-    if (setActivityItems) {
-      setActivityItems(activityItems.filter(item => item.id !== id));
+    if (!setActivityItems) return;
+    const doDelete = () => setActivityItems((prev) => prev.filter(item => item.id !== id));
+    if (Platform.OS === 'web') {
+      if (window.confirm('Remove this activity entry?')) doDelete();
+    } else {
+      Alert.alert('Remove Activity', 'Remove this activity entry?', [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Remove', style: 'destructive', onPress: doDelete },
+      ]);
     }
   };
 

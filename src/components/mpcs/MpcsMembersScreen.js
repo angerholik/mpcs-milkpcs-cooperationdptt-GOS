@@ -64,7 +64,6 @@ export default function MpcsMembersScreen({
   const [search, setSearch] = useState('');
   const [form, setForm] = useState(emptyForm);
   const [editingId, setEditingId] = useState(null);
-  const [menuOpenId, setMenuOpenId] = useState(null);
   const [resolvingMember, setResolvingMember] = useState(null);
   const [resolutionNote, setResolutionNote] = useState('');
   const [resolving, setResolving] = useState(false);
@@ -122,7 +121,6 @@ export default function MpcsMembersScreen({
   };
 
   const handleEdit = (m) => {
-    setMenuOpenId(null);
     setEditingId(m.id);
     setForm({
       memberName: m.member_name || '',
@@ -139,7 +137,6 @@ export default function MpcsMembersScreen({
   };
 
   const handleDelete = (m) => {
-    setMenuOpenId(null);
     const doDelete = async () => {
       const { error } = await deleteMember(m.id);
       if (error) {
@@ -227,14 +224,13 @@ export default function MpcsMembersScreen({
         ) : (
           <>
             <View style={styles.listCard}>
-              {filtered.map((m, i) => {
-                const isLast = i === filtered.length - 1;
+              {filtered.map((m) => {
                 return (
-                <View key={m.id} style={[styles.listRow, menuOpenId === m.id && styles.listRowRaised]}>
-                  <Pressable style={styles.avatar} onPress={() => setViewingMember(m)}>
+                <Pressable key={m.id} style={styles.listRow} onPress={() => setViewingMember(m)}>
+                  <View style={styles.avatar}>
                     <Text style={styles.avatarText}>{initialsOf(m.member_name)}</Text>
-                  </Pressable>
-                  <Pressable style={{ flex: 1 }} onPress={() => setViewingMember(m)}>
+                  </View>
+                  <View style={{ flex: 1 }}>
                     <Text style={styles.listRowTitle} numberOfLines={1}>{m.member_name}</Text>
                     <Text style={styles.listRowSub}>
                       {m.ward_name || 'No ward'} · joined {joinedLabel(m.created_at)}
@@ -244,34 +240,14 @@ export default function MpcsMembersScreen({
                         <Text style={styles.flagLink}>🚩 Flagged{m.flag_reason ? `: ${m.flag_reason}` : ''} — Mark reviewed</Text>
                       </Pressable>
                     )}
-                  </Pressable>
+                  </View>
                   {!m.aadhaar_number && (
                     <View style={styles.incompletePill}>
                       <Text style={styles.incompletePillText}>INCOMPLETE</Text>
                     </View>
                   )}
-                  <View>
-                    <Pressable
-                      hitSlop={8}
-                      style={styles.rowMenuBtn}
-                      onPress={() => setMenuOpenId((cur) => (cur === m.id ? null : m.id))}
-                    >
-                      <MaterialCommunityIcons name="dots-vertical" size={18} color={COLORS.slate500} />
-                    </Pressable>
-                    {menuOpenId === m.id && (
-                      <View style={[styles.rowMenu, isLast && styles.rowMenuUp]}>
-                        <Pressable style={styles.rowMenuItem} onPress={() => handleEdit(m)}>
-                          <MaterialCommunityIcons name="pencil-outline" size={15} color={COLORS.ink} />
-                          <Text style={styles.rowMenuItemText}>Edit</Text>
-                        </Pressable>
-                        <Pressable style={styles.rowMenuItem} onPress={() => handleDelete(m)}>
-                          <MaterialCommunityIcons name="trash-can-outline" size={15} color={COLORS.maroon} />
-                          <Text style={[styles.rowMenuItemText, { color: COLORS.maroon }]}>Delete</Text>
-                        </Pressable>
-                      </View>
-                    )}
-                  </View>
-                </View>
+                  <MaterialCommunityIcons name="chevron-right" size={18} color={COLORS.slate400} />
+                </Pressable>
                 );
               })}
             </View>
@@ -442,6 +418,14 @@ export default function MpcsMembersScreen({
               )}
             </View>
 
+            <Pressable
+              style={styles.deleteLinkBtn}
+              onPress={() => { const m = viewingMember; setViewingMember(null); handleDelete(m); }}
+            >
+              <MaterialCommunityIcons name="trash-can-outline" size={15} color={COLORS.maroon} />
+              <Text style={styles.deleteLinkText}>Remove member</Text>
+            </Pressable>
+
             <View style={styles.row}>
               <Pressable style={styles.backOutlineBtn} onPress={() => setViewingMember(null)}>
                 <Text style={styles.backOutlineText}>Close</Text>
@@ -567,12 +551,7 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     borderBottomWidth: 1,
     borderBottomColor: COLORS.border,
-    zIndex: 1,
   },
-  // Without this, the open dropdown menu is painted behind whichever row
-  // comes next in the list (later siblings win ties on z-index:auto), so
-  // Edit/Delete taps land on the row below instead of the menu item.
-  listRowRaised: { zIndex: 20 },
   avatar: {
     width: 40,
     height: 40,
@@ -619,46 +598,6 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: COLORS.maroon,
     letterSpacing: 0.4,
-  },
-  rowMenuBtn: {
-    width: 28,
-    height: 28,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  rowMenu: {
-    position: 'absolute',
-    top: 32,
-    right: 0,
-    backgroundColor: COLORS.surface,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    paddingVertical: 4,
-    minWidth: 110,
-    zIndex: 10,
-    elevation: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.12,
-    shadowRadius: 6,
-  },
-  // listCard clips overflow for its rounded corners, so the last row's
-  // menu would otherwise be cut off opening downward past the card's
-  // bottom edge — flip it to open upward instead.
-  rowMenuUp: { top: undefined, bottom: 32 },
-  rowMenuItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-  },
-  rowMenuItemText: {
-    fontFamily: FONT_FAMILY,
-    fontSize: 13,
-    fontWeight: '700',
-    color: COLORS.ink,
   },
   showingCaption: {
     fontFamily: FONT_FAMILY,
@@ -816,5 +755,18 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '700',
     color: COLORS.ink,
+  },
+  deleteLinkBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 8,
+  },
+  deleteLinkText: {
+    fontFamily: FONT_FAMILY,
+    fontSize: 13,
+    fontWeight: '700',
+    color: COLORS.maroon,
   },
 });

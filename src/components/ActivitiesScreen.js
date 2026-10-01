@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { getMilkSectionData, saveMilkSectionData } from '../utils/monthlySyncManager';
-import { View, Text, StyleSheet, TouchableOpacity, TextInput, ScrollView, Platform, Pressable, Image } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, TextInput, ScrollView, Platform, Pressable, Image, Alert } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import BottomNav from './BottomNav';
@@ -88,7 +88,15 @@ export default function ActivitiesScreen({
   };
 
   const handleDeleteActivity = (id) => {
-    setActivityList(activityList.filter(item => item.id !== id));
+    const doDelete = () => setActivityList((prev) => prev.filter(item => item.id !== id));
+    if (Platform.OS === 'web') {
+      if (window.confirm('Remove this activity entry?')) doDelete();
+    } else {
+      Alert.alert('Remove Activity', 'Remove this activity entry?', [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Remove', style: 'destructive', onPress: doDelete },
+      ]);
+    }
   };
 
   const handleSaveAndNext = async () => {
