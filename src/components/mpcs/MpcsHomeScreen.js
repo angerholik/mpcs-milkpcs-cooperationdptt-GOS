@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, Pressable, ScrollView, Platform, StatusBar, Animated, Easing } from 'react-native';
+import { View, Text, StyleSheet, Pressable, ScrollView, Platform, StatusBar, Animated, Easing, Image } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { webCapWidth } from '../../utils/webStyles';
@@ -72,6 +72,18 @@ const FONT_FAMILY = 'Manrope';
 // and on native the plain translucent circle underneath still reads fine
 // without it.
 const blurStyle = (px) => (Platform.OS === 'web' ? { filter: `blur(${px}px)` } : {});
+
+// Same Kanchenjunga photo used on every other header across the app, dimmed
+// and desaturated so it tints the maroon instead of fighting the white
+// header text. `opacity` and `mixBlendMode` get silently clobbered by
+// react-native-web's atomic CSS ordering when set alongside `filter` on the
+// same element (same class of bug as the boxShadow-vs-shadow* props issue
+// elsewhere in this app) — the dimming is folded into `brightness()` inside
+// `filter` instead, which reliably passes through, and the wrapping View's
+// own `opacity` (plain, no sibling `filter`) handles the fade.
+const headerPhotoFilter = Platform.OS === 'web'
+  ? { filter: 'grayscale(0.4) contrast(1.1) brightness(0.55)' }
+  : { opacity: 0.28 };
 
 // Approximates the reference's two-layer soft-card/shadow-sm boxShadow
 // tokens using RN's own shadow* props — react-native-web translates these
@@ -287,6 +299,13 @@ export default function HomeScreen({
         end={{ x: 0, y: 1 }}
         style={styles.header}
       >
+        <View style={[StyleSheet.absoluteFillObject, { opacity: 0.4 }]} pointerEvents="none">
+          <Image
+            source={require('../../../assets/core/kanchenjunga.jpg')}
+            style={[StyleSheet.absoluteFillObject, headerPhotoFilter]}
+            resizeMode="cover"
+          />
+        </View>
         <View style={[styles.headerBlobTop, blurStyle(28)]} pointerEvents="none" />
         <View style={[styles.headerBlobBottom, blurStyle(20)]} pointerEvents="none" />
 
