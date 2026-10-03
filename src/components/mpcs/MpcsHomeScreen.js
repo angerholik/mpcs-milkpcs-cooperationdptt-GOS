@@ -6,6 +6,11 @@ import { webCapWidth } from '../../utils/webStyles';
 import BottomNav from '../BottomNav';
 import { getMpcsDailyTransactions, getMpcsCscTransactions } from '../../supabase';
 
+// Metro's web target resolves an image require() straight to a URL string
+// (unlike native, where it's a numeric asset id needing resolveAssetSource,
+// which isn't even exposed on this RN-Web build).
+const kanchenjunga = require('../../../assets/core/kanchenjunga.jpg');
+
 // Redesign source: a reference mockup (code.html + screen.png) the user
 // supplied directly — exact Tailwind "brand"/"surface" palette, spacing,
 // and motion reproduced 1:1 below (pulsing notification dot, press-scale
@@ -299,13 +304,34 @@ export default function HomeScreen({
         end={{ x: 0, y: 1 }}
         style={styles.header}
       >
-        <View style={[StyleSheet.absoluteFillObject, { opacity: 0.4 }]} pointerEvents="none">
+        {Platform.OS === 'web' ? (
+          // RN-Web's atomic CSS ordering is non-deterministic across dev vs
+          // minified production builds — in dev, opacity on a wrapping View
+          // (separate from the Image's `filter`) rendered correctly, but in
+          // the production bundle the same split style still lost the
+          // opacity (same underlying clobbering as the boxShadow bug
+          // elsewhere in this app). A real inline `style` attribute on a
+          // plain `<img>` has the highest CSS specificity and isn't routed
+          // through that atomic-class pipeline at all, so it can't be
+          // reordered away.
+          // eslint-disable-next-line jsx-a11y/alt-text
+          <img
+            src={kanchenjunga}
+            style={{
+              position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+              width: '100%', height: '100%', objectFit: 'cover',
+              opacity: 0.4, filter: 'grayscale(0.4) contrast(1.1) brightness(0.75)',
+              pointerEvents: 'none',
+            }}
+          />
+        ) : (
           <Image
             source={require('../../../assets/core/kanchenjunga.jpg')}
             style={[StyleSheet.absoluteFillObject, headerPhotoFilter]}
             resizeMode="cover"
+            pointerEvents="none"
           />
-        </View>
+        )}
         <View style={[styles.headerBlobTop, blurStyle(28)]} pointerEvents="none" />
         <View style={[styles.headerBlobBottom, blurStyle(20)]} pointerEvents="none" />
 
