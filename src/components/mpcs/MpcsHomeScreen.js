@@ -9,7 +9,7 @@ import { getMpcsDailyTransactions, getMpcsCscTransactions } from '../../supabase
 // Metro's web target resolves an image require() straight to a URL string
 // (unlike native, where it's a numeric asset id needing resolveAssetSource,
 // which isn't even exposed on this RN-Web build).
-const kanchenjunga = require('../../../assets/core/kanchenjunga.jpg');
+const cooperativeTheme = require('../../../assets/core/cooperative-theme.jpg');
 
 // Redesign source: a reference mockup (code.html + screen.png) the user
 // supplied directly — exact Tailwind "brand"/"surface" palette, spacing,
@@ -316,17 +316,27 @@ export default function HomeScreen({
           // reordered away.
           // eslint-disable-next-line jsx-a11y/alt-text
           <img
-            src={kanchenjunga}
+            src={cooperativeTheme}
             style={{
-              position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
-              width: '100%', height: '100%', objectFit: 'cover',
-              opacity: 0.4, filter: 'grayscale(0.4) contrast(1.1) brightness(0.75)',
+              // Oversized and centered past the header's own edges —
+              // `blur()` samples transparent pixels once it runs past an
+              // element's own boundary, which otherwise fades the image's
+              // edges to nothing and shows up as a faint darker frame
+              // around the header (the header clips to its rounded box via
+              // `overflow: hidden`, so the overscan never shows).
+              position: 'absolute', top: '-8%', left: '-8%', right: '-8%', bottom: '-8%',
+              width: '116%', height: '116%', objectFit: 'cover', objectPosition: 'center 35%',
+              opacity: 0.45,
+              // Blurred so the signage text (legible in the source photo)
+              // reads as texture/light rather than a second, confusing set
+              // of words competing with the header's real UI text.
+              filter: 'grayscale(0.5) contrast(1.15) brightness(0.8) blur(0.6px)',
               pointerEvents: 'none',
             }}
           />
         ) : (
           <Image
-            source={require('../../../assets/core/kanchenjunga.jpg')}
+            source={require('../../../assets/core/cooperative-theme.jpg')}
             style={[StyleSheet.absoluteFillObject, headerPhotoFilter]}
             resizeMode="cover"
             pointerEvents="none"
