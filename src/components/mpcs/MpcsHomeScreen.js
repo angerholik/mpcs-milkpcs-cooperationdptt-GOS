@@ -1,15 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, Pressable, ScrollView, Platform, StatusBar, Animated, Easing, Image } from 'react-native';
+import { View, Text, StyleSheet, Pressable, ScrollView, Platform, StatusBar, Animated, Easing } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import Svg, { Path } from 'react-native-svg';
 import { webCapWidth } from '../../utils/webStyles';
 import BottomNav from '../BottomNav';
 import { getMpcsDailyTransactions, getMpcsCscTransactions } from '../../supabase';
-
-// Metro's web target resolves an image require() straight to a URL string
-// (unlike native, where it's a numeric asset id needing resolveAssetSource,
-// which isn't even exposed on this RN-Web build).
-const cooperativeTheme = require('../../../assets/core/cooperative-theme.jpg');
 
 // Redesign source: a reference mockup (code.html + screen.png) the user
 // supplied directly — exact Tailwind "brand"/"surface" palette, spacing,
@@ -77,18 +73,41 @@ const FONT_FAMILY = 'Manrope';
 // and on native the plain translucent circle underneath still reads fine
 // without it.
 const blurStyle = (px) => (Platform.OS === 'web' ? { filter: `blur(${px}px)` } : {});
+// Frosted-glass look for the header's icon buttons/chips — web only
+// (backdropFilter has no native RN equivalent), falls back to their plain
+// translucent-fill look on native.
+const glassStyle = (px) => (Platform.OS === 'web' ? { backdropFilter: `blur(${px}px)`, WebkitBackdropFilter: `blur(${px}px)` } : {});
 
-// Same Kanchenjunga photo used on every other header across the app, dimmed
-// and desaturated so it tints the maroon instead of fighting the white
-// header text. `opacity` and `mixBlendMode` get silently clobbered by
-// react-native-web's atomic CSS ordering when set alongside `filter` on the
-// same element (same class of bug as the boxShadow-vs-shadow* props issue
-// elsewhere in this app) — the dimming is folded into `brightness()` inside
-// `filter` instead, which reliably passes through, and the wrapping View's
-// own `opacity` (plain, no sibling `filter`) handles the fade.
-const headerPhotoFilter = Platform.OS === 'web'
-  ? { filter: 'grayscale(0.4) contrast(1.1) brightness(0.55)' }
-  : { opacity: 0.28 };
+// Layered organic wave shapes (reference: a teal "liquid" wallpaper the user
+// supplied) reworked in the maroon brand ramp — gives the gradient header
+// depth and movement without a photo. Each path is a soft diagonal band in
+// a slightly different brand shade/opacity, loosely overlapping like silk
+// layers rather than hard-edged blobs.
+function HeaderWaves() {
+  return (
+    <Svg width="100%" height="100%" viewBox="0 0 400 300" preserveAspectRatio="xMidYMid slice" style={StyleSheet.absoluteFillObject}>
+      <Path
+        d="M-20,40 C60,-10 120,90 210,55 C300,20 340,90 420,70 L420,-20 L-20,-20 Z"
+        fill="rgba(255,255,255,0.06)"
+      />
+      <Path
+        d="M-20,120 C70,70 140,170 230,120 C310,78 360,150 420,115 L420,-20 L-20,-20 Z"
+        fill={COLORS.brand500}
+        fillOpacity={0.35}
+      />
+      <Path
+        d="M-20,190 C80,140 150,230 240,185 C320,145 370,205 420,175 L420,320 L-20,320 Z"
+        fill={COLORS.brand800}
+        fillOpacity={0.55}
+      />
+      <Path
+        d="M-20,250 C90,210 170,290 260,245 C330,210 380,260 420,235 L420,320 L-20,320 Z"
+        fill={COLORS.brand900}
+        fillOpacity={0.6}
+      />
+    </Svg>
+  );
+}
 
 // Approximates the reference's two-layer soft-card/shadow-sm boxShadow
 // tokens using RN's own shadow* props — react-native-web translates these
@@ -299,49 +318,23 @@ export default function HomeScreen({
       <StatusBar barStyle="light-content" backgroundColor={COLORS.brand900} />
 
       <LinearGradient
-        colors={['#6E1818', '#5C1313', '#4F1111']}
+        colors={[COLORS.brand500, COLORS.brand700, COLORS.brand900]}
         start={{ x: 0, y: 0 }}
-        end={{ x: 0, y: 1 }}
+        end={{ x: 1, y: 1 }}
         style={styles.header}
       >
-        {Platform.OS === 'web' ? (
-          // RN-Web's atomic CSS ordering is non-deterministic across dev vs
-          // minified production builds — in dev, opacity on a wrapping View
-          // (separate from the Image's `filter`) rendered correctly, but in
-          // the production bundle the same split style still lost the
-          // opacity (same underlying clobbering as the boxShadow bug
-          // elsewhere in this app). A real inline `style` attribute on a
-          // plain `<img>` has the highest CSS specificity and isn't routed
-          // through that atomic-class pipeline at all, so it can't be
-          // reordered away.
-          // eslint-disable-next-line jsx-a11y/alt-text
-          <img
-            src={cooperativeTheme}
-            style={{
-              // Oversized and centered past the header's own edges —
-              // `blur()` samples transparent pixels once it runs past an
-              // element's own boundary, which otherwise fades the image's
-              // edges to nothing and shows up as a faint darker frame
-              // around the header (the header clips to its rounded box via
-              // `overflow: hidden`, so the overscan never shows).
-              position: 'absolute', top: '-8%', left: '-8%', right: '-8%', bottom: '-8%',
-              width: '116%', height: '116%', objectFit: 'cover', objectPosition: 'center 35%',
-              opacity: 0.45,
-              // Blurred so the signage text (legible in the source photo)
-              // reads as texture/light rather than a second, confusing set
-              // of words competing with the header's real UI text.
-              filter: 'grayscale(0.5) contrast(1.15) brightness(0.8) blur(0.6px)',
-              pointerEvents: 'none',
-            }}
-          />
-        ) : (
-          <Image
-            source={require('../../../assets/core/cooperative-theme.jpg')}
-            style={[StyleSheet.absoluteFillObject, headerPhotoFilter]}
-            resizeMode="cover"
-            pointerEvents="none"
-          />
-        )}
+        <HeaderWaves />
+        {/* Vignette over the plain gradient for a touch of depth — darkest
+            at the edges and bottom (where it also helps the meta row's
+            text contrast), clear through the middle where the title sits. */}
+        <LinearGradient
+          colors={['rgba(79,17,17,0.55)', 'rgba(79,17,17,0)', 'rgba(79,17,17,0.5)']}
+          locations={[0, 0.45, 1]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 0, y: 1 }}
+          style={StyleSheet.absoluteFillObject}
+          pointerEvents="none"
+        />
         <View style={[styles.headerBlobTop, blurStyle(28)]} pointerEvents="none" />
         <View style={[styles.headerBlobBottom, blurStyle(20)]} pointerEvents="none" />
 
@@ -350,11 +343,11 @@ export default function HomeScreen({
             <Text style={styles.headerWordmark}>CORE</Text>
           </Pressable>
           <View style={styles.headerActions}>
-            <PressScale onPress={onNotifyPress} hitSlop={8} scaleTo={0.88} style={({ pressed }) => [styles.headerIconBtn, pressed && { backgroundColor: 'rgba(255,255,255,0.2)' }]}>
+            <PressScale onPress={onNotifyPress} hitSlop={8} scaleTo={0.88} style={({ pressed }) => [styles.headerIconBtn, glassStyle(10), pressed && { backgroundColor: 'rgba(255,255,255,0.2)' }]}>
               <MaterialCommunityIcons name="bell-outline" size={18} color="rgba(255,255,255,0.9)" />
               {activeAlert ? <Animated.View style={[styles.headerDot, bellPulse]} /> : null}
             </PressScale>
-            <PressScale onPress={onProfilePress} hitSlop={8} scaleTo={0.9} style={styles.headerAvatar}>
+            <PressScale onPress={onProfilePress} hitSlop={8} scaleTo={0.9} style={[styles.headerAvatar, glassStyle(10)]}>
               <Text style={styles.headerAvatarText}>{roleInitials}</Text>
             </PressScale>
           </View>
@@ -363,7 +356,7 @@ export default function HomeScreen({
           {selectedSociety?.name || societyName || 'Society Name Missing'}
         </Text>
         <View style={styles.headerMetaRow}>
-          <View style={styles.headerMetaChip}>
+          <View style={[styles.headerMetaChip, glassStyle(8)]}>
             <MaterialCommunityIcons name="map-marker-outline" size={13} color={COLORS.amber200} />
             <Text style={styles.headerMetaChipText}>{formatGpuLabel(district) || 'Location Pending'}</Text>
           </View>
@@ -468,12 +461,17 @@ export default function HomeScreen({
             <View style={styles.listCard}>
               {monthlyParams.map((p, i) => {
                 const style = PARAM_STYLE[p.id] || { icon: 'circle-outline', bg: COLORS.slate100, border: COLORS.slate200, fg: COLORS.slate500 };
+                // The spotlight card above already carries this item's full
+                // title + description, so its list row switches to a "NOW"
+                // state instead of repeating the same copy verbatim.
+                const isCurrent = p.id === nextAction.id && !p.done && !p.na;
                 return (
                   <PressScale
                     key={p.id}
                     scaleTo={0.985}
                     style={({ pressed, hovered }) => [
                       styles.listRow,
+                      isCurrent && styles.listRowCurrent,
                       i === monthlyParams.length - 1 && styles.listRowLast,
                       hovered && { backgroundColor: 'rgba(248,250,252,0.6)' },
                       pressed && { backgroundColor: COLORS.slate100 },
@@ -487,9 +485,13 @@ export default function HomeScreen({
                         </View>
                         <View style={{ flex: 1 }}>
                           <Text style={[styles.listRowTitle, hovered && { color: COLORS.brand700 }]}>{p.title}</Text>
-                          <Text style={styles.listRowDesc}>{p.desc}</Text>
+                          <Text style={[styles.listRowDesc, isCurrent && styles.listRowDescCurrent]}>{isCurrent ? 'Current task' : p.desc}</Text>
                         </View>
-                        {p.na ? (
+                        {isCurrent ? (
+                          <View style={styles.nowPill}>
+                            <Text style={styles.nowPillText}>NOW</Text>
+                          </View>
+                        ) : p.na ? (
                           <View style={styles.dashPill}>
                             <Text style={styles.dashPillText}>—</Text>
                           </View>
@@ -591,6 +593,8 @@ const styles = StyleSheet.create({
     paddingTop: 14,
     paddingBottom: 24,
     overflow: 'hidden',
+    borderBottomLeftRadius: 28,
+    borderBottomRightRadius: 28,
   },
   headerBlobTop: {
     position: 'absolute',
@@ -994,6 +998,30 @@ const styles = StyleSheet.create({
   },
   listRowLast: {
     borderBottomWidth: 0,
+  },
+  listRowCurrent: {
+    backgroundColor: COLORS.brand50,
+    borderLeftWidth: 3,
+    borderLeftColor: COLORS.brand700,
+    paddingLeft: 13,
+  },
+  listRowDescCurrent: {
+    color: COLORS.brand700,
+    fontWeight: '600',
+  },
+  nowPill: {
+    backgroundColor: COLORS.brand700,
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 999,
+    marginRight: 4,
+  },
+  nowPillText: {
+    fontFamily: FONT_FAMILY,
+    fontSize: 12,
+    fontWeight: '800',
+    color: '#ffffff',
+    letterSpacing: 0.6,
   },
   paramIconBox: {
     width: 44,
