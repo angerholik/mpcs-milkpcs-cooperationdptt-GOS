@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, Pressable, ScrollView, Platform, StatusBar, Animated, Easing } from 'react-native';
+import { View, Text, StyleSheet, Pressable, ScrollView, Platform, Animated, Easing } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
-import Svg, { Path } from 'react-native-svg';
 import { webCapWidth } from '../../utils/webStyles';
 import BottomNav from '../BottomNav';
+import PressScale from '../PressScale';
+import ScreenHeader from '../ScreenHeader';
 import { getMpcsDailyTransactions, getMpcsCscTransactions } from '../../supabase';
 
 // Redesign source: a reference mockup (code.html + screen.png) the user
@@ -78,37 +78,6 @@ const blurStyle = (px) => (Platform.OS === 'web' ? { filter: `blur(${px}px)` } :
 // translucent-fill look on native.
 const glassStyle = (px) => (Platform.OS === 'web' ? { backdropFilter: `blur(${px}px)`, WebkitBackdropFilter: `blur(${px}px)` } : {});
 
-// Layered organic wave shapes (reference: a teal "liquid" wallpaper the user
-// supplied) reworked in the maroon brand ramp — gives the gradient header
-// depth and movement without a photo. Each path is a soft diagonal band in
-// a slightly different brand shade/opacity, loosely overlapping like silk
-// layers rather than hard-edged blobs.
-function HeaderWaves() {
-  return (
-    <Svg width="100%" height="100%" viewBox="0 0 400 300" preserveAspectRatio="xMidYMid slice" style={StyleSheet.absoluteFillObject}>
-      <Path
-        d="M-20,40 C60,-10 120,90 210,55 C300,20 340,90 420,70 L420,-20 L-20,-20 Z"
-        fill="rgba(255,255,255,0.06)"
-      />
-      <Path
-        d="M-20,120 C70,70 140,170 230,120 C310,78 360,150 420,115 L420,-20 L-20,-20 Z"
-        fill={COLORS.brand500}
-        fillOpacity={0.35}
-      />
-      <Path
-        d="M-20,190 C80,140 150,230 240,185 C320,145 370,205 420,175 L420,320 L-20,320 Z"
-        fill={COLORS.brand800}
-        fillOpacity={0.55}
-      />
-      <Path
-        d="M-20,250 C90,210 170,290 260,245 C330,210 380,260 420,235 L420,320 L-20,320 Z"
-        fill={COLORS.brand900}
-        fillOpacity={0.6}
-      />
-    </Svg>
-  );
-}
-
 // Approximates the reference's two-layer soft-card/shadow-sm boxShadow
 // tokens using RN's own shadow* props — react-native-web translates these
 // specific prop names to a real CSS box-shadow automatically, unlike an
@@ -119,27 +88,6 @@ function HeaderWaves() {
 // glance; `elevation` covers the Android native equivalent.
 const softCardShadow = { shadowColor: '#0F172A', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.08, shadowRadius: 10, elevation: 3 };
 const lightShadow = { shadowColor: '#0F172A', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 4, elevation: 2 };
-
-// Smooth press depth (scale) used on every tappable card/row/button below —
-// matches the reference's blanket `transition duration-150` on interactive
-// elements instead of an instant style swap. Drop-in for a plain
-// `<Pressable style={({pressed}) => [...]}>` — `style` carries the full
-// visual style (static + pressed-state) exactly as it would on Pressable
-// itself; this just also animates a scale transform smoothly on press.
-function PressScale({ style, outerStyle, children, scaleTo = 0.97, onPress, ...rest }) {
-  const scale = useRef(new Animated.Value(1)).current;
-  const pressIn = () => Animated.spring(scale, { toValue: scaleTo, useNativeDriver: true, speed: 60, bounciness: 0 }).start();
-  const pressOut = () => Animated.spring(scale, { toValue: 1, useNativeDriver: true, speed: 16, bounciness: 6 }).start();
-  return (
-    <Pressable onPress={onPress} onPressIn={pressIn} onPressOut={pressOut} style={outerStyle} {...rest}>
-      {(state) => (
-        <Animated.View style={[typeof style === 'function' ? style(state) : style, { transform: [{ scale }] }]}>
-          {typeof children === 'function' ? children(state) : children}
-        </Animated.View>
-      )}
-    </Pressable>
-  );
-}
 
 const isEvidenceCaptured = (st) => Boolean(st) && st.includes('CAPTURED') && !st.includes('NOT');
 
@@ -315,46 +263,16 @@ export default function HomeScreen({
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor={COLORS.brand900} />
-
-      <LinearGradient
-        colors={[COLORS.brand500, COLORS.brand700, COLORS.brand900]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={styles.header}
+      <ScreenHeader
+        variant="hero"
+        title={selectedSociety?.name || societyName || 'Society Name Missing'}
+        onBrandPress={onManageInstitutions}
+        initials={roleInitials}
+        onAvatarPress={onProfilePress}
+        onNotifyPress={onNotifyPress}
+        showAlertDot={!!activeAlert}
+        alertDotStyle={bellPulse}
       >
-        <HeaderWaves />
-        {/* Vignette over the plain gradient for a touch of depth — darkest
-            at the edges and bottom (where it also helps the meta row's
-            text contrast), clear through the middle where the title sits. */}
-        <LinearGradient
-          colors={['rgba(79,17,17,0.55)', 'rgba(79,17,17,0)', 'rgba(79,17,17,0.5)']}
-          locations={[0, 0.45, 1]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 0, y: 1 }}
-          style={StyleSheet.absoluteFillObject}
-          pointerEvents="none"
-        />
-        <View style={[styles.headerBlobTop, blurStyle(28)]} pointerEvents="none" />
-        <View style={[styles.headerBlobBottom, blurStyle(20)]} pointerEvents="none" />
-
-        <View style={styles.headerTopRow}>
-          <Pressable onPress={onManageInstitutions} hitSlop={8} style={styles.headerBrandGroup}>
-            <Text style={styles.headerWordmark}>CORE</Text>
-          </Pressable>
-          <View style={styles.headerActions}>
-            <PressScale onPress={onNotifyPress} hitSlop={8} scaleTo={0.88} style={({ pressed }) => [styles.headerIconBtn, glassStyle(10), pressed && { backgroundColor: 'rgba(255,255,255,0.2)' }]}>
-              <MaterialCommunityIcons name="bell-outline" size={18} color="rgba(255,255,255,0.9)" />
-              {activeAlert ? <Animated.View style={[styles.headerDot, bellPulse]} /> : null}
-            </PressScale>
-            <PressScale onPress={onProfilePress} hitSlop={8} scaleTo={0.9} style={[styles.headerAvatar, glassStyle(10)]}>
-              <Text style={styles.headerAvatarText}>{roleInitials}</Text>
-            </PressScale>
-          </View>
-        </View>
-        <Text style={styles.headerTitle} numberOfLines={1}>
-          {selectedSociety?.name || societyName || 'Society Name Missing'}
-        </Text>
         <View style={styles.headerMetaRow}>
           <View style={[styles.headerMetaChip, glassStyle(8)]}>
             <MaterialCommunityIcons name="map-marker-outline" size={13} color={COLORS.amber200} />
@@ -365,7 +283,7 @@ export default function HomeScreen({
             {pendingCount === 0 ? 'MONTHLY PARAMS READY' : `${completedCount}/${totalCount} MONTHLY PARAMS READY`}
           </Text>
         </View>
-      </LinearGradient>
+      </ScreenHeader>
 
       <ScrollView style={styles.scrollContent} contentContainerStyle={[styles.scrollInner, webCapWidth]} showsVerticalScrollIndicator={false}>
 
@@ -587,107 +505,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: COLORS.surface100,
-  },
-  header: {
-    paddingHorizontal: 20,
-    paddingTop: 14,
-    paddingBottom: 24,
-    overflow: 'hidden',
-    borderBottomLeftRadius: 28,
-    borderBottomRightRadius: 28,
-  },
-  headerBlobTop: {
-    position: 'absolute',
-    top: -80,
-    right: -64,
-    width: 256,
-    height: 256,
-    borderRadius: 128,
-    backgroundColor: 'rgba(255,255,255,0.05)',
-  },
-  headerBlobBottom: {
-    position: 'absolute',
-    bottom: -48,
-    left: '22%',
-    width: 192,
-    height: 192,
-    borderRadius: 96,
-    backgroundColor: 'rgba(244,63,94,0.1)',
-  },
-  headerTopRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  headerBrandGroup: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  headerBrandBox: {
-    width: 28,
-    height: 28,
-    borderRadius: 8,
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.2)',
-  },
-  headerWordmark: {
-    fontFamily: FONT_FAMILY,
-    fontSize: 14,
-    fontWeight: '700',
-    color: 'rgba(255,255,255,0.9)',
-    letterSpacing: 1.4,
-  },
-  headerActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  headerIconBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  headerDot: {
-    position: 'absolute',
-    top: 6,
-    right: 6,
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: COLORS.amber200,
-    borderWidth: 2,
-    borderColor: '#5C1313',
-  },
-  headerAvatar: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 2,
-    borderColor: 'rgba(255,255,255,0.25)',
-    backgroundColor: 'rgba(255,255,255,0.15)',
-  },
-  headerAvatarText: {
-    fontFamily: FONT_FAMILY,
-    fontSize: 12,
-    fontWeight: '800',
-    color: '#ffffff',
-  },
-  headerTitle: {
-    fontFamily: FONT_FAMILY,
-    fontSize: 24,
-    fontWeight: '800',
-    color: '#ffffff',
-    marginBottom: 8,
   },
   headerMetaRow: {
     flexDirection: 'row',

@@ -1,8 +1,9 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Platform } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { webCapWidth } from '../../utils/webStyles';
 import BottomNav from '../BottomNav';
+import ScreenHeader from '../ScreenHeader';
 
 // Same palette as MpcsMasterDataListScreen / MpcsMasterDataScreen / the
 // transaction screens — flat maroon header, cream page, white bordered
@@ -98,21 +99,14 @@ export default function MpcsProfileSummaryScreen({
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <View style={styles.topRow}>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.title}>Profile</Text>
-            <Text style={styles.subtitle}>{(societyName || 'MPCS SOCIETY').toUpperCase()}</Text>
-          </View>
-          <TouchableOpacity style={styles.notifyBtn} onPress={onNotifyPress} activeOpacity={0.7}>
-            <MaterialCommunityIcons name="bell-outline" size={20} color="#ffffff" />
-            {unreadCount > 0 && <View style={styles.notifyBadge} />}
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.avatarCircle} onPress={onProfilePress} activeOpacity={0.8}>
-            <Text style={styles.avatarText}>CI</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
+      <ScreenHeader
+        title="Profile"
+        subtitle={(societyName || 'MPCS SOCIETY').toUpperCase()}
+        initials="CI"
+        onAvatarPress={onProfilePress}
+        onNotifyPress={onNotifyPress}
+        showAlertDot={unreadCount > 0}
+      />
 
       <ScrollView
         style={styles.scrollContent}
@@ -226,17 +220,6 @@ export default function MpcsProfileSummaryScreen({
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.bg },
 
-  header: { backgroundColor: COLORS.maroon, paddingHorizontal: 16, paddingTop: Platform.OS === 'ios' ? 44 : 14, paddingBottom: 16 },
-  topRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
-  title: { fontFamily: FONT_FAMILY, fontSize: 22, fontWeight: '800', color: '#ffffff' },
-  subtitle: { fontFamily: FONT_FAMILY, fontSize: 11, fontWeight: '700', color: 'rgba(255,255,255,0.75)', letterSpacing: 0.6, marginTop: 4 },
-  notifyBtn: { width: 32, height: 32, alignItems: 'center', justifyContent: 'center' },
-  notifyBadge: {
-    position: 'absolute', top: 4, right: 4, width: 8, height: 8, borderRadius: 4,
-    backgroundColor: '#EF4444', borderWidth: 1, borderColor: COLORS.maroon,
-  },
-  avatarCircle: { width: 36, height: 36, borderRadius: 18, backgroundColor: 'rgba(255,255,255,0.15)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.3)', alignItems: 'center', justifyContent: 'center' },
-  avatarText: { fontFamily: FONT_FAMILY, fontSize: 12, fontWeight: '800', color: '#ffffff' },
 
   scrollContent: { flex: 1 },
   scrollInner: { padding: 16, paddingBottom: 110, gap: 10 },

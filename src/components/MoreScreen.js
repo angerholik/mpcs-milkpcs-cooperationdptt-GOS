@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, Pressable, ScrollView, Platfo
 import { MaterialIcons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { webCapWidth } from '../utils/webStyles';
 import HeaderNav from './HeaderNav';
+import ScreenHeader from './ScreenHeader';
 import BottomNav from './BottomNav';
 
 // Same palette as MpcsMasterDataListScreen / the redesigned Profile screen —
@@ -143,19 +144,32 @@ export default function MoreScreen({
 
   return (
     <View style={styles.container}>
-      <HeaderNav
-        activeModule={activeModule}
-        selectedSociety={selectedSociety}
-        institutionsList={institutionsList}
-        onSelectSociety={onSelectSociety}
-        onManageInstitutions={onManageInstitutions}
-        onSwitchModule={onSwitchModule}
-        onMenuPress={onManageInstitutions}
-        onNotifyPress={onNotifyPress}
-        onProfilePress={onProfilePress}
-        unreadCount={unreadCount}
-        role={role}
-      />
+      {/* MPCS uses the shared brand header; Milk PCS keeps HeaderNav, which
+          carries the society/module switcher its own Home still relies on. */}
+      {activeModule === 'MPCS' ? (
+        <ScreenHeader
+          title="More"
+          subtitle={(selectedSociety?.name || 'MPCS SOCIETY').toUpperCase()}
+          initials={(role || 'CI').slice(0, 2).toUpperCase()}
+          onAvatarPress={onProfilePress}
+          onNotifyPress={onNotifyPress}
+          showAlertDot={unreadCount > 0}
+        />
+      ) : (
+        <HeaderNav
+          activeModule={activeModule}
+          selectedSociety={selectedSociety}
+          institutionsList={institutionsList}
+          onSelectSociety={onSelectSociety}
+          onManageInstitutions={onManageInstitutions}
+          onSwitchModule={onSwitchModule}
+          onMenuPress={onManageInstitutions}
+          onNotifyPress={onNotifyPress}
+          onProfilePress={onProfilePress}
+          unreadCount={unreadCount}
+          role={role}
+        />
+      )}
 
       <ScrollView style={styles.scrollContent} contentContainerStyle={[styles.scrollInner, webCapWidth]} showsVerticalScrollIndicator={false}>
         <View style={styles.officerCard}>
