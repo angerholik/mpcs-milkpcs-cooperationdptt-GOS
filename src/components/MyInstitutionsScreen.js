@@ -197,7 +197,7 @@ export default function MyInstitutionsScreen({
             onPress={() => setModalVisible(true)}
           >
             <LinearGradient
-              colors={[COLORS.maroon800, COLORS.maroon900]}
+              colors={['#7B1420', '#7B1420']}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}
               style={styles.addInstBtn}
@@ -327,7 +327,7 @@ export default function MyInstitutionsScreen({
           >
             {({ hovered }) => (
               <LinearGradient
-                colors={['#10b981', '#047857']}
+                colors={['#7B1420', '#7B1420']}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 0 }}
                 style={[
@@ -381,7 +381,7 @@ export default function MyInstitutionsScreen({
                 >
                   {instType === 'MPCS' ? (
                     <LinearGradient
-                      colors={['#7a1a1f', '#4a1017']}
+                      colors={['#7B1420', '#7B1420']}
                       start={{ x: 0, y: 0 }}
                       end={{ x: 1, y: 0 }}
                       style={styles.activeTypeBtnGradient}
@@ -404,7 +404,7 @@ export default function MyInstitutionsScreen({
                 >
                   {instType === 'MILK' ? (
                     <LinearGradient
-                      colors={['#7a1a1f', '#4a1017']}
+                      colors={['#7B1420', '#7B1420']}
                       start={{ x: 0, y: 0 }}
                       end={{ x: 1, y: 0 }}
                       style={styles.activeTypeBtnGradient}
@@ -456,7 +456,7 @@ export default function MyInstitutionsScreen({
 
               <TouchableOpacity onPress={handleAddSubmit} activeOpacity={0.85} style={{ marginTop: 10, marginBottom: 14 }}>
                 <LinearGradient
-                  colors={['#7a1a1f', '#4a1017']}
+                  colors={['#7B1420', '#7B1420']}
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 0 }}
                   style={styles.saveModalBtnGradient}

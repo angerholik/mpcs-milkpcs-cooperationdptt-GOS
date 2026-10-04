@@ -1,17 +1,11 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Platform, Pressable, Image } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Pressable, Platform } from 'react-native';
 import ScreenHeader from './ScreenHeader';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
 import NetInfo from '@react-native-community/netinfo';
 import BottomNav from './BottomNav';
 import { webCapWidth } from '../utils/webStyles';
 import { getQueueItems } from '../utils/syncManager';
-
-// Same subtle Kanchenjunga treatment used on every header across the app.
-const headerPhotoFilter = Platform.OS === 'web'
-  ? { opacity: 0.4, filter: 'grayscale(0.35) contrast(1.15) brightness(0.95)', mixBlendMode: 'luminosity' }
-  : { opacity: 0.28 };
 
 const COLORS = {
   surface: '#ffffff',
@@ -95,95 +89,53 @@ export default function SyncStatusScreen({
 
   return (
     <View style={styles.container}>
-      <ScreenHeader
-        title="Sync Status"
-        subtitle="MILK PCS"
-        onBack={onBack}
-        onAvatarPress={onProfilePress}
-        onNotifyPress={onNotifyPress}
-        showAlertDot={unreadCount > 0}
-      />
+      <ScreenHeader title="Sync Status" subtitle="MILK PCS" onBack={onBack} onAvatarPress={onProfilePress} onNotifyPress={onNotifyPress} showAlertDot={unreadCount > 0} />
 
-
-      <ScrollView style={styles.scrollContent} contentContainerStyle={[styles.scrollInner, webCapWidth]} showsVerticalScrollIndicator={false}>
-        <View style={[styles.alertCard, !isOnline && styles.alertCardOffline]}>
-          <View style={[styles.alertIconBox, !isOnline && styles.alertIconBoxOffline]}>
-            <MaterialCommunityIcons name={isOnline ? 'wifi' : 'wifi-off'} size={20} color={isOnline ? COLORS.amber900 : COLORS.red600} />
-          </View>
-          <View style={styles.alertBody}>
-            <Text style={[styles.alertTitle, !isOnline && { color: COLORS.red600 }]}>
-              {isOnline ? 'Connected' : 'Offline'}
-            </Text>
-            <Text style={styles.alertText}>
-              {isOnline
-                ? 'Records save straight to the cloud database.'
-                : 'Records are saving to this device and will sync once you’re back online.'}
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={[styles.inner, webCapWidth]} showsVerticalScrollIndicator={false}>
+        <View style={styles.row}>
+          <MaterialCommunityIcons name={isOnline ? 'wifi' : 'wifi-off'} size={22} color={isOnline ? '#15803D' : '#B91C1C'} />
+          <View style={{ flex: 1 }}>
+            <Text style={styles.rowTitle}>{isOnline ? 'Connected' : 'Offline'}</Text>
+            <Text style={styles.rowSub}>
+              {isOnline ? 'Records save straight to the cloud database.' : 'Records are saving to this device and will sync once you’re back online.'}
             </Text>
           </View>
         </View>
 
-        <View style={styles.card}>
-          <View style={styles.cardHeaderRow}>
-            <View style={styles.cardIconBox}>
-              <MaterialCommunityIcons name="cloud-sync-outline" size={20} color={COLORS.primary} />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.cardHeaderTitle}>Sync Queue</Text>
-            </View>
-            <View style={styles.statusBadge}>
-              <Text style={[styles.statusBadgeText, { color: pendingCount > 0 ? COLORS.amber900 : COLORS.emerald700 }]}>
-                {syncing ? 'SYNCING' : pendingCount > 0 ? `${pendingCount} PENDING` : 'UP TO DATE'}
-              </Text>
-            </View>
-          </View>
+        <View style={styles.sectionRow}>
+          <Text style={styles.sectionLabel}>Sync queue</Text>
+          <Text style={[styles.sectionCount, pendingCount > 0 && { color: '#B45309' }]}>
+            {syncing ? 'Syncing…' : pendingCount > 0 ? `${pendingCount} pending` : 'Up to date'}
+          </Text>
+        </View>
 
-          {queueItems.length > 0 ? (
-            queueItems.map((item, index) => (
-              <View key={item.id || index}>
-                {index > 0 && <View style={styles.divider} />}
-                <View style={styles.queueRow}>
-                  <View style={styles.infoCol}>
-                    <Text style={styles.infoLabel}>{TYPE_LABELS[item.type] || item.type || 'Submission'}</Text>
-                    <Text style={styles.infoValue}>{formatQueuedAt(item.timestamp)}</Text>
-                  </View>
-                  {item.retryCount > 0 && (
-                    <View style={styles.retryBadge}>
-                      <Text style={styles.retryBadgeText}>RETRY {item.retryCount}/3</Text>
-                    </View>
-                  )}
+        {queueItems.length > 0 ? (
+          <View style={styles.listCard}>
+            {queueItems.map((item, index) => (
+              <View key={item.id || index} style={[styles.listRow, index < queueItems.length - 1 && styles.listRowBorder]}>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.rowTitle}>{TYPE_LABELS[item.type] || item.type || 'Submission'}</Text>
+                  <Text style={styles.rowSub}>{formatQueuedAt(item.timestamp)}</Text>
                 </View>
+                {item.retryCount > 0 ? <Text style={styles.retry}>RETRY {item.retryCount}/3</Text> : null}
               </View>
-            ))
-          ) : (
-            <View style={{ paddingVertical: 14, alignItems: 'center', gap: 4 }}>
-              <MaterialCommunityIcons name="cloud-check-outline" size={32} color={COLORS.emerald500} />
-              <Text style={{ fontFamily: FONT_FAMILY, fontSize: 13, fontWeight: '700', color: COLORS.slate600 }}>
-                All caught up
-              </Text>
-              <Text style={{ fontFamily: FONT_FAMILY, fontSize: 11, color: COLORS.slate400, textAlign: 'center' }}>
-                No submissions waiting to sync.
-              </Text>
+            ))}
+          </View>
+        ) : (
+          <View style={styles.row}>
+            <MaterialCommunityIcons name="cloud-check-outline" size={22} color="#15803D" />
+            <View style={{ flex: 1 }}>
+              <Text style={styles.rowTitle}>All caught up</Text>
+              <Text style={styles.rowSub}>No submissions waiting to sync.</Text>
             </View>
-          )}
-        </View>
-
-        {pendingCount > 0 && (
-          <View style={[styles.btnWrapper, webCapWidth]}>
-            <Pressable
-              style={({ hovered, pressed }) => [
-                styles.retryBtn,
-                (!isOnline || syncing) && { opacity: 0.5 },
-                pressed && { transform: [{ scale: 0.98 }] },
-                hovered && Platform.OS === 'web' && !syncing && isOnline && { shadowOpacity: 0.4 }
-              ]}
-              onPress={handleRetry}
-              disabled={!isOnline || syncing}
-            >
-              <MaterialCommunityIcons name={syncing ? 'sync' : 'cloud-upload-outline'} size={16} color={COLORS.primary} />
-              <Text style={styles.retryBtnText}>{syncing ? 'Syncing…' : 'Retry Sync Now'}</Text>
-            </Pressable>
           </View>
         )}
+
+        {pendingCount > 0 ? (
+          <Pressable style={[styles.primary, (!isOnline || syncing) && { opacity: 0.5 }]} onPress={handleRetry} disabled={!isOnline || syncing}>
+            <Text style={styles.primaryText}>{syncing ? 'Syncing…' : 'Retry sync now'}</Text>
+          </Pressable>
+        ) : null}
       </ScrollView>
 
       {onTabPress && <BottomNav activeTab={activeTab || 'more'} onTabPress={onTabPress} />}
@@ -191,111 +143,20 @@ export default function SyncStatusScreen({
   );
 }
 
+const F = 'Manrope';
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.slate50, position: 'relative' },
-  topBar: {
-    position: 'relative',
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 12,
-    paddingTop: Platform.OS === 'ios' ? 44 : 12,
-    overflow: 'hidden',
-  },
-  backBtn: { padding: 8, marginRight: 8 },
-  topBarTitleContainer: { flex: 1 },
-  notifyBtn: {
-    width: 36,
-    height: 36,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  notifyBadge: {
-    position: 'absolute',
-    top: 6,
-    right: 6,
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#EF4444',
-    borderWidth: 1,
-    borderColor: COLORS.primary,
-  },
-  avatarBtn: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.35)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginLeft: 8,
-  },
-  avatarText: {
-    color: '#FFFFFF',
-    fontSize: 10,
-    fontWeight: '800',
-    fontFamily: FONT_FAMILY,
-  },
-  bgBlobTop: {
-    position: 'absolute', top: -40, right: -40, width: 260, height: 260,
-    borderRadius: 130, backgroundColor: 'rgba(122, 26, 31, 0.08)', zIndex: -1,
-  },
-  bgBlobBottomLeft: {
-    position: 'absolute', bottom: 80, left: -50, width: 240, height: 240,
-    borderRadius: 120, backgroundColor: 'rgba(180, 83, 9, 0.06)', zIndex: -1,
-  },
-  moduleTag: {
-    color: 'rgba(255,255,255,0.7)', fontFamily: FONT_FAMILY, fontSize: 8,
-    fontWeight: '800', letterSpacing: 1.2, marginBottom: 2,
-  },
-  screenTitleHeader: { color: '#FFFFFF', fontFamily: FONT_FAMILY, fontSize: 16, fontWeight: '800', letterSpacing: -0.16 },
-  scrollContent: { flex: 1 },
-  scrollInner: { padding: 12, gap: 12, paddingBottom: 110 },
-  alertCard: {
-    backgroundColor: 'rgba(254, 252, 232, 0.8)', borderRadius: 14, padding: 12,
-    flexDirection: 'row', alignItems: 'center', gap: 10, borderWidth: 1,
-    borderColor: 'rgba(253, 230, 138, 0.5)', shadowColor: '#0f172a',
-    shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.05, shadowRadius: 10, elevation: 2,
-  },
-  alertCardOffline: { backgroundColor: COLORS.red50, borderColor: 'rgba(220,38,38,0.2)' },
-  alertIconBox: {
-    width: 36, height: 36, borderRadius: 18, backgroundColor: COLORS.amber100,
-    alignItems: 'center', justifyContent: 'center',
-  },
-  alertIconBoxOffline: { backgroundColor: 'rgba(220,38,38,0.12)' },
-  alertBody: { flex: 1, paddingRight: 8 },
-  alertTitle: { fontFamily: FONT_FAMILY, fontSize: 13, fontWeight: '800', color: COLORS.amber900, marginBottom: 2 },
-  alertText: { fontFamily: FONT_FAMILY, fontSize: 11, fontWeight: '500', color: 'rgba(146, 64, 14, 0.9)' },
-  card: {
-    backgroundColor: COLORS.surface, borderRadius: 16, padding: 16, borderWidth: 1,
-    borderColor: 'rgba(226,232,240,0.6)', shadowColor: '#0f172a',
-    shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.08, shadowRadius: 20, elevation: 3,
-  },
-  cardHeaderRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 12 },
-  cardIconBox: {
-    width: 32, height: 32, borderRadius: 10, backgroundColor: COLORS.slate50,
-    borderWidth: 1, borderColor: COLORS.slate100, alignItems: 'center', justifyContent: 'center',
-  },
-  cardHeaderTitle: { fontFamily: FONT_FAMILY, fontSize: 14, fontWeight: '700', color: COLORS.slate800, letterSpacing: -0.14 },
-  statusBadge: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6, backgroundColor: COLORS.slate100 },
-  statusBadgeText: { fontFamily: FONT_FAMILY, fontSize: 10, fontWeight: '800' },
-  divider: { height: 1, backgroundColor: COLORS.slate100, marginVertical: 12 },
-  queueRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  infoCol: { flex: 1 },
-  infoLabel: { fontFamily: FONT_FAMILY, fontSize: 8, fontWeight: '800', color: COLORS.slate400, letterSpacing: 1.2, marginBottom: 2 },
-  infoValue: { fontFamily: FONT_FAMILY, fontSize: 13, fontWeight: '600', color: COLORS.slate800 },
-  retryBadge: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6, backgroundColor: COLORS.red50, borderWidth: 1, borderColor: 'rgba(220,38,38,0.2)' },
-  retryBadgeText: { fontFamily: FONT_FAMILY, fontSize: 9, fontWeight: '800', color: COLORS.red600 },
-  btnWrapper: {
-    borderRadius: 16, shadowColor: COLORS.primary, shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2, shadowRadius: 8, elevation: 4, overflow: 'hidden',
-  },
-  retryBtn: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
-    paddingVertical: 12, paddingHorizontal: 16, borderRadius: 16,
-    borderWidth: 1.5, borderColor: COLORS.primary, backgroundColor: '#FFFFFF',
-  },
-  retryBtnText: { color: COLORS.primary, fontFamily: FONT_FAMILY, fontSize: 13, fontWeight: '700', letterSpacing: 0.3 },
+  container: { flex: 1, backgroundColor: '#F4F5F7' },
+  inner: { padding: 16, paddingBottom: 110, gap: 16 },
+  row: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: '#fff', borderRadius: 18, borderWidth: 1, borderColor: '#E7E2DA', padding: 16 },
+  rowTitle: { fontFamily: F, fontSize: 15, fontWeight: '800', color: '#1E1B18' },
+  rowSub: { fontFamily: F, fontSize: 12, fontWeight: '500', color: '#78716C', marginTop: 2, lineHeight: 17 },
+  sectionRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  sectionLabel: { fontFamily: F, fontSize: 11, fontWeight: '700', color: '#94A3B8', letterSpacing: 0.6, textTransform: 'uppercase' },
+  sectionCount: { fontFamily: F, fontSize: 11, fontWeight: '600', color: '#047857' },
+  listCard: { backgroundColor: '#fff', borderRadius: 18, borderWidth: 1, borderColor: '#E7E2DA', overflow: 'hidden' },
+  listRow: { flexDirection: 'row', alignItems: 'center', padding: 16 },
+  listRowBorder: { borderBottomWidth: 1, borderBottomColor: '#E7E2DA' },
+  retry: { fontFamily: F, fontSize: 11, fontWeight: '800', color: '#B45309' },
+  primary: { paddingVertical: 14, borderRadius: 12, backgroundColor: '#7B1420', alignItems: 'center' },
+  primaryText: { fontFamily: F, fontSize: 14, fontWeight: '800', color: '#fff' },
 });

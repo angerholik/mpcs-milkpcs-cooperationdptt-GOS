@@ -67,7 +67,7 @@ const csvCell = (v) => {
   return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
 };
 
-// MPCS-only restyle of the shared LoanBeneficiaryListScreen (still used
+// Shared by MPCS and Milk PCS (societyType) — replaces the old LoanBeneficiaryListScreen (used
 // as-is by the Milk PCS module) — same fetch/save/update/delete calls and
 // auto-filled "remaining" logic, redesign source: the maroon wizard/master-
 // data card system already used across MpcsLoanSetupScreen etc. The add/
@@ -77,6 +77,7 @@ const csvCell = (v) => {
 // CSV/PDF export cover the roster.
 export default function MpcsLoanBeneficiariesScreen({
   societyName = '',
+  societyType = 'MPCS',
   loanExtended = '',
   onBack,
   onBeneficiariesChanged,
@@ -92,7 +93,7 @@ export default function MpcsLoanBeneficiariesScreen({
 
   const loadBeneficiaries = useCallback(async () => {
     setLoading(true);
-    const { data } = await fetchLoanBeneficiaries(societyName, 'MPCS');
+    const { data } = await fetchLoanBeneficiaries(societyName, societyType);
     setBeneficiaries(data || []);
     setLoading(false);
   }, [societyName]);
@@ -173,7 +174,7 @@ export default function MpcsLoanBeneficiariesScreen({
     };
     const { error } = editingId
       ? await updateLoanBeneficiary(editingId, payload)
-      : await saveLoanBeneficiary({ societyName, societyType: 'MPCS', ...payload });
+      : await saveLoanBeneficiary({ societyName, societyType, ...payload });
     setSaving(false);
     if (error) {
       console.error('[CORE] saveLoanBeneficiary failed:', error);
