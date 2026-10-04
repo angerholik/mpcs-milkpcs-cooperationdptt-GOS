@@ -1198,10 +1198,14 @@ export default function App() {
   // Demographics, Compliance, Financials, Dividend, Share Capital, CSC,
   // Loan) was actually last saved, so the Master Data Directory list can
   // show a real "Last updated" date instead of a hardcoded placeholder.
-  const stampMasterDataUpdated = (sectionKey) => {
+  // `overrides` carries the values being saved in the same call: this runs
+  // from a closure that still holds the pre-edit state, so saving the
+  // timestamp alone would write the old field values back over the edit
+  // (locally and to the cloud row).
+  const stampMasterDataUpdated = (sectionKey, overrides = {}) => {
     setMasterDataTimestamps(prev => {
       const updated = { ...prev, [sectionKey]: new Date().toISOString() };
-      saveMasterStateToStorage({ masterDataTimestamps: updated });
+      saveMasterStateToStorage({ ...overrides, masterDataTimestamps: updated });
       return updated;
     });
   };
@@ -3060,12 +3064,10 @@ export default function App() {
                         setManagerMobile={setManagerMobile}
                         lastUpdated=""
                         onSave={(data) => {
-                          if (data) saveMasterStateToStorage(data);
-                          stampMasterDataUpdated('instProfile');
+                          stampMasterDataUpdated('instProfile', data || {});
                         }}
                         onSaveNext={(data) => {
-                          if (data) saveMasterStateToStorage(data);
-                          stampMasterDataUpdated('instProfile');
+                          stampMasterDataUpdated('instProfile', data || {});
                           setCurrentMobileScreen('COMPLIANCE_AUDIT');
                         }}
                         onBack={() => setCurrentMobileScreen('HOME')}
@@ -3092,26 +3094,22 @@ export default function App() {
                           setCenterName(d.centerName); setRegistrationNumber(d.registrationNumber);
                           setPresidentName(d.presidentName); setPresidentMobile(d.presidentMobile);
                           setManagerName(d.managerName); setManagerMobile(d.managerMobile);
-                          saveMasterStateToStorage({ centerName: d.centerName, registrationNumber: d.registrationNumber, presidentName: d.presidentName, presidentMobile: d.presidentMobile, managerName: d.managerName, managerMobile: d.managerMobile });
-                          stampMasterDataUpdated('instProfile');
+                          stampMasterDataUpdated('instProfile', { centerName: d.centerName, registrationNumber: d.registrationNumber, presidentName: d.presidentName, presidentMobile: d.presidentMobile, managerName: d.managerName, managerMobile: d.managerMobile });
                         }}
                         onSaveCompliance={(d) => {
                           setMasterAuditYear(d.auditYear); setMasterAuditDate(d.auditDate); setMasterAuditStatus(d.auditStatus);
                           setMasterAgmYear(d.agmYear); setMasterAgmDate(d.agmDate); setMasterAgmStatus(d.agmStatus);
-                          saveMasterStateToStorage({ masterAuditYear: d.auditYear, masterAuditDate: d.auditDate, masterAuditStatus: d.auditStatus, masterAgmYear: d.agmYear, masterAgmDate: d.agmDate, masterAgmStatus: d.agmStatus });
-                          stampMasterDataUpdated('complianceAudit');
+                          stampMasterDataUpdated('complianceAudit', { masterAuditYear: d.auditYear, masterAuditDate: d.auditDate, masterAuditStatus: d.auditStatus, masterAgmYear: d.agmYear, masterAgmDate: d.agmDate, masterAgmStatus: d.agmStatus });
                         }}
                         onSaveLoan={(d) => {
                           setMasterHasLoan(d.hasLoan); setMasterLoanType(d.loanType); setMasterLoanSanctionDate(d.sanctionDate);
                           setMasterLoanBeneficiaries(d.beneficiaries); setMasterLoanExtended(d.loanExtended);
-                          saveMasterStateToStorage({ masterHasLoan: d.hasLoan, masterLoanType: d.loanType, masterLoanSanctionDate: d.sanctionDate, masterLoanBeneficiaries: d.beneficiaries, masterLoanExtended: d.loanExtended });
-                          stampMasterDataUpdated('loanSetup');
+                          stampMasterDataUpdated('loanSetup', { masterHasLoan: d.hasLoan, masterLoanType: d.loanType, masterLoanSanctionDate: d.sanctionDate, masterLoanBeneficiaries: d.beneficiaries, masterLoanExtended: d.loanExtended });
                         }}
                         onSaveDemographics={(d) => {
                           setMSc(d.mSc); setFSc(d.fSc); setMSt(d.mSt); setFSt(d.fSt);
                           setMObc(d.mObc); setFObc(d.fObc); setMGen(d.mGen); setFGen(d.fGen);
-                          saveMasterStateToStorage(d);
-                          stampMasterDataUpdated('demographics');
+                          stampMasterDataUpdated('demographics', d);
                         }}
                         onManageBeneficiaries={() => { setLoanBeneficiariesBackTarget('MILK_MASTER_DATA'); setCurrentMobileScreen('LOAN_BENEFICIARIES'); }}
                         onBack={() => { setCurrentMobileScreen('HOME'); setActiveBottomTab(masterDataViewReturnTab); }}
@@ -3227,12 +3225,10 @@ export default function App() {
                         mGen={mGen} setMGen={setMGen} fGen={fGen} setFGen={setFGen}
                         lastUpdated=""
                         onSave={(data) => {
-                          if (data) saveMasterStateToStorage(data);
-                          stampMasterDataUpdated('demographics');
+                          stampMasterDataUpdated('demographics', data || {});
                         }}
                         onSaveNext={(data) => {
-                          if (data) saveMasterStateToStorage(data);
-                          stampMasterDataUpdated('demographics');
+                          stampMasterDataUpdated('demographics', data || {});
                           setCurrentMobileScreen('HOME');
                         }}
                         onBack={() => setCurrentMobileScreen(demographicsBackTarget)}
