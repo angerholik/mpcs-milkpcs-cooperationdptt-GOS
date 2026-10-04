@@ -4,6 +4,7 @@ import { MaterialIcons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useAutosave } from '../../hooks/useAutosave';
 import BottomNav from '../BottomNav';
+import ScreenHeader from '../ScreenHeader';
 import AnimatedContinueButton from '../AnimatedContinueButton';
 
 // Same subtle Kanchenjunga treatment used on every header across the app.
@@ -134,33 +135,14 @@ export default function MpcsInstitutionalProfileScreen({
   return (
     <View style={styles.container}>
       {/* Top Header */}
-      <View style={styles.topBar}>
-        <LinearGradient
-          colors={['#7a1a1f', '#4a1017']}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 0 }}
-          style={StyleSheet.absoluteFillObject}
-        />
-        <Image
-          source={require('../../../assets/core/kanchenjunga.jpg')}
-          style={[StyleSheet.absoluteFillObject, { width: '100%', height: '100%' }, headerPhotoFilter]}
-          resizeMode="cover"
-        />
-        <TouchableOpacity style={styles.backBtn} onPress={() => { handleSave(); if (onBack) onBack(); }} activeOpacity={0.7}>
-          <MaterialCommunityIcons name="arrow-left" size={24} color="#FFFFFF" />
-        </TouchableOpacity>
-        <View style={styles.topBarTitleContainer}>
-          <Text style={styles.moduleTag}>MPCS</Text>
-          <Text style={styles.screenTitleHeader}>Institutional Profile</Text>
-        </View>
-        <TouchableOpacity style={styles.notifyBtn} onPress={onNotifyPress} activeOpacity={0.7}>
-          <MaterialCommunityIcons name="bell-outline" size={20} color="#FFFFFF" />
-          {unreadCount > 0 && <View style={styles.notifyBadge} />}
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.avatarBtn} onPress={onProfilePress} activeOpacity={0.8}>
-          <Text style={styles.avatarText}>CI</Text>
-        </TouchableOpacity>
-      </View>
+      <ScreenHeader
+        title="Institutional Profile"
+        subtitle="MPCS"
+        onBack={onBack}
+        onAvatarPress={onProfilePress}
+        onNotifyPress={onNotifyPress}
+        showAlertDot={unreadCount > 0}
+      />
 
       {/* Sticky Action Banner at Top — only the contextual "Edit Profile"
           action lives here now. "Save & Next" moved to a bottom footer:
@@ -192,9 +174,6 @@ export default function MpcsInstitutionalProfileScreen({
       </View>
 
       {/* Decorative Ambient Background Blobs */}
-      <View style={styles.bgBlobTop} pointerEvents="none" />
-      <View style={styles.bgBlobBottomLeft} pointerEvents="none" />
-      <View style={styles.bgBlobBottomRight} pointerEvents="none" />
 
       <ScrollView style={styles.scrollContent} contentContainerStyle={[styles.scrollInner, styles.webCapWidth]} showsVerticalScrollIndicator={false}>
         {/* Profile Status Banner */}

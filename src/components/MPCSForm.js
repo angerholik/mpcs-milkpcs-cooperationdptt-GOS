@@ -20,7 +20,7 @@ const COLORS = {
     textPrimary: '#450A0A',
     textSecondary: '#7F1D1D',
     surface: '#FFFFFF',
-    background: '#F8F5F2',
+    background: '#F4F5F7',
     border: '#E2E8F0',
 };
 
@@ -422,7 +422,7 @@ const FieldInput = ({ field, formData, handleChange }) => {
                     onPress={pickImage}
                     style={{
                         height: 120,
-                        backgroundColor: '#F8F5F2',
+                        backgroundColor: '#F4F5F7',
                         borderRadius: 16,
                         borderWidth: 2,
                         borderColor: hasImage ? COLORS.emerald : '#E2E8F0',
@@ -534,7 +534,7 @@ const FieldInput = ({ field, formData, handleChange }) => {
                     )}
                 </View>
             ) : field.type === 'radio' && field.options ? (
-                    <View style={[styles.floatingInputInner, { paddingHorizontal: 4, paddingVertical: 4, backgroundColor: '#F8F5F2', borderColor: '#CBD5E1', borderStyle: 'solid', borderWidth: 1.5 }]}>
+                    <View style={[styles.floatingInputInner, { paddingHorizontal: 4, paddingVertical: 4, backgroundColor: '#F4F5F7', borderColor: '#CBD5E1', borderStyle: 'solid', borderWidth: 1.5 }]}>
                         {field.options.map((opt, i) => {
                             const isSelected = formData[field.id] === opt;
                             return (
@@ -1234,7 +1234,7 @@ const styles = StyleSheet.create({
         paddingVertical: 10,
         paddingHorizontal: 8,
         borderBottomWidth: 1,
-        borderBottomColor: '#F8F5F2',
+        borderBottomColor: '#F4F5F7',
     },
     categoryCell: {
         flex: 1.5,
@@ -1511,7 +1511,7 @@ const styles = StyleSheet.create({
         width: 36,
         height: 36,
         borderRadius: 18,
-        backgroundColor: '#F8F5F2',
+        backgroundColor: '#F4F5F7',
         alignItems: 'center',
         justifyContent: 'center',
     }

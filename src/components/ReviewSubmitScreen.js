@@ -1,13 +1,8 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, Platform, Pressable, Image } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, ActivityIndicator, Pressable } from 'react-native';
+import MpcsWizardHeader from './mpcs/MpcsWizardHeader';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
 import { webCapWidth } from '../utils/webStyles';
-
-// Same subtle Kanchenjunga treatment used on every header across the app.
-const headerPhotoFilter = Platform.OS === 'web'
-  ? { opacity: 0.4, filter: 'grayscale(0.35) contrast(1.15) brightness(0.95)', mixBlendMode: 'luminosity' }
-  : { opacity: 0.28 };
 
 const COLORS = {
   surface: '#ffffff',
@@ -26,6 +21,8 @@ const COLORS = {
   emerald500: '#10b981',
   emerald50: '#ecfdf5',
   amber900: '#78350f',
+  maroon: '#7B1420',
+  ink: '#1E1B18',
   red50: '#fef2f2',
 };
 
@@ -87,7 +84,7 @@ export default function ReviewSubmitScreen({
       screenKey: 'EVIDENCE' 
     },
     { 
-      title: 'Monthly Sales / Deposit',   
+      title: 'Collection & Deposit',   
       status: opsState.status === 'Pending' ? 'NOT COMPLETED' : opsState.status,      
       subText: opsState.updatedAt ? `Last updated ${formatTime(opsState.updatedAt)}` : '',
       isComplete: isOpsComplete,      
@@ -95,7 +92,7 @@ export default function ReviewSubmitScreen({
       screenKey: 'OPERATIONS' 
     },
     { 
-      title: 'Activities / Events Log',   
+      title: 'Activities & Events',   
       status: actStatusDisplay, 
       subText: actState.updatedAt ? `Last updated ${formatTime(actState.updatedAt)}` : '',
       isComplete: isActComplete, 
@@ -115,312 +112,92 @@ export default function ReviewSubmitScreen({
 
   const mandatorySections = sections.filter(sec => !sec.isNA);
   const allSectionsComplete = mandatorySections.every(sec => sec.isComplete);
+  const completedCount = mandatorySections.filter(sec => sec.isComplete).length;
+  const pendingCount = mandatorySections.length - completedCount;
 
   return (
     <View style={styles.container}>
-      {/* Top Header */}
-      <View style={styles.topBar}>
-        <LinearGradient
-          colors={['#7a1a1f', '#4a1017']}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 0 }}
-          style={StyleSheet.absoluteFillObject}
-        />
-        <Image
-          source={require('../../assets/core/kanchenjunga.jpg')}
-          style={[StyleSheet.absoluteFillObject, { width: '100%', height: '100%' }, headerPhotoFilter]}
-          resizeMode="cover"
-        />
-        <TouchableOpacity style={styles.backBtn} onPress={onBack} activeOpacity={0.7}>
-          <MaterialCommunityIcons name="arrow-left" size={24} color="#FFFFFF" />
-        </TouchableOpacity>
-        <View style={styles.topBarTitleContainer}>
-          <Text style={styles.moduleTag}>MILK PCS</Text>
-          <Text style={styles.screenTitleHeader}>Review & Submit Return</Text>
-        </View>
-        <TouchableOpacity style={styles.notifyBtn} onPress={onNotifyPress} activeOpacity={0.7}>
-          <MaterialCommunityIcons name="bell-outline" size={20} color="#FFFFFF" />
-          {unreadCount > 0 && <View style={styles.notifyBadge} />}
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.avatarBtn} onPress={onProfilePress} activeOpacity={0.8}>
-          <Text style={styles.avatarText}>CI</Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* Decorative Ambient Background Blobs */}
-      <View style={styles.bgBlobTop} pointerEvents="none" />
-      <View style={styles.bgBlobBottomLeft} pointerEvents="none" />
-      <View style={styles.bgBlobBottomRight} pointerEvents="none" />
+      <MpcsWizardHeader
+        module="MILK PCS"
+        total={mandatorySections.length}
+        step={completedCount}
+        month={(reportingMonth || 'CURRENT MONTH').toUpperCase()}
+        title="Review & Submit"
+        label={`${societyName || 'This society'} · ${completedCount} of ${mandatorySections.length} parameters done`}
+        onBack={onBack}
+      />
 
       <ScrollView style={styles.scrollContent} contentContainerStyle={[styles.scrollInner, webCapWidth]} showsVerticalScrollIndicator={false}>
-        
-        {/* Month Banner */}
-        <View style={styles.monthBannerCard}>
-          <LinearGradient
-            colors={['rgba(122, 26, 31, 0.95)', 'rgba(74, 16, 23, 0.95)']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={StyleSheet.absoluteFillObject}
-          />
-          <View style={styles.monthBannerContent}>
-            <View>
-              <Text style={styles.monthBannerSub}>MONTHLY REPORT</Text>
-              <Text style={styles.monthBannerTitle}>{reportingMonth || "CURRENT MONTH"}</Text>
-              <Text style={styles.societyNameSub}>{societyName || "Milk Society"}</Text>
-            </View>
-            <View style={styles.monthBannerIconBox}>
-              <MaterialCommunityIcons name="file-document-check-outline" size={28} color="#ffffff" />
-            </View>
-          </View>
-        </View>
-
-        {/* Section Completion Checklist */}
-        <View style={styles.card}>
-          <View style={styles.cardHeaderRow}>
-            <View style={styles.cardIconBox}>
-              <MaterialCommunityIcons name="format-list-checks" size={20} color={COLORS.primary} />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.cardHeaderTitle}>Monthly Sections</Text>
-              <Text style={styles.cardHeaderSub}>
-                Tap any section to independently view or update it.
-              </Text>
-            </View>
-          </View>
-
-          {sections.map((sec, idx) => {
-            const isTappable = !sec.isNA && onNavigateScreen;
-            const RowWrapper = isTappable ? TouchableOpacity : View;
-            const rowProps = isTappable
-              ? {
-                  onPress: () => onNavigateScreen(sec.screenKey),
-                  activeOpacity: 0.75,
-                  style: [styles.checkRow, idx > 0 && styles.rowBorder, sec.isNA && styles.checkRowNA, styles.checkRowTappable],
-                }
-              : { style: [styles.checkRow, idx > 0 && styles.rowBorder, sec.isNA && styles.checkRowNA] };
-
+        <View style={styles.listCard}>
+          {sections.map((sec, i) => {
+            const tappable = !sec.isNA && !!onNavigateScreen;
             return (
-              <RowWrapper key={sec.title} {...rowProps}>
-                <MaterialCommunityIcons
-                  name={sec.isNA ? 'minus-circle-outline' : sec.isComplete ? 'check-circle' : 'alert-circle-outline'}
-                  size={20}
-                  color={sec.isNA ? COLORS.slate400 : sec.isComplete ? COLORS.emerald500 : COLORS.primary}
-                />
+              <Pressable
+                key={sec.title}
+                disabled={!tappable}
+                style={[styles.listRow, i < sections.length - 1 && styles.listRowBorder]}
+                onPress={() => onNavigateScreen(sec.screenKey)}
+              >
                 <View style={{ flex: 1 }}>
-                  <Text style={[styles.checkTitle, sec.isNA && styles.checkTitleNA]}>{sec.title}</Text>
-                  {sec.subText ? (
-                    <Text style={{ fontFamily: FONT_FAMILY, fontSize: 11, color: COLORS.slate500, marginTop: 2 }}>{sec.subText}</Text>
-                  ) : null}
+                  <Text style={[styles.listRowTitle, sec.isNA && { color: COLORS.slate500 }]}>{sec.title}</Text>
+                  {sec.isNA ? <Text style={styles.listRowSub}>No active loan</Text> : sec.subText ? <Text style={styles.listRowSub}>{sec.subText}</Text> : null}
                 </View>
-                <View style={[
-                  styles.statusChip,
-                  {
-                    backgroundColor: sec.isNA ? COLORS.slate100 : sec.isComplete ? COLORS.emerald50 : COLORS.red50,
-                    borderColor: sec.isNA ? 'rgba(148,163,184,0.3)' : sec.isComplete ? 'rgba(16,185,129,0.2)' : 'rgba(220,38,38,0.2)',
-                  }
-                ]}>
-                  <Text style={[styles.statusChipText, {
-                    color: sec.isNA ? COLORS.slate400 : sec.isComplete ? COLORS.emerald700 : COLORS.primary,
-                    fontStyle: sec.isNA ? 'italic' : 'normal',
-                  }]}>
-                    {sec.status}
-                  </Text>
-                </View>
-                {isTappable && (
-                  <MaterialCommunityIcons name="chevron-right" size={18} color={COLORS.slate400} />
+                {sec.isNA ? (
+                  <Text style={styles.pendingText}>—</Text>
+                ) : sec.isComplete ? (
+                  <View style={styles.doneGroup}>
+                    <MaterialCommunityIcons name="check" size={16} color={COLORS.ink} />
+                    <Text style={styles.doneText}>Done</Text>
+                  </View>
+                ) : (
+                  <View style={styles.doneGroup}>
+                    <Text style={styles.pendingText}>Pending</Text>
+                    <MaterialCommunityIcons name="chevron-right" size={18} color={COLORS.maroon} />
+                  </View>
                 )}
-              </RowWrapper>
+              </Pressable>
             );
           })}
         </View>
 
-        {!allSectionsComplete && (
-          <View style={styles.incompleteHint}>
-            <MaterialCommunityIcons name="gesture-tap" size={16} color={COLORS.amber900} />
-            <Text style={styles.incompleteHintText}>
-              Tap any incomplete section above to go back and fill it in.
+        <Text style={styles.footerNote}>
+          Tap a pending parameter to fill it in. Submitting keeps this return as a permanent record for {reportingMonth || 'this month'}; Master data is not changed.
+        </Text>
+
+        <Pressable
+          style={[styles.submitBtn, (!allSectionsComplete || isSealing) && styles.submitBtnDisabled]}
+          onPress={onCompileAndSeal}
+          disabled={!allSectionsComplete || isSealing}
+        >
+          {isSealing ? (
+            <ActivityIndicator color="#ffffff" size="small" />
+          ) : (
+            <Text style={[styles.submitBtnText, !allSectionsComplete && styles.submitBtnTextDisabled]}>
+              {allSectionsComplete ? 'Submit monthly return' : `${pendingCount} parameter${pendingCount === 1 ? '' : 's'} still pending`}
             </Text>
-          </View>
-        )}
-
-        {/* Permanent Record Banner */}
-        <View style={styles.warningBanner}>
-          <View style={styles.warningIconBox}>
-            <MaterialCommunityIcons name="shield-lock-outline" size={20} color={COLORS.primary} />
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.warningTitle}>Permanent Record</Text>
-            <Text style={styles.warningText}>
-              Submitting this return creates a permanent historical record for {societyName || "this society"}. Master data will remain unchanged.
-            </Text>
-          </View>
-        </View>
-
-        <View style={[styles.btnWrapper, { marginTop: 16 }]}>
-          <Pressable 
-            style={({ hovered, pressed }) => [
-              styles.submitCtaBtn,
-              (!allSectionsComplete || isSealing) && { backgroundColor: COLORS.slate400 },
-              pressed && allSectionsComplete && !isSealing && { transform: [{ scale: 0.98 }] },
-              hovered && Platform.OS === 'web' && { shadowOpacity: 0.4 }
-            ]}
-            onPress={onCompileAndSeal}
-            disabled={!allSectionsComplete || isSealing}
-          >
-            {allSectionsComplete && !isSealing && (
-              <LinearGradient
-                colors={['#047857', '#064e3b']}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-                style={StyleSheet.absoluteFillObject}
-              />
-            )}
-            {isSealing ? (
-              <ActivityIndicator color="#ffffff" size="small" />
-            ) : (
-              <>
-                <Text style={styles.submitCtaText}>
-                  {allSectionsComplete ? 'COMPILE & SEAL' : 'Complete Sections to Submit'}
-                </Text>
-                {allSectionsComplete && <MaterialCommunityIcons name="lock-outline" size={18} color="#ffffff" />}
-              </>
-            )}
-          </Pressable>
-        </View>
-
+          )}
+        </Pressable>
       </ScrollView>
     </View>
   );
 }
 
+const F = 'Manrope';
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.slate50, position: 'relative' },
-  topBar: {
-    position: 'relative',
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 12,
-    paddingTop: Platform.OS === 'ios' ? 44 : 12,
-    overflow: 'hidden',
-  },
-  backBtn: { padding: 8, marginRight: 8 },
-  topBarTitleContainer: { flex: 1 },
-  notifyBtn: {
-    width: 36,
-    height: 36,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  notifyBadge: {
-    position: 'absolute',
-    top: 6,
-    right: 6,
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#EF4444',
-    borderWidth: 1,
-    borderColor: COLORS.primary,
-  },
-  avatarBtn: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.35)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginLeft: 8,
-  },
-  avatarText: {
-    color: '#FFFFFF',
-    fontSize: 10,
-    fontWeight: '800',
-    fontFamily: FONT_FAMILY,
-  },
-  bgBlobTop: {
-    position: 'absolute', top: -40, right: -40, width: 260, height: 260,
-    borderRadius: 130, backgroundColor: 'rgba(122, 26, 31, 0.08)', zIndex: -1,
-  },
-  bgBlobBottomLeft: {
-    position: 'absolute', bottom: 80, left: -50, width: 240, height: 240,
-    borderRadius: 120, backgroundColor: 'rgba(180, 83, 9, 0.06)', zIndex: -1,
-  },
-  bgBlobBottomRight: {
-    position: 'absolute', top: '40%', right: -60, width: 220, height: 220,
-    borderRadius: 110, backgroundColor: 'rgba(122, 26, 31, 0.05)', zIndex: -1,
-  },
-  moduleTag: { 
-    color: 'rgba(255,255,255,0.7)', fontFamily: FONT_FAMILY,
-    fontSize: 8, fontWeight: '800', letterSpacing: 1.2, marginBottom: 2,
-  },
-  screenTitleHeader: { 
-    color: '#FFFFFF', fontFamily: FONT_FAMILY, fontSize: 16, 
-    fontWeight: '800', letterSpacing: -0.16,
-  },
+  container: { flex: 1, backgroundColor: '#F4F5F7' },
   scrollContent: { flex: 1 },
-  scrollInner: { padding: 16, gap: 16, paddingBottom: 40 },
-  monthBannerCard: {
-    borderRadius: 16, overflow: 'hidden', padding: 20,
-    shadowColor: COLORS.primary, shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.15, shadowRadius: 24, elevation: 6,
-  },
-  monthBannerContent: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  monthBannerSub: { 
-    fontFamily: FONT_FAMILY, fontSize: 10, fontWeight: '800', 
-    color: 'rgba(255,255,255,0.7)', letterSpacing: 1.2, marginBottom: 4 
-  },
-  monthBannerTitle: { fontFamily: FONT_FAMILY, fontSize: 24, fontWeight: '800', color: '#ffffff', letterSpacing: -0.5 },
-  societyNameSub: { 
-    fontFamily: FONT_FAMILY, fontSize: 14, fontWeight: '500', 
-    color: 'rgba(255,255,255,0.9)', marginTop: 4 
-  },
-  monthBannerIconBox: {
-    width: 52, height: 52, borderRadius: 26, backgroundColor: 'rgba(255,255,255,0.1)',
-    borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)', alignItems: 'center', justifyContent: 'center',
-  },
-  card: {
-    backgroundColor: COLORS.surface, borderRadius: 16, padding: 16,
-    borderWidth: 1, borderColor: 'rgba(226,232,240,0.6)', shadowColor: '#0f172a',
-    shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.08, shadowRadius: 20, elevation: 3,
-  },
-  cardHeaderRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 16 },
-  cardIconBox: {
-    width: 32, height: 32, borderRadius: 10, backgroundColor: COLORS.slate50,
-    borderWidth: 1, borderColor: COLORS.slate100, alignItems: 'center', justifyContent: 'center',
-  },
-  cardHeaderTitle: { 
-    fontFamily: FONT_FAMILY, fontSize: 14, fontWeight: '700', color: COLORS.slate800, letterSpacing: -0.14,
-  },
-  cardHeaderSub: { fontFamily: FONT_FAMILY, fontSize: 11, fontWeight: '500', color: COLORS.slate400, marginTop: 1 },
-  checkRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 12, gap: 12 },
-  checkRowNA: { opacity: 0.55 },
-  checkRowTappable: {
-    backgroundColor: 'rgba(122, 26, 31, 0.03)', borderRadius: 10, marginHorizontal: -4, paddingHorizontal: 4,
-  },
-  rowBorder: { borderTopWidth: 1, borderTopColor: COLORS.slate100 },
-  checkTitle: { fontFamily: FONT_FAMILY, fontSize: 14, fontWeight: '600', color: COLORS.slate800 },
-  checkTitleNA: { color: COLORS.slate400, fontWeight: '500' },
-  statusChip: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6, borderWidth: 1 },
-  statusChipText: { fontFamily: FONT_FAMILY, fontSize: 9, fontWeight: '800', letterSpacing: 0.8 },
-  incompleteHint: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 4 },
-  incompleteHintText: { flex: 1, fontFamily: FONT_FAMILY, fontSize: 12, color: COLORS.amber900, fontWeight: '600' },
-  warningBanner: {
-    backgroundColor: 'rgba(254, 242, 242, 0.8)', borderRadius: 14, borderWidth: 1, borderColor: 'rgba(252, 165, 165, 0.5)',
-    flexDirection: 'row', alignItems: 'flex-start', gap: 12, padding: 16,
-  },
-  warningIconBox: {
-    width: 36, height: 36, borderRadius: 18, backgroundColor: COLORS.red50,
-    borderWidth: 1, borderColor: 'rgba(252, 165, 165, 0.4)', alignItems: 'center', justifyContent: 'center',
-  },
-  warningTitle: { fontFamily: FONT_FAMILY, fontSize: 13, fontWeight: '800', color: COLORS.primary, marginBottom: 4 },
-  warningText: { fontFamily: FONT_FAMILY, fontSize: 12, color: COLORS.slate700, lineHeight: 18, fontWeight: '500' },
-  btnWrapper: {
-    borderRadius: 16, shadowColor: COLORS.primary, shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2, shadowRadius: 8, elevation: 4, overflow: 'hidden',
-  },
-  submitCtaBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, paddingVertical: 14, paddingHorizontal: 16 },
-  submitCtaText: { color: '#FFFFFF', fontFamily: FONT_FAMILY, fontSize: 14, fontWeight: '700', letterSpacing: 0.5 },
+  scrollInner: { padding: 16, paddingBottom: 110, gap: 16 },
+  listCard: { backgroundColor: '#fff', borderRadius: 18, borderWidth: 1, borderColor: '#E7E2DA', overflow: 'hidden' },
+  listRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 18 },
+  listRowBorder: { borderBottomWidth: 1, borderBottomColor: '#E7E2DA' },
+  listRowTitle: { fontFamily: F, fontSize: 16, fontWeight: '800', color: '#1E1B18' },
+  listRowSub: { fontFamily: F, fontSize: 12, fontWeight: '500', color: '#78716C', marginTop: 2 },
+  doneGroup: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  doneText: { fontFamily: F, fontSize: 14, fontWeight: '700', color: '#1E1B18' },
+  pendingText: { fontFamily: F, fontSize: 14, fontWeight: '800', color: '#7B1420' },
+  footerNote: { fontFamily: F, fontSize: 13, fontWeight: '500', color: '#57534E', lineHeight: 18 },
+  submitBtn: { paddingVertical: 15, borderRadius: 12, backgroundColor: '#7B1420', alignItems: 'center', justifyContent: 'center' },
+  submitBtnDisabled: { backgroundColor: '#DCD3C8' },
+  submitBtnText: { fontFamily: F, fontSize: 14, fontWeight: '800', color: '#ffffff' },
+  submitBtnTextDisabled: { color: '#4A4038' },
 });

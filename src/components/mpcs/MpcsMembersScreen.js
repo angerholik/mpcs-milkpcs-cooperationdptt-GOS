@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { View, Text, StyleSheet, TextInput, ScrollView, Platform, Pressable, ActivityIndicator, Alert } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import BottomNav from '../BottomNav';
+import ScreenHeader from '../ScreenHeader';
 import { webCapWidth } from '../../utils/webStyles';
 import { fetchMembers, saveMember, updateMember, deleteMember, resolveMemberFlag } from '../../supabase';
 
@@ -52,7 +53,11 @@ const notify = (title, message) => {
 
 export default function MpcsMembersScreen({
   societyName = '',
+  societyType = 'MPCS',
   inspectorEmail = '',
+  onNotifyPress,
+  onProfilePress,
+  unreadCount = 0,
   onBack,
   onMemberDataChanged,
   activeTab,
@@ -71,7 +76,7 @@ export default function MpcsMembersScreen({
 
   const loadMembers = useCallback(async () => {
     setLoading(true);
-    const { data } = await fetchMembers(societyName, 'MPCS');
+    const { data } = await fetchMembers(societyName, societyType);
     setMembers(data || []);
     setLoading(false);
   }, [societyName]);
@@ -108,7 +113,7 @@ export default function MpcsMembersScreen({
     };
     const { error } = editingId
       ? await updateMember(editingId, payload)
-      : await saveMember({ societyName, societyType: 'MPCS', addedBy: inspectorEmail, ...payload });
+      : await saveMember({ societyName, societyType, addedBy: inspectorEmail, ...payload });
     setSaving(false);
     if (error) {
       notify('Save Failed', error.message || 'Could not save this member. Please try again.');
@@ -174,13 +179,14 @@ export default function MpcsMembersScreen({
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <Pressable onPress={onBack} hitSlop={8} style={styles.backBtn}>
-          <MaterialCommunityIcons name="arrow-left" size={22} color="#ffffff" />
-        </Pressable>
-        <Text style={styles.headerTitle}>Members</Text>
-        <Text style={styles.headerSubtitle}>{societyName || 'Unknown society'} · {members.length} on record</Text>
-      </View>
+      <ScreenHeader
+        title="Members"
+        subtitle={`${(societyName || 'UNKNOWN SOCIETY').toUpperCase()} · ${members.length} ON RECORD`}
+        onBack={onBack}
+        onAvatarPress={onProfilePress}
+        onNotifyPress={onNotifyPress}
+        showAlertDot={unreadCount > 0}
+      />
 
       <ScrollView
         style={styles.scrollContent}

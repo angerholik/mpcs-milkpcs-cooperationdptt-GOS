@@ -110,10 +110,10 @@ const NEXT_ACTION_BUTTON_LABEL = {
 // the reference's per-row identity (Digital Evidence stays rose whether
 // open or done; Loan Status stays slate when not applicable).
 const PARAM_STYLE = {
-  MPCS_EVIDENCE: { icon: 'image-outline', bg: COLORS.rose50, border: 'rgba(254,205,213,0.6)', fg: COLORS.rose500 },
-  MPCS_SALES: { icon: 'currency-usd', bg: COLORS.emerald50, border: COLORS.emerald200, fg: COLORS.emerald600 },
+  MPCS_EVIDENCE: { icon: 'camera-outline', bg: COLORS.rose50, border: 'rgba(254,205,213,0.6)', fg: COLORS.rose500 },
+  MPCS_SALES: { icon: 'wallet-outline', bg: COLORS.emerald50, border: COLORS.emerald200, fg: COLORS.emerald600 },
   MPCS_BUSINESS: { icon: 'chart-bar', bg: COLORS.emerald50, border: COLORS.emerald200, fg: COLORS.emerald600 },
-  MPCS_LOAN_STATUS: { icon: 'file-document-outline', bg: COLORS.slate100, border: 'rgba(226,232,240,0.8)', fg: COLORS.slate500 },
+  MPCS_LOAN_STATUS: { icon: 'bank-outline', bg: COLORS.slate100, border: 'rgba(226,232,240,0.8)', fg: COLORS.slate500 },
 };
 
 // Same 2.5s ease-in-out pulse as the reference's `animate-pulse-subtle`

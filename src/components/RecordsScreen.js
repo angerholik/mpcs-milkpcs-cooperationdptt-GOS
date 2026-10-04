@@ -3,7 +3,6 @@ import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, Platfo
 import { MaterialIcons } from '@expo/vector-icons';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
-import HeaderNav from './HeaderNav';
 import ScreenHeader from './ScreenHeader';
 import BottomNav from './BottomNav';
 import { supabase } from '../supabase';
@@ -287,32 +286,14 @@ export default function RecordsScreen({
 
   return (
     <View style={styles.container}>
-      {/* MPCS uses the shared brand header; Milk PCS keeps HeaderNav, which
-          carries the society/module switcher its own Home still relies on. */}
-      {activeModule === 'MPCS' || reportType === 'MPCS' ? (
-        <ScreenHeader
-          title="Records"
-          subtitle={(selectedSociety?.name || 'MPCS SOCIETY').toUpperCase()}
-          initials={(role || 'CI').slice(0, 2).toUpperCase()}
-          onAvatarPress={onProfilePress}
-          onNotifyPress={onNotifyPress}
-          showAlertDot={unreadCount > 0}
-        />
-      ) : (
-        <HeaderNav
-          activeModule={activeModule}
-          selectedSociety={selectedSociety}
-          institutionsList={institutionsList}
-          onSelectSociety={onSelectSociety}
-          onManageInstitutions={onManageInstitutions}
-          onSwitchModule={onSwitchModule}
-          onMenuPress={onManageInstitutions}
-          onNotifyPress={onNotifyPress}
-          onProfilePress={onProfilePress}
-          unreadCount={unreadCount}
-          role={role}
-        />
-      )}
+      <ScreenHeader
+        title="Records"
+        subtitle={(selectedSociety?.name || (activeModule === 'MILK' ? 'MILK PCS' : 'MPCS SOCIETY')).toUpperCase()}
+        initials={(role || 'CI').slice(0, 2).toUpperCase()}
+        onAvatarPress={onProfilePress}
+        onNotifyPress={onNotifyPress}
+        showAlertDot={unreadCount > 0}
+      />
 
       <ScrollView style={styles.scrollContent} contentContainerStyle={[styles.scrollInner, webCapWidth]}>
         {/* Screen Title */}

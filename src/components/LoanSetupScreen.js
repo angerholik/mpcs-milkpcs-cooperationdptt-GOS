@@ -1,16 +1,14 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, Platform, Pressable, Image } from 'react-native';
+import ScreenHeader from './ScreenHeader';
+import { ReadCard, ChipSelect, DateField, ViewFooter, EditFooter, masterStyles } from './MasterRecord';
+import { WizardField } from './WizardField';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useAutosave } from '../hooks/useAutosave';
 import BottomNav from './BottomNav';
 import { webCapWidth } from '../utils/webStyles';
 
 // Same subtle Kanchenjunga treatment used on every header across the app.
-const headerPhotoFilter = Platform.OS === 'web'
-  ? { opacity: 0.4, filter: 'grayscale(0.35) contrast(1.15) brightness(0.95)', mixBlendMode: 'luminosity' }
-  : { opacity: 0.28 };
-
 const COLORS = {
   surface: '#ffffff',
   slate800: '#1e293b',
@@ -119,455 +117,47 @@ export default function LoanSetupScreen({
   };
 
   return (
-    <View style={styles.container}>
-      {/* Top Header */}
-      <View style={styles.topBar}>
-        <LinearGradient
-          colors={['#7a1a1f', '#4a1017']}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 0 }}
-          style={StyleSheet.absoluteFillObject}
-        />
-        <Image
-          source={require('../../assets/core/kanchenjunga.jpg')}
-          style={[StyleSheet.absoluteFillObject, { width: '100%', height: '100%' }, headerPhotoFilter]}
-          resizeMode="cover"
-        />
-        <TouchableOpacity style={styles.backBtn} onPress={() => { handleSave(); if (onBack) onBack(); }} activeOpacity={0.7}>
-          <MaterialCommunityIcons name="arrow-left" size={24} color="#FFFFFF" />
-        </TouchableOpacity>
-        <View style={styles.topBarTitleContainer}>
-          <Text style={styles.moduleTag}>MILK PCS MASTER DATA</Text>
-          <Text style={styles.screenTitleHeader}>Loan Details</Text>
-        </View>
-        <TouchableOpacity style={styles.notifyBtn} onPress={onNotifyPress} activeOpacity={0.7}>
-          <MaterialCommunityIcons name="bell-outline" size={20} color="#FFFFFF" />
-          {unreadCount > 0 && <View style={styles.notifyBadge} />}
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.avatarBtn} onPress={onProfilePress} activeOpacity={0.8}>
-          <Text style={styles.avatarText}>CI</Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* Sticky Action Banner at Top — only the contextual edit action.
-          "Save & Next" is the wizard's forward-navigation action, so it
-          lives in a bottom footer after the reviewable content instead. */}
-      <View style={styles.stickyActionBanner}>
-        <View style={[{ flexDirection: 'row', gap: 8 }, webCapWidth]}>
-          <View style={styles.btnWrapper}>
-            <Pressable
-              style={({ hovered, pressed }) => [
-                styles.editCtaBtn,
-                pressed && { transform: [{ scale: 0.98 }] },
-                hovered && Platform.OS === 'web' && { shadowOpacity: 0.4 }
-              ]}
-              onPress={() => setModalVisible(true)}
-            >
-              <LinearGradient
-                colors={['#7a1a1f', '#4a1017']}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-                style={StyleSheet.absoluteFillObject}
-              />
-              <MaterialCommunityIcons name="pencil-outline" size={16} color="#ffffff" />
-              <Text style={styles.editCtaText}>Edit Loan Details</Text>
-            </Pressable>
-          </View>
-        </View>
-      </View>
-
-      {/* Decorative Ambient Background Blobs */}
-      <View style={styles.bgBlobTop} pointerEvents="none" />
-      <View style={styles.bgBlobBottomLeft} pointerEvents="none" />
-      <View style={styles.bgBlobBottomRight} pointerEvents="none" />
-
-      <ScrollView style={styles.scrollContent} contentContainerStyle={[styles.scrollInner, webCapWidth]} showsVerticalScrollIndicator={false}>
-        {/* Profile Status Banner */}
-        <View style={styles.alertCard}>
-          <View style={styles.alertIconBox}>
-            <MaterialCommunityIcons name="bank-outline" size={20} color={COLORS.amber900} />
-          </View>
-          <View style={styles.alertBody}>
-            <Text style={styles.alertTitle}>Loan Record</Text>
-            <Text style={styles.alertText}>Last verified: {lastVerified}</Text>
-          </View>
-        </View>
-
-        {/* Active / Inactive Selector — settable up front, without opening Edit */}
-        <View style={{ flexDirection: 'row', gap: 10, marginBottom: 14 }}>
-          <TouchableOpacity
-            style={{
-              flex: 1, paddingVertical: 10, borderRadius: 10, alignItems: 'center', borderWidth: 1.5,
-              borderColor: hasLoan ? COLORS.emerald700 : COLORS.slate200,
-              backgroundColor: hasLoan ? COLORS.emerald50 : COLORS.surface
-            }}
-            onPress={() => { setHasLoan(true); handleSave({ hasLoan: true }); }}
-          >
-            <Text style={{ fontFamily: FONT_FAMILY, fontSize: 12, fontWeight: '800', color: hasLoan ? COLORS.emerald700 : COLORS.slate500 }}>
-              ✓ ACTIVE LOAN
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={{
-              flex: 1, paddingVertical: 10, borderRadius: 10, alignItems: 'center', borderWidth: 1.5,
-              borderColor: !hasLoan ? COLORS.amber900 : COLORS.slate200,
-              backgroundColor: !hasLoan ? COLORS.amber100 : COLORS.surface
-            }}
-            onPress={() => { setHasLoan(false); handleSave({ hasLoan: false }); }}
-          >
-            <Text style={{ fontFamily: FONT_FAMILY, fontSize: 12, fontWeight: '800', color: !hasLoan ? COLORS.amber900 : COLORS.slate500 }}>
-              ⚠ NO ACTIVE LOAN
-            </Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* Info Card */}
-        <View style={[styles.card, !hasLoan && { opacity: 0.75 }]}>
-          <View style={styles.cardHeaderRow}>
-            <View style={styles.cardIconBox}>
-              <MaterialCommunityIcons name="bank" size={20} color={COLORS.primary} />
-            </View>
-            <Text style={styles.cardHeaderTitle}>Loan Setup</Text>
-            <View style={{
-              marginLeft: 'auto',
-              backgroundColor: hasLoan ? (loanCleared ? COLORS.slate100 : COLORS.emerald50) : COLORS.slate100,
-              paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6, borderWidth: 1,
-              borderColor: hasLoan ? (loanCleared ? COLORS.slate200 : 'rgba(16,185,129,0.3)') : COLORS.slate200
-            }}>
-              <Text style={{ fontFamily: FONT_FAMILY, fontSize: 10, fontWeight: '800', color: hasLoan ? (loanCleared ? COLORS.slate500 : COLORS.emerald700) : COLORS.slate500 }}>
-                {hasLoan ? (loanCleared ? '✓ CLEARED' : '✓ ACTIVE') : '⚠ NONE'}
-              </Text>
-            </View>
-          </View>
-
-          {hasLoan ? (
-            <>
-              <View style={styles.infoGrid}>
-                <View style={styles.infoCol}>
-                  <Text style={styles.infoLabel}>LOAN TYPE</Text>
-                  <Text style={styles.infoValue}>{loanType || "-"}</Text>
-                </View>
-                <View style={styles.infoCol}>
-                  <Text style={styles.infoLabel}>SANCTION DATE</Text>
-                  <Text style={styles.infoValue}>{sanctionDate || "-"}</Text>
-                </View>
-              </View>
-
-              <View style={styles.divider} />
-
-              <View style={styles.infoGrid}>
-                <View style={styles.infoCol}>
-                  <Text style={styles.infoLabel}>NO. OF BENEFICIARIES</Text>
-                  <Text style={styles.infoValue}>{beneficiaries || "-"}</Text>
-                </View>
-                <View style={styles.infoCol}>
-                  <Text style={styles.infoLabel}>AMOUNT EXTENDED (₹)</Text>
-                  <Text style={styles.infoValue}>{loanExtended || "-"}</Text>
-                </View>
-              </View>
-
-              {onManageBeneficiaries && (
-                <TouchableOpacity
-                  style={styles.manageBeneficiariesBtn}
-                  onPress={() => { handleSave(); onManageBeneficiaries(); }}
-                  activeOpacity={0.7}
-                >
-                  <MaterialCommunityIcons name="account-cash-outline" size={16} color={COLORS.primary} />
-                  <Text style={styles.manageBeneficiariesBtnText}>Manage Beneficiaries</Text>
-                  <MaterialCommunityIcons name="chevron-right" size={16} color={COLORS.primary} style={{ marginLeft: 'auto' }} />
-                </TouchableOpacity>
-              )}
-            </>
-          ) : (
-            <View style={{ paddingVertical: 14, alignItems: 'center', gap: 4 }}>
-              <MaterialCommunityIcons name="bank-off-outline" size={32} color={COLORS.slate400} />
-              <Text style={{ fontFamily: FONT_FAMILY, fontSize: 13, fontWeight: '700', color: COLORS.slate600 }}>
-                No Active Loan
-              </Text>
-              <Text style={{ fontFamily: FONT_FAMILY, fontSize: 11, color: COLORS.slate400, textAlign: 'center' }}>
-                This society has no loan currently on record. Fields are non-mandatory.
-              </Text>
-            </View>
-          )}
-        </View>
-
-        {/* Wizard forward-navigation action now scrolls with the content
-            instead of sitting in a fixed footer, which competed with the
-            floating BottomNav pill for the same strip at the bottom. */}
-        {onNext && (
-          <View style={[{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 20, paddingTop: 16, marginTop: 4, borderTopWidth: 1, borderTopColor: 'rgba(226,232,240,0.8)' }, webCapWidth]}>
-            <TouchableOpacity
-              onPress={() => { handleSave(); if (onBack) onBack(); }}
-              style={styles.prevCircleBtn}
-              activeOpacity={0.85}
-            >
-              <MaterialCommunityIcons name="chevron-left" size={24} color="#ffffff" />
-            </TouchableOpacity>
-            <Text style={styles.stepLabelText}>STEP 3 OF 4</Text>
-            <Pressable
-              onPress={() => { handleSave(); onNext(); }}
-              style={({ pressed }) => [styles.nextCircleBtn, pressed && { transform: [{ scale: 0.95 }] }]}
-            >
-              <MaterialCommunityIcons name="chevron-right" size={24} color="#7a1a1f" />
-            </Pressable>
-          </View>
+    <View style={masterStyles.container}>
+      <ScreenHeader title="Loan Details" subtitle="MILK PCS" onBack={onBack} onAvatarPress={onProfilePress} onNotifyPress={onNotifyPress} showAlertDot={unreadCount > 0} />
+      <ScrollView style={masterStyles.scrollContent} contentContainerStyle={[masterStyles.scrollInner, webCapWidth]} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+        {modalVisible ? (
+          <>
+            <ChipSelect label="Loan on record" options={['Active loan', 'No active loan']} value={hasLoan ? 'Active loan' : 'No active loan'} onChange={(v) => setHasLoan(v === 'Active loan')} />
+            {hasLoan ? (
+              <>
+                <WizardField label="Loan type" value={loanType} onChangeText={setLoanType} placeholder="e.g. Cash Credit Limit" />
+                <DateField label="Sanction date" valueIso={formatToIsoDate(sanctionDate)} onChangeIso={(v) => setSanctionDate(formatFromIsoDate(v))} TextInput={TextInput} />
+                <WizardField label="No. of beneficiaries" value={beneficiaries} onChangeText={setBeneficiaries} keyboardType="numeric" />
+                <WizardField label="Amount extended" prefix="₹" value={loanExtended} onChangeText={setLoanExtended} keyboardType="numeric" />
+              </>
+            ) : null}
+            <EditFooter onCancel={() => setModalVisible(false)} onSave={() => handleSave()} />
+          </>
+        ) : (
+          <>
+            <ReadCard
+              title="Loan record"
+              icon="bank-outline"
+              rows={hasLoan ? [
+                { label: 'Status', value: loanCleared ? 'Cleared' : 'Active', color: loanCleared ? '#78716C' : '#047857' },
+                { label: 'Loan type', value: loanType },
+                { label: 'Sanction date', value: sanctionDate },
+                { label: 'Beneficiaries', value: beneficiaries },
+                { label: 'Amount extended', value: loanExtended ? `₹${loanExtended}` : '' },
+              ] : [{ label: 'Status', value: 'No active loan' }]}
+            />
+            {hasLoan && onManageBeneficiaries ? (
+              <Pressable style={{ flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: '#fff', borderRadius: 18, borderWidth: 1, borderColor: '#E7E2DA', padding: 16 }} onPress={() => { handleSave(); onManageBeneficiaries(); }}>
+                <MaterialCommunityIcons name="account-cash-outline" size={20} color="#7B1420" />
+                <Text style={{ flex: 1, fontFamily: 'Manrope', fontSize: 15, fontWeight: '800', color: '#1E1B18' }}>Manage beneficiaries</Text>
+                <MaterialCommunityIcons name="chevron-right" size={18} color="#A8A29E" />
+              </Pressable>
+            ) : null}
+            <ViewFooter onUpdate={() => setModalVisible(true)} onBack={onBack} onNext={onNext ? () => { handleSave(); onNext(); } : undefined} />
+          </>
         )}
       </ScrollView>
-
       {onTabPress && <BottomNav activeTab={activeTab || 'home'} onTabPress={onTabPress} />}
-
-      {/* In-App Slide-Up Sheet */}
-      {modalVisible && (
-        <View style={styles.inAppModalOverlay}>
-          <TouchableOpacity style={StyleSheet.absoluteFillObject} activeOpacity={1} onPress={() => setModalVisible(false)} />
-          <View style={styles.modalCard}>
-            <View style={styles.modalHeaderRow}>
-              <Text style={styles.modalTitle}>Edit Loan Details</Text>
-              <TouchableOpacity style={styles.closeBtnCircle} onPress={() => setModalVisible(false)} activeOpacity={0.7}>
-                <MaterialCommunityIcons name="close" size={18} color={COLORS.slate500} />
-              </TouchableOpacity>
-            </View>
-
-            <ScrollView style={styles.modalFormScroll} showsVerticalScrollIndicator={false}>
-              {/* Active / No Loan Selector */}
-              <View style={styles.modalFormGroup}>
-                <Text style={styles.modalLabel}>Loan Status for this Society</Text>
-                <View style={{ flexDirection: 'row', gap: 10, marginTop: 4 }}>
-                  <TouchableOpacity
-                    style={{
-                      flex: 1, paddingVertical: 10, borderRadius: 10, alignItems: 'center', borderWidth: 1.5,
-                      borderColor: hasLoan ? COLORS.emerald700 : COLORS.slate200,
-                      backgroundColor: hasLoan ? COLORS.emerald50 : COLORS.slate50
-                    }}
-                    onPress={() => setHasLoan(true)}
-                  >
-                    <Text style={{ fontFamily: FONT_FAMILY, fontSize: 12, fontWeight: '800', color: hasLoan ? COLORS.emerald700 : COLORS.slate500 }}>
-                      ✓ ACTIVE LOAN
-                    </Text>
-                  </TouchableOpacity>
-
-                  <TouchableOpacity
-                    style={{
-                      flex: 1, paddingVertical: 10, borderRadius: 10, alignItems: 'center', borderWidth: 1.5,
-                      borderColor: !hasLoan ? COLORS.amber900 : COLORS.slate200,
-                      backgroundColor: !hasLoan ? COLORS.amber100 : COLORS.slate50
-                    }}
-                    onPress={() => setHasLoan(false)}
-                  >
-                    <Text style={{ fontFamily: FONT_FAMILY, fontSize: 12, fontWeight: '800', color: !hasLoan ? COLORS.amber900 : COLORS.slate500 }}>
-                      ⚠ NO LOAN
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-
-              <View style={styles.modalFormGroup}>
-                <Text style={styles.modalLabel}>Loan Type</Text>
-                <TextInput style={styles.modalInput} value={loanType} onChangeText={setLoanType} placeholder="e.g. Cash Credit Limit" placeholderTextColor={COLORS.slate400} />
-              </View>
-
-              <View style={styles.modalFormGroup}>
-                <Text style={styles.modalLabel}>Sanction Date</Text>
-                {Platform.OS === 'web' ? (
-                  <View style={styles.datePickerWrapper}>
-                    <input
-                      type="date"
-                      value={formatToIsoDate(sanctionDate)}
-                      onChange={(e) => setSanctionDate(formatFromIsoDate(e.target.value))}
-                      style={{
-                        width: '100%', height: '100%', border: 'none', outline: 'none',
-                        background: 'transparent', fontFamily: FONT_FAMILY, fontSize: '13px',
-                        color: '#1e293b', fontWeight: '500', cursor: 'pointer',
-                      }}
-                    />
-                  </View>
-                ) : (
-                  <TextInput style={styles.modalInput} value={sanctionDate} onChangeText={setSanctionDate} placeholder="DD Mon YYYY" placeholderTextColor={COLORS.slate400} />
-                )}
-              </View>
-
-              <View style={styles.modalFormGroup}>
-                <Text style={styles.modalLabel}>No. of Beneficiaries</Text>
-                <TextInput style={styles.modalInput} keyboardType="numeric" value={beneficiaries} onChangeText={setBeneficiaries} placeholder="0" placeholderTextColor={COLORS.slate400} />
-              </View>
-
-              <View style={styles.modalFormGroup}>
-                <Text style={styles.modalLabel}>Amount Extended (₹)</Text>
-                <TextInput style={styles.modalInput} keyboardType="numeric" value={loanExtended} onChangeText={setLoanExtended} placeholder="0" placeholderTextColor={COLORS.slate400} />
-              </View>
-
-              <View style={[styles.btnWrapper, { marginTop: 16, marginBottom: 20 }]}>
-                <Pressable
-                  style={({ hovered, pressed }) => [
-                    styles.saveModalBtn,
-                    pressed && { transform: [{ scale: 0.98 }] },
-                    hovered && Platform.OS === 'web' && { shadowOpacity: 0.4 }
-                  ]}
-                  onPress={() => handleSave()}
-                >
-                  <LinearGradient
-                    colors={['#7a1a1f', '#4a1017']}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 0 }}
-                    style={StyleSheet.absoluteFillObject}
-                  />
-                  <Text style={styles.saveModalText}>Save Changes</Text>
-                </Pressable>
-              </View>
-            </ScrollView>
-          </View>
-        </View>
-      )}
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.slate50, position: 'relative' },
-  topBar: {
-    position: 'relative',
-    flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 12,
-    paddingTop: Platform.OS === 'ios' ? 44 : 12, overflow: 'hidden',
-  },
-  backBtn: { padding: 8, marginRight: 8 },
-  topBarTitleContainer: { flex: 1 },
-  notifyBtn: {
-    width: 36,
-    height: 36,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  notifyBadge: {
-    position: 'absolute',
-    top: 6,
-    right: 6,
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#EF4444',
-    borderWidth: 1,
-    borderColor: COLORS.primary,
-  },
-  avatarBtn: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.35)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginLeft: 8,
-  },
-  avatarText: {
-    color: '#FFFFFF',
-    fontSize: 10,
-    fontWeight: '800',
-    fontFamily: FONT_FAMILY,
-  },
-  stickyActionBanner: {
-    backgroundColor: 'rgba(255, 255, 255, 0.95)', borderBottomWidth: 1,
-    borderBottomColor: 'rgba(226, 232, 240, 0.8)', paddingHorizontal: 12, paddingVertical: 8, zIndex: 10,
-  },
-  bgBlobTop: {
-    position: 'absolute', top: -40, right: -40, width: 260, height: 260,
-    borderRadius: 130, backgroundColor: 'rgba(122, 26, 31, 0.08)', zIndex: -1,
-  },
-  bgBlobBottomLeft: {
-    position: 'absolute', bottom: 80, left: -50, width: 240, height: 240,
-    borderRadius: 120, backgroundColor: 'rgba(180, 83, 9, 0.06)', zIndex: -1,
-  },
-  bgBlobBottomRight: {
-    position: 'absolute', top: '40%', right: -60, width: 220, height: 220,
-    borderRadius: 110, backgroundColor: 'rgba(122, 26, 31, 0.05)', zIndex: -1,
-  },
-  moduleTag: {
-    color: 'rgba(255,255,255,0.7)', fontFamily: FONT_FAMILY, fontSize: 8,
-    fontWeight: '800', letterSpacing: 1.2, marginBottom: 2,
-  },
-  screenTitleHeader: { color: '#FFFFFF', fontFamily: FONT_FAMILY, fontSize: 16, fontWeight: '800', letterSpacing: -0.16 },
-  scrollContent: { flex: 1 },
-  scrollInner: { padding: 12, gap: 12, paddingBottom: 110 },
-  alertCard: {
-    backgroundColor: 'rgba(254, 252, 232, 0.8)', borderRadius: 14, padding: 12,
-    flexDirection: 'row', alignItems: 'center', gap: 10, borderWidth: 1,
-    borderColor: 'rgba(253, 230, 138, 0.5)', shadowColor: '#0f172a',
-    shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.05, shadowRadius: 10, elevation: 2, marginBottom: 12,
-  },
-  alertIconBox: {
-    width: 36, height: 36, borderRadius: 18, backgroundColor: COLORS.amber100,
-    alignItems: 'center', justifyContent: 'center',
-  },
-  alertBody: { flex: 1, paddingRight: 8 },
-  alertTitle: { fontFamily: FONT_FAMILY, fontSize: 13, fontWeight: '800', color: COLORS.amber900, marginBottom: 2 },
-  alertText: { fontFamily: FONT_FAMILY, fontSize: 11, fontWeight: '500', color: 'rgba(146, 64, 14, 0.9)' },
-  card: {
-    backgroundColor: COLORS.surface, borderRadius: 16, padding: 16, borderWidth: 1,
-    borderColor: 'rgba(226,232,240,0.6)', shadowColor: '#0f172a',
-    shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.08, shadowRadius: 20, elevation: 3,
-  },
-  cardHeaderRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 12 },
-  cardIconBox: {
-    width: 32, height: 32, borderRadius: 10, backgroundColor: COLORS.slate50,
-    borderWidth: 1, borderColor: COLORS.slate100, alignItems: 'center', justifyContent: 'center',
-  },
-  cardHeaderTitle: { fontFamily: FONT_FAMILY, fontSize: 14, fontWeight: '700', color: COLORS.slate800, letterSpacing: -0.14 },
-  divider: { height: 1, backgroundColor: COLORS.slate100, marginVertical: 12 },
-  infoGrid: { flexDirection: 'row', gap: 12 },
-  infoCol: { flex: 1 },
-  infoLabel: { fontFamily: FONT_FAMILY, fontSize: 8, fontWeight: '800', color: COLORS.slate400, letterSpacing: 1.2, marginBottom: 2 },
-  infoValue: { fontFamily: FONT_FAMILY, fontSize: 13, fontWeight: '600', color: COLORS.slate800 },
-  manageBeneficiariesBtn: {
-    flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 14, paddingTop: 14,
-    borderTopWidth: 1, borderTopColor: COLORS.slate100,
-  },
-  manageBeneficiariesBtnText: { fontFamily: FONT_FAMILY, fontSize: 13, fontWeight: '700', color: COLORS.primary },
-  btnWrapper: {
-    borderRadius: 16, shadowColor: COLORS.primary, shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2, shadowRadius: 8, elevation: 4, overflow: 'hidden',
-  },
-  editCtaBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 12, paddingHorizontal: 16 },
-  editCtaText: { color: '#FFFFFF', fontFamily: FONT_FAMILY, fontSize: 13, fontWeight: '700', letterSpacing: 0.5 },
-  prevCircleBtn: { width: 48, height: 48, borderRadius: 24, backgroundColor: '#7a1a1f', alignItems: 'center', justifyContent: 'center' },
-  nextCircleBtn: {
-    width: 48, height: 48, borderRadius: 24, backgroundColor: '#ffffff',
-    borderWidth: 1.5, borderColor: '#7a1a1f', alignItems: 'center', justifyContent: 'center',
-  },
-  stepLabelText: { fontFamily: FONT_FAMILY, fontSize: 11, fontWeight: '700', color: COLORS.slate400, letterSpacing: 0.6 },
-
-  // In-App Slide-Up Sheet
-  inAppModalOverlay: {
-    position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
-    backgroundColor: 'rgba(15, 23, 42, 0.65)', justifyContent: 'flex-end', zIndex: 9999,
-  },
-  modalCard: {
-    width: '100%', maxWidth: 500, alignSelf: 'center', backgroundColor: COLORS.surface,
-    borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20,
-    paddingBottom: Platform.OS === 'ios' ? 34 : 20, maxHeight: '85%',
-    shadowColor: '#0f172a', shadowOffset: { width: 0, height: -10 }, shadowOpacity: 0.1, shadowRadius: 40, elevation: 25,
-  },
-  modalHeaderRow: {
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    paddingBottom: 16, borderBottomWidth: 1, borderBottomColor: COLORS.slate100, marginBottom: 16,
-  },
-  modalTitle: { fontFamily: FONT_FAMILY, fontSize: 16, fontWeight: '800', color: COLORS.slate800, letterSpacing: -0.16 },
-  closeBtnCircle: {
-    width: 36, height: 36, borderRadius: 18, backgroundColor: COLORS.slate50,
-    borderWidth: 1, borderColor: COLORS.slate100, alignItems: 'center', justifyContent: 'center',
-  },
-  modalFormScroll: { maxHeight: 500 },
-  modalFormGroup: { marginBottom: 12, gap: 6 },
-  modalLabel: { fontFamily: FONT_FAMILY, fontSize: 9, fontWeight: '800', color: COLORS.slate500, letterSpacing: 1.2, marginBottom: 2 },
-  modalInput: {
-    borderWidth: 1, borderColor: COLORS.slate200, borderRadius: 10, paddingHorizontal: 14, height: 42,
-    fontFamily: FONT_FAMILY, fontSize: 16, fontWeight: '500', color: COLORS.slate800,
-    backgroundColor: COLORS.slate50, ...(Platform.OS === 'web' && { outlineStyle: 'none' }),
-  },
-  datePickerWrapper: {
-    borderWidth: 1, borderColor: COLORS.slate200, borderRadius: 10, paddingHorizontal: 14, height: 42,
-    backgroundColor: COLORS.slate50, flexDirection: 'row', alignItems: 'center',
-  },
-  saveModalBtn: { alignItems: 'center', justifyContent: 'center', paddingVertical: 12, paddingHorizontal: 16 },
-  saveModalText: { color: '#FFFFFF', fontFamily: FONT_FAMILY, fontSize: 13, fontWeight: '700', letterSpacing: 0.5 },
-});

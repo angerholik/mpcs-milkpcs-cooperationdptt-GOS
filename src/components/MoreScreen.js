@@ -2,7 +2,6 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Pressable, ScrollView, Platform, Linking } from 'react-native';
 import { MaterialIcons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { webCapWidth } from '../utils/webStyles';
-import HeaderNav from './HeaderNav';
 import ScreenHeader from './ScreenHeader';
 import BottomNav from './BottomNav';
 
@@ -11,9 +10,9 @@ import BottomNav from './BottomNav';
 // used to run its own gradient officer card + page-watermark photo +
 // decorative blobs + slate/emerald scale left over from an earlier design
 // pass; brought in line so More doesn't look like a different app from
-// Master Data/Cash Book/CSC/Profile. (HeaderNav above this screen still
-// carries its own photo — it's shared with Home/Records and out of scope
-// here.)
+// Master Data/Cash Book/CSC/Profile. (The header is the shared ScreenHeader;
+// the old HeaderNav + page watermark photo were dropped for both modules
+// so Milk PCS and MPCS match.)
 const COLORS = {
   maroon: '#7B1420',
   bg: '#F4F5F7',
@@ -144,32 +143,14 @@ export default function MoreScreen({
 
   return (
     <View style={styles.container}>
-      {/* MPCS uses the shared brand header; Milk PCS keeps HeaderNav, which
-          carries the society/module switcher its own Home still relies on. */}
-      {activeModule === 'MPCS' ? (
-        <ScreenHeader
-          title="More"
-          subtitle={(selectedSociety?.name || 'MPCS SOCIETY').toUpperCase()}
-          initials={(role || 'CI').slice(0, 2).toUpperCase()}
-          onAvatarPress={onProfilePress}
-          onNotifyPress={onNotifyPress}
-          showAlertDot={unreadCount > 0}
-        />
-      ) : (
-        <HeaderNav
-          activeModule={activeModule}
-          selectedSociety={selectedSociety}
-          institutionsList={institutionsList}
-          onSelectSociety={onSelectSociety}
-          onManageInstitutions={onManageInstitutions}
-          onSwitchModule={onSwitchModule}
-          onMenuPress={onManageInstitutions}
-          onNotifyPress={onNotifyPress}
-          onProfilePress={onProfilePress}
-          unreadCount={unreadCount}
-          role={role}
-        />
-      )}
+      <ScreenHeader
+        title="More"
+        subtitle={(selectedSociety?.name || (activeModule === 'MILK' ? 'MILK PCS' : 'MPCS SOCIETY')).toUpperCase()}
+        initials={(role || 'CI').slice(0, 2).toUpperCase()}
+        onAvatarPress={onProfilePress}
+        onNotifyPress={onNotifyPress}
+        showAlertDot={unreadCount > 0}
+      />
 
       <ScrollView style={styles.scrollContent} contentContainerStyle={[styles.scrollInner, webCapWidth]} showsVerticalScrollIndicator={false}>
         <View style={styles.officerCard}>

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Pressable, ScrollView, TextInput, Image, Platform } from 'react-native';
 import { MaterialIcons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import ScreenHeader from './ScreenHeader';
 import { webCapWidth } from '../utils/webStyles';
 
 // Web-only: approximates the reference's mix-blend-mode: luminosity treatment
@@ -13,7 +14,7 @@ const headerPhotoFilter = Platform.OS === 'web'
 
 // STITCH Design Tokens (Matching Dashboard Overview)
 const COLORS = {
-  background: "#F7F5F2",
+  background: "#F4F5F7",
   surface: "#ffffff",
   primary: "#7a1a1f",
   primaryDark: "#4a1017",
@@ -129,35 +130,7 @@ export default function MyInstitutionsScreen({
           it's only a negative margin at the very top of the ScrollView's
           own content that gets clipped by the scroll boundary. */}
       <View style={styles.headerWrap}>
-        <LinearGradient
-          colors={[COLORS.maroon850, COLORS.maroon900]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 0, y: 1 }}
-          style={styles.topBar}
-        >
-          <Image
-            source={require('../../assets/core/kanchenjunga.jpg')}
-            style={[
-              StyleSheet.absoluteFillObject,
-              // width/height:100% on top of absoluteFillObject's inset:0 —
-              // the production web export's atomic-CSS output otherwise
-              // keeps a base class sized to the photo's raw intrinsic
-              // dimensions (900x675px) and inset:0 alone doesn't override
-              // it, so the image renders far larger than the header and
-              // effectively disappears once clipped.
-              { width: '100%', height: '100%' },
-              headerPhotoFilter,
-            ]}
-            resizeMode="cover"
-          />
-          <LinearGradient
-            colors={['rgba(84,8,14,0.2)', 'rgba(66,6,11,0.55)', COLORS.maroon900]}
-            locations={[0, 0.55, 1]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 0, y: 1 }}
-            style={StyleSheet.absoluteFillObject}
-          />
-
+        <ScreenHeader variant="hero" title={displayName || 'Cooperative Inspector'} initials={(role || 'CI').slice(0, 2).toUpperCase()}>
           <View style={styles.headerTopRow}>
             <View style={styles.rolePill}>
               <MaterialCommunityIcons name="shield-check" size={14} color={COLORS.gold} />
@@ -173,13 +146,11 @@ export default function MyInstitutionsScreen({
             )}
           </View>
 
-          <View style={styles.headerGreetBlock}>
-            <Text style={styles.welcomeNameBig}>{displayName || 'Cooperative Inspector'}</Text>
-            <Text style={styles.welcomeSub}>
-              {isCi ? 'Manage registered MPCS & Milk PCS institutions' : 'View institutions assigned to you'}
-            </Text>
-          </View>
-        </LinearGradient>
+          <Text style={styles.welcomeSub}>
+            {isCi ? 'Manage registered MPCS & Milk PCS institutions' : 'View institutions assigned to you'}
+          </Text>
+          <View style={{ height: 56 }} />
+        </ScreenHeader>
 
         <View style={styles.summaryBarRow}>
           <View style={styles.summaryCard}>

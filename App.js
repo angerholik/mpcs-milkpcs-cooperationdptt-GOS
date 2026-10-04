@@ -42,8 +42,8 @@ import RecordsScreen from './src/components/RecordsScreen';
 import MoreScreen from './src/components/MoreScreen';
 import SyncStatusScreen from './src/components/SyncStatusScreen';
 import MyInstitutionsScreen from './src/components/MyInstitutionsScreen';
-import MemberDataScreen from './src/components/MemberDataScreen';
 import MpcsMembersScreen from './src/components/mpcs/MpcsMembersScreen';
+import MilkMasterDataListScreen from './src/components/MilkMasterDataListScreen';
 import LoanBeneficiaryListScreen from './src/components/LoanBeneficiaryListScreen';
 import MpcsLoanBeneficiariesScreen from './src/components/mpcs/MpcsLoanBeneficiariesScreen';
 
@@ -2885,7 +2885,7 @@ export default function App() {
                     }
                     onEditMasterData={() => {
                       setMasterDataViewReturnTab('profile');
-                      setCurrentMobileScreen('PROFILE_VIEW');
+                      setCurrentMobileScreen('MILK_MASTER_DATA');
                       setActiveBottomTab('home');
                     }}
                     activeTab="profile"
@@ -3080,42 +3080,52 @@ export default function App() {
                       />
                     )}
 
-                    {/* Opened from the More menu to check/edit just this section —
-                        no Save & Continue, Back returns to the More menu instead of
-                        chaining into Compliance & Audit. */}
-                    {currentMobileScreen === 'PROFILE_VIEW' && (
-                      <InstitutionalProfileScreen
-                        centerName={centerName}
-                        setCenterName={setCenterName}
-                        centerId={registrationNumber}
-                        regNo={registrationNumber}
-                        setRegNo={setRegistrationNumber}
-                        presidentName={presidentName}
-                        setPresidentName={setPresidentName}
-                        presidentMobile={presidentMobile}
-                        setPresidentMobile={setPresidentMobile}
-                        managerName={managerName}
-                        setManagerName={setManagerName}
-                        managerMobile={managerMobile}
-                        setManagerMobile={setManagerMobile}
-                        lastUpdated=""
-                        onSave={(data) => {
-                          if (data) saveMasterStateToStorage(data);
+                    {currentMobileScreen === 'MILK_MASTER_DATA' && (
+                      <MilkMasterDataListScreen
+                        societyName={selectedSociety?.name || centerName?.trim() || ''}
+                        profile={{ centerName: centerName || '', registrationNumber: registrationNumber || '', presidentName: presidentName || '', presidentMobile: presidentMobile || '', managerName: managerName || '', managerMobile: managerMobile || '' }}
+                        compliance={{ auditYear: masterAuditYear, auditDate: masterAuditDate, auditStatus: masterAuditStatus, agmYear: masterAgmYear, agmDate: masterAgmDate, agmStatus: masterAgmStatus }}
+                        loan={{ hasLoan: masterHasLoan, loanType: masterLoanType, sanctionDate: masterLoanSanctionDate, beneficiaries: masterLoanBeneficiaries, loanExtended: masterLoanExtended, loanCleared: masterLoanCleared }}
+                        demographics={{ mSc, fSc, mSt, fSt, mObc, fObc, mGen, fGen }}
+                        masterDataUpdated={masterDataTimestamps}
+                        onSaveProfile={(d) => {
+                          setCenterName(d.centerName); setRegistrationNumber(d.registrationNumber);
+                          setPresidentName(d.presidentName); setPresidentMobile(d.presidentMobile);
+                          setManagerName(d.managerName); setManagerMobile(d.managerMobile);
+                          saveMasterStateToStorage({ centerName: d.centerName, registrationNumber: d.registrationNumber, presidentName: d.presidentName, presidentMobile: d.presidentMobile, managerName: d.managerName, managerMobile: d.managerMobile });
                           stampMasterDataUpdated('instProfile');
                         }}
-                        onNext={() => setCurrentMobileScreen('COMPLIANCE_VIEW')}
+                        onSaveCompliance={(d) => {
+                          setMasterAuditYear(d.auditYear); setMasterAuditDate(d.auditDate); setMasterAuditStatus(d.auditStatus);
+                          setMasterAgmYear(d.agmYear); setMasterAgmDate(d.agmDate); setMasterAgmStatus(d.agmStatus);
+                          saveMasterStateToStorage({ masterAuditYear: d.auditYear, masterAuditDate: d.auditDate, masterAuditStatus: d.auditStatus, masterAgmYear: d.agmYear, masterAgmDate: d.agmDate, masterAgmStatus: d.agmStatus });
+                          stampMasterDataUpdated('complianceAudit');
+                        }}
+                        onSaveLoan={(d) => {
+                          setMasterHasLoan(d.hasLoan); setMasterLoanType(d.loanType); setMasterLoanSanctionDate(d.sanctionDate);
+                          setMasterLoanBeneficiaries(d.beneficiaries); setMasterLoanExtended(d.loanExtended);
+                          saveMasterStateToStorage({ masterHasLoan: d.hasLoan, masterLoanType: d.loanType, masterLoanSanctionDate: d.sanctionDate, masterLoanBeneficiaries: d.beneficiaries, masterLoanExtended: d.loanExtended });
+                          stampMasterDataUpdated('loanSetup');
+                        }}
+                        onSaveDemographics={(d) => {
+                          setMSc(d.mSc); setFSc(d.fSc); setMSt(d.mSt); setFSt(d.fSt);
+                          setMObc(d.mObc); setFObc(d.fObc); setMGen(d.mGen); setFGen(d.fGen);
+                          saveMasterStateToStorage(d);
+                          stampMasterDataUpdated('demographics');
+                        }}
+                        onManageBeneficiaries={() => { setLoanBeneficiariesBackTarget('MILK_MASTER_DATA'); setCurrentMobileScreen('LOAN_BENEFICIARIES'); }}
                         onBack={() => { setCurrentMobileScreen('HOME'); setActiveBottomTab(masterDataViewReturnTab); }}
-                      activeTab={masterDataViewReturnTab}
-                      onTabPress={(tab) => {
-                        setActiveBottomTab(tab);
-                        if (tab === 'home') setCurrentMobileScreen('HOME');
-                      }}
-                      onNotifyPress={() => setShowHistory(true)}
-                      onProfilePress={() => setActiveBottomTab('more')}
-                      unreadCount={activeAlert ? 1 : 0}
+                        onNotifyPress={() => setShowHistory(true)}
+                        onProfilePress={() => setActiveBottomTab('more')}
+                        unreadCount={activeAlert ? 1 : 0}
+                        activeTab={masterDataViewReturnTab}
+                        onTabPress={(tab) => { setActiveBottomTab(tab); if (tab === 'home') setCurrentMobileScreen('HOME'); }}
                       />
                     )}
 
+                    {/* Opened from the More menu to check/edit just this section —
+                        no Save & Continue, Back returns to the More menu instead of
+                        chaining into Compliance & Audit. */}
                     {currentMobileScreen === 'COMPLIANCE_AUDIT' && (
                       <ComplianceAuditScreen
                         lastVerified=""
@@ -3157,47 +3167,6 @@ export default function App() {
                       />
                     )}
 
-                    {currentMobileScreen === 'COMPLIANCE_VIEW' && (
-                      <ComplianceAuditScreen
-                        lastVerified=""
-                        initialAuditYear={masterAuditYear}
-                        initialAuditDate={masterAuditDate}
-                        initialAuditStatus={masterAuditStatus}
-                        initialAgmYear={masterAgmYear}
-                        initialAgmDate={masterAgmDate}
-                        initialAgmStatus={masterAgmStatus}
-                        onSaveCompliance={(data) => {
-                          if (data) {
-                            setMasterAuditYear(data.auditYear);
-                            setMasterAuditDate(data.auditDate);
-                            setMasterAuditStatus(data.auditStatus);
-                            setMasterAgmYear(data.agmYear);
-                            setMasterAgmDate(data.agmDate);
-                            setMasterAgmStatus(data.agmStatus);
-                            saveMasterStateToStorage({
-                              masterAuditYear: data.auditYear,
-                              masterAuditDate: data.auditDate,
-                              masterAuditStatus: data.auditStatus,
-                              masterAgmYear: data.agmYear,
-                              masterAgmDate: data.agmDate,
-                              masterAgmStatus: data.agmStatus,
-                            });
-                          }
-                          stampMasterDataUpdated('complianceAudit');
-                        }}
-                        onNext={() => setCurrentMobileScreen('LOAN_SETUP_VIEW')}
-                        onBack={() => setCurrentMobileScreen('PROFILE_VIEW')}
-                      activeTab={masterDataViewReturnTab}
-                      onTabPress={(tab) => {
-                        setActiveBottomTab(tab);
-                        if (tab === 'home') setCurrentMobileScreen('HOME');
-                      }}
-                      onNotifyPress={() => setShowHistory(true)}
-                      onProfilePress={() => setActiveBottomTab('more')}
-                      unreadCount={activeAlert ? 1 : 0}
-                      />
-                    )}
-
                     {currentMobileScreen === 'LOAN_SETUP' && (
                       <LoanSetupScreen
                         lastVerified=""
@@ -3228,46 +3197,6 @@ export default function App() {
                         onBack={() => setCurrentMobileScreen('COMPLIANCE_AUDIT')}
                         onManageBeneficiaries={() => { setLoanBeneficiariesBackTarget('LOAN_SETUP'); setCurrentMobileScreen('LOAN_BENEFICIARIES'); }}
                       activeTab="home"
-                      onTabPress={(tab) => {
-                        setActiveBottomTab(tab);
-                        if (tab === 'home') setCurrentMobileScreen('HOME');
-                      }}
-                      onNotifyPress={() => setShowHistory(true)}
-                      onProfilePress={() => setActiveBottomTab('more')}
-                      unreadCount={activeAlert ? 1 : 0}
-                      />
-                    )}
-
-                    {currentMobileScreen === 'LOAN_SETUP_VIEW' && (
-                      <LoanSetupScreen
-                        lastVerified=""
-                        initialHasLoan={masterHasLoan}
-                        initialLoanType={masterLoanType}
-                        initialSanctionDate={masterLoanSanctionDate}
-                        initialBeneficiaries={masterLoanBeneficiaries}
-                        initialLoanExtended={masterLoanExtended}
-                        initialLoanCleared={masterLoanCleared}
-                        onSaveLoan={(data) => {
-                          if (data) {
-                            setMasterHasLoan(data.hasLoan);
-                            setMasterLoanType(data.loanType);
-                            setMasterLoanSanctionDate(data.sanctionDate);
-                            setMasterLoanBeneficiaries(data.beneficiaries);
-                            setMasterLoanExtended(data.loanExtended);
-                            saveMasterStateToStorage({
-                              masterHasLoan: data.hasLoan,
-                              masterLoanType: data.loanType,
-                              masterLoanSanctionDate: data.sanctionDate,
-                              masterLoanBeneficiaries: data.beneficiaries,
-                              masterLoanExtended: data.loanExtended,
-                            });
-                          }
-                          stampMasterDataUpdated('loanSetup');
-                        }}
-                        onNext={() => { setDemographicsBackTarget('LOAN_SETUP_VIEW'); setCurrentMobileScreen('DEMOGRAPHICS'); }}
-                        onBack={() => setCurrentMobileScreen('COMPLIANCE_VIEW')}
-                        onManageBeneficiaries={() => { setLoanBeneficiariesBackTarget('LOAN_SETUP_VIEW'); setCurrentMobileScreen('LOAN_BENEFICIARIES'); }}
-                      activeTab={masterDataViewReturnTab}
                       onTabPress={(tab) => {
                         setActiveBottomTab(tab);
                         if (tab === 'home') setCurrentMobileScreen('HOME');
@@ -3339,15 +3268,20 @@ export default function App() {
                     )}
 
                     {currentMobileScreen === 'MEMBERS' && (
-                      <MemberDataScreen
+                      <MpcsMembersScreen
                         societyName={selectedSociety?.name || centerName?.trim()}
                         societyType="MILK"
                         inspectorEmail={userProfile?.email}
                         onBack={() => setCurrentMobileScreen('HOME')}
                         onMemberDataChanged={() => stampMasterDataUpdated('members')}
-                      onNotifyPress={() => setShowHistory(true)}
-                      onProfilePress={() => setActiveBottomTab('more')}
-                      unreadCount={activeAlert ? 1 : 0}
+                        onNotifyPress={() => setShowHistory(true)}
+                        onProfilePress={() => setActiveBottomTab('more')}
+                        unreadCount={activeAlert ? 1 : 0}
+                        activeTab={activeBottomTab}
+                        onTabPress={(tab) => {
+                          setActiveBottomTab(tab);
+                          if (tab === 'home') setCurrentMobileScreen('HOME');
+                        }}
                       />
                     )}
 

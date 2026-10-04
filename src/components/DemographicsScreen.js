@@ -1,15 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, Platform, Pressable, Image } from 'react-native';
+import ScreenHeader from './ScreenHeader';
+import { ReadCard, ChipSelect, DateField, ViewFooter, EditFooter, masterStyles } from './MasterRecord';
+import { WizardField } from './WizardField';
 import { MaterialIcons, MaterialCommunityIcons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
 import { webCapWidth } from '../utils/webStyles';
 import BottomNav from './BottomNav';
 
 // Same subtle Kanchenjunga treatment used on every header across the app.
-const headerPhotoFilter = Platform.OS === 'web'
-  ? { opacity: 0.4, filter: 'grayscale(0.35) contrast(1.15) brightness(0.95)', mixBlendMode: 'luminosity' }
-  : { opacity: 0.28 };
-
 const COLORS = {
   surface: '#ffffff',
   slate800: '#1e293b',
@@ -121,613 +119,64 @@ export default function DemographicsScreen({
     { category: 'General', male: mGen, female: fGen, total: genTotal },
   ];
 
+  const num = (setter) => (v) => setter(v.replace(/[^0-9]/g, ''));
+  const temps = [
+    ['SC', tMSc, setTMSc, tFSc, setTFSc],
+    ['ST', tMSt, setTMSt, tFSt, setTFSt],
+    ['OBC', tMObc, setTMObc, tFObc, setTFObc],
+    ['General', tMGen, setTMGen, tFGen, setTFGen],
+  ];
   return (
-    <View style={styles.container}>
-      {/* Top Header */}
-      <View style={styles.topBar}>
-        <LinearGradient
-          colors={['#7a1a1f', '#4a1017']}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 0 }}
-          style={StyleSheet.absoluteFillObject}
-        />
-        <Image
-          source={require('../../assets/core/kanchenjunga.jpg')}
-          style={[StyleSheet.absoluteFillObject, { width: '100%', height: '100%' }, headerPhotoFilter]}
-          resizeMode="cover"
-        />
-        <TouchableOpacity style={styles.backBtn} onPress={onBack} activeOpacity={0.7}>
-          <MaterialCommunityIcons name="arrow-left" size={24} color="#FFFFFF" />
-        </TouchableOpacity>
-        <View style={styles.topBarTitleContainer}>
-          <Text style={styles.moduleTag}>MILK PCS</Text>
-          <Text style={styles.screenTitleHeader}>Registered Demographics</Text>
-        </View>
-        <TouchableOpacity style={styles.notifyBtn} onPress={onNotifyPress} activeOpacity={0.7}>
-          <MaterialCommunityIcons name="bell-outline" size={20} color="#FFFFFF" />
-          {unreadCount > 0 && <View style={styles.notifyBadge} />}
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.avatarBtn} onPress={onProfilePress} activeOpacity={0.8}>
-          <Text style={styles.avatarText}>CI</Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* Sticky Action Banner at Top — only the contextual edit action.
-          "Submit to Database" is the wizard's forward-navigation action, so
-          it lives in a bottom footer after the reviewable content instead. */}
-      <View style={styles.stickyActionBanner}>
-        <View style={[{ flexDirection: 'row', gap: 8 }, webCapWidth]}>
-          <View style={styles.btnWrapper}>
-            <Pressable
-              style={({ hovered, pressed }) => [
-                styles.editCtaBtn,
-                pressed && { transform: [{ scale: 0.98 }] },
-                hovered && Platform.OS === 'web' && { shadowOpacity: 0.4 }
-              ]}
-              onPress={() => setModalVisible(true)}
-            >
-              <LinearGradient
-                colors={['#7a1a1f', '#4a1017']}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-                style={StyleSheet.absoluteFillObject}
-              />
-              <MaterialCommunityIcons name="pencil-outline" size={16} color="#ffffff" />
-              <Text style={styles.editCtaText}>Edit Demographics</Text>
-            </Pressable>
+    <View style={masterStyles.container}>
+      <ScreenHeader title="Registered Demographics" subtitle="MILK PCS" onBack={onBack} onAvatarPress={onProfilePress} onNotifyPress={onNotifyPress} showAlertDot={unreadCount > 0} />
+      <ScrollView style={masterStyles.scrollContent} contentContainerStyle={[masterStyles.scrollInner, webCapWidth]} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+        {isSaved ? (
+          <View style={masterStyles.toast}>
+            <MaterialCommunityIcons name="check-circle" size={18} color="#15803D" />
+            <Text style={masterStyles.toastText}>Demographics saved</Text>
           </View>
-        </View>
-      </View>
-
-
-      {/* Decorative Ambient Background Blobs */}
-      <View style={styles.bgBlobTop} pointerEvents="none" />
-      <View style={styles.bgBlobBottomLeft} pointerEvents="none" />
-      <View style={styles.bgBlobBottomRight} pointerEvents="none" />
-
-      {isSaved && (
-        <View style={styles.saveToast} pointerEvents="none">
-          <MaterialCommunityIcons name="check-circle" size={18} color="#ffffff" />
-          <Text style={styles.saveToastText}>Demographics data successfully saved to the database</Text>
-        </View>
-      )}
-
-      <ScrollView style={styles.scrollContent} contentContainerStyle={[styles.scrollInner, webCapWidth]} showsVerticalScrollIndicator={false}>
-        {/* Profile Status Banner */}
-        <View style={styles.alertCard}>
-          <View style={styles.alertIconBox}>
-            <MaterialCommunityIcons name="account-group-outline" size={20} color={COLORS.amber900} />
-          </View>
-          <View style={styles.alertBody}>
-            <Text style={styles.alertTitle}>Demographics Data</Text>
-            <Text style={styles.alertText}>Last updated: {lastUpdated}</Text>
-          </View>
-        </View>
-
-        {/* Demographic Table Card */}
-        <View style={styles.card}>
-          <View style={styles.cardHeaderRow}>
-            <View style={styles.cardIconBox}>
-              <MaterialCommunityIcons name="account-multiple" size={20} color={COLORS.primary} />
+        ) : null}
+        {modalVisible ? (
+          <>
+            {temps.map(([cat, m, setM, f, setF]) => (
+              <View key={cat} style={{ gap: 8 }}>
+                <Text style={{ fontFamily: 'Manrope', fontSize: 15, fontWeight: '800', color: '#1E1B18' }}>{cat}</Text>
+                <View style={{ flexDirection: 'row', gap: 12 }}>
+                  <View style={{ flex: 1 }}><WizardField label="Male" value={m} onChangeText={num(setM)} keyboardType="numeric" /></View>
+                  <View style={{ flex: 1 }}><WizardField label="Female" value={f} onChangeText={num(setF)} keyboardType="numeric" /></View>
+                </View>
+              </View>
+            ))}
+            <EditFooter onCancel={() => setModalVisible(false)} onSave={handleSave} />
+          </>
+        ) : (
+          <>
+            <View style={{ backgroundColor: '#fff', borderRadius: 18, borderWidth: 1, borderColor: '#E7E2DA', padding: 16, gap: 10 }}>
+              <View style={{ flexDirection: 'row' }}>
+                {['CATEGORY', 'MALE', 'FEMALE', 'TOTAL'].map((h, i) => (
+                  <Text key={h} style={{ flex: i === 0 ? 1.4 : 1, textAlign: i === 0 ? 'left' : 'center', fontFamily: 'Manrope', fontSize: 11, fontWeight: '700', color: '#78716C', letterSpacing: 0.6 }}>{h}</Text>
+                ))}
+              </View>
+              {demographicsData.map((row) => (
+                <View key={row.category} style={{ flexDirection: 'row', borderTopWidth: 1, borderTopColor: '#F1F5F9', paddingTop: 10 }}>
+                  <Text style={{ flex: 1.4, fontFamily: 'Manrope', fontSize: 15, fontWeight: '800', color: '#1E1B18' }}>{row.category}</Text>
+                  <Text style={{ flex: 1, textAlign: 'center', fontFamily: 'Manrope', fontSize: 15, fontWeight: '600', color: '#1E1B18' }}>{row.male !== '' ? row.male : '—'}</Text>
+                  <Text style={{ flex: 1, textAlign: 'center', fontFamily: 'Manrope', fontSize: 15, fontWeight: '600', color: '#1E1B18' }}>{row.female !== '' ? row.female : '—'}</Text>
+                  <Text style={{ flex: 1, textAlign: 'center', fontFamily: 'Manrope', fontSize: 15, fontWeight: '800', color: '#1E1B18' }}>{row.total || '—'}</Text>
+                </View>
+              ))}
+              <View style={{ flexDirection: 'row', borderTopWidth: 1.5, borderTopColor: '#E7E2DA', paddingTop: 10 }}>
+                <Text style={{ flex: 1.4, fontFamily: 'Manrope', fontSize: 13, fontWeight: '800', color: '#57534E' }}>TOTAL</Text>
+                <Text style={{ flex: 1, textAlign: 'center', fontFamily: 'Manrope', fontSize: 15, fontWeight: '800', color: '#1E1B18' }}>{maleSum || '—'}</Text>
+                <Text style={{ flex: 1, textAlign: 'center', fontFamily: 'Manrope', fontSize: 15, fontWeight: '800', color: '#1E1B18' }}>{femaleSum || '—'}</Text>
+                <Text style={{ flex: 1, textAlign: 'center', fontFamily: 'Manrope', fontSize: 15, fontWeight: '800', color: '#7B1420' }}>{grandTotal || '—'}</Text>
+              </View>
             </View>
-            <Text style={styles.cardHeaderTitle}>Category-wise Member Breakdown</Text>
-          </View>
-
-          {/* Table Header */}
-          <View style={styles.tableHeaderRow}>
-            <Text style={[styles.colHeader, { flex: 1.2 }]}>Category</Text>
-            <Text style={[styles.colHeader, { flex: 1, textAlign: 'center' }]}>Male</Text>
-            <Text style={[styles.colHeader, { flex: 1, textAlign: 'center' }]}>Female</Text>
-            <Text style={[styles.colHeader, { flex: 1, textAlign: 'right' }]}>Total</Text>
-          </View>
-
-          {/* Table Rows */}
-          {demographicsData.map((row) => (
-            <View style={styles.tableRow} key={row.category}>
-              <Text style={[styles.cellCategory, { flex: 1.2 }]}>{row.category}</Text>
-              <Text style={[styles.cellValue, { flex: 1, textAlign: 'center' }]}>{row.male !== '' ? row.male : '-'}</Text>
-              <Text style={[styles.cellValue, { flex: 1, textAlign: 'center' }]}>{row.female !== '' ? row.female : '-'}</Text>
-              <Text style={[styles.cellTotal, { flex: 1, textAlign: 'right' }]}>{row.total || '-'}</Text>
-            </View>
-          ))}
-
-          {/* Grand Total Row */}
-          <View style={styles.grandTotalRow}>
-            <Text style={[styles.grandTotalLabel, { flex: 1.2 }]}>GRAND TOTAL</Text>
-            <Text style={[styles.grandTotalVal, { flex: 1, textAlign: 'center' }]}>{maleSum || '-'}</Text>
-            <Text style={[styles.grandTotalVal, { flex: 1, textAlign: 'center' }]}>{femaleSum || '-'}</Text>
-            <Text style={[styles.grandTotalVal, { flex: 1, textAlign: 'right', color: COLORS.primary }]}>{grandTotal || '-'}</Text>
-          </View>
-        </View>
-
-        {/* Wizard forward-navigation action now scrolls with the content
-            instead of sitting in a fixed footer, which competed with the
-            floating BottomNav pill for the same strip at the bottom. This
-            is the last step, so it pairs a Previous chevron (matching the
-            other master data steps) with the terminal Submit action rather
-            than a Next chevron — there's nowhere forward to go. */}
-        <View style={[{ flexDirection: 'row', alignItems: 'center', gap: 12 }, webCapWidth]}>
-          {onBack && (
-            <TouchableOpacity
-              onPress={onBack}
-              style={styles.prevCircleBtn}
-              activeOpacity={0.85}
-            >
-              <MaterialCommunityIcons name="chevron-left" size={24} color="#ffffff" />
-            </TouchableOpacity>
-          )}
-          <View style={[styles.btnWrapper, { flex: 1 }]}>
-            <Pressable
-              style={({ hovered, pressed }) => [
-                styles.editCtaBtn,
-                pressed && { transform: [{ scale: 0.98 }] },
-                hovered && Platform.OS === 'web' && { shadowOpacity: 0.4 }
-              ]}
-              onPress={handleSaveAndNext}
-            >
-              <LinearGradient
-                colors={['#047857', '#064e3b']}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-                style={StyleSheet.absoluteFillObject}
-              />
-              <Text style={styles.editCtaText}>Submit to Database</Text>
-              <MaterialCommunityIcons name="cloud-check-outline" size={16} color="#ffffff" />
-            </Pressable>
-          </View>
-        </View>
+            <ViewFooter onUpdate={() => setModalVisible(true)} onBack={onBack} onNext={handleSaveAndNext} nextLabel="Submit" />
+          </>
+        )}
       </ScrollView>
-
       {onTabPress && <BottomNav activeTab={activeTab || 'home'} onTabPress={onTabPress} />}
-
-      {/* In-App Slide-Up Sheet */}
-      {modalVisible && (
-        <View style={styles.inAppModalOverlay}>
-          <TouchableOpacity style={StyleSheet.absoluteFillObject} activeOpacity={1} onPress={() => setModalVisible(false)} />
-          <View style={styles.modalCard}>
-            <View style={styles.modalHeaderRow}>
-              <Text style={styles.modalTitle}>Edit Demographics</Text>
-              <TouchableOpacity style={styles.closeBtnCircle} onPress={() => setModalVisible(false)} activeOpacity={0.7}>
-                <MaterialCommunityIcons name="close" size={18} color={COLORS.slate500} />
-              </TouchableOpacity>
-            </View>
-
-            <ScrollView style={styles.modalFormScroll} showsVerticalScrollIndicator={false}>
-              
-              <View style={styles.modalCategoryGroup}>
-                <Text style={styles.modalSectionTitle}>SC Category</Text>
-                <View style={styles.modalInputRow}>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.modalLabel}>Male Members</Text>
-                    <TextInput style={styles.modalInput} keyboardType="numeric" value={tMSc} onChangeText={(val) => setTMSc(val.replace(/[^0-9]/g, ''))} placeholder="0" placeholderTextColor={COLORS.slate400} />
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.modalLabel}>Female Members</Text>
-                    <TextInput style={styles.modalInput} keyboardType="numeric" value={tFSc} onChangeText={(val) => setTFSc(val.replace(/[^0-9]/g, ''))} placeholder="0" placeholderTextColor={COLORS.slate400} />
-                  </View>
-                </View>
-              </View>
-
-              <View style={styles.modalCategoryGroup}>
-                <Text style={styles.modalSectionTitle}>ST Category</Text>
-                <View style={styles.modalInputRow}>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.modalLabel}>Male Members</Text>
-                    <TextInput style={styles.modalInput} keyboardType="numeric" value={tMSt} onChangeText={(val) => setTMSt(val.replace(/[^0-9]/g, ''))} placeholder="0" placeholderTextColor={COLORS.slate400} />
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.modalLabel}>Female Members</Text>
-                    <TextInput style={styles.modalInput} keyboardType="numeric" value={tFSt} onChangeText={(val) => setTFSt(val.replace(/[^0-9]/g, ''))} placeholder="0" placeholderTextColor={COLORS.slate400} />
-                  </View>
-                </View>
-              </View>
-
-              <View style={styles.modalCategoryGroup}>
-                <Text style={styles.modalSectionTitle}>OBC Category</Text>
-                <View style={styles.modalInputRow}>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.modalLabel}>Male Members</Text>
-                    <TextInput style={styles.modalInput} keyboardType="numeric" value={tMObc} onChangeText={(val) => setTMObc(val.replace(/[^0-9]/g, ''))} placeholder="0" placeholderTextColor={COLORS.slate400} />
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.modalLabel}>Female Members</Text>
-                    <TextInput style={styles.modalInput} keyboardType="numeric" value={tFObc} onChangeText={(val) => setTFObc(val.replace(/[^0-9]/g, ''))} placeholder="0" placeholderTextColor={COLORS.slate400} />
-                  </View>
-                </View>
-              </View>
-
-              <View style={styles.modalCategoryGroup}>
-                <Text style={styles.modalSectionTitle}>General Category</Text>
-                <View style={styles.modalInputRow}>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.modalLabel}>Male Members</Text>
-                    <TextInput style={styles.modalInput} keyboardType="numeric" value={tMGen} onChangeText={(val) => setTMGen(val.replace(/[^0-9]/g, ''))} placeholder="0" placeholderTextColor={COLORS.slate400} />
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.modalLabel}>Female Members</Text>
-                    <TextInput style={styles.modalInput} keyboardType="numeric" value={tFGen} onChangeText={(val) => setTFGen(val.replace(/[^0-9]/g, ''))} placeholder="0" placeholderTextColor={COLORS.slate400} />
-                  </View>
-                </View>
-              </View>
-
-              <View style={[styles.btnWrapper, { marginTop: 16, marginBottom: 20 }]}>
-                <Pressable 
-                  style={({ hovered, pressed }) => [
-                    styles.saveModalBtn,
-                    pressed && { transform: [{ scale: 0.98 }] },
-                    hovered && Platform.OS === 'web' && { shadowOpacity: 0.4 }
-                  ]}
-                  onPress={handleSave}
-                >
-                  <LinearGradient
-                    colors={['#7a1a1f', '#4a1017']}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 0 }}
-                    style={StyleSheet.absoluteFillObject}
-                  />
-                  <Text style={styles.saveModalText}>Save Changes</Text>
-                </Pressable>
-              </View>
-            </ScrollView>
-          </View>
-        </View>
-      )}
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.slate50, position: 'relative' },
-  topBar: {
-    position: 'relative',
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 12,
-    paddingTop: Platform.OS === 'ios' ? 44 : 12,
-    overflow: 'hidden',
-  },
-  backBtn: { 
-    padding: 8,
-    marginRight: 8,
-  },
-  topBarTitleContainer: {
-    flex: 1,
-  },
-  notifyBtn: {
-    width: 36,
-    height: 36,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  notifyBadge: {
-    position: 'absolute',
-    top: 6,
-    right: 6,
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#EF4444',
-    borderWidth: 1,
-    borderColor: COLORS.primary,
-  },
-  avatarBtn: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.35)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginLeft: 8,
-  },
-  avatarText: {
-    color: '#FFFFFF',
-    fontSize: 10,
-    fontWeight: '800',
-    fontFamily: FONT_FAMILY,
-  },
-  stickyActionBanner: {
-    backgroundColor: 'rgba(255, 255, 255, 0.95)',
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(226, 232, 240, 0.8)',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    zIndex: 10,
-  },
-  bgBlobTop: {
-    position: 'absolute',
-    top: -40,
-    right: -40,
-    width: 260,
-    height: 260,
-    borderRadius: 130,
-    backgroundColor: 'rgba(122, 26, 31, 0.08)',
-    zIndex: -1,
-  },
-  bgBlobBottomLeft: {
-    position: 'absolute',
-    bottom: 80,
-    left: -50,
-    width: 240,
-    height: 240,
-    borderRadius: 120,
-    backgroundColor: 'rgba(180, 83, 9, 0.06)',
-    zIndex: -1,
-  },
-  bgBlobBottomRight: {
-    position: 'absolute',
-    top: '40%',
-    right: -60,
-    width: 220,
-    height: 220,
-    borderRadius: 110,
-    backgroundColor: 'rgba(122, 26, 31, 0.05)',
-    zIndex: -1,
-  },
-  moduleTag: { 
-    color: 'rgba(255,255,255,0.7)', 
-    fontFamily: FONT_FAMILY,
-    fontSize: 8, 
-    fontWeight: '800', 
-    letterSpacing: 1.2,
-    marginBottom: 2,
-  },
-  screenTitleHeader: { 
-    color: '#FFFFFF', 
-    fontFamily: FONT_FAMILY, 
-    fontSize: 16, 
-    fontWeight: '800',
-    letterSpacing: -0.16,
-  },
-  scrollContent: { flex: 1 },
-  scrollInner: {
-    padding: 12,
-    gap: 12,
-    paddingBottom: 110, // clears the floating BottomNav pill
-  },
-  alertCard: {
-    backgroundColor: 'rgba(254, 252, 232, 0.8)',
-    borderRadius: 14,
-    padding: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    borderWidth: 1,
-    borderColor: 'rgba(253, 230, 138, 0.5)',
-    shadowColor: '#0f172a',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-    elevation: 2,
-  },
-  alertIconBox: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: COLORS.amber100,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  alertBody: {
-    flex: 1,
-    paddingRight: 8,
-  },
-  alertTitle: {
-    fontFamily: FONT_FAMILY,
-    fontSize: 13,
-    fontWeight: '800',
-    color: COLORS.amber900,
-    marginBottom: 2,
-  },
-  alertText: {
-    fontFamily: FONT_FAMILY,
-    fontSize: 11,
-    fontWeight: '500',
-    color: 'rgba(146, 64, 14, 0.9)',
-  },
-  card: {
-    backgroundColor: COLORS.surface,
-    borderRadius: 16,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: 'rgba(226,232,240,0.6)',
-    shadowColor: '#0f172a',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.08,
-    shadowRadius: 20,
-    elevation: 3,
-  },
-  cardHeaderRow: { 
-    flexDirection: 'row', 
-    alignItems: 'center', 
-    gap: 10, 
-    marginBottom: 12 
-  },
-  cardIconBox: {
-    width: 32,
-    height: 32,
-    borderRadius: 10,
-    backgroundColor: COLORS.slate50,
-    borderWidth: 1,
-    borderColor: COLORS.slate100,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  cardHeaderTitle: { 
-    fontFamily: FONT_FAMILY, 
-    fontSize: 14, 
-    fontWeight: '700', 
-    color: COLORS.slate800,
-    letterSpacing: -0.14,
-  },
-  tableHeaderRow: { flexDirection: 'row', backgroundColor: COLORS.slate50, paddingVertical: 8, paddingHorizontal: 10, borderRadius: 6, marginBottom: 6 },
-  colHeader: { fontFamily: FONT_FAMILY, fontSize: 11, fontWeight: '700', color: COLORS.slate500 },
-  tableRow: { flexDirection: 'row', paddingVertical: 10, paddingHorizontal: 10, borderBottomWidth: 1, borderBottomColor: COLORS.slate50 },
-  cellCategory: { fontFamily: FONT_FAMILY, fontSize: 12, fontWeight: '700', color: COLORS.slate800 },
-  cellValue: { fontFamily: FONT_FAMILY, fontSize: 12, color: COLORS.slate700 },
-  cellTotal: { fontFamily: FONT_FAMILY, fontSize: 12, fontWeight: '700', color: COLORS.primary },
-  grandTotalRow: { flexDirection: 'row', backgroundColor: 'rgba(122, 26, 31, 0.05)', paddingVertical: 10, paddingHorizontal: 10, borderRadius: 6, marginTop: 8 },
-  grandTotalLabel: { fontFamily: FONT_FAMILY, fontSize: 12, fontWeight: '800', color: COLORS.primary },
-  grandTotalVal: { fontFamily: FONT_FAMILY, fontSize: 12, fontWeight: '800', color: COLORS.slate800 },
-
-  prevCircleBtn: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: '#7a1a1f',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  btnWrapper: {
-    borderRadius: 16,
-    shadowColor: COLORS.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 4,
-    overflow: 'hidden',
-  },
-  editCtaBtn: { 
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    paddingVertical: 12, 
-    paddingHorizontal: 16,
-  },
-  editCtaText: { 
-    color: '#FFFFFF', 
-    fontFamily: FONT_FAMILY, 
-    fontSize: 13, 
-    fontWeight: '700',
-    letterSpacing: 0.5,
-  },
-
-  // In-App Slide-Up Sheet
-  inAppModalOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(15, 23, 42, 0.65)',
-    justifyContent: 'flex-end',
-    zIndex: 9999,
-  },
-  modalCard: {
-    width: '100%',
-    maxWidth: 500,
-    alignSelf: 'center',
-    backgroundColor: COLORS.surface,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    padding: 20,
-    paddingBottom: Platform.OS === 'ios' ? 34 : 20,
-    maxHeight: '85%',
-    shadowColor: '#0f172a',
-    shadowOffset: { width: 0, height: -10 },
-    shadowOpacity: 0.1,
-    shadowRadius: 40,
-    elevation: 25,
-  },
-  modalHeaderRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingBottom: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.slate100,
-    marginBottom: 16,
-  },
-  modalTitle: { 
-    fontFamily: FONT_FAMILY, 
-    fontSize: 16, 
-    fontWeight: '800', 
-    color: COLORS.slate800,
-    letterSpacing: -0.16,
-  },
-  closeBtnCircle: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: COLORS.slate50,
-    borderWidth: 1,
-    borderColor: COLORS.slate100,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  modalFormScroll: { 
-    maxHeight: 500 
-  },
-  modalCategoryGroup: { marginBottom: 14 },
-  modalSectionTitle: { 
-    fontFamily: FONT_FAMILY, 
-    fontSize: 12, 
-    fontWeight: '800', 
-    color: COLORS.slate800, 
-    marginBottom: 12 
-  },
-  modalInputRow: { flexDirection: 'row', gap: 10 },
-  modalLabel: { 
-    fontFamily: FONT_FAMILY, 
-    fontSize: 9, 
-    fontWeight: '800', 
-    color: COLORS.slate500,
-    letterSpacing: 1.2,
-    marginBottom: 6,
-  },
-  modalInput: {
-    borderWidth: 1,
-    borderColor: COLORS.slate200,
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    height: 42,
-    fontFamily: FONT_FAMILY,
-    fontSize: 16,
-    fontWeight: '500',
-    color: COLORS.slate800,
-    backgroundColor: COLORS.slate50,
-    ...(Platform.OS === 'web' && { outlineStyle: 'none' }),
-  },
-  saveModalBtn: { 
-    alignItems: 'center', 
-    justifyContent: 'center',
-    paddingVertical: 12, 
-    paddingHorizontal: 16,
-  },
-  saveModalText: {
-    color: '#FFFFFF',
-    fontFamily: FONT_FAMILY,
-    fontSize: 13,
-    fontWeight: '700',
-    letterSpacing: 0.5,
-  },
-  saveToast: {
-    position: 'absolute',
-    top: 108,
-    left: 16,
-    right: 16,
-    zIndex: 20,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    backgroundColor: COLORS.emerald700,
-    borderRadius: 12,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  saveToastText: {
-    flex: 1,
-    color: '#ffffff',
-    fontFamily: FONT_FAMILY,
-    fontSize: 13,
-    fontWeight: '700',
-  },
-});

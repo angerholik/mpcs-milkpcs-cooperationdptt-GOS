@@ -1,76 +1,148 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Pressable, ScrollView, Image, Platform, StatusBar } from 'react-native';
+import React, { useState, useEffect, useRef } from 'react';
+import { View, Text, StyleSheet, Pressable, ScrollView, Platform, Animated, Easing } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
 import { webCapWidth } from '../utils/webStyles';
 import BottomNav from './BottomNav';
-import HeaderNav from './HeaderNav';
+import PressScale from './PressScale';
+import ScreenHeader from './ScreenHeader';
 
-// Same Kanchenjunga photo used in every header, at a much lower opacity so
-// it reads as a faint page watermark behind the (mostly white/card-covered)
-// scroll content rather than competing with it.
-const pageBgPhotoFilter = Platform.OS === 'web'
-  ? { opacity: 0.05, filter: 'grayscale(1) contrast(1.1)' }
-  : { opacity: 0.035 };
-
-// STITCH Design Tokens (New Iteration)
+// Milk PCS Home — same layout and tokens as MpcsHomeScreen so both modules
+// read as one app; only the status logic and screen ids differ.
 const COLORS = {
-  background: "#fcf8fa",
-  surface: "#ffffff",
-  primary: "#7a1a1f",
-  primaryDark: "#4a1017",
-  onSurface: "#1b1b1d",
-  slate800: "#1e293b",
-  slate600: "#475569",
-  slate500: "#64748b",
-  slate400: "#94a3b8",
-  slate300: "#cbd5e1",
-  slate200: "#e2e8f0",
-  slate100: "#f1f5f9",
-  slate50: "#f8fafc",
-  amber50: "#fffbeb",
-  amber100: "#fef3c7",
-  amber600: "#d97706",
-  amber700: "#b45309",
-  amber800: "#92400e",
-  amber900: "#78350f",
-  emerald50: "#ecfdf5",
-  emerald100: "#d1fae5",
-  emerald500: "#10b981",
-  emerald700: "#047857",
-  red50: "#fef2f2",
+  // Exact hex values from the reference's Tailwind config (brand.500-900,
+  // surface.50-300) — note 500 is the lightest of the "dark" shades and
+  // 900 the darkest, matching the reference's own scale rather than a
+  // conventional 50(light)->900(dark) ramp.
+  brand50: '#FDF2F2',
+  brand100: '#FDE8E8',
+  brand500: '#9B1C1C',
+  brand600: '#771D1D',
+  brand700: '#641B1B',
+  brand800: '#4D1414',
+  brand900: '#380F0F',
+  surface50: '#FBFBFC',
+  surface100: '#F4F5F7',
+  surface200: '#E9EBEF',
+  surface300: '#D7DAE2',
+  ink: '#0F172A', // slate-900 equivalent
+  slate600: '#475569',
+  slate500: '#64748B',
+  slate400: '#94A3B8',
+  rose50: '#FFF1F2',
+  rose200: '#FECDD3',
+  rose500: '#F43F5E',
+  rose700: '#BE123C',
+  emerald50: '#ECFDF5',
+  emerald200: '#A7F3D0',
+  emerald600: '#059669',
+  emerald700: '#047857',
+  amber50: '#FFFBEB',
+  amber100: '#FEF3C7',
+  amber200: '#FDE68A',
+  amber800: '#92400E',
+  amber900: '#78350F',
+  slate100: '#F1F5F9',
+  slate200: '#E2E8F0',
+  slate300: '#CBD5E1',
+  sky50: '#F0F9FF',
+  sky100: '#E0F2FE',
+  sky700: '#0369A1',
 };
 
 const FONT_FAMILY = 'Manrope';
 
+// The header/on-site card ambient glow uses a real CSS blur on web (same
+// conditional pattern already used elsewhere in this app for the
+// Kanchenjunga photo filter) — React Native itself has no blur primitive,
+// and on native the plain translucent circle underneath still reads fine
+// without it.
+const blurStyle = (px) => (Platform.OS === 'web' ? { filter: `blur(${px}px)` } : {});
+// Frosted-glass look for the header's icon buttons/chips — web only
+// (backdropFilter has no native RN equivalent), falls back to their plain
+// translucent-fill look on native.
+const glassStyle = (px) => (Platform.OS === 'web' ? { backdropFilter: `blur(${px}px)`, WebkitBackdropFilter: `blur(${px}px)` } : {});
+
+// Approximates the reference's two-layer soft-card/shadow-sm boxShadow
+// tokens using RN's own shadow* props — react-native-web translates these
+// specific prop names to a real CSS box-shadow automatically, unlike an
+// arbitrary `boxShadow` style key (which RN-Web silently drops; only a
+// fixed set of style props, e.g. `filter`, pass through unrecognized).
+// RN only renders one shadow layer, so this is a single-layer stand-in
+// for the reference's two-layer shadow, tuned to read the same at a
+// glance; `elevation` covers the Android native equivalent.
+const softCardShadow = { shadowColor: '#0F172A', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.08, shadowRadius: 10, elevation: 3 };
+const lightShadow = { shadowColor: '#0F172A', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 4, elevation: 2 };
+
 const isEvidenceCaptured = (st) => Boolean(st) && st.includes('CAPTURED') && !st.includes('NOT');
 
 // The GPU name is stored as whatever the inspector typed when registering
-// the institution (e.g. "Bermiok Daragoan"), not guaranteed to already say
-// "GPU" — append the suffix for display without doubling it up for GPU
-// names that already include it.
+// the institution, not guaranteed to already say "GPU" — append the suffix
+// for display without doubling it up for GPU names that already include it.
 const formatGpuLabel = (value) => {
   if (!value) return value;
   return /\bgpu\b/i.test(value) ? value : `${value} GPU`;
 };
 
-// Master Data Directory "Last updated" — previously hardcoded per-item
-// placeholder strings that never reflected an actual save.
-const formatLastUpdated = (isoString) => {
-  if (!isoString) return 'Needs update';
-  const d = new Date(isoString);
-  if (isNaN(d.getTime())) return 'Needs update';
-  return d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+const NEXT_ACTION_BUTTON_LABEL = {
+  'camera-outline': 'Open Camera',
+  'file-check-outline': 'Review',
 };
 
+const PARAM_STYLE = {
+  EVIDENCE: { icon: 'camera-outline', bg: COLORS.rose50, border: 'rgba(254,205,213,0.6)', fg: COLORS.rose500 },
+  OPERATIONS: { icon: 'wallet-outline', bg: COLORS.emerald50, border: COLORS.emerald200, fg: COLORS.emerald600 },
+  ACTIVITIES: { icon: 'format-list-checks', bg: COLORS.sky50, border: COLORS.sky100, fg: COLORS.sky700 },
+  COMPLIANCE: { icon: 'bank-outline', bg: COLORS.slate100, border: 'rgba(226,232,240,0.8)', fg: COLORS.slate500 },
+};
+
+// Same 2.5s ease-in-out pulse as the reference's `animate-pulse-subtle`
+// keyframe (opacity 1<->0.6, scale 1<->0.92) — loops for as long as the
+// screen is mounted and there's an unread alert to draw attention to.
+function usePulse(active) {
+  const pulse = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    if (!active) { pulse.setValue(0); return undefined; }
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulse, { toValue: 1, duration: 1250, easing: Easing.bezier(0.4, 0, 0.6, 1), useNativeDriver: true }),
+        Animated.timing(pulse, { toValue: 0, duration: 1250, easing: Easing.bezier(0.4, 0, 0.6, 1), useNativeDriver: true }),
+      ])
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [active]);
+  return {
+    opacity: pulse.interpolate({ inputRange: [0, 1], outputRange: [1, 0.6] }),
+    transform: [{ scale: pulse.interpolate({ inputRange: [0, 1], outputRange: [1, 0.92] }) }],
+  };
+}
+
+// The segmented Monthly/Master/Member switcher's active pill fades/scales
+// in smoothly instead of snapping, matching the reference's blanket
+// `transition duration-150` on interactive chrome.
+function TabButton({ label, active, onPress }) {
+  const progress = useRef(new Animated.Value(active ? 1 : 0)).current;
+  useEffect(() => {
+    Animated.timing(progress, { toValue: active ? 1 : 0, duration: 150, easing: Easing.out(Easing.ease), useNativeDriver: false }).start();
+  }, [active]);
+  const bgColor = progress.interpolate({ inputRange: [0, 1], outputRange: ['rgba(255,255,255,0)', '#ffffff'] });
+  const textColor = progress.interpolate({ inputRange: [0, 1], outputRange: [COLORS.slate600, COLORS.brand700] });
+  const dotScale = progress.interpolate({ inputRange: [0, 1], outputRange: [0, 1] });
+  return (
+    <Pressable onPress={onPress} style={{ flex: 1 }}>
+      <Animated.View style={[styles.tabBtn, { backgroundColor: bgColor }]}>
+        <Animated.Text style={[styles.tabText, { color: textColor, fontWeight: active ? '700' : '600' }]}>{label}</Animated.Text>
+        <Animated.View style={[styles.tabDot, { transform: [{ scale: dotScale }] }]} />
+      </Animated.View>
+    </Pressable>
+  );
+}
+
 export default function HomeScreen({
-  activeModule = 'MILK',
-  onSwitchModule,
   societyName = "",
   centerId = "",
   district = "",
   reportingMonth = "",
-  reportStatus = "DRAFT",
   progressPercent = 0,
   completedCount = 0,
   totalCount = 4,
@@ -79,422 +151,222 @@ export default function HomeScreen({
   activitiesStatus = "NOT STARTED",
   complianceStatus = "NOT STARTED",
   loanIsActive = false,
-  masterDataUpdated = {},
-  lastUpdated = "",
   activeAlert,
-  onDismissAlert,
   selectedSociety,
-  institutionsList,
-  onSelectSociety,
   onManageInstitutions,
   onNavigateScreen,
-  onReviewSubmit,
   onNotifyPress,
   onProfilePress,
   role,
   activeTab = 'home',
   onTabPress
 }) {
-
   const [internalTab, setInternalTab] = useState('monthly');
   const [alertVisible, setAlertVisible] = useState(true);
+  const bellPulse = usePulse(!!activeAlert);
+
+  const evidenceDone = isEvidenceCaptured(evidenceStatus) || !!evidenceStatus?.includes('Valid');
+  const operationsDone = !!operationsStatus?.includes('COMPLETED');
+  const activitiesDone = !!activitiesStatus?.includes('ENTRIES') || !!activitiesStatus?.includes('COMPLETED');
+  const loanDone = loanIsActive && !!complianceStatus?.includes('COMPLETED');
+
+  const monthlyParams = [
+    { id: 'EVIDENCE', title: 'Digital Evidence', desc: 'Photo & geolocation', done: evidenceDone, na: false },
+    { id: 'OPERATIONS', title: 'Collection & Deposit', desc: 'Monthly collection reconciled', done: operationsDone, na: false },
+    { id: 'ACTIVITIES', title: 'Activities & Events', desc: 'Visits, events and key activities', done: activitiesDone, na: false },
+    { id: 'COMPLIANCE', title: 'Loan Status', desc: loanIsActive ? 'Monthly loan recovery' : 'No active loan', done: loanDone, na: !loanIsActive },
+  ];
+
+  const nextAction = !evidenceDone
+    ? { icon: 'camera-outline', title: 'Digital Evidence', desc: 'Capture geo-tagged live photo & premises snapshot required for physical verification.', screen: 'EVIDENCE', id: 'EVIDENCE' }
+    : !operationsDone
+      ? { icon: 'wallet-outline', title: 'Collection & Deposit', desc: 'Record daily collection and verify bank deposits.', screen: 'OPERATIONS', id: 'OPERATIONS' }
+      : !activitiesDone
+        ? { icon: 'format-list-checks', title: 'Activities & Events', desc: 'Log operational visits, events, and key activities.', screen: 'ACTIVITIES', id: 'ACTIVITIES' }
+        : (loanIsActive && !loanDone)
+          ? { icon: 'bank-outline', title: 'Loan Status', desc: "Report this month's loan recovery.", screen: 'COMPLIANCE', id: 'COMPLIANCE' }
+          : { icon: 'file-check-outline', title: 'Review & Submit Return', desc: 'All monthly parameters are ready for final submission.', screen: 'REVIEW', id: 'REVIEW' };
+  const nextActionStyle = PARAM_STYLE[nextAction.id] || { bg: COLORS.brand50, border: COLORS.brand100, fg: COLORS.brand700 };
+
+  const roleInitials = (role || 'CI').slice(0, 2).toUpperCase();
+  const readyPercent = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
+  const pendingCount = totalCount - completedCount;
+  const regNo = selectedSociety?.regNo || centerId;
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor={COLORS.primary} />
-
-      <Image
-        source={require('../../assets/core/kanchenjunga.jpg')}
-        style={[StyleSheet.absoluteFillObject, { width: '100%', height: '100%' }, pageBgPhotoFilter]}
-        resizeMode="cover"
-        pointerEvents="none"
-      />
-
-      <HeaderNav
-        activeModule={activeModule}
-        selectedSociety={selectedSociety}
-        institutionsList={institutionsList}
-        onSelectSociety={onSelectSociety}
-        onManageInstitutions={onManageInstitutions}
-        onSwitchModule={onSwitchModule}
-        onMenuPress={onManageInstitutions}
+      <ScreenHeader
+        variant="hero"
+        title={selectedSociety?.name || societyName || 'Society Name Missing'}
+        onBrandPress={onManageInstitutions}
+        initials={roleInitials}
+        onAvatarPress={onProfilePress}
         onNotifyPress={onNotifyPress}
-        onProfilePress={onProfilePress}
-        unreadCount={activeAlert ? 1 : 0}
-        role={role}
-      />
-
-      {/* Sticky Action Banner at Top */}
-      {alertVisible && (
-        <View style={styles.stickyActionBanner}>
-          <View style={styles.alertCard}>
-            <View style={styles.alertIconBox}>
-              <MaterialCommunityIcons name="alert-outline" size={20} color={COLORS.emerald700} />
-            </View>
-            <View style={styles.alertBody}>
-              <Text style={styles.alertTitle}>Action Required</Text>
-              <Text style={styles.alertText}>
-                {activeAlert?.message || activeAlert?.text || 'Please review pending monthly submissions before the 15th to avoid operational flags.'}
-              </Text>
-            </View>
-            <TouchableOpacity style={styles.alertCloseBtn} onPress={() => setAlertVisible(false)}>
-              <MaterialCommunityIcons name="close" size={18} color="rgba(180, 83, 9, 0.6)" />
-            </TouchableOpacity>
+        showAlertDot={!!activeAlert}
+        alertDotStyle={bellPulse}
+      >
+        <View style={styles.headerMetaRow}>
+          <View style={[styles.headerMetaChip, glassStyle(8)]}>
+            <MaterialCommunityIcons name="map-marker-outline" size={13} color={COLORS.amber200} />
+            <Text style={styles.headerMetaChipText}>{formatGpuLabel(district) || 'Location Pending'}</Text>
           </View>
+          <Text style={styles.headerMetaDot}>•</Text>
+          <Text style={styles.headerMetaStatus}>
+            {pendingCount === 0 ? 'MONTHLY PARAMS READY' : `${completedCount}/${totalCount} MONTHLY PARAMS READY`}
+          </Text>
         </View>
-      )}
-
-      {/* Decorative Ambient Background Blobs */}
-      <View style={styles.bgBlobTop} pointerEvents="none" />
-      <View style={styles.bgBlobBottomLeft} pointerEvents="none" />
-      <View style={styles.bgBlobBottomRight} pointerEvents="none" />
+      </ScreenHeader>
 
       <ScrollView style={styles.scrollContent} contentContainerStyle={[styles.scrollInner, webCapWidth]} showsVerticalScrollIndicator={false}>
 
+        <View style={styles.tabBar}>
+          {[
+            { key: 'monthly', label: 'Monthly' },
+            { key: 'master', label: 'Master' },
+            { key: 'member', label: 'Member' },
+          ].map((t) => (
+            <TabButton
+              key={t.key}
+              label={t.label}
+              active={internalTab === t.key}
+              onPress={() => (t.key === 'member' ? onNavigateScreen && onNavigateScreen('MEMBERS') : t.key === 'master' ? onNavigateScreen && onNavigateScreen('MILK_MASTER_DATA') : setInternalTab(t.key))}
+            />
+          ))}
+        </View>
 
+        {alertVisible && activeAlert ? (
+          <View style={styles.alertCard}>
+            <View style={styles.alertIconBox}>
+              <MaterialCommunityIcons name="alert-outline" size={16} color={COLORS.amber800} />
+            </View>
+            <Text style={styles.alertText}>{activeAlert?.message || activeAlert?.text}</Text>
+            <Pressable onPress={() => setAlertVisible(false)} hitSlop={8} style={styles.alertCloseBtn}>
+              <MaterialCommunityIcons name="close" size={16} color={COLORS.amber800} />
+            </Pressable>
+          </View>
+        ) : null}
 
-        {/* Society Overview Card */}
-        <View style={styles.overviewCard}>
-          <View style={styles.overviewHeader}>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.societyTitle}>{societyName || selectedSociety?.name || 'Society Name Missing'}</Text>
-              <View style={styles.locationRow}>
-                <MaterialCommunityIcons name="map-marker-outline" size={16} color={COLORS.slate400} />
-                <Text style={styles.societyLocation}>{formatGpuLabel(district) || 'Location Not Set'}</Text>
+        {internalTab === 'monthly' && (
+          <>
+            <View style={styles.card}>
+              <View style={styles.progressHeaderRow}>
+                <View>
+                  <Text style={styles.progressLabel}>Reporting Period</Text>
+                  <Text style={styles.progressMonth}>{reportingMonth || 'Current Month'}</Text>
+                  {regNo ? <Text style={styles.progressReg}>Reg. No. {regNo}</Text> : null}
+                </View>
+                <View style={styles.progressFractionRow}>
+                  <Text style={styles.progressFraction}>{completedCount}</Text>
+                  <Text style={styles.progressFractionSlash}> / {totalCount}</Text>
+                </View>
+              </View>
+              <View style={styles.segmentRow}>
+                {Array.from({ length: totalCount }).map((_, i) => {
+                  const isNext = i === completedCount && pendingCount > 0;
+                  return (
+                    <View key={i} style={[styles.segment, i < completedCount && styles.segmentDone]}>
+                      {isNext && <View style={styles.segmentNextFill} />}
+                    </View>
+                  );
+                })}
+              </View>
+              <View style={styles.progressFootRow}>
+                <View style={styles.progressFootReady}>
+                  <MaterialCommunityIcons name="check" size={12} color={COLORS.emerald600} />
+                  <Text style={styles.progressFootReadyText}>{readyPercent}% Ready</Text>
+                </View>
+                <Text style={styles.progressFootPending}>
+                  {pendingCount > 0 ? `${pendingCount} pending task${pendingCount === 1 ? '' : 's'}` : 'All parameters ready'}
+                </Text>
               </View>
             </View>
-            <View style={styles.activeBadge}>
-              <View style={styles.activeDot} />
-              <Text style={styles.activeBadgeText}>ACTIVE</Text>
+
+            <View style={styles.sectionHeaderRow}>
+              <Text style={styles.sectionLabel}>On Site Now</Text>
             </View>
-          </View>
-
-          <View style={styles.overviewGrid}>
-            <View style={styles.overviewGridItem}>
-              <Text style={styles.gridLabel}>REGISTRATION NUMBER</Text>
-              <Text style={styles.gridValue}>{selectedSociety?.regNo || centerId || '—'}</Text>
-            </View>
-          </View>
-        </View>
-
-        {/* Current Reporting Period Card */}
-        <View style={styles.reportCard}>
-          <View style={styles.reportHeader}>
-            <View>
-              <Text style={styles.reportSubtitle}>CURRENT REPORTING PERIOD</Text>
-              <Text style={styles.reportTitle}>{reportingMonth || 'Current Month'}</Text>
-            </View>
-            <View style={[styles.monthBadge, reportStatus === 'MONTHLY PARAMS OK' ? styles.badgeSuccess : styles.badgeWarning]}>
-              <Text style={[styles.monthBadgeText, reportStatus === 'MONTHLY PARAMS OK' ? styles.badgeTextSuccess : styles.badgeTextWarning]}>
-                {reportStatus || 'DRAFT'}
-              </Text>
-            </View>
-          </View>
-
-          <View style={styles.progressContainer}>
-            <View style={styles.progressLabelRow}>
-              <Text style={styles.progressLabel}>OVERALL COMPLETION</Text>
-              <Text style={styles.progressPercent}>{progressPercent}%</Text>
-            </View>
-            <View style={styles.progressBarBg}>
-              <View style={[
-                styles.progressBarFill,
-                { width: `${Math.min(100, Math.max(0, progressPercent))}%`, backgroundColor: progressPercent === 100 ? COLORS.emerald500 : '#dc2626' },
-                Platform.OS === 'web' && { filter: 'drop-shadow(0 0 8px rgba(122,26,31,0.5))', backgroundImage: progressPercent === 100 ? 'linear-gradient(to right, #10b981, #047857)' : 'linear-gradient(to right, #dc2626, #be123c, #7a1a1f)' }
-              ]} />
-            </View>
-            <Text style={styles.progressSubtext}>
-              {completedCount} of {totalCount} sections completed
-            </Text>
-          </View>
-        </View>
-
-        <Pressable
-          style={({ hovered, pressed }) => [
-            styles.nextStepBtnWrapper,
-            pressed && { transform: [{ scale: 0.98 }] },
-            hovered && { opacity: 0.95 }
-          ]}
-          onPress={() => {
-            if (!onNavigateScreen) return;
-            if (!isEvidenceCaptured(evidenceStatus) && !evidenceStatus?.includes('Valid')) {
-              onNavigateScreen('EVIDENCE');
-            } else if (!operationsStatus?.includes('COMPLETED')) {
-              onNavigateScreen('OPERATIONS');
-            } else if (!activitiesStatus?.includes('ENTRIES') && !activitiesStatus?.includes('COMPLETED')) {
-              onNavigateScreen('ACTIVITIES');
-            } else if (!complianceStatus?.includes('COMPLETED')) {
-              onNavigateScreen('COMPLIANCE');
-            } else {
-              onNavigateScreen('REVIEW');
-            }
-          }}
-        >
-          {({ hovered }) => (
-            <LinearGradient
-              colors={['#7a1a1f', '#4a1017']}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-              style={[
-                styles.nextStepBtn,
-                hovered && { shadowOpacity: 0.2, shadowRadius: 12, elevation: 8 }
-              ]}
-            >
-              <Text style={styles.nextStepBtnText}>
-                {(!isEvidenceCaptured(evidenceStatus) && !evidenceStatus?.includes('Valid'))
-                  ? 'Next Step: Digital Evidence (Live Visit)'
-                  : !operationsStatus?.includes('COMPLETED')
-                    ? 'Next Step: Monthly Sales / Deposit'
-                    : (!activitiesStatus?.includes('ENTRIES') && !activitiesStatus?.includes('COMPLETED'))
-                      ? 'Next Step: Activities & Events Log'
-                      : !complianceStatus?.includes('COMPLETED')
-                        ? 'Next Step: Compliance Updates'
-                        : 'Next Step: Review & Submit Return'}
-              </Text>
-              <MaterialCommunityIcons
-                name="arrow-right"
-                size={18}
-                color="#ffffff"
-                style={hovered && { transform: [{ translateX: 4 }] }}
-              />
-            </LinearGradient>
-          )}
-        </Pressable>
-
-        {/* Tabs Grid */}
-        <View style={styles.tabContainer}>
-          <TouchableOpacity
-            style={[styles.tabBtn, internalTab === 'monthly' && styles.tabBtnActive]}
-            onPress={() => setInternalTab('monthly')}
-            activeOpacity={0.9}
-          >
-            <Text style={[styles.tabText, internalTab === 'monthly' && styles.tabTextActive]}>Monthly Data</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.tabBtn, internalTab === 'master' && styles.tabBtnActive]}
-            onPress={() => setInternalTab('master')}
-            activeOpacity={0.9}
-          >
-            <Text style={[styles.tabText, internalTab === 'master' && styles.tabTextActive]}>Master Data</Text>
-          </TouchableOpacity>
-          {/* Member Data is a standalone roster, not one of the Master Data
-              tiles — tapping it navigates straight to the screen rather than
-              switching internalTab, since there's nothing to show inline here. */}
-          <TouchableOpacity
-            style={styles.tabBtn}
-            onPress={() => onNavigateScreen && onNavigateScreen('MEMBERS')}
-            activeOpacity={0.9}
-          >
-            <Text style={styles.tabText}>Member Data</Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* Monthly Data Section */}
-        {internalTab === 'monthly' && (
-          <View style={styles.sectionContainer}>
-            <Text style={styles.sectionTitle}>Monthly Data Entries</Text>
-
-            <View style={styles.monthlyGrid}>
-              {/* Digital Evidence */}
-              <Pressable
-                style={({ hovered }) => [
-                  styles.moduleCard,
-                  Platform.OS === 'web' && { transition: 'all 0.3s' },
-                  hovered && { borderColor: '#cbd5e1', shadowOpacity: 0.08, elevation: 4 }
-                ]}
-                onPress={() => onNavigateScreen && onNavigateScreen('EVIDENCE')}
+            <View style={styles.onSiteCard}>
+              <View style={[styles.onSiteBlob, blurStyle(24)]} pointerEvents="none" />
+              <View style={styles.onSiteTopRow}>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.onSiteTitle}>{nextAction.title}</Text>
+                  <Text style={styles.onSiteDesc}>{nextAction.desc}</Text>
+                </View>
+                <View style={[styles.onSiteIconBox, { backgroundColor: nextActionStyle.bg, borderColor: nextActionStyle.border }]}>
+                  <MaterialCommunityIcons name={nextAction.icon} size={20} color={nextActionStyle.fg} />
+                </View>
+              </View>
+              <PressScale
+                style={({ pressed, hovered }) => [styles.onSiteBtn, hovered && { backgroundColor: COLORS.brand800 }, pressed && { opacity: 0.92 }]}
+                scaleTo={0.98}
+                onPress={() => onNavigateScreen && onNavigateScreen(nextAction.screen)}
               >
-                {({ hovered }) => (
-                  <>
-                    <View style={styles.moduleCardHeader}>
-                      <View style={[
-                        styles.moduleIconBox,
-                        { backgroundColor: isEvidenceCaptured(evidenceStatus) ? COLORS.emerald50 : COLORS.slate50, borderColor: isEvidenceCaptured(evidenceStatus) ? '#a7f3d0' : COLORS.slate100 },
-                        Platform.OS === 'web' && { transition: 'all 0.3s' },
-                        hovered && { backgroundColor: '#fef2f2', borderColor: '#fee2e2' }
-                      ]}>
-                        <MaterialCommunityIcons name="image-outline" size={24} color={isEvidenceCaptured(evidenceStatus) ? COLORS.emerald700 : hovered ? '#7a1a1f' : COLORS.slate400} />
-                      </View>
-                      <View style={[styles.statusPill, { backgroundColor: isEvidenceCaptured(evidenceStatus) ? COLORS.emerald50 : COLORS.slate100, borderColor: isEvidenceCaptured(evidenceStatus) ? 'rgba(16,185,129,0.3)' : 'rgba(226,232,240,0.5)' }]}>
-                        <Text style={[styles.statusPillText, { color: isEvidenceCaptured(evidenceStatus) ? COLORS.emerald700 : COLORS.slate500 }]}>
-                          {evidenceStatus || 'NOT CAPTURED'}
-                        </Text>
-                      </View>
-                    </View>
-                    <Text style={[styles.moduleCardTitle, Platform.OS === 'web' && { transition: 'all 0.3s' }, hovered && { color: '#7a1a1f' }]}>Digital Evidence</Text>
-                    <Text style={styles.moduleCardDesc}>Upload site photos and ledger scans for the current period.</Text>
-                  </>
-                )}
-              </Pressable>
-
-              {/* Collection  & Deposit */}
-              <Pressable
-                style={({ hovered }) => [
-                  styles.moduleCard,
-                  Platform.OS === 'web' && { transition: 'all 0.3s' },
-                  hovered && { borderColor: '#cbd5e1', shadowOpacity: 0.08, elevation: 4 }
-                ]}
-                onPress={() => onNavigateScreen && onNavigateScreen('OPERATIONS')}
-              >
-                {({ hovered }) => (
-                  <>
-                    <View style={styles.moduleCardHeader}>
-                      <View style={[
-                        styles.moduleIconBox,
-                        { backgroundColor: operationsStatus?.includes('COMPLETED') ? COLORS.emerald50 : COLORS.emerald50, borderColor: operationsStatus?.includes('COMPLETED') ? '#a7f3d0' : 'rgba(16,185,129,0.3)' },
-                        Platform.OS === 'web' && { transition: 'all 0.3s' },
-                        hovered && { backgroundColor: '#ecfdf5', borderColor: '#a7f3d0' }
-                      ]}>
-                        <MaterialCommunityIcons name="wallet-outline" size={24} color={operationsStatus?.includes('COMPLETED') ? COLORS.emerald700 : COLORS.emerald700} />
-                      </View>
-                      <View style={[styles.statusPill, { backgroundColor: operationsStatus?.includes('COMPLETED') ? COLORS.emerald50 : COLORS.emerald50, borderColor: operationsStatus?.includes('COMPLETED') ? 'rgba(16,185,129,0.3)' : 'rgba(16,185,129,0.3)' }]}>
-                        <Text style={[styles.statusPillText, { color: operationsStatus?.includes('COMPLETED') ? COLORS.emerald700 : COLORS.emerald700 }]}>
-                          {operationsStatus || 'NOT COMPLETED'}
-                        </Text>
-                      </View>
-                    </View>
-                    <Text style={[styles.moduleCardTitle, Platform.OS === 'web' && { transition: 'all 0.3s' }, hovered && { color: '#7a1a1f' }]}>Monthly Collection / Deposit</Text>
-                    <Text style={styles.moduleCardDesc}>Record daily collection and verify bank deposits.</Text>
-                  </>
-                )}
-              </Pressable>
-
-              {/* Activities */}
-              <Pressable
-                style={({ hovered }) => [
-                  styles.moduleCard,
-                  Platform.OS === 'web' && { transition: 'all 0.3s' },
-                  hovered && { borderColor: '#cbd5e1', shadowOpacity: 0.08, elevation: 4 }
-                ]}
-                onPress={() => onNavigateScreen && onNavigateScreen('ACTIVITIES')}
-              >
-                {({ hovered }) => (
-                  <>
-                    <View style={styles.moduleCardHeader}>
-                      <View style={[
-                        styles.moduleIconBox,
-                        { backgroundColor: (activitiesStatus === '0 ENTRIES' || activitiesStatus === 'NOT COMPLETED') ? COLORS.slate50 : COLORS.emerald50, borderColor: (activitiesStatus === '0 ENTRIES' || activitiesStatus === 'NOT COMPLETED') ? COLORS.slate100 : '#a7f3d0' },
-                        Platform.OS === 'web' && { transition: 'all 0.3s' },
-                        hovered && { backgroundColor: '#fef2f2', borderColor: '#fee2e2' }
-                      ]}>
-                        <MaterialCommunityIcons name="format-list-checks" size={24} color={(activitiesStatus === '0 ENTRIES' || activitiesStatus === 'NOT COMPLETED') ? (hovered ? '#7a1a1f' : COLORS.slate400) : COLORS.emerald700} />
-                      </View>
-                      <View style={[styles.statusPill, { backgroundColor: (activitiesStatus === '0 ENTRIES' || activitiesStatus === 'NOT COMPLETED') ? COLORS.slate100 : COLORS.emerald50, borderColor: (activitiesStatus === '0 ENTRIES' || activitiesStatus === 'NOT COMPLETED') ? 'rgba(226,232,240,0.5)' : 'rgba(16,185,129,0.3)' }]}>
-                        <Text style={[styles.statusPillText, { color: (activitiesStatus === '0 ENTRIES' || activitiesStatus === 'NOT COMPLETED') ? COLORS.slate500 : COLORS.emerald700 }]}>
-                          {activitiesStatus}
-                        </Text>
-                      </View>
-                    </View>
-                    <Text style={[styles.moduleCardTitle, Platform.OS === 'web' && { transition: 'all 0.3s' }, hovered && { color: '#7a1a1f' }]}>Activities & Events Log</Text>
-                    <Text style={styles.moduleCardDesc}>Log operational visits, events, and key activities.</Text>
-                  </>
-                )}
-              </Pressable>
-
-              {/* Loan Status — this screen (key 'COMPLIANCE') only tracks monthly
-                  loan repayment now, not general compliance; see ComplianceScreen.js */}
-              <Pressable
-                style={({ hovered }) => [
-                  styles.moduleCard,
-                  Platform.OS === 'web' && { transition: 'all 0.3s' },
-                  hovered && { borderColor: '#cbd5e1', shadowOpacity: 0.08, elevation: 4 }
-                ]}
-                onPress={() => onNavigateScreen && onNavigateScreen('COMPLIANCE')}
-              >
-                {({ hovered }) => (
-                  <>
-                    <View style={styles.moduleCardHeader}>
-                      <View style={[
-                        styles.moduleIconBox,
-                        { backgroundColor: !loanIsActive ? COLORS.slate50 : complianceStatus?.includes('COMPLETED') ? COLORS.emerald50 : COLORS.amber50, borderColor: !loanIsActive ? COLORS.slate100 : complianceStatus?.includes('COMPLETED') ? '#a7f3d0' : 'rgba(254,243,199,0.5)' },
-                        Platform.OS === 'web' && { transition: 'all 0.3s' },
-                        hovered && { backgroundColor: '#fef2f2', borderColor: '#fee2e2' }
-                      ]}>
-                        <MaterialCommunityIcons name="bank-outline" size={24} color={!loanIsActive ? COLORS.slate400 : complianceStatus?.includes('COMPLETED') ? COLORS.emerald700 : COLORS.amber600} />
-                      </View>
-                      <View style={[styles.statusPill, { backgroundColor: !loanIsActive ? COLORS.slate100 : complianceStatus?.includes('COMPLETED') ? COLORS.emerald50 : COLORS.amber50, borderColor: !loanIsActive ? 'rgba(226,232,240,0.5)' : complianceStatus?.includes('COMPLETED') ? 'rgba(16,185,129,0.3)' : 'rgba(254,243,199,0.5)' }]}>
-                        <Text style={[styles.statusPillText, { color: !loanIsActive ? COLORS.slate500 : complianceStatus?.includes('COMPLETED') ? COLORS.emerald700 : COLORS.amber700 }]}>
-                          {loanIsActive ? (complianceStatus || 'NOT COMPLETED') : 'NOT APPLICABLE'}
-                        </Text>
-                      </View>
-                    </View>
-                    <Text style={[styles.moduleCardTitle, Platform.OS === 'web' && { transition: 'all 0.3s' }, hovered && { color: '#7a1a1f' }]}>Loan Status</Text>
-                    <Text style={styles.moduleCardDesc}>
-                      {loanIsActive ? 'Report this month\'s loan recovery.' : 'No active loan on record for this society.'}
-                    </Text>
-                  </>
-                )}
-              </Pressable>
+                <MaterialCommunityIcons name={nextAction.icon} size={16} color="rgba(255,255,255,0.9)" />
+                <Text style={styles.onSiteBtnText}>{NEXT_ACTION_BUTTON_LABEL[nextAction.icon] || 'Open'}</Text>
+              </PressScale>
             </View>
-          </View>
-        )}
 
-        {/* Master Data Section */}
-        {internalTab === 'master' && (
-          <View style={styles.sectionContainer}>
-            <Text style={styles.sectionTitle}>Master Data Directory</Text>
-            <View style={styles.masterListContainer}>
-              {[
-                // _VIEW ids open the screen standalone — no Save & Continue /
-                // Previous chevron pulling the user into an adjacent section.
-                // DEMOGRAPHICS is the terminal step (Submit to Database is its
-                // own legitimate action, not a hop to somewhere else), so it
-                // keeps the plain key.
-                { id: 'PROFILE_VIEW', title: 'Institutional Profile', icon: 'office-building-outline', updated: formatLastUpdated(masterDataUpdated.instProfile) },
-                { id: 'COMPLIANCE_VIEW', title: 'Compliance & Audit', icon: 'gavel', updated: formatLastUpdated(masterDataUpdated.complianceAudit) },
-                { id: 'LOAN_SETUP_VIEW', title: 'Loan Details', icon: 'bank-outline', updated: formatLastUpdated(masterDataUpdated.loanSetup) },
-                { id: 'DEMOGRAPHICS', title: 'Registered Demographics', icon: 'account-group-outline', updated: formatLastUpdated(masterDataUpdated.demographics) }
-              ].map((item, index) => (
-                <Pressable
-                  key={item.id}
-                  style={({ hovered }) => [
-                    styles.masterListItem,
-                    Platform.OS === 'web' && { transition: 'all 0.3s' },
-                    hovered && { borderColor: '#cbd5e1', shadowOpacity: 0.08, elevation: 4 }
-                  ]}
-                  onPress={() => onNavigateScreen && onNavigateScreen(item.id)}
-                >
-                  {({ hovered }) => (
-                    <>
-                      <View style={styles.masterListLeft}>
-                        <View style={[
-                          styles.masterListIcon,
-                          Platform.OS === 'web' && { transition: 'all 0.3s' },
-                          hovered && { backgroundColor: '#fef2f2', borderColor: '#fee2e2' }
-                        ]}>
-                          <MaterialCommunityIcons name={item.icon} size={20} color={hovered ? '#7a1a1f' : COLORS.slate600} />
+            <View style={styles.sectionHeaderRow}>
+              <Text style={styles.sectionLabel}>Parameters</Text>
+              <Text style={styles.sectionCount}>{monthlyParams.length} Items</Text>
+            </View>
+            <View style={styles.listCard}>
+              {monthlyParams.map((p, i) => {
+                const style = PARAM_STYLE[p.id] || { icon: 'circle-outline', bg: COLORS.slate100, border: COLORS.slate200, fg: COLORS.slate500 };
+                // The spotlight card above already carries this item's full
+                // title + description, so its list row switches to a "NOW"
+                // state instead of repeating the same copy verbatim.
+                const isCurrent = p.id === nextAction.id && !p.done && !p.na;
+                return (
+                  <PressScale
+                    key={p.id}
+                    scaleTo={0.985}
+                    style={({ pressed, hovered }) => [
+                      styles.listRow,
+                      isCurrent && styles.listRowCurrent,
+                      i === monthlyParams.length - 1 && styles.listRowLast,
+                      hovered && { backgroundColor: 'rgba(248,250,252,0.6)' },
+                      pressed && { backgroundColor: COLORS.slate100 },
+                    ]}
+                    onPress={() => onNavigateScreen && onNavigateScreen(p.id)}
+                  >
+                    {({ hovered }) => (
+                      <>
+                        <View style={[styles.paramIconBox, { backgroundColor: style.bg, borderColor: style.border }]}>
+                          <MaterialCommunityIcons name={style.icon} size={19} color={style.fg} />
                         </View>
                         <View style={{ flex: 1 }}>
-                          <Text style={[styles.masterListTitle, Platform.OS === 'web' && { transition: 'all 0.3s' }, hovered && { color: '#7a1a1f' }]}>{item.title}</Text>
-                          <View style={styles.masterListSubRow}>
-                            <MaterialCommunityIcons name="clock-time-four-outline" size={12} color={COLORS.slate400} />
-                            <Text style={styles.masterListSub}>Last updated: {item.updated}</Text>
+                          <Text style={[styles.listRowTitle, hovered && { color: COLORS.brand700 }]}>{p.title}</Text>
+                          <Text style={[styles.listRowDesc, isCurrent && styles.listRowDescCurrent]}>{isCurrent ? 'Current task' : p.desc}</Text>
+                        </View>
+                        {isCurrent ? (
+                          <View style={styles.nowPill}>
+                            <Text style={styles.nowPillText}>NOW</Text>
                           </View>
-                        </View>
-                      </View>
-                      <View style={styles.masterListRight}>
-                        <View style={[
-                          { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center', backgroundColor: COLORS.slate50, borderWidth: 1, borderColor: COLORS.slate100 },
-                          Platform.OS === 'web' && { transition: 'all 0.3s' },
-                          hovered && { backgroundColor: '#7a1a1f', borderColor: 'transparent' }
-                        ]}>
-                          <MaterialCommunityIcons
-                            name="arrow-right"
-                            size={18}
-                            color={hovered ? '#ffffff' : COLORS.slate400}
-                            style={[Platform.OS === 'web' && { transition: 'transform 0.3s' }, hovered && { transform: [{ translateX: 2 }] }]}
-                          />
-                        </View>
-                      </View>
-                    </>
-                  )}
-                </Pressable>
-              ))}
+                        ) : p.na ? (
+                          <View style={styles.dashPill}>
+                            <Text style={styles.dashPillText}>—</Text>
+                          </View>
+                        ) : p.done ? (
+                          <View style={styles.doneBadge}>
+                            <MaterialCommunityIcons name="check" size={11} color={COLORS.emerald700} />
+                            <Text style={styles.doneBadgeText}>Done</Text>
+                          </View>
+                        ) : (
+                          <View style={styles.openPill}>
+                            <Text style={styles.openPillText}>OPEN</Text>
+                          </View>
+                        )}
+                        <MaterialCommunityIcons name="chevron-right" size={16} color={COLORS.slate400} style={hovered && { transform: [{ translateX: 2 }] }} />
+                      </>
+                    )}
+                  </PressScale>
+                );
+              })}
             </View>
-          </View>
+
+          </>
         )}
 
-        {/* Extra padding for bottom nav */}
         <View style={{ height: 60 }} />
       </ScrollView>
 
@@ -506,485 +378,418 @@ export default function HomeScreen({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    position: 'relative',
-    overflow: 'hidden',
-    backgroundColor: COLORS.background,
+    backgroundColor: COLORS.surface100,
   },
-  stickyActionBanner: {
-    backgroundColor: 'rgba(255, 255, 255, 0.95)',
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(226, 232, 240, 0.8)',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    zIndex: 10,
+  headerMetaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    flexWrap: 'wrap',
   },
-  bgBlobTop: {
-    position: 'absolute',
-    top: -40,
-    right: -40,
-    width: 260,
-    height: 260,
-    borderRadius: 130,
-    backgroundColor: 'rgba(122, 26, 31, 0.08)',
-    zIndex: -1,
+  headerMetaChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: 'rgba(0,0,0,0.2)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
   },
-  bgBlobBottomLeft: {
-    position: 'absolute',
-    bottom: 80,
-    left: -50,
-    width: 240,
-    height: 240,
-    borderRadius: 120,
-    backgroundColor: 'rgba(180, 83, 9, 0.06)',
-    zIndex: -1,
+  headerMetaChipText: {
+    fontFamily: FONT_FAMILY,
+    fontSize: 11,
+    fontWeight: '500',
+    color: 'rgba(255,255,255,0.85)',
   },
-  bgBlobBottomRight: {
-    position: 'absolute',
-    top: '40%',
-    right: -60,
-    width: 220,
-    height: 220,
-    borderRadius: 110,
-    backgroundColor: 'rgba(122, 26, 31, 0.05)',
-    zIndex: -1,
+  headerMetaDot: {
+    color: 'rgba(255,255,255,0.4)',
+    fontWeight: '300',
+  },
+  headerMetaStatus: {
+    fontFamily: FONT_FAMILY,
+    fontSize: 11,
+    fontWeight: '500',
+    color: 'rgba(255,255,255,0.9)',
+    letterSpacing: 0.3,
   },
   scrollContent: {
     flex: 1,
   },
   scrollInner: {
-    padding: 12,
-    gap: 12,
-    paddingTop: 12,
-    paddingBottom: 100, // Prevent BottomNav overlap
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 100,
+    gap: 16,
   },
-  alertCard: {
-    backgroundColor: 'rgba(254, 252, 232, 0.8)', // amber-50/80 roughly
-    borderRadius: 16,
-    padding: 16, // Reduced from 20
+  tabBar: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 12, // Reduced from 16
-    borderWidth: 1,
-    borderColor: 'rgba(253, 230, 138, 0.5)',
-    shadowColor: '#0f172a',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-    elevation: 2,
+    backgroundColor: 'rgba(226,232,240,0.8)',
+    padding: 4,
+    borderRadius: 12,
+    gap: 4,
   },
-  alertIconBox: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: COLORS.amber100,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  alertBody: {
+  tabBtn: {
     flex: 1,
-    paddingRight: 8,
-  },
-  alertTitle: {
-    fontFamily: FONT_FAMILY,
-    fontSize: 15,
-    fontWeight: '800',
-    color: COLORS.amber900,
-    marginBottom: 4,
-  },
-  alertText: {
-    fontFamily: FONT_FAMILY,
-    fontSize: 14,
-    fontWeight: '500',
-    color: 'rgba(146, 64, 14, 0.9)',
-    lineHeight: 20,
-  },
-  alertCloseBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    flexDirection: 'row',
+    paddingVertical: 8,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  overviewCard: {
-    backgroundColor: COLORS.surface,
-    borderRadius: 14,
-    padding: 12,
-    borderWidth: 1,
-    borderColor: 'rgba(226,232,240,0.6)',
-    shadowColor: '#0f172a',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.06,
-    shadowRadius: 12,
-    elevation: 3,
-    overflow: 'hidden',
-  },
-  overviewHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 12,
-    paddingLeft: 2,
-  },
-  societyTitle: {
-    fontFamily: FONT_FAMILY,
-    fontSize: 18,
-    fontWeight: '700',
-    color: COLORS.slate800,
-    marginBottom: 2,
-    letterSpacing: -0.18,
-  },
-  locationRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
     gap: 6,
+    borderRadius: 8,
   },
-  societyLocation: {
+  tabText: {
     fontFamily: FONT_FAMILY,
-    fontSize: 14,
-    fontWeight: '500',
-    color: COLORS.slate500,
+    fontSize: 12,
+    fontWeight: '600',
+    color: COLORS.slate600,
   },
-  activeBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    backgroundColor: COLORS.emerald50,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: 'rgba(209,250,229,0.5)',
-  },
-  activeDot: {
+  tabDot: {
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: COLORS.emerald500,
+    backgroundColor: COLORS.brand600,
   },
-  activeBadgeText: {
-    fontFamily: FONT_FAMILY,
-    fontSize: 8,
-    fontWeight: '800',
-    color: COLORS.emerald700,
-    letterSpacing: 1.2,
-  },
-  overviewGrid: {
+  alertCard: {
     flexDirection: 'row',
-    borderTopWidth: 1,
-    borderTopColor: COLORS.slate100,
-    paddingTop: 12,
-    paddingLeft: 2,
+    alignItems: 'flex-start',
     gap: 12,
-  },
-  overviewGridItem: {
-    flex: 1,
-  },
-  gridLabel: {
-    fontFamily: FONT_FAMILY,
-    fontSize: 8,
-    fontWeight: '800',
-    color: COLORS.slate400,
-    letterSpacing: 1.2,
-    marginBottom: 4,
-  },
-  gridValue: {
-    fontFamily: FONT_FAMILY,
-    fontSize: 13,
-    fontWeight: '600',
-    color: COLORS.slate800,
-  },
-  reportCard: {
-    backgroundColor: COLORS.surface,
-    borderRadius: 14,
-    padding: 12,
+    backgroundColor: 'rgba(255,251,235,0.9)',
+    borderRadius: 16,
     borderWidth: 1,
-    borderColor: 'rgba(226,232,240,0.6)',
-    shadowColor: '#0f172a',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.06,
-    shadowRadius: 12,
-    elevation: 3,
+    borderColor: 'rgba(253,230,138,0.8)',
+    padding: 14,
+    ...lightShadow,
   },
-  reportHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+  alertIconBox: {
+    width: 26,
+    height: 26,
+    borderRadius: 8,
+    backgroundColor: 'rgba(254,243,199,0.9)',
     alignItems: 'center',
-    marginBottom: 12,
-  },
-  reportTitle: {
-    fontFamily: FONT_FAMILY,
-    fontSize: 14,
-    fontWeight: '700',
-    color: COLORS.slate800,
-    letterSpacing: -0.14,
-  },
-  reportSubtitle: {
-    fontFamily: FONT_FAMILY,
-    fontSize: 9,
-    fontWeight: '800',
-    color: COLORS.slate400,
-    letterSpacing: 1.2,
-    marginBottom: 2,
-  },
-  monthBadge: {
-    backgroundColor: COLORS.slate100,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: 'rgba(226,232,240,0.5)',
     justifyContent: 'center',
-    alignItems: 'center',
+    marginTop: 2,
   },
-  monthBadgeText: {
+  alertText: {
+    flex: 1,
     fontFamily: FONT_FAMILY,
-    fontSize: 8,
-    fontWeight: '800',
-    color: COLORS.slate600,
+    fontSize: 12,
+    fontWeight: '500',
+    color: COLORS.amber900,
+    lineHeight: 17,
+    paddingRight: 16,
   },
-  badgeSuccess: {
-    backgroundColor: COLORS.emerald50,
-    borderColor: 'rgba(16,185,129,0.3)',
+  alertCloseBtn: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+  },
+  card: {
+    backgroundColor: '#ffffff',
+    borderRadius: 16,
     borderWidth: 1,
+    borderColor: 'rgba(226,232,240,0.8)',
+    padding: 16,
+    ...softCardShadow,
   },
-  badgeWarning: {
-    backgroundColor: COLORS.emerald50,
-    borderColor: 'rgba(245,158,11,0.3)',
-    borderWidth: 1,
-  },
-  badgeTextSuccess: {
-    color: COLORS.emerald700,
-  },
-  badgeTextWarning: {
-    color: COLORS.amber800,
-  },
-  progressContainer: {
-    marginBottom: 8,
-  },
-  progressLabelRow: {
+  progressHeaderRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'baseline',
+    alignItems: 'flex-start',
     marginBottom: 12,
   },
   progressLabel: {
     fontFamily: FONT_FAMILY,
-    fontSize: 8,
-    fontWeight: '800',
-    color: COLORS.slate500,
-    letterSpacing: 1.2,
-  },
-  progressPercent: {
-    fontFamily: FONT_FAMILY,
-    fontSize: 22,
-    fontWeight: '800',
-    color: COLORS.primary,
-    letterSpacing: -0.44,
-  },
-  progressBarBg: {
-    height: 6,
-    backgroundColor: COLORS.slate100,
-    borderRadius: 3,
-    overflow: 'hidden',
-  },
-  progressBarFill: {
-    height: '100%',
-    borderRadius: 3,
-  },
-  progressSubtext: {
-    fontFamily: FONT_FAMILY,
     fontSize: 11,
     fontWeight: '600',
     color: COLORS.slate400,
-    marginTop: 6,
-  },
-  nextStepBtnWrapper: {
-    borderRadius: 16,
-    shadowColor: COLORS.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  nextStepBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    borderRadius: 16,
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-  },
-  nextStepBtnText: {
-    fontFamily: FONT_FAMILY,
-    fontSize: 15,
-    fontWeight: '700',
-    color: '#ffffff',
-    letterSpacing: 0.5,
-  },
-  tabContainer: {
-    flexDirection: 'row',
-    backgroundColor: 'rgba(241,245,249,0.8)', // slate-100/80
-    padding: 6,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: 'rgba(226,232,240,0.5)',
-  },
-  tabBtn: {
-    flex: 1,
-    paddingVertical: 12,
-    alignItems: 'center',
-    borderRadius: 12,
-  },
-  tabBtnActive: {
-    backgroundColor: COLORS.surface,
-    borderWidth: 1,
-    borderColor: 'rgba(226,232,240,0.5)',
-    shadowColor: '#0f172a',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
-  },
-  tabText: {
-    fontFamily: FONT_FAMILY,
-    fontSize: 14,
-    fontWeight: '600',
-    color: COLORS.slate500,
-    letterSpacing: 0.5,
-  },
-  tabTextActive: {
-    fontWeight: '700',
-    color: COLORS.slate800,
-  },
-  sectionContainer: {
-    gap: 12, // gap-sm roughly
-  },
-  sectionTitle: {
-    fontFamily: FONT_FAMILY,
-    fontSize: 14,
-    fontWeight: '800',
-    color: COLORS.slate800,
-    paddingHorizontal: 8,
-    marginBottom: 8,
-    letterSpacing: -0.16,
-  },
-  monthlyGrid: {
-    flexDirection: 'column',
-    gap: 12,
-  },
-  moduleCard: {
-    width: '100%',
-    backgroundColor: COLORS.surface,
-    borderRadius: 14,
-    padding: 12,
-    borderWidth: 1,
-    borderColor: 'rgba(226,232,240,0.6)',
-    shadowColor: '#0f172a',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
-    shadowRadius: 10,
-    elevation: 2,
-  },
-  moduleCardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 10,
-  },
-  moduleIconBox: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  statusPill: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
-    borderWidth: 1,
-  },
-  statusPillText: {
-    fontFamily: FONT_FAMILY,
-    fontSize: 9,
-    fontWeight: '800',
-    letterSpacing: 1.0,
-  },
-  moduleCardTitle: {
-    fontFamily: FONT_FAMILY,
-    fontSize: 14,
-    fontWeight: '800',
-    color: COLORS.slate800,
-    marginBottom: 4,
-  },
-  moduleCardDesc: {
-    fontFamily: FONT_FAMILY,
-    fontSize: 12,
-    fontWeight: '500',
-    color: COLORS.slate500,
-    lineHeight: 18,
-  },
-  masterListContainer: {
-    gap: 12,
-  },
-  masterListItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    backgroundColor: COLORS.surface,
-    borderRadius: 16,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: 'rgba(226,232,240,0.6)',
-    shadowColor: '#0f172a',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
-    shadowRadius: 10,
-    elevation: 2,
-  },
-  masterListLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 16,
-    flex: 1,
-  },
-  masterListIcon: {
-    width: 44,
-    height: 44,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: COLORS.slate100,
-    backgroundColor: COLORS.slate50,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  masterListTitle: {
-    fontFamily: FONT_FAMILY,
-    fontSize: 15,
-    fontWeight: '800',
-    color: COLORS.slate800,
+    letterSpacing: 0.6,
+    textTransform: 'uppercase',
     marginBottom: 2,
   },
-  masterListSubRow: {
+  progressReg: {
+    fontFamily: FONT_FAMILY,
+    fontSize: 11,
+    fontWeight: '500',
+    color: COLORS.slate400,
+    marginTop: 2,
+  },
+  progressMonth: {
+    fontFamily: FONT_FAMILY,
+    fontSize: 16,
+    fontWeight: '800',
+    color: COLORS.ink,
+    letterSpacing: -0.2,
+  },
+  progressFractionRow: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+  },
+  progressFraction: {
+    fontFamily: FONT_FAMILY,
+    fontSize: 24,
+    fontWeight: '800',
+    color: COLORS.brand700,
+    letterSpacing: -0.4,
+  },
+  progressFractionSlash: {
+    fontFamily: FONT_FAMILY,
+    fontSize: 14,
+    fontWeight: '700',
+    color: COLORS.slate400,
+  },
+  segmentRow: {
+    flexDirection: 'row',
+    gap: 6,
+    alignItems: 'center',
+  },
+  segment: {
+    flex: 1,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: COLORS.slate200,
+    overflow: 'hidden',
+  },
+  segmentDone: {
+    backgroundColor: COLORS.brand700,
+  },
+  segmentNextFill: {
+    height: '100%',
+    width: '33%',
+    borderRadius: 4,
+    backgroundColor: COLORS.slate300,
+  },
+  progressFootRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 10,
+  },
+  progressFootReady: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
   },
-  masterListSub: {
+  progressFootReadyText: {
+    fontFamily: FONT_FAMILY,
+    fontSize: 11,
+    fontWeight: '600',
+    color: COLORS.emerald600,
+  },
+  progressFootPending: {
+    fontFamily: FONT_FAMILY,
+    fontSize: 11,
+    fontWeight: '500',
+    color: COLORS.slate500,
+  },
+  sectionHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 2,
+  },
+  sectionLabel: {
+    fontFamily: FONT_FAMILY,
+    fontSize: 11,
+    fontWeight: '700',
+    color: COLORS.slate400,
+    letterSpacing: 0.6,
+    textTransform: 'uppercase',
+  },
+  sectionCount: {
+    fontFamily: FONT_FAMILY,
+    fontSize: 11,
+    fontWeight: '500',
+    color: COLORS.slate500,
+  },
+  onSiteCard: {
+    backgroundColor: '#ffffff',
+    borderRadius: 16,
+    borderWidth: 2,
+    borderColor: 'rgba(100,27,27,0.25)',
+    padding: 16,
+    overflow: 'hidden',
+    ...softCardShadow,
+  },
+  onSiteBlob: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    width: 128,
+    height: 128,
+    borderRadius: 64,
+    backgroundColor: COLORS.brand50,
+  },
+  onSiteTopRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 10,
+    marginBottom: 16,
+  },
+  onSiteIconBox: {
+    width: 42,
+    height: 42,
+    borderRadius: 12,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  onSiteTitle: {
+    fontFamily: FONT_FAMILY,
+    fontSize: 16,
+    fontWeight: '800',
+    color: COLORS.ink,
+    letterSpacing: -0.2,
+    marginBottom: 4,
+  },
+  onSiteDesc: {
     fontFamily: FONT_FAMILY,
     fontSize: 12,
     fontWeight: '500',
     color: COLORS.slate500,
+    lineHeight: 17,
   },
-  masterListRight: {
-    width: 32, // w-8
-    height: 32, // h-8
-    borderRadius: 16,
-    backgroundColor: COLORS.slate50,
-    borderWidth: 1,
-    borderColor: COLORS.slate100,
+  onSiteBtn: {
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    gap: 8,
+    backgroundColor: COLORS.brand700,
+    borderRadius: 12,
+    paddingVertical: 14,
+  },
+  onSiteBtnText: {
+    fontFamily: FONT_FAMILY,
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#ffffff',
+    letterSpacing: 0.2,
+  },
+  listCard: {
+    backgroundColor: '#ffffff',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(226,232,240,0.8)',
+    overflow: 'hidden',
+    ...softCardShadow,
+  },
+  listRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.slate100,
+  },
+  listRowLast: {
+    borderBottomWidth: 0,
+  },
+  listRowCurrent: {
+    backgroundColor: COLORS.brand50,
+    borderLeftWidth: 3,
+    borderLeftColor: COLORS.brand700,
+    paddingLeft: 13,
+  },
+  listRowDescCurrent: {
+    color: COLORS.brand700,
+    fontWeight: '600',
+  },
+  nowPill: {
+    backgroundColor: COLORS.brand700,
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 999,
+    marginRight: 4,
+  },
+  nowPillText: {
+    fontFamily: FONT_FAMILY,
+    fontSize: 12,
+    fontWeight: '800',
+    color: '#ffffff',
+    letterSpacing: 0.6,
+  },
+  paramIconBox: {
+    width: 44,
+    height: 44,
+    borderRadius: 16,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  listRowTitle: {
+    fontFamily: FONT_FAMILY,
+    fontSize: 18,
+    fontWeight: '800',
+    color: COLORS.ink,
+    letterSpacing: -0.3,
+  },
+  listRowDesc: {
+    fontFamily: FONT_FAMILY,
+    fontSize: 13,
+    fontWeight: '400',
+    color: COLORS.slate400,
+    marginTop: 3,
+  },
+  dashPill: {
+    width: 36,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: COLORS.slate100,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 4,
+  },
+  dashPillText: {
+    fontFamily: FONT_FAMILY,
+    fontSize: 12,
+    fontWeight: '600',
+    color: COLORS.slate400,
+  },
+  doneBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: COLORS.emerald50,
+    borderWidth: 1,
+    borderColor: COLORS.emerald200,
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 999,
+    marginRight: 4,
+  },
+  doneBadgeText: {
+    fontFamily: FONT_FAMILY,
+    fontSize: 12,
+    fontWeight: '600',
+    color: COLORS.emerald700,
+  },
+  openPill: {
+    backgroundColor: COLORS.rose50,
+    borderWidth: 1,
+    borderColor: 'rgba(254,205,213,0.6)',
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 999,
+    marginRight: 4,
+  },
+  openPillText: {
+    fontFamily: FONT_FAMILY,
+    fontSize: 12,
+    fontWeight: '700',
+    color: COLORS.rose700,
+    letterSpacing: 0.4,
+  },
+  masterSummaryRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  masterSummaryCount: {
+    fontFamily: FONT_FAMILY,
+    fontSize: 16,
+    fontWeight: '800',
+    color: COLORS.ink,
   },
 });

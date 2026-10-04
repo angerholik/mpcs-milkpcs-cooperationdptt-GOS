@@ -14,7 +14,7 @@ const COLORS = {
 
 const FONT_FAMILY = 'Manrope';
 
-export default function MpcsWizardHeader({ month, title, step, total = 5, draft = true, onBack }) {
+export default function MpcsWizardHeader({ month, title, step, total = 5, draft = true, onBack, module = 'MPCS', label }) {
   return (
     <View style={styles.header}>
       <View style={styles.topRow}>
@@ -22,7 +22,7 @@ export default function MpcsWizardHeader({ month, title, step, total = 5, draft 
           <MaterialCommunityIcons name="arrow-left" size={22} color="#ffffff" />
         </Pressable>
         <View style={{ flex: 1 }}>
-          <Text style={styles.eyebrow}>MPCS · {month}</Text>
+          <Text style={styles.eyebrow}>{module} · {month}</Text>
           <Text style={styles.title}>{title}</Text>
         </View>
         {draft && (
@@ -36,7 +36,7 @@ export default function MpcsWizardHeader({ month, title, step, total = 5, draft 
           <View key={i} style={[styles.segment, i < step && styles.segmentDone]} />
         ))}
       </View>
-      <Text style={styles.stepLabel}>Parameter {step} of {total}</Text>
+      <Text style={styles.stepLabel}>{label || `Parameter ${step} of ${total}`}</Text>
     </View>
   );
 }
