@@ -6197,7 +6197,10 @@ export default function App() {
   // Dashboard is about to render. Keeps the whole boot sequence as one
   // continuous branded screen instead of splash → blank spinner → content.
   useEffect(() => {
-    const ready = !loading && !passwordRecoveryActive && (!session || officerRole !== undefined);
+    // A recovery session has nothing to wait for — ResetPasswordForm is shown
+    // as-is. Treating it as "not ready" left the boot splash covering the
+    // form forever, so the reset link looked stuck on the CORE loader.
+    const ready = !loading && (passwordRecoveryActive || !session || officerRole !== undefined);
     if (!ready) return;
     const el = document.getElementById('boot-splash');
     if (!el) return;
