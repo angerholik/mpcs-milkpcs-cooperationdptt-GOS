@@ -55,6 +55,18 @@ export const dropQueued = async (replaceKey) => {
     }
 };
 
+// Lets the user discard one stuck item (e.g. a save that can never succeed).
+export const removeQueueItem = async (id) => {
+    try {
+        const queueJson = await AsyncStorage.getItem(QUEUE_KEY);
+        if (!queueJson) return;
+        const queue = JSON.parse(queueJson).filter(q => q.id !== id);
+        await AsyncStorage.setItem(QUEUE_KEY, JSON.stringify(queue));
+    } catch (e) {
+        console.warn('removeQueueItem failed:', e);
+    }
+};
+
 export const processQueue = async (onStatusChange) => {
     let isConnected = true;
     try {

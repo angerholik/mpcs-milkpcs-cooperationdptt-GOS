@@ -764,7 +764,7 @@ function ProfileForm({ initial, onCancel, onSave, onDirtyChange }) {
   const hasErrors = !!(panErr || presMobileErr || mgrMobileErr);
   return (
     <FormBody onCancel={onCancel} onSave={() => { if (!hasErrors) onSave(form, prev); }}>
-      <Field label="Society name" value={form.societyName} onChangeText={set('societyName')} required />
+      <Field label="Society name" value={form.societyName} onChangeText={set('societyName')} required readOnly hint="Fixed at registration. Ask the administrator to change it." />
       <Field label="Registration number" value={form.regNumber} onChangeText={set('regNumber')} required />
       <DateField label="Date of registration" value={form.regDate} onChangeText={set('regDate')} required />
       <Field label="PAN" value={form.panCard} onChangeText={set('panCard')} placeholder="Enter PAN number (if available)" autoCapitalize="characters" error={panErr} />
@@ -979,12 +979,12 @@ function CscForm({ initial, onCancel, onSave, onDirtyChange }) {
 
 // ─── Shared bits ────────────────────────────────────────────────────────
 
-function Field({ label, value, onChangeText, placeholder, keyboardType, autoCapitalize, multiline, prefix, error, required }) {
+function Field({ label, value, onChangeText, placeholder, keyboardType, autoCapitalize, multiline, prefix, error, required, readOnly, hint }) {
   const [focused, setFocused] = useState(false);
   return (
     <View style={styles.fieldGroup}>
       <Text style={styles.inputLabel}>{label}{required ? <Text style={styles.inputRequired}> *</Text> : null}</Text>
-      <View style={[styles.inputBox, multiline && { height: 80, alignItems: 'flex-start', paddingVertical: 12 }, focused && styles.inputBoxFocused, error && styles.inputBoxError]}>
+      <View style={[styles.inputBox, multiline && { height: 80, alignItems: 'flex-start', paddingVertical: 12 }, focused && styles.inputBoxFocused, error && styles.inputBoxError, readOnly && { opacity: 0.65 }]}>
         {prefix && (
           <>
             <Text style={styles.inputPrefix}>{prefix}</Text>
@@ -995,6 +995,7 @@ function Field({ label, value, onChangeText, placeholder, keyboardType, autoCapi
           style={styles.textInput}
           value={value}
           onChangeText={onChangeText}
+          editable={!readOnly}
           placeholder={placeholder || ''}
           placeholderTextColor={COLORS.slate400}
           keyboardType={keyboardType || 'default'}
@@ -1004,6 +1005,7 @@ function Field({ label, value, onChangeText, placeholder, keyboardType, autoCapi
           onBlur={() => setFocused(false)}
         />
       </View>
+      {!!hint && <Text style={styles.fieldHint}>{hint}</Text>}
       {!!error && <Text style={styles.fieldError}>{error}</Text>}
     </View>
   );
@@ -1164,6 +1166,7 @@ const styles = StyleSheet.create({
   inputBox: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#F3F4F7', borderWidth: 1, borderColor: '#E2E4EA', borderRadius: 12, paddingHorizontal: 14, height: 48 },
   inputBoxFocused: { borderColor: COLORS.maroon, backgroundColor: COLORS.surface, shadowColor: COLORS.maroon, shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.12, shadowRadius: 6, elevation: 2 },
   inputBoxError: { borderColor: '#DC2626' },
+  fieldHint: { fontFamily: FONT_FAMILY, fontSize: 12, fontWeight: '500', color: COLORS.slate500, marginTop: 4 },
   fieldError: { fontFamily: FONT_FAMILY, fontSize: 12, fontWeight: '600', color: '#DC2626', marginTop: 2 },
   inputPrefix: { fontFamily: FONT_FAMILY, fontSize: 16, fontWeight: '700', color: COLORS.ink },
   inputPrefixDivider: { width: 1, height: 20, backgroundColor: '#D5D8DE', marginHorizontal: 10 },

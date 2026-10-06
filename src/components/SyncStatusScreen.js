@@ -1,11 +1,11 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { View, Text, StyleSheet, ScrollView, Pressable, Platform } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Pressable, Platform, Alert } from 'react-native';
 import ScreenHeader from './ScreenHeader';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import NetInfo from '@react-native-community/netinfo';
 import BottomNav from './BottomNav';
 import { webCapWidth } from '../utils/webStyles';
-import { getQueueItems } from '../utils/syncManager';
+import { getQueueItems, removeQueueItem, getQueueStatus } from '../utils/syncManager';
 
 const COLORS = {
   surface: '#ffffff',
@@ -49,6 +49,7 @@ export default function SyncStatusScreen({
   pendingCount = 0,
   syncing = false,
   onRetrySync,
+  onQueueChanged,
   onBack,
   activeTab,
   onTabPress,
@@ -81,6 +82,22 @@ export default function SyncStatusScreen({
     const unsubscribe = NetInfo.addEventListener((state) => setIsOnline(!!state.isConnected));
     return () => unsubscribe();
   }, []);
+
+  const handleDiscard = (id) => {
+    const doIt = async () => {
+      await removeQueueItem(id);
+      refreshQueueItems();
+      if (onQueueChanged) onQueueChanged();
+    };
+    if (Platform.OS === 'web') {
+      if (window.confirm('Discard this unsynced save? Its changes will not reach the cloud.')) doIt();
+    } else {
+      Alert.alert('Discard unsynced save?', 'Its changes will not reach the cloud.', [
+        { text: 'Keep', style: 'cancel' },
+        { text: 'Discard', style: 'destructive', onPress: doIt },
+      ]);
+    }
+  };
 
   const handleRetry = () => {
     if (onRetrySync) onRetrySync();
@@ -118,6 +135,7 @@ export default function SyncStatusScreen({
                   <Text style={styles.rowSub}>{formatQueuedAt(item.timestamp)}</Text>
                   {item.lastError ? <Text style={styles.errText}>{item.lastError}</Text> : null}
                 </View>
+                <Pressable onPress={() => handleDiscard(item.id)} hitSlop={8}><Text style={styles.discard}>Discard</Text></Pressable>
                 {item.retryCount > 0 ? <Text style={styles.retry}>RETRY {item.retryCount}</Text> : null}
               </View>
             ))}
@@ -157,6 +175,7 @@ const styles = StyleSheet.create({
   listCard: { backgroundColor: '#fff', borderRadius: 18, borderWidth: 1, borderColor: '#E7E2DA', overflow: 'hidden' },
   listRow: { flexDirection: 'row', alignItems: 'center', padding: 16 },
   listRowBorder: { borderBottomWidth: 1, borderBottomColor: '#E7E2DA' },
+  discard: { fontFamily: F, fontSize: 12, fontWeight: '800', color: '#7B1420', marginLeft: 10 },
   errText: { fontFamily: F, fontSize: 11, fontWeight: '600', color: '#B91C1C', marginTop: 4 },
   retry: { fontFamily: F, fontSize: 11, fontWeight: '800', color: '#B45309' },
   primary: { paddingVertical: 14, borderRadius: 12, backgroundColor: '#7B1420', alignItems: 'center' },

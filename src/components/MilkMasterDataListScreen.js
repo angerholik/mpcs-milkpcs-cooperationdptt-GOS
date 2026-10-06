@@ -54,7 +54,7 @@ function ProfilePanel({ initial, editing, onSave, onCancel }) {
   }
   return (
     <View style={{ gap: 14 }}>
-      <WizardField grey required label="Milk center name" value={d.centerName} onChangeText={set('centerName')} placeholder="Enter center name" />
+      <WizardField grey required label="Milk center name" value={d.centerName} editable={false} helper="Fixed at registration. Ask the administrator to change it." />
       <WizardField grey required label="Registration number" value={d.registrationNumber} onChangeText={set('registrationNumber')} placeholder="Enter registration number" />
       <View style={{ flexDirection: 'row', gap: 12 }}>
         <View style={{ flex: 1 }}><WizardField grey label="President name" value={d.presidentName} onChangeText={set('presidentName')} placeholder="President name" /></View>

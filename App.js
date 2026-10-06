@@ -1208,7 +1208,6 @@ export default function App() {
   // Shared save handlers for MpcsMasterDataListScreen's six inline-editable
   // records (Loan is the 7th but navigates to its own screen instead).
   const handleSaveMpcsProfile = (data) => {
-    if (data.societyName !== undefined) setCenterName(data.societyName);
     if (data.panCard !== undefined) setPanCard(data.panCard);
     if (data.regDate !== undefined) setRegDate(data.regDate);
     if (data.regNumber !== undefined) setRegistrationNumber(data.regNumber);
@@ -1216,10 +1215,12 @@ export default function App() {
     if (data.presidentMobile !== undefined) setPresidentMobile(data.presidentMobile);
     if (data.secretaryName !== undefined) setManagerName(data.secretaryName);
     if (data.secretaryMobile !== undefined) setManagerMobile(data.secretaryMobile);
+    // The society name is the key its assignments and cloud rows hang off, so
+    // it is never changed from here (renaming it cut the inspector off from
+    // their own society's data).
     if (selectedSociety) {
       setSelectedSociety(prev => ({
         ...prev,
-        name: data.societyName !== undefined ? data.societyName : prev?.name,
         regNo: data.regNumber !== undefined ? data.regNumber : prev?.regNo,
         panCard: data.panCard !== undefined ? data.panCard : prev?.panCard,
         regDate: data.regDate !== undefined ? data.regDate : prev?.regDate
@@ -1230,7 +1231,6 @@ export default function App() {
         inst.id === selectedSociety.id
           ? {
               ...inst,
-              name: data.societyName !== undefined ? data.societyName : inst.name,
               regNo: data.regNumber !== undefined ? data.regNumber : inst.regNo,
               panCard: data.panCard !== undefined ? data.panCard : inst.panCard,
               regDate: data.regDate !== undefined ? data.regDate : inst.regDate
@@ -1239,7 +1239,6 @@ export default function App() {
       ));
     }
     stampMasterDataUpdated('instProfile', {
-      centerName: data.societyName,
       panCard: data.panCard,
       regDate: data.regDate,
       registrationNumber: data.regNumber,
@@ -3043,10 +3042,10 @@ export default function App() {
                         demographics={{ mSc, fSc, mSt, fSt, mObc, fObc, mGen, fGen }}
                         masterDataUpdated={masterDataTimestamps}
                         onSaveProfile={(d) => {
-                          setCenterName(d.centerName); setRegistrationNumber(d.registrationNumber);
+                          setRegistrationNumber(d.registrationNumber);
                           setPresidentName(d.presidentName); setPresidentMobile(d.presidentMobile);
                           setManagerName(d.managerName); setManagerMobile(d.managerMobile);
-                          stampMasterDataUpdated('instProfile', { centerName: d.centerName, registrationNumber: d.registrationNumber, presidentName: d.presidentName, presidentMobile: d.presidentMobile, managerName: d.managerName, managerMobile: d.managerMobile });
+                          stampMasterDataUpdated('instProfile', { registrationNumber: d.registrationNumber, presidentName: d.presidentName, presidentMobile: d.presidentMobile, managerName: d.managerName, managerMobile: d.managerMobile });
                         }}
                         onSaveCompliance={(d) => {
                           setMasterAuditYear(d.auditYear); setMasterAuditDate(d.auditDate); setMasterAuditStatus(d.auditStatus);
@@ -3089,6 +3088,7 @@ export default function App() {
                     {currentMobileScreen === 'SYNC_STATUS' && (
                       <SyncStatusScreen
                         pendingCount={pendingSyncCount}
+                        onQueueChanged={() => getQueueStatus().then(setPendingSyncCount)}
                         syncing={isSyncing}
                         onRetrySync={() => {
                           setIsSyncing(true);
