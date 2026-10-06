@@ -90,7 +90,11 @@ export default function MyInstitutionsScreen({
   const mpcsCount = institutions.filter(i => i.type === 'MPCS').length;
   const milkCount = institutions.filter(i => i.type === 'MILK').length;
 
-  const filteredInstitutions = institutions;
+  // Summary cards double as the type filter; Total Managed (or tapping the
+  // active card again) clears it and shows everything.
+  const [typeFilter, setTypeFilter] = useState('ALL');
+  const filteredInstitutions = typeFilter === 'ALL' ? institutions : institutions.filter(i => i.type === typeFilter);
+  const pickFilter = (f) => setTypeFilter(prev => (prev === f ? 'ALL' : f));
 
   const handleAddSubmit = () => {
     if (!instName) {
@@ -153,7 +157,7 @@ export default function MyInstitutionsScreen({
         </ScreenHeader>
 
         <View style={styles.summaryBarRow}>
-          <View style={styles.summaryCard}>
+          <Pressable style={[styles.summaryCard, typeFilter === 'MPCS' && styles.summaryCardActive]} onPress={() => pickFilter('MPCS')} accessibilityRole="button" accessibilityState={{ selected: typeFilter === 'MPCS' }}>
             <View style={[styles.summaryIconBox, { backgroundColor: COLORS.red50 }]}>
               <MaterialCommunityIcons name="office-building" size={16} color={COLORS.maroon700} />
             </View>
@@ -161,9 +165,9 @@ export default function MyInstitutionsScreen({
               <Text style={[styles.summaryVal, { color: COLORS.onSurface }]}>{mpcsCount}</Text>
               <Text style={styles.summaryLabel}>MPCS Societies</Text>
             </View>
-          </View>
+          </Pressable>
 
-          <View style={styles.summaryCard}>
+          <Pressable style={[styles.summaryCard, typeFilter === 'MILK' && styles.summaryCardActive]} onPress={() => pickFilter('MILK')} accessibilityRole="button" accessibilityState={{ selected: typeFilter === 'MILK' }}>
             <View style={[styles.summaryIconBox, { backgroundColor: '#eff6ff' }]}>
               <MaterialCommunityIcons name="storefront" size={16} color="#2563eb" />
             </View>
@@ -171,9 +175,9 @@ export default function MyInstitutionsScreen({
               <Text style={[styles.summaryVal, { color: '#2563eb' }]}>{milkCount}</Text>
               <Text style={styles.summaryLabel}>Milk PCS Units</Text>
             </View>
-          </View>
+          </Pressable>
 
-          <View style={styles.summaryCard}>
+          <Pressable style={[styles.summaryCard, typeFilter === 'ALL' && styles.summaryCardActive]} onPress={() => pickFilter('ALL')} accessibilityRole="button" accessibilityState={{ selected: typeFilter === 'ALL' }}>
             <View style={[styles.summaryIconBox, { backgroundColor: COLORS.emerald50 }]}>
               <MaterialCommunityIcons name="checkbox-marked-circle-outline" size={16} color={COLORS.emerald600} />
             </View>
@@ -181,7 +185,7 @@ export default function MyInstitutionsScreen({
               <Text style={[styles.summaryVal, { color: COLORS.emerald700 }]}>{institutions.length}</Text>
               <Text style={styles.summaryLabel}>Total Managed</Text>
             </View>
-          </View>
+          </Pressable>
         </View>
       </View>
 
@@ -226,7 +230,7 @@ export default function MyInstitutionsScreen({
               </View>
               <Text style={styles.emptyTitle}>No Institutions Found</Text>
               <Text style={styles.emptySub}>
-                {isCi
+                {typeFilter !== 'ALL' ? `No ${typeFilter === 'MPCS' ? 'MPCS societies' : 'Milk PCS units'} yet. Tap the card again to show everything.` : isCi
                   ? 'Tap the button above to register your first MPCS or Milk PCS unit under your jurisdiction.'
                   : 'No institutions have been assigned to you yet. Contact your Cooperative Inspector.'}
               </Text>
@@ -569,6 +573,7 @@ const styles = StyleSheet.create({
     shadowRadius: 6,
     elevation: 1,
   },
+  summaryCardActive: { borderColor: '#7B1420', borderWidth: 2, backgroundColor: '#FDF2F2' },
   summaryIconBox: {
     width: 32,
     height: 32,
