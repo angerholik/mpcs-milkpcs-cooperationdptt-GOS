@@ -1230,7 +1230,7 @@ export default function App() {
           : inst
       ));
     }
-    saveMasterStateToStorage({
+    stampMasterDataUpdated('instProfile', {
       centerName: data.societyName,
       panCard: data.panCard,
       regDate: data.regDate,
@@ -1240,42 +1240,34 @@ export default function App() {
       managerName: data.secretaryName,
       managerMobile: data.secretaryMobile
     });
-    stampMasterDataUpdated('instProfile');
   };
   const handleSaveMpcsDemographics = (data) => {
     setDemographicsData(data);
-    saveMasterStateToStorage({ demographicsData: data });
-    stampMasterDataUpdated('demographics');
+    stampMasterDataUpdated('demographics', { demographicsData: data });
   };
   const handleSaveMpcsCompliance = (data) => {
     setComplianceData(data);
-    saveMasterStateToStorage({ complianceData: data });
-    stampMasterDataUpdated('compliance');
+    stampMasterDataUpdated('compliance', { complianceData: data });
   };
   const handleSaveMpcsFinancials = (data) => {
     setFinancialsData(data);
-    saveMasterStateToStorage({ financialsData: data });
-    stampMasterDataUpdated('financials');
+    stampMasterDataUpdated('financials', { financialsData: data });
   };
   const handleSaveMpcsDividend = (data) => {
     setDividendData(data);
-    saveMasterStateToStorage({ dividendData: data });
-    stampMasterDataUpdated('dividend');
+    stampMasterDataUpdated('dividend', { dividendData: data });
   };
   const handleSaveMpcsShareCapital = (data) => {
     setShareCapitalData(data);
-    saveMasterStateToStorage({ shareCapitalData: data });
-    stampMasterDataUpdated('shareCapital');
+    stampMasterDataUpdated('shareCapital', { shareCapitalData: data });
   };
   const handleSaveMpcsLoan = (data) => {
     setLoanData(data);
-    saveMasterStateToStorage({ loanData: data });
-    stampMasterDataUpdated('loan');
+    stampMasterDataUpdated('loan', { loanData: data });
   };
   const handleSaveMpcsCscDetails = (data) => {
     setCscDetailsData(data);
-    saveMasterStateToStorage({ cscDetailsData: data });
-    stampMasterDataUpdated('csc');
+    stampMasterDataUpdated('csc', { cscDetailsData: data });
   };
 
   const loadMasterStateFromStorage = async (targetSocName = null, explicitEmail = null) => {
@@ -3550,8 +3542,7 @@ export default function App() {
                         initialLoanCleared={loanData?.loanCleared || false}
                         onSaveLoan={(data) => {
                           setLoanData(data);
-                          saveMasterStateToStorage({ loanData: data });
-                          stampMasterDataUpdated('loan');
+                          stampMasterDataUpdated('loan', { loanData: data });
                         }}
                         onNext={() => {
                           showToast('✅ Master Data Saved Successfully!');
