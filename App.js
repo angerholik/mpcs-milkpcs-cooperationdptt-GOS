@@ -58,7 +58,7 @@ import MpcsReviewSubmitScreen from './src/components/mpcs/MpcsReviewSubmitScreen
 
 import { supabase, saveMilkPcsSubmission, saveMpcsSubmission, uploadPhoto } from './src/supabase';
 import { saveMilkPcsProfile, loadMilkPcsProfileByName, loadMilkCenters, addMilkCenter } from './src/utils/storage';
-import { queueSubmission, processQueue, getQueueStatus } from './src/utils/syncManager';
+import { queueSubmission, processQueue, getQueueStatus, dropQueued } from './src/utils/syncManager';
 import { isMonthlyParamsCompleted, saveMonthlyParams, getMonthlyParams, saveSectionStates, getSectionStates, getMilkSectionData, clearMilkSectionData } from './src/utils/monthlySyncManager';
 import { useFonts, Manrope_400Regular, Manrope_500Medium, Manrope_600SemiBold, Manrope_700Bold, Manrope_800ExtraBold } from '@expo-google-fonts/manrope';
 import { Cinzel_600SemiBold, Cinzel_700Bold } from '@expo-google-fonts/cinzel';
@@ -1114,12 +1114,16 @@ export default function App() {
             const { error } = await saveMilkPcsSubmission(milkPayload);
             if (error) {
               console.warn('Master data cloud sync failed, queuing for retry:', error.message || error);
-              await queueSubmission('MILK_PCS', milkPayload);
+              await queueSubmission('MILK_PCS', milkPayload, { replaceKey: `master:${activeSocName}`, error: error.message || error });
+              getQueueStatus().then(setPendingSyncCount);
+            } else {
+              // A newer snapshot reached the cloud — any older queued one is stale.
+              await dropQueued(`master:${activeSocName}`);
               getQueueStatus().then(setPendingSyncCount);
             }
           } catch (cloudErr) {
             console.warn('Master data cloud sync exception, queuing for retry:', cloudErr);
-            await queueSubmission('MILK_PCS', milkPayload);
+            await queueSubmission('MILK_PCS', milkPayload, { replaceKey: `master:${activeSocName}`, error: (cloudErr && cloudErr.message) || cloudErr });
             getQueueStatus().then(setPendingSyncCount);
           }
         } else {
@@ -1163,12 +1167,16 @@ export default function App() {
             const { error } = await saveMpcsSubmission(mpcsPayload);
             if (error) {
               console.warn('Master data cloud sync failed, queuing for retry:', error.message || error);
-              await queueSubmission('MPCS', mpcsPayload);
+              await queueSubmission('MPCS', mpcsPayload, { replaceKey: `master:${activeSocName}`, error: error.message || error });
+              getQueueStatus().then(setPendingSyncCount);
+            } else {
+              // A newer snapshot reached the cloud — any older queued one is stale.
+              await dropQueued(`master:${activeSocName}`);
               getQueueStatus().then(setPendingSyncCount);
             }
           } catch (cloudErr) {
             console.warn('Master data cloud sync exception, queuing for retry:', cloudErr);
-            await queueSubmission('MPCS', mpcsPayload);
+            await queueSubmission('MPCS', mpcsPayload, { replaceKey: `master:${activeSocName}`, error: (cloudErr && cloudErr.message) || cloudErr });
             getQueueStatus().then(setPendingSyncCount);
           }
         }

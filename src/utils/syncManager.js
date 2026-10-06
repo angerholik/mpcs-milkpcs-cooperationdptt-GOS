@@ -15,15 +15,21 @@ const QUEUE_KEY = 'submission_queue';
  *   pass, since a captured evidence photo is much harder to recapture than
  *   any other field is to retype.
  */
-export const queueSubmission = async (type, data) => {
+export const queueSubmission = async (type, data, options = {}) => {
     try {
         const queueJson = await AsyncStorage.getItem(QUEUE_KEY);
-        const queue = queueJson ? JSON.parse(queueJson) : [];
+        let queue = queueJson ? JSON.parse(queueJson) : [];
+        // Master-data syncs are full snapshots of a society, so only the newest
+        // one matters: a queued older snapshot replayed later would overwrite
+        // newer values in the cloud. `replaceKey` keeps one per society.
+        if (options.replaceKey) queue = queue.filter(q => q.replaceKey !== options.replaceKey);
         const item = {
             id: Date.now().toString(),
             type,
             data,
-            timestamp: new Date().toISOString()
+            timestamp: new Date().toISOString(),
+            ...(options.replaceKey ? { replaceKey: options.replaceKey } : {}),
+            ...(options.error ? { lastError: String(options.error) } : {}),
         };
         queue.push(item);
         await AsyncStorage.setItem(QUEUE_KEY, JSON.stringify(queue));
@@ -37,6 +43,18 @@ export const queueSubmission = async (type, data) => {
 /**
  * Processes the offline queue and attempts to sync with Supabase.
  */
+// Removes queued snapshots superseded by a newer successful sync.
+export const dropQueued = async (replaceKey) => {
+    try {
+        const queueJson = await AsyncStorage.getItem(QUEUE_KEY);
+        if (!queueJson) return;
+        const queue = JSON.parse(queueJson).filter(q => q.replaceKey !== replaceKey);
+        await AsyncStorage.setItem(QUEUE_KEY, JSON.stringify(queue));
+    } catch (e) {
+        console.warn('dropQueued failed:', e);
+    }
+};
+
 export const processQueue = async (onStatusChange) => {
     let isConnected = true;
     try {
@@ -100,19 +118,17 @@ export const processQueue = async (onStatusChange) => {
                     syncedCount++;
                 } else {
                     console.warn('Sync item failed:', error.message || error);
-                    // increment retry count, if retry > 3 remove from queue to unstick user
                     item.retryCount = (item.retryCount || 0) + 1;
-                    if (item.retryCount <= 3) {
-                        remaining.push(item);
-                    } else {
-                        console.error('Dropping un-syncable item after 3 retries:', item);
-                        syncedCount++; // clear from queue
-                    }
+                    item.lastError = error.message || String(error);
+                    // Kept, not dropped: silently discarding an item after a few
+                    // tries made a lost update look the same as a synced one.
+                    remaining.push(item);
                 }
             } catch (e) {
                 console.error('Queue item sync exception:', e);
                 item.retryCount = (item.retryCount || 0) + 1;
-                if (item.retryCount <= 3) remaining.push(item);
+                item.lastError = (e && e.message) || String(e);
+                remaining.push(item);
             }
         }
 

@@ -116,8 +116,9 @@ export default function SyncStatusScreen({
                 <View style={{ flex: 1 }}>
                   <Text style={styles.rowTitle}>{TYPE_LABELS[item.type] || item.type || 'Submission'}</Text>
                   <Text style={styles.rowSub}>{formatQueuedAt(item.timestamp)}</Text>
+                  {item.lastError ? <Text style={styles.errText}>{item.lastError}</Text> : null}
                 </View>
-                {item.retryCount > 0 ? <Text style={styles.retry}>RETRY {item.retryCount}/3</Text> : null}
+                {item.retryCount > 0 ? <Text style={styles.retry}>RETRY {item.retryCount}</Text> : null}
               </View>
             ))}
           </View>
@@ -156,6 +157,7 @@ const styles = StyleSheet.create({
   listCard: { backgroundColor: '#fff', borderRadius: 18, borderWidth: 1, borderColor: '#E7E2DA', overflow: 'hidden' },
   listRow: { flexDirection: 'row', alignItems: 'center', padding: 16 },
   listRowBorder: { borderBottomWidth: 1, borderBottomColor: '#E7E2DA' },
+  errText: { fontFamily: F, fontSize: 11, fontWeight: '600', color: '#B91C1C', marginTop: 4 },
   retry: { fontFamily: F, fontSize: 11, fontWeight: '800', color: '#B45309' },
   primary: { paddingVertical: 14, borderRadius: 12, backgroundColor: '#7B1420', alignItems: 'center' },
   primaryText: { fontFamily: F, fontSize: 14, fontWeight: '800', color: '#fff' },
