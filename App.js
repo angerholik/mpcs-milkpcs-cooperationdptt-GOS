@@ -3133,7 +3133,8 @@ export default function App() {
                           if (returnMobileScreen === 'REVIEW') {
                             setCurrentMobileScreen('REVIEW');
                           } else {
-                            setCurrentMobileScreen('COMPLIANCE');
+                            // Loan Status only applies to a society with an active loan.
+                            setCurrentMobileScreen(masterHasLoan && !masterLoanCleared ? 'COMPLIANCE' : 'REVIEW');
                           }
                         }}
                         onBack={() => setCurrentMobileScreen(returnMobileScreen === 'REVIEW' ? 'REVIEW' : 'OPERATIONS')}

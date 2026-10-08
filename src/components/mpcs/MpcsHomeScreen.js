@@ -364,11 +364,13 @@ export default function HomeScreen({
                     style={({ pressed, hovered }) => [
                       styles.listRow,
                       isCurrent && styles.listRowCurrent,
+                      p.na && { opacity: 0.55 },
                       i === monthlyParams.length - 1 && styles.listRowLast,
                       hovered && { backgroundColor: 'rgba(248,250,252,0.6)' },
                       pressed && { backgroundColor: COLORS.slate100 },
                     ]}
-                    onPress={() => onNavigateScreen && onNavigateScreen(p.id)}
+                    disabled={p.na}
+                    onPress={() => !p.na && onNavigateScreen && onNavigateScreen(p.id)}
                   >
                     {({ hovered }) => (
                       <>
@@ -397,7 +399,7 @@ export default function HomeScreen({
                             <Text style={styles.openPillText}>OPEN</Text>
                           </View>
                         )}
-                        <MaterialCommunityIcons name="chevron-right" size={16} color={COLORS.slate400} style={hovered && { transform: [{ translateX: 2 }] }} />
+                        {!p.na && <MaterialCommunityIcons name="chevron-right" size={16} color={COLORS.slate400} style={hovered && { transform: [{ translateX: 2 }] }} />}
                       </>
                     )}
                   </PressScale>

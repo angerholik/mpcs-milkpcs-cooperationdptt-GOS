@@ -166,6 +166,7 @@ export default function MpcsReviewSubmitScreen({
               <Pressable
                 key={sec.title}
                 style={[styles.listRow, !isLast && styles.listRowBorder]}
+                disabled={sec.screenKey === 'MPCS_LOAN_STATUS' && !loanIsActive}
                 onPress={() => onNavigateSection && onNavigateSection(sec.screenKey)}
               >
                 <View style={{ flex: 1 }}>
