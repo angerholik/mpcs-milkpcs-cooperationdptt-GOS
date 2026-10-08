@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, ActivityIndicator, Pressable } from 'react-native';
 import MpcsWizardHeader from './mpcs/MpcsWizardHeader';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -28,6 +28,8 @@ const COLORS = {
 
 const FONT_FAMILY = 'Manrope';
 
+const PENDING_COUNT_WORDS = ['Zero', 'One', 'Two', 'Three', 'Four', 'Five'];
+
 const formatTime = (isoString) => {
   if (!isoString) return '';
   const d = new Date(isoString);
@@ -48,6 +50,7 @@ export default function ReviewSubmitScreen({
   onProfilePress,
   unreadCount = 0,
 }) {
+  const [modalVisible, setModalVisible] = useState(false);
 
   // Process Evidence State
   const evidenceState = milkSectionStates?.evidence || { status: 'NOT CAPTURED' };
@@ -143,7 +146,7 @@ export default function ReviewSubmitScreen({
                   {sec.isNA ? <Text style={styles.listRowSub}>No active loan</Text> : sec.subText ? <Text style={styles.listRowSub}>{sec.subText}</Text> : null}
                 </View>
                 {sec.isNA ? (
-                  <Text style={styles.pendingText}>—</Text>
+                  <Text style={styles.naText}>NA</Text>
                 ) : sec.isComplete ? (
                   <View style={styles.doneGroup}>
                     <MaterialCommunityIcons name="check" size={16} color={COLORS.ink} />
@@ -164,20 +167,48 @@ export default function ReviewSubmitScreen({
           Tap a pending parameter to fill it in. Submitting keeps this return as a permanent record for {reportingMonth || 'this month'}; Master data is not changed.
         </Text>
 
+        <View style={styles.divider} />
+
         <Pressable
           style={[styles.submitBtn, (!allSectionsComplete || isSealing) && styles.submitBtnDisabled]}
-          onPress={onCompileAndSeal}
+          onPress={() => allSectionsComplete && !isSealing && setModalVisible(true)}
           disabled={!allSectionsComplete || isSealing}
         >
           {isSealing ? (
             <ActivityIndicator color="#ffffff" size="small" />
           ) : (
             <Text style={[styles.submitBtnText, !allSectionsComplete && styles.submitBtnTextDisabled]}>
-              {allSectionsComplete ? 'Submit monthly return' : `${pendingCount} parameter${pendingCount === 1 ? '' : 's'} still pending`}
+              {allSectionsComplete ? 'Submit monthly return' : `${PENDING_COUNT_WORDS[pendingCount] || pendingCount} parameter${pendingCount === 1 ? '' : 's'} still pending`}
             </Text>
           )}
         </Pressable>
+
+        <Pressable onPress={onBack} hitSlop={8}>
+          <Text style={styles.draftLink}>Save as draft</Text>
+        </Pressable>
       </ScrollView>
+
+      {modalVisible && (
+        <View style={styles.modalOverlay}>
+          <Pressable style={StyleSheet.absoluteFillObject} onPress={() => setModalVisible(false)} />
+          <View style={styles.modalCard}>
+            <View style={{ gap: 12 }}>
+              <Text style={styles.modalTitle}>Confirm submission</Text>
+              <Text style={styles.modalDesc}>
+                Are you sure you want to seal and submit the monthly return for {societyName || 'this society'}?
+              </Text>
+              <View style={{ flexDirection: 'row', gap: 10, marginTop: 4 }}>
+                <Pressable style={styles.cancelBtn} onPress={() => setModalVisible(false)}>
+                  <Text style={styles.cancelBtnText}>Cancel</Text>
+                </Pressable>
+                <Pressable style={[styles.submitBtn, { flex: 1 }]} onPress={() => { setModalVisible(false); onCompileAndSeal && onCompileAndSeal(); }}>
+                  <Text style={styles.submitBtnText}>Submit now</Text>
+                </Pressable>
+              </View>
+            </View>
+          </View>
+        </View>
+      )}
     </View>
   );
 }
@@ -196,6 +227,15 @@ const styles = StyleSheet.create({
   doneText: { fontFamily: F, fontSize: 14, fontWeight: '700', color: '#1E1B18' },
   pendingText: { fontFamily: F, fontSize: 14, fontWeight: '800', color: '#7B1420' },
   footerNote: { fontFamily: F, fontSize: 13, fontWeight: '500', color: '#57534E', lineHeight: 18 },
+  naText: { fontFamily: F, fontSize: 14, fontWeight: '800', color: '#78716C' },
+  divider: { height: 1, backgroundColor: '#E7E2DA' },
+  draftLink: { fontFamily: F, fontSize: 13, fontWeight: '700', color: '#78716C', textAlign: 'center' },
+  modalOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(15,23,42,0.5)', alignItems: 'center', justifyContent: 'center', padding: 24, zIndex: 50 },
+  modalCard: { backgroundColor: '#fff', borderRadius: 18, padding: 22, width: '100%', maxWidth: 380 },
+  modalTitle: { fontFamily: F, fontSize: 17, fontWeight: '800', color: '#1E1B18', textAlign: 'center' },
+  modalDesc: { fontFamily: F, fontSize: 13, fontWeight: '500', color: '#57534E', textAlign: 'center', lineHeight: 19 },
+  cancelBtn: { flex: 1, paddingVertical: 15, borderRadius: 12, borderWidth: 1.5, borderColor: '#E7E2DA', alignItems: 'center', justifyContent: 'center' },
+  cancelBtnText: { fontFamily: F, fontSize: 14, fontWeight: '800', color: '#1E1B18' },
   submitBtn: { paddingVertical: 15, borderRadius: 12, backgroundColor: '#7B1420', alignItems: 'center', justifyContent: 'center' },
   submitBtnDisabled: { backgroundColor: '#DCD3C8' },
   submitBtnText: { fontFamily: F, fontSize: 14, fontWeight: '800', color: '#ffffff' },

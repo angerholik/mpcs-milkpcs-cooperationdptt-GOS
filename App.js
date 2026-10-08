@@ -3274,6 +3274,7 @@ export default function App() {
 
                     {currentMobileScreen === 'REVIEW' && (
                       <ReviewSubmitScreen
+                        societyName={selectedSociety?.name || centerName?.trim() || ''}
                         reportingMonth={reportingMonth || ''}
                         milkSectionStates={milkSectionStates}
                         loanIsActive={!!(masterHasLoan && !masterLoanCleared)}

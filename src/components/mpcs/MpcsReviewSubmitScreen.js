@@ -172,7 +172,9 @@ export default function MpcsReviewSubmitScreen({
                   <Text style={styles.listRowTitle}>{sec.title}</Text>
                   {sec.subText ? <Text style={styles.listRowSub}>{sec.subText}</Text> : null}
                 </View>
-                {sec.isComplete ? (
+                {sec.screenKey === 'MPCS_LOAN_STATUS' && !loanIsActive ? (
+                  <Text style={styles.naText}>NA</Text>
+                ) : sec.isComplete ? (
                   <View style={styles.doneGroup}>
                     <MaterialCommunityIcons name="check" size={16} color={COLORS.ink} />
                     <Text style={styles.doneText}>Done</Text>
@@ -307,6 +309,7 @@ const styles = StyleSheet.create({
   listRowBorder: { borderBottomWidth: 1, borderBottomColor: COLORS.border },
   listRowTitle: { fontFamily: FONT_FAMILY, fontSize: 16, fontWeight: '700', color: COLORS.ink },
   listRowSub: { fontFamily: FONT_FAMILY, fontSize: 12, fontWeight: '500', color: COLORS.slate500, marginTop: 3 },
+  naText: { fontFamily: FONT_FAMILY, fontSize: 14, fontWeight: '800', color: COLORS.slate500 },
   doneGroup: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   doneText: { fontFamily: FONT_FAMILY, fontSize: 14, fontWeight: '700', color: COLORS.ink },
   pendingText: { fontFamily: FONT_FAMILY, fontSize: 14, fontWeight: '800', color: COLORS.maroon },
