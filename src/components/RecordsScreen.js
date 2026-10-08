@@ -42,6 +42,7 @@ export default function RecordsScreen({
   userProfile = null,
   records = [],
   reportType = null,
+  inspectorName = '',
   activeModule = 'MILK',
   selectedSociety,
   institutionsList = [],
@@ -77,6 +78,21 @@ export default function RecordsScreen({
             ''
           ).trim().toLowerCase();
 
+          const selName = (selectedSociety?.name || '').trim().toLowerCase();
+          const isSelectedSociety = (name) => !selName || (name || '').trim().toLowerCase() === selName;
+          const GENERIC = ['', 'inspector', 'cooperative inspector'];
+          const resolveOfficer = (name, email) => {
+            const n = (name || '').trim();
+            if (n && !GENERIC.includes(n.toLowerCase())) return n;
+            if (inspectorName && (!email || email === userEmail)) return inspectorName;
+            return email ? email.split('@')[0] : (n || 'Inspector');
+          };
+          const fmtDate = (iso) => {
+            if (!iso) return null;
+            const d = new Date(iso);
+            return isNaN(d.getTime()) ? null : d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+          };
+
           // Records is rendered separately for the Milk PCS and MPCS sections of the
           // app (two call sites in App.js) — each must only ever show that section's
           // own submissions. Only query the table that matches, instead of always
@@ -104,12 +120,13 @@ export default function RecordsScreen({
             const officerEmail = (r.inspector_email || '').trim().toLowerCase();
             const officerName = (r.reported_by || '').trim().toLowerCase();
 
-            // Strict user isolation filter
-            if (userEmail || userName) {
-              const matchEmail = userEmail && officerEmail && officerEmail === userEmail;
-              const matchName = userName && officerName && officerName.includes(userName);
-              if (!matchEmail && !matchName) return;
-            }
+            // Which rows this account may see is decided by the database (row-level
+            // security: its assigned institutions only). Filtering again here by
+            // officer name hid every record whose submitter name didn't match this
+            // login's name exactly — so Records could be empty even after a save.
+            // This screen shows the selected institution's returns.
+            if (!isSelectedSociety(r.center_name)) return;
+            const updatedIso = actObj?.updated_at || null;
 
             list.push({
               id: r.id,
@@ -117,7 +134,8 @@ export default function RecordsScreen({
               month: r.reporting_month || 'Monthly',
               center: r.center_name,
               code: r.center_id || r.registration_number || 'MILK-PCS',
-              officer: r.reported_by || userProfile?.fullName || 'Inspector',
+              officer: resolveOfficer(r.reported_by, officerEmail),
+              updatedDate: fmtDate(updatedIso),
               litres: `${r.litres || 0} L`,
               withdrawal: `₹${r.withdrawal || 0}`,
               balance: `₹${r.balance || 0}`,
@@ -139,12 +157,8 @@ export default function RecordsScreen({
             const officerEmail = (fdObj?.inspectorEmail || r.inspector_email || '').trim().toLowerCase();
             const officerName = (r.reported_by || r.president_name || '').trim().toLowerCase();
 
-            // Strict user isolation filter
-            if (userEmail || userName) {
-              const matchEmail = userEmail && officerEmail && officerEmail === userEmail;
-              const matchName = userName && officerName && officerName.includes(userName);
-              if (!matchEmail && !matchName) return;
-            }
+            if (!isSelectedSociety(r.society_name || r.center_name)) return;
+            const updatedIso = fdObj?.updated_at || null;
 
             list.push({
               id: r.id,
@@ -152,7 +166,8 @@ export default function RecordsScreen({
               month: r.reporting_month || 'Monthly',
               center: r.society_name || r.center_name,
               code: r.registration_number || 'MPCS',
-              officer: r.reported_by || r.president_name || userProfile?.fullName || 'Inspector',
+              officer: resolveOfficer(fdObj?.reportedBy || r.reported_by, officerEmail),
+              updatedDate: fmtDate(updatedIso),
               litres: `${r.total_members || 0} Members`,
               withdrawal: `₹${r.annual_turnover || 0}`,
               balance: `₹${r.bank_balance || 0}`,
@@ -169,7 +184,7 @@ export default function RecordsScreen({
         }
       })();
     }
-  }, [records, userProfile, reportType]);
+  }, [records, userProfile, reportType, selectedSociety?.name, inspectorName]);
 
   const activeRecords = (records && records.length > 0) ? records : dbRecords;
 
@@ -390,7 +405,9 @@ export default function RecordsScreen({
             </View>
 
             <View style={styles.cardFooter}>
-              <Text style={styles.footerMeta}>Submitted: {item.date} by {item.officer}</Text>
+              <Text style={styles.footerMeta}>
+                Submitted {item.date}{item.updatedDate && item.updatedDate !== item.date ? ` · Revised ${item.updatedDate}` : ''} by {item.officer}
+              </Text>
               <TouchableOpacity style={styles.pdfBtn} onPress={() => onViewPdf && onViewPdf(item)} activeOpacity={0.8}>
                 <MaterialIcons name="picture-as-pdf" size={16} color={COLORS.primary} />
                 <Text style={styles.pdfBtnText}>VIEW PDF</Text>

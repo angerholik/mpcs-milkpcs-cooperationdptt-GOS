@@ -59,7 +59,7 @@ import MpcsReviewSubmitScreen from './src/components/mpcs/MpcsReviewSubmitScreen
 import { supabase, saveMilkPcsSubmission, saveMpcsSubmission, uploadPhoto } from './src/supabase';
 import { saveMilkPcsProfile, loadMilkPcsProfileByName, loadMilkCenters, addMilkCenter } from './src/utils/storage';
 import { queueSubmission, processQueue, getQueueStatus, dropQueued } from './src/utils/syncManager';
-import { isMonthlyParamsCompleted, saveMonthlyParams, getMonthlyParams, saveSectionStates, getSectionStates, getMilkSectionData, clearMilkSectionData } from './src/utils/monthlySyncManager';
+import { isMonthlyParamsCompleted, saveMonthlyParams, getMonthlyParams, saveSectionStates, getSectionStates, getMilkSectionData, saveMilkSectionData, clearMilkSectionData } from './src/utils/monthlySyncManager';
 import { useFonts, Manrope_400Regular, Manrope_500Medium, Manrope_600SemiBold, Manrope_700Bold, Manrope_800ExtraBold } from '@expo-google-fonts/manrope';
 import { Cinzel_600SemiBold, Cinzel_700Bold } from '@expo-google-fonts/cinzel';
 import { Inter_400Regular, Inter_500Medium, Inter_600SemiBold, Inter_700Bold, Inter_800ExtraBold } from '@expo-google-fonts/inter';
@@ -519,6 +519,10 @@ export default function App() {
   const [alertHistory, setAlertHistory] = useState([]);
   const [lastReadAlertAt, setLastReadAlertAt] = useState(null); // legacy "read up to" marker
   const [readAlertIds, setReadAlertIds] = useState([]);
+  // The signed-in officer's name from officer_registry — some accounts have no
+  // fullName in their auth metadata, which left submissions credited to a
+  // generic "Cooperative Inspector".
+  const [officerRegistryName, setOfficerRegistryName] = useState('');
   // Inbox: a message stays unread (and the Inbox card stays on screen) until it
   // is opened or marked read; read state is per message and kept on the device.
   const unreadAlerts = alertHistory.filter((m) => !readAlertIds.includes(m.id) && !(lastReadAlertAt && new Date(m.created_at) <= new Date(lastReadAlertAt)));
@@ -711,7 +715,7 @@ export default function App() {
   // placeholder, which then can never match this officer's real name in
   // reconstructInstitutionsFromCloud's name-based lookup.
   const getUserDisplayName = () => {
-    return userProfile?.user_metadata?.fullName || userProfile?.user_metadata?.inspectorName || userProfile?.fullName || '';
+    return userProfile?.user_metadata?.fullName || userProfile?.user_metadata?.inspectorName || userProfile?.fullName || officerRegistryName || '';
   };
 
   // Source of truth for role-based rendering/scoping in the app UI. This is
@@ -1286,6 +1290,16 @@ export default function App() {
     setCscDetailsData(data);
     stampMasterDataUpdated('csc', { cscDetailsData: data });
   };
+
+  useEffect(() => {
+    const email = session?.user?.email;
+    if (!email) { setOfficerRegistryName(''); return undefined; }
+    let cancelled = false;
+    supabase.from('officer_registry').select('name').eq('email', email).maybeSingle()
+      .then(({ data }) => { if (!cancelled && data?.name) setOfficerRegistryName(data.name); })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [session?.user?.email]);
 
   // ── Autosync ──────────────────────────────────────────────────────────────
   // Explicit Save buttons already sync, but several screens (draft links, the
@@ -2883,6 +2897,7 @@ export default function App() {
                     activeTab="records"
                     userProfile={userProfile}
                     reportType="MILK"
+                    inspectorName={getUserDisplayName()}
                     activeModule="MILK"
                     selectedSociety={selectedSociety}
                     institutionsList={institutionsList}
@@ -3263,6 +3278,7 @@ export default function App() {
                     activeTab="records"
                     userProfile={userProfile}
                     reportType="MPCS"
+                    inspectorName={getUserDisplayName()}
                     activeModule="MPCS"
                     selectedSociety={selectedSociety}
                     institutionsList={institutionsList}
@@ -3460,6 +3476,15 @@ export default function App() {
                         longitude={location?.longitude ? String(location.longitude) : ""}
                         setLongitude={(val) => setLocation(prev => ({ ...prev, longitude: parseFloat(val) }))}
                         onSaveNext={(validUntil) => {
+                          // The captured photo only lived in memory, so after a reload the
+                          // evidence still read "CAPTURED" but Submit had no photo to
+                          // upload and the record's PDF came out without one. Keep it
+                          // on the device (same section Milk PCS uses) so the seal step
+                          // can upload it.
+                          const evSoc = selectedSociety?.name || centerName?.trim() || '';
+                          if (evSoc && (imageUri || imageBase64)) {
+                            saveMilkSectionData(evSoc, reportingMonth || getCurrentMonthLabel(), 'evidence', { imageUri, imageBase64, location, timestamp });
+                          }
                           saveMasterStateToStorage({
                             evidence: { status: 'CAPTURED ✓', validUntil, timestamp, location }
                           });
