@@ -3583,7 +3583,7 @@ export default function App() {
                             evidence: { status: 'CAPTURED ✓', validUntil, timestamp, location }
                           });
                           updateSectionState('evidence', { status: 'CAPTURED ✓', validUntil });
-                          setCurrentMobileScreen('HOME');
+                          setCurrentMobileScreen('MPCS_SALES');
                         }}
                         onBack={() => setCurrentMobileScreen('HOME')}
                       activeTab="home"
@@ -3620,9 +3620,9 @@ export default function App() {
                             salesRemarks
                           });
                           updateSectionState('sales', { status: 'COMPLETED ✓' });
-                          setCurrentMobileScreen('HOME');
+                          setCurrentMobileScreen('MPCS_BUSINESS');
                         }}
-                        onBack={() => setCurrentMobileScreen('HOME')}
+                        onBack={() => setCurrentMobileScreen('MPCS_EVIDENCE')}
                       activeTab="home"
                       onTabPress={(tab) => {
                         setActiveBottomTab(tab);
@@ -3670,9 +3670,9 @@ export default function App() {
                             netSurplusDeficit: diff,
                           });
                           updateSectionState('business', { status: 'COMPLETED ✓' });
-                          setCurrentMobileScreen('HOME');
+                          setCurrentMobileScreen(!!(loanData?.hasLoan && !loanData?.loanCleared) ? 'MPCS_LOAN_STATUS' : 'MPCS_ACTIVITIES');
                         }}
-                        onBack={() => setCurrentMobileScreen('HOME')}
+                        onBack={() => setCurrentMobileScreen('MPCS_SALES')}
                       activeTab="home"
                       onTabPress={(tab) => {
                         setActiveBottomTab(tab);
@@ -3727,7 +3727,7 @@ export default function App() {
                           updateSectionState('activities', { status: 'COMPLETED ✓' });
                           setCurrentMobileScreen('MPCS_REVIEW');
                         }}
-                        onBack={() => setCurrentMobileScreen('HOME')}
+                        onBack={() => setCurrentMobileScreen((!!(loanData?.hasLoan && !loanData?.loanCleared) ? 'MPCS_LOAN_STATUS' : 'MPCS_BUSINESS'))}
                       activeTab="home"
                       onTabPress={(tab) => {
                         setActiveBottomTab(tab);
@@ -3824,9 +3824,9 @@ export default function App() {
                         }}
                         onSaveNext={() => {
                           updateSectionState('loan', { status: 'COMPLETED ✓' });
-                          setCurrentMobileScreen('HOME');
+                          setCurrentMobileScreen('MPCS_ACTIVITIES');
                         }}
-                        onBack={() => setCurrentMobileScreen('HOME')}
+                        onBack={() => setCurrentMobileScreen('MPCS_BUSINESS')}
                         onOpenLoanSetup={() => {
                           // "Set it" is a Yes answer by itself — without this
                           // the Loan Setup screen (which no longer has its
