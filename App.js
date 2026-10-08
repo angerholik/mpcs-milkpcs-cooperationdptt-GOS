@@ -511,6 +511,8 @@ export default function App() {
 
   // Sync & Network State
   const [isSyncing, setIsSyncing] = useState(false);
+  const isSyncingRef = useRef(false);
+  const lastSyncAtRef = useRef(0);
   const [pendingSyncCount, setPendingSyncCount] = useState(0);
 
   // UI State
@@ -1734,16 +1736,22 @@ export default function App() {
 
     fetchAlerts();
 
+    // Sync when the connection (re)appears, at most once per 20s. This used to
+    // depend on `isSyncing` in the effect's deps, so every sync toggled the flag,
+    // tore down and re-created this listener + the realtime channel, and the new
+    // listener synced again — with a save that kept failing it never settled,
+    // which is what made the app sluggish / stuck.
     const unsubscribe = NetInfo.addEventListener(state => {
       if (state && state.isConnected) {
-        // Sync Data
-        if (!isSyncing) {
-            setIsSyncing(true);
-            processQueue(({ pending }) => {
-                setPendingSyncCount(pending);
-            }).finally(() => setIsSyncing(false));
+        const now = Date.now();
+        if (!isSyncingRef.current && now - lastSyncAtRef.current > 20000) {
+          lastSyncAtRef.current = now;
+          isSyncingRef.current = true;
+          setIsSyncing(true);
+          processQueue(({ pending }) => {
+              setPendingSyncCount(pending);
+          }).finally(() => { isSyncingRef.current = false; setIsSyncing(false); });
         }
-        // Sync Broadcasts
         fetchAlerts();
       }
     });
@@ -1768,7 +1776,7 @@ export default function App() {
     };
   // Re-runs on login too, so a broadcast sent while the user was signed out is
   // fetched immediately instead of up to 30s later.
-  }, [isSyncing, session?.user?.email]);
+  }, [session?.user?.email]);
 
   const persistReadIds = (ids) => AsyncStorage.setItem('@read_alert_ids', JSON.stringify(ids)).catch(() => {});
   const markAlertRead = (id) => {
@@ -3184,7 +3192,7 @@ export default function App() {
                         syncing={isSyncing}
                         onRetrySync={() => {
                           setIsSyncing(true);
-                          processQueue(({ pending }) => setPendingSyncCount(pending)).finally(() => setIsSyncing(false));
+                          processQueue(({ pending }) => setPendingSyncCount(pending), { force: true }).finally(() => setIsSyncing(false));
                         }}
                         onBack={() => setCurrentMobileScreen('HOME')}
                         activeTab="home"

@@ -67,7 +67,7 @@ export const removeQueueItem = async (id) => {
     }
 };
 
-export const processQueue = async (onStatusChange) => {
+export const processQueue = async (onStatusChange, { force = false } = {}) => {
     let isConnected = true;
     try {
         if (Platform.OS === 'web') {
@@ -93,6 +93,12 @@ export const processQueue = async (onStatusChange) => {
         let syncedCount = 0;
 
         for (const item of queue) {
+            // Back off on items that keep failing instead of hammering the server
+            // on every connectivity event; a manual "Retry sync now" forces them.
+            if (!force && item.nextAttemptAt && Date.now() < item.nextAttemptAt) {
+                remaining.push(item);
+                continue;
+            }
             try {
                 let error = null;
                 if (item.type === 'RPC_ASSIGN') {
@@ -132,6 +138,7 @@ export const processQueue = async (onStatusChange) => {
                     console.warn('Sync item failed:', error.message || error);
                     item.retryCount = (item.retryCount || 0) + 1;
                     item.lastError = error.message || String(error);
+                    item.nextAttemptAt = Date.now() + Math.min(15000 * Math.pow(2, item.retryCount), 600000);
                     // Kept, not dropped: silently discarding an item after a few
                     // tries made a lost update look the same as a synced one.
                     remaining.push(item);
@@ -140,6 +147,7 @@ export const processQueue = async (onStatusChange) => {
                 console.error('Queue item sync exception:', e);
                 item.retryCount = (item.retryCount || 0) + 1;
                 item.lastError = (e && e.message) || String(e);
+                item.nextAttemptAt = Date.now() + Math.min(15000 * Math.pow(2, item.retryCount), 600000);
                 remaining.push(item);
             }
         }
