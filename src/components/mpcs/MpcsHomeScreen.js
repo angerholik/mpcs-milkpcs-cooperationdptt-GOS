@@ -4,6 +4,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { webCapWidth } from '../../utils/webStyles';
 import BottomNav from '../BottomNav';
 import PressScale from '../PressScale';
+import HomeShortcuts from '../HomeShortcuts';
 import ScreenHeader from '../ScreenHeader';
 import { getMpcsDailyTransactions, getMpcsCscTransactions } from '../../supabase';
 
@@ -138,27 +139,6 @@ function usePulse(active) {
   };
 }
 
-// The segmented Monthly/Master/Member switcher's active pill fades/scales
-// in smoothly instead of snapping, matching the reference's blanket
-// `transition duration-150` on interactive chrome.
-function TabButton({ label, active, onPress }) {
-  const progress = useRef(new Animated.Value(active ? 1 : 0)).current;
-  useEffect(() => {
-    Animated.timing(progress, { toValue: active ? 1 : 0, duration: 150, easing: Easing.out(Easing.ease), useNativeDriver: false }).start();
-  }, [active]);
-  const bgColor = progress.interpolate({ inputRange: [0, 1], outputRange: ['rgba(255,255,255,0)', '#ffffff'] });
-  const textColor = progress.interpolate({ inputRange: [0, 1], outputRange: [COLORS.slate600, COLORS.brand700] });
-  const dotScale = progress.interpolate({ inputRange: [0, 1], outputRange: [0, 1] });
-  return (
-    <Pressable onPress={onPress} style={{ flex: 1 }}>
-      <Animated.View style={[styles.tabBtn, { backgroundColor: bgColor }]}>
-        <Animated.Text style={[styles.tabText, { color: textColor, fontWeight: active ? '700' : '600' }]}>{label}</Animated.Text>
-        <Animated.View style={[styles.tabDot, { transform: [{ scale: dotScale }] }]} />
-      </Animated.View>
-    </Pressable>
-  );
-}
-
 export default function HomeScreen({
   societyName = "",
   centerId = "",
@@ -184,7 +164,6 @@ export default function HomeScreen({
   activeTab = 'home',
   onTabPress
 }) {
-  const [internalTab, setInternalTab] = useState('monthly');
   const [alertVisible, setAlertVisible] = useState(true);
   const [cashBookStats, setCashBookStats] = useState(null); // { count, total }
   const [cscStats, setCscStats] = useState(null); // { count, commission }
@@ -287,20 +266,12 @@ export default function HomeScreen({
 
       <ScrollView style={styles.scrollContent} contentContainerStyle={[styles.scrollInner, webCapWidth]} showsVerticalScrollIndicator={false}>
 
-        <View style={styles.tabBar}>
-          {[
-            { key: 'monthly', label: 'Monthly' },
-            { key: 'master', label: 'Master' },
-            { key: 'member', label: 'Member' },
-          ].map((t) => (
-            <TabButton
-              key={t.key}
-              label={t.label}
-              active={internalTab === t.key}
-              onPress={() => (t.key === 'master' ? onNavigateScreen && onNavigateScreen('MPCS_MASTER_DATA') : setInternalTab(t.key))}
-            />
-          ))}
-        </View>
+        <HomeShortcuts
+          items={[
+            { title: 'Master data', sub: `${['instProfile', 'demographics', 'compliance', 'financials', 'dividend', 'shareCapital', 'loan', 'csc'].filter((k) => masterDataUpdated[k]).length} of 8 recorded`, icon: 'database-cog-outline', bg: COLORS.brand50, border: COLORS.brand100, fg: COLORS.brand700, onPress: () => onNavigateScreen && onNavigateScreen('MPCS_MASTER_DATA') },
+            { title: 'Members', sub: 'Registered members', icon: 'account-group-outline', bg: COLORS.sky50, border: COLORS.sky100, fg: COLORS.sky700, onPress: () => onNavigateScreen && onNavigateScreen('MPCS_MEMBERS') },
+          ]}
+        />
 
         {alertVisible && activeAlert ? (
           <View style={styles.alertCard}>
@@ -314,7 +285,6 @@ export default function HomeScreen({
           </View>
         ) : null}
 
-        {internalTab === 'monthly' && (
           <>
             <View style={styles.card}>
               <View style={styles.progressHeaderRow}>
@@ -478,20 +448,6 @@ export default function HomeScreen({
               </PressScale>
             </View>
           </>
-        )}
-
-        {internalTab === 'member' && (
-          <PressScale
-            scaleTo={0.98}
-            style={({ pressed, hovered }) => [styles.card, hovered && { backgroundColor: 'rgba(248,250,252,0.6)' }, pressed && { backgroundColor: COLORS.slate50 }]}
-            onPress={() => onNavigateScreen && onNavigateScreen('MPCS_MEMBERS')}
-          >
-            <View style={styles.masterSummaryRow}>
-              <Text style={styles.masterSummaryCount}>Registered members</Text>
-              <MaterialCommunityIcons name="chevron-right" size={16} color={COLORS.slate400} />
-            </View>
-          </PressScale>
-        )}
 
         <View style={{ height: 60 }} />
       </ScrollView>
@@ -548,34 +504,6 @@ const styles = StyleSheet.create({
     paddingTop: 16,
     paddingBottom: 100,
     gap: 16,
-  },
-  tabBar: {
-    flexDirection: 'row',
-    backgroundColor: 'rgba(226,232,240,0.8)',
-    padding: 4,
-    borderRadius: 12,
-    gap: 4,
-  },
-  tabBtn: {
-    flex: 1,
-    flexDirection: 'row',
-    paddingVertical: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    borderRadius: 8,
-  },
-  tabText: {
-    fontFamily: FONT_FAMILY,
-    fontSize: 12,
-    fontWeight: '600',
-    color: COLORS.slate600,
-  },
-  tabDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: COLORS.brand600,
   },
   alertCard: {
     flexDirection: 'row',
