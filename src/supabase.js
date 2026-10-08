@@ -66,6 +66,26 @@ export async function uploadEvidence(base64Data, societyName = 'general') {
   }
 }
 
+
+// Supabase reports a write blocked by row-level security as "success, 0 rows",
+// so a save the database refused looked identical to one that worked (and was
+// never queued for retry). These helpers turn that case into a real error.
+const noRowsError = (what) => new Error(`${what}: no rows changed (not permitted for this account, or the record no longer exists)`);
+
+async function deleteById(table, id, what) {
+  const { data, error } = await supabase.from(table).delete().eq('id', id).select('id');
+  if (error) { console.error(`[CORE] ${what} failed:`, error.message); return { error }; }
+  if (data && data.length > 0) return { error: null };
+  // 0 rows: already gone (fine) or blocked by RLS (a real failure).
+  const { data: still } = await supabase.from(table).select('id').eq('id', id).maybeSingle();
+  if (still) {
+    const e = noRowsError(what);
+    console.error('[CORE]', e.message);
+    return { error: e };
+  }
+  return { error: null };
+}
+
 // ─── Save Milk PCS submission ─────────────────────────────────────────────────
 export async function saveMilkPcsSubmission(params) {
   try {
@@ -198,7 +218,7 @@ export async function saveMilkPcsSubmission(params) {
       if (!pdfUrl) delete updatePayload.pdf_url;
       const res = await supabase.from('milk_pcs_submissions').update(updatePayload).eq('id', existingId).select();
       data = res.data;
-      error = res.error;
+      error = res.error || ((!res.data || res.data.length === 0) ? noRowsError('milk submission update') : null);
     } else {
       console.log('[CORE] Inserting new Milk PCS submission record for:', cleanCenter);
       const res = await supabase.from('milk_pcs_submissions').insert([row]).select();
@@ -321,7 +341,7 @@ export async function saveMpcsSubmission(formData) {
       };
       const res = await supabase.from('mpcs_submissions').update(updatePayload).eq('id', existingId).select();
       data = res.data;
-      error = res.error;
+      error = res.error || ((!res.data || res.data.length === 0) ? noRowsError('mpcs submission update') : null);
     } else {
       console.log('[CORE] Inserting new MPCS submission record for:', cleanSociety);
       const res = await supabase.from('mpcs_submissions').insert([row]).select();
@@ -395,6 +415,7 @@ export async function updateMember(memberId, { memberName, aadhaarNumber, mobile
       address: address || null,
     }).eq('id', memberId).select();
     if (error) console.error('[CORE] updateMember failed:', error.message);
+    if (!error && (!data || data.length === 0)) return { data, error: noRowsError('updateMember') };
     return { data, error };
   } catch (err) {
     console.error('[CORE] updateMember exception:', err);
@@ -413,13 +434,12 @@ export async function resolveMemberFlag(memberId, { resolvedBy, resolutionNote }
     resolution_note: (resolutionNote || '').trim() || null,
   }).eq('id', memberId).select();
   if (error) console.error('[CORE] resolveMemberFlag failed:', error.message);
+  if (!error && (!data || data.length === 0)) return { data, error: noRowsError('resolveMemberFlag') };
   return { data, error };
 }
 
 export async function deleteMember(memberId) {
-  const { error } = await supabase.from('member_registry').delete().eq('id', memberId);
-  if (error) console.error('[CORE] deleteMember failed:', error.message);
-  return { error };
+  return deleteById('member_registry', memberId, 'deleteMember');
 }
 
 // ─── Loan Beneficiaries (per-institution loan disbursement roster) ───────────
@@ -470,6 +490,7 @@ export async function updateLoanBeneficiary(beneficiaryId, { beneficiaryName, aa
       updated_at: new Date().toISOString(),
     }).eq('id', beneficiaryId).select();
     if (error) console.error('[CORE] updateLoanBeneficiary failed:', error.message);
+    if (!error && (!data || data.length === 0)) return { data, error: noRowsError('updateLoanBeneficiary') };
     return { data, error };
   } catch (err) {
     console.error('[CORE] updateLoanBeneficiary exception:', err);
@@ -478,9 +499,7 @@ export async function updateLoanBeneficiary(beneficiaryId, { beneficiaryName, aa
 }
 
 export async function deleteLoanBeneficiary(beneficiaryId) {
-  const { error } = await supabase.from('loan_beneficiaries').delete().eq('id', beneficiaryId);
-  if (error) console.error('[CORE] deleteLoanBeneficiary failed:', error.message);
-  return { error };
+  return deleteById('loan_beneficiaries', beneficiaryId, 'deleteLoanBeneficiary');
 }
 
 // ─── MPCS Daily Transactions ───────────────────────────────────────────────────
@@ -530,9 +549,7 @@ export async function saveMpcsDailyTransaction(societyName, { transactionDate, p
 }
 
 export async function deleteMpcsDailyTransaction(transactionId) {
-  const { error } = await supabase.from('mpcs_daily_transactions').delete().eq('id', transactionId);
-  if (error) console.error('[CORE] deleteMpcsDailyTransaction failed:', error.message);
-  return { error };
+  return deleteById('mpcs_daily_transactions', transactionId, 'deleteMpcsDailyTransaction');
 }
 
 // ─── MPCS CSC Transactions ──────────────────────────────────────────────────────
@@ -569,7 +586,5 @@ export async function saveMpcsCscTransaction(societyName, { transactionDate, ser
 }
 
 export async function deleteMpcsCscTransaction(transactionId) {
-  const { error } = await supabase.from('mpcs_csc_transactions').delete().eq('id', transactionId);
-  if (error) console.error('[CORE] deleteMpcsCscTransaction failed:', error.message);
-  return { error };
+  return deleteById('mpcs_csc_transactions', transactionId, 'deleteMpcsCscTransaction');
 }

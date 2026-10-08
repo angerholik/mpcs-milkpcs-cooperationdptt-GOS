@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   StyleSheet,
   Text,
@@ -1281,6 +1281,46 @@ export default function App() {
     setCscDetailsData(data);
     stampMasterDataUpdated('csc', { cscDetailsData: data });
   };
+
+  // ── Autosync ──────────────────────────────────────────────────────────────
+  // Explicit Save buttons already sync, but several screens (draft links, the
+  // MPCS wizard fields, activity add/delete) only change state and wait for a
+  // later "Save and continue" — so those edits never reached the cloud (and so
+  // never the admin dashboard) until, or unless, that final tap happened.
+  // This pushes any change to the synced fields ~1s after it is made.
+  // Changes caused by *loading* a society (storage / cloud hydration) are
+  // absorbed into the baseline instead, so merely opening a society never
+  // writes its local copy back over the cloud row.
+  const autosyncBaselineRef = useRef(null);
+  const autosyncHoldUntilRef = useRef(0);
+  const autosyncSig = JSON.stringify([
+    selectedSociety?.name, selectedSociety?.type, reportingMonth,
+    centerName, registrationNumber, panCard, regDate, presidentName, presidentMobile, managerName, managerMobile,
+    masterAuditDate, masterAuditYear, masterAuditStatus, masterAgmDate, masterAgmYear, masterAgmStatus,
+    masterHasLoan, masterLoanType, masterLoanSanctionDate, masterLoanBeneficiaries, masterLoanExtended, masterLoanCleared,
+    mSc, fSc, mSt, fSt, mObc, fObc, mGen, fGen,
+    demographicsData, complianceData, financialsData, supplementalData, dividendData, bankData, shareCapitalData, cscDetailsData, loanData,
+    businessPerformanceData, withdrawal, balance, salesRemarks, activityItems,
+  ]);
+  useEffect(() => {
+    autosyncBaselineRef.current = null;
+    autosyncHoldUntilRef.current = Date.now() + 4000;
+  }, [selectedSociety?.name, reportingMonth]);
+  useEffect(() => {
+    const soc = selectedSociety?.name || centerName?.trim();
+    if (!soc) return undefined;
+    if (autosyncBaselineRef.current === null || Date.now() < autosyncHoldUntilRef.current) {
+      autosyncBaselineRef.current = autosyncSig;
+      return undefined;
+    }
+    if (autosyncSig === autosyncBaselineRef.current) return undefined;
+    const timer = setTimeout(() => {
+      autosyncBaselineRef.current = autosyncSig;
+      saveMasterStateToStorage();
+    }, 1000);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autosyncSig]);
 
   const loadMasterStateFromStorage = async (targetSocName = null, explicitEmail = null) => {
     try {

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { getMilkSectionData, saveMilkSectionData } from '../utils/monthlySyncManager';
 import { View, Text, StyleSheet, TouchableOpacity, TextInput, ScrollView, Platform, Pressable, Image } from 'react-native';
 import MpcsWizardHeader from './mpcs/MpcsWizardHeader';
@@ -8,6 +8,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import BottomNav from './BottomNav';
 import { webCapWidth } from '../utils/webStyles';
+import { useAutosave } from '../hooks/useAutosave';
 
 // Same subtle Kanchenjunga treatment used on every header across the app.
 const headerPhotoFilter = Platform.OS === 'web'
@@ -52,6 +53,9 @@ export default function OperationsScreen({
   const [withdrawal, setWithdrawal] = useState("");
   const [balance, setBalance] = useState("");
   const [isSaved, setIsSaved] = useState(false);
+  // Last persisted values; null until the saved copy has loaded, so opening the
+  // screen never counts as an edit.
+  const loadedSigRef = useRef(null);
 
   useEffect(() => {
     (async () => {
@@ -61,11 +65,23 @@ export default function OperationsScreen({
         setWithdrawal(data.withdrawal || "");
         setBalance(data.balance || "");
       }
+      loadedSigRef.current = JSON.stringify([data?.litres || '', data?.withdrawal || '', data?.balance || '']);
     })();
   }, [societyName, reportingMonth]);
 
+  // Every edit is persisted (and synced to the cloud) shortly after it is made,
+  // not only when Save is tapped.
+  useAutosave(async () => {
+    const sig = JSON.stringify([litres, withdrawal, balance]);
+    if (loadedSigRef.current === null || sig === loadedSigRef.current) return;
+    loadedSigRef.current = sig;
+    await saveMilkSectionData(societyName, reportingMonth, 'operations', { litres, withdrawal, balance });
+    if (onSave) onSave();
+  }, [litres, withdrawal, balance]);
+
   const handleSave = async () => {
     await saveMilkSectionData(societyName, reportingMonth, 'operations', { litres, withdrawal, balance });
+    loadedSigRef.current = JSON.stringify([litres, withdrawal, balance]);
     setIsSaved(true);
     setTimeout(() => setIsSaved(false), 2500);
     if (onSave) onSave();

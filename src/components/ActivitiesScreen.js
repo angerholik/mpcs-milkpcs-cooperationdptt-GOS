@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { getMilkSectionData, saveMilkSectionData } from '../utils/monthlySyncManager';
 import { View, Text, StyleSheet, TouchableOpacity, TextInput, ScrollView, Platform, Pressable, Image, Alert } from 'react-native';
 import MpcsWizardHeader from './mpcs/MpcsWizardHeader';
@@ -8,6 +8,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import BottomNav from './BottomNav';
 import { webCapWidth } from '../utils/webStyles';
+import { useAutosave } from '../hooks/useAutosave';
 
 // Same subtle Kanchenjunga treatment used on every header across the app.
 const headerPhotoFilter = Platform.OS === 'web'
@@ -59,6 +60,8 @@ export default function ActivitiesScreen({
   unreadCount = 0,
 }) {
   const [activityList, setActivityList] = useState([]);
+  const loadedSigRef = useRef(null); // null until the saved list has loaded
+  const completedRef = useRef(false);
   const [activeCategory, setActiveCategory] = useState('Meetings');
   const [meetingsCount, setMeetingsCount] = useState('');
   const [participantsCount, setParticipantsCount] = useState('');
@@ -70,8 +73,20 @@ export default function ActivitiesScreen({
       if (data && data.activityList) {
         setActivityList(data.activityList);
       }
+      completedRef.current = !!data?.isCompleted;
+      loadedSigRef.current = JSON.stringify(data?.activityList || []);
     })();
   }, [societyName, reportingMonth]);
+
+  // Adding or deleting an entry is saved (and synced to the cloud) right away,
+  // not only when "Save and continue" is tapped.
+  useAutosave(async () => {
+    const sig = JSON.stringify(activityList);
+    if (loadedSigRef.current === null || sig === loadedSigRef.current) return;
+    loadedSigRef.current = sig;
+    await saveMilkSectionData(societyName, reportingMonth, 'activities', { activityList, isCompleted: completedRef.current || activityList.length > 0 });
+    if (onSave) onSave(activityList.length);
+  }, [activityList]);
 
   const categories = ['Meetings', 'Trainings', 'Events', 'Others'];
 
@@ -104,6 +119,7 @@ export default function ActivitiesScreen({
 
   const handleSaveAndNext = async () => {
     await saveMilkSectionData(societyName, reportingMonth, 'activities', { activityList, isCompleted: true });
+    loadedSigRef.current = JSON.stringify(activityList);
     if (onSaveNext) {
       onSaveNext(activityList.length);
     } else if (onNext) {

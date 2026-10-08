@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import MpcsWizardHeader from './mpcs/MpcsWizardHeader';
 import * as ImagePicker from 'expo-image-picker';
 import * as Location from 'expo-location';
@@ -12,6 +12,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import BottomNav from './BottomNav';
 import LiveCameraCapture from './LiveCameraCapture';
 import { webCapWidth } from '../utils/webStyles';
+import { useAutosave } from '../hooks/useAutosave';
 
 // Same subtle Kanchenjunga treatment used on every header across the app.
 const headerPhotoFilter = Platform.OS === 'web'
@@ -69,6 +70,7 @@ export default function DigitalEvidenceScreen({
   const [isCapturing, setIsCapturing] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
   const [showLiveCamera, setShowLiveCamera] = useState(false);
+  const loadedSigRef = useRef(null); // null until the saved copy has loaded
 
   useEffect(() => {
     (async () => {
@@ -80,6 +82,7 @@ export default function DigitalEvidenceScreen({
         setTimestamp(data.timestamp || "");
         setReportedBy(data.reportedBy || "");
       }
+      loadedSigRef.current = JSON.stringify([data?.imageUri || null, data?.timestamp || '']);
     })();
   }, [societyName, reportingMonth]);
 
@@ -143,6 +146,17 @@ export default function DigitalEvidenceScreen({
     setShowLiveCamera(false);
     await applyCaptureResult({ canceled: false, assets: [{ uri, base64 }] });
   };
+
+  // A captured photo is saved (and synced) straight away, not only when Save
+  // and continue is tapped — a retake is far harder to redo than a typed value.
+  useAutosave(async () => {
+    const sig = JSON.stringify([imageUri || null, timestamp || '']);
+    if (loadedSigRef.current === null || sig === loadedSigRef.current) return;
+    loadedSigRef.current = sig;
+    await saveMilkSectionData(societyName, reportingMonth, 'evidence', { imageUri, imageBase64, location, timestamp, reportedBy });
+    const validUntil = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+    if (onSave) onSave(validUntil);
+  }, [imageUri, timestamp]);
 
   const handleSave = async () => {
     await saveMilkSectionData(societyName, reportingMonth, 'evidence', {

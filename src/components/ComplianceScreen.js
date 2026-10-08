@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { getMilkSectionData, saveMilkSectionData } from '../utils/monthlySyncManager';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, Platform, Pressable, Alert, Image } from 'react-native';
 import MpcsWizardHeader from './mpcs/MpcsWizardHeader';
@@ -7,6 +7,7 @@ import { WizardField, CalcCard } from './WizardField';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { webCapWidth } from '../utils/webStyles';
+import { useAutosave } from '../hooks/useAutosave';
 import BottomNav from './BottomNav';
 
 // Same subtle Kanchenjunga treatment used on every header across the app.
@@ -66,6 +67,7 @@ export default function ComplianceScreen({
   // Monthly loan repayment tracking
   const [loanRecovered, setLoanRecovered] = useState('');
 
+  const loadedRecoveredRef = useRef(null); // null until the saved value has loaded
   const loanIsActive = masterHasLoan && !masterLoanCleared;
 
   // Outstanding is derived, never entered directly: it's always
@@ -89,6 +91,7 @@ export default function ComplianceScreen({
           setLastVerified(new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }));
         }
       }
+      loadedRecoveredRef.current = data?.loanRecovered || '';
     })();
   }, [societyName, reportingMonth]);
 
@@ -97,6 +100,14 @@ export default function ComplianceScreen({
     await saveMilkSectionData(societyName, reportingMonth, 'compliance', { ...newData, isCompleted });
     return isCompleted;
   };
+
+  // Saved (and synced to the cloud) as it is typed, not only on Save and continue.
+  useAutosave(async () => {
+    if (loadedRecoveredRef.current === null || loanRecovered === loadedRecoveredRef.current) return;
+    loadedRecoveredRef.current = loanRecovered;
+    await saveToLocal({ loanRecovered, loanOutstanding });
+    if (onSave) onSave();
+  }, [loanRecovered]);
 
   const handleSaveAndNext = async () => {
     await saveToLocal({ loanRecovered, loanOutstanding });
