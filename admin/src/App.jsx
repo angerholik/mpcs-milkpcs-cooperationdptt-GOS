@@ -251,11 +251,23 @@ function normalizeMpcsAuditFields(row) {
   const compliance = fd.complianceData || {};
   const financials = fd.financialsData || {};
   const loan = fd.loanData || {};
+  // The field app's form used to save "Done"; "Completed" is the canonical value.
+  const isDoneStatus = (v) => v === 'Completed' || v === 'Done';
   let audit_done = row.audit_done;
   if (compliance.auditStatus) {
-    audit_done = compliance.auditStatus === 'Completed'
+    audit_done = isDoneStatus(compliance.auditStatus)
       ? `Yes${compliance.auditDate ? ` (${compliance.auditDate})` : ''}`
       : 'No';
+  }
+  // AGM was never read from complianceData at all, so an AGM marked completed
+  // in the field app always showed as pending here.
+  let agm_done = row.agm_done;
+  let agm_date = row.agm_date;
+  if (compliance.agmStatus) {
+    agm_done = isDoneStatus(compliance.agmStatus)
+      ? `Yes${compliance.agmDate ? ` (${compliance.agmDate})` : ''}`
+      : 'No';
+    if (compliance.agmDate) agm_date = compliance.agmDate;
   }
   const audit_year = compliance.auditYear || row.audit_year || fd['4.2'] || null;
   const audit_category = row.audit_category || fd['4.3'] || null;
@@ -275,7 +287,7 @@ function normalizeMpcsAuditFields(row) {
   const photo_url = row.photo_url || fd.evidence_photo_url || null;
   const gps_lat = row.gps_lat ?? fd.latitude ?? null;
   const gps_lng = row.gps_lng ?? fd.longitude ?? null;
-  return { ...row, audit_done, audit_year, audit_category, is_profit, net_profit_loss, has_loan, photo_url, gps_lat, gps_lng };
+  return { ...row, audit_done, audit_year, audit_category, agm_done, agm_date, is_profit, net_profit_loss, has_loan, photo_url, gps_lat, gps_lng };
 }
 
 // Helper to parse MPCS Audit & AGM details

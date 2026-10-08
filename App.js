@@ -275,6 +275,8 @@ const getCurrentMonthLabel = () =>
 // clobbered by an earlier one that just happened to finish later.
 let cloudSyncQueue = Promise.resolve();
 
+const isDoneStatus = (s) => s === 'Completed' || s === 'Done';
+
 export default function App() {
   const [fontsLoaded, fontError] = useFonts({
     Manrope: Manrope_400Regular,
@@ -1138,7 +1140,7 @@ export default function App() {
             managerMobile: stateObj.managerMobile,
             // complianceData holds { auditStatus: 'Completed'|'Pending', auditDate, auditYear, ... }
             // from MpcsComplianceAuditScreen — there is no auditDone/auditGrade field.
-            auditDone: stateObj.complianceData?.auditStatus === 'Completed'
+            auditDone: isDoneStatus(stateObj.complianceData?.auditStatus)
               ? `Yes${stateObj.complianceData?.auditDate ? ` (${stateObj.complianceData.auditDate})` : ''}`
               : 'No',
             auditYear: stateObj.complianceData?.auditYear,
@@ -1252,7 +1254,10 @@ export default function App() {
     setDemographicsData(data);
     stampMasterDataUpdated('demographics', { demographicsData: data });
   };
-  const handleSaveMpcsCompliance = (data) => {
+  const handleSaveMpcsCompliance = (raw) => {
+    // The form's toggle says "Done"; everything downstream (cloud row, admin
+    // dashboard, profile summary) expects "Completed".
+    const data = { ...raw, auditStatus: isDoneStatus(raw.auditStatus) ? 'Completed' : 'Pending', agmStatus: isDoneStatus(raw.agmStatus) ? 'Completed' : 'Pending' };
     setComplianceData(data);
     stampMasterDataUpdated('compliance', { complianceData: data });
   };
@@ -2352,10 +2357,10 @@ export default function App() {
       // overwriting whatever audit/AGM status the MPCS Compliance & Audit screen
       // had just saved into the live complianceData master state moments earlier
       // (the actual source of truth — same one MpcsComplianceAuditScreen writes to).
-      auditDone: isMilk ? (masterAuditDate ? `Yes (${masterAuditDate})` : 'No') : (complianceData?.auditStatus === 'Completed' ? `Yes${complianceData?.auditDate ? ` (${complianceData.auditDate})` : ''}` : 'No'),
+      auditDone: isMilk ? (masterAuditDate ? `Yes (${masterAuditDate})` : 'No') : (isDoneStatus(complianceData?.auditStatus) ? `Yes${complianceData?.auditDate ? ` (${complianceData.auditDate})` : ''}` : 'No'),
       auditDate: isMilk ? masterAuditDate : (complianceData?.auditDate || auditDate),
       auditYear: isMilk ? masterAuditYear : (complianceData?.auditYear || auditYear),
-      agmDone: isMilk ? (masterAgmDate ? `Yes (${masterAgmDate})` : 'No') : (complianceData?.agmStatus === 'Completed' ? `Yes${complianceData?.agmDate ? ` (${complianceData.agmDate})` : ''}` : 'No'),
+      agmDone: isMilk ? (masterAgmDate ? `Yes (${masterAgmDate})` : 'No') : (isDoneStatus(complianceData?.agmStatus) ? `Yes${complianceData?.agmDate ? ` (${complianceData.agmDate})` : ''}` : 'No'),
       agmDate: isMilk ? masterAgmDate : (complianceData?.agmDate || agmDate),
       agmYear: isMilk ? masterAgmYear : (complianceData?.agmYear || agmYear),
       // financialsData.profitOrLoss/netProfit were never threaded into this payload,
@@ -3213,9 +3218,9 @@ export default function App() {
                     presidentMobile={presidentMobile || ''}
                     secretaryName={managerName || ''}
                     secretaryMobile={managerMobile || ''}
-                    auditStatus={complianceData?.auditStatus || ''}
+                    auditStatus={isDoneStatus(complianceData?.auditStatus) ? 'Completed' : (complianceData?.auditStatus || '')}
                     auditDate={complianceData?.auditDate || ''}
-                    agmStatus={complianceData?.agmStatus || ''}
+                    agmStatus={isDoneStatus(complianceData?.agmStatus) ? 'Completed' : (complianceData?.agmStatus || '')}
                     agmDate={complianceData?.agmDate || ''}
                     totalMembers={
                       Array.isArray(demographicsData)
