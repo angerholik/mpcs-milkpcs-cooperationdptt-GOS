@@ -56,10 +56,10 @@ import MpcsLoanSetupScreen from './src/components/mpcs/MpcsLoanSetupScreen';
 import MpcsLoanStatusScreen from './src/components/mpcs/MpcsLoanStatusScreen';
 import MpcsReviewSubmitScreen from './src/components/mpcs/MpcsReviewSubmitScreen';
 
-import { supabase, saveMilkPcsSubmission, saveMpcsSubmission, uploadPhoto } from './src/supabase';
+import { supabase, saveMilkPcsSubmission, saveMpcsSubmission, uploadPhoto, saveReportHtml, loadReportHtml, REPORT_RETENTION_DAYS } from './src/supabase';
 import { saveMilkPcsProfile, loadMilkPcsProfileByName, loadMilkCenters, addMilkCenter } from './src/utils/storage';
 import { queueSubmission, processQueue, getQueueStatus, dropQueued } from './src/utils/syncManager';
-import { isMonthlyParamsCompleted, saveMonthlyParams, getMonthlyParams, saveSectionStates, getSectionStates, getMilkSectionData, saveMilkSectionData, clearMilkSectionData } from './src/utils/monthlySyncManager';
+import { isMonthlyParamsCompleted, saveMonthlyParams, getMonthlyParams, saveSectionStates, getSectionStates, getMilkSectionData, saveMilkSectionData, clearMilkSectionData, saveMilkSectionStates } from './src/utils/monthlySyncManager';
 import { useFonts, Manrope_400Regular, Manrope_500Medium, Manrope_600SemiBold, Manrope_700Bold, Manrope_800ExtraBold } from '@expo-google-fonts/manrope';
 import { Cinzel_600SemiBold, Cinzel_700Bold } from '@expo-google-fonts/cinzel';
 import { Inter_400Regular, Inter_500Medium, Inter_600SemiBold, Inter_700Bold, Inter_800ExtraBold } from '@expo-google-fonts/inter';
@@ -525,6 +525,7 @@ export default function App() {
   // fullName in their auth metadata, which left submissions credited to a
   // generic "Cooperative Inspector".
   const [officerRegistryName, setOfficerRegistryName] = useState('');
+  const [officerRegistryRole, setOfficerRegistryRole] = useState('');
   // Inbox: a message stays unread (and the Inbox card stays on screen) until it
   // is opened or marked read; read state is per message and kept on the device.
   const unreadAlerts = alertHistory.filter((m) => !readAlertIds.includes(m.id) && !(lastReadAlertAt && new Date(m.created_at) <= new Date(lastReadAlertAt)));
@@ -801,6 +802,48 @@ export default function App() {
     } catch (e) { console.warn('saveInstitutionsForUser error:', e); }
   };
 
+  // After a successful Review & Submit every monthly section goes back to
+  // empty/0. Master Data is untouched. Local-only: the sealed cloud row must
+  // keep its values, so autosync is held and the master save skips the cloud.
+  const resetMonthlyAfterSubmit = async (socName, repMonth) => {
+    autosyncBaselineRef.current = null;
+    autosyncHoldUntilRef.current = Date.now() + 4000;
+    setWithdrawal('');
+    setBalance('');
+    setLitres('');
+    setSalesRemarks('');
+    setBusinessPerformanceData({});
+    setActivityItems([]);
+    const freshStates = {
+      evidence: { status: 'NOT CAPTURED', updatedAt: null, validUntil: null },
+      sales: { status: 'NOT COMPLETED', updatedAt: null },
+      business: { status: 'NOT COMPLETED', updatedAt: null },
+      csc: { status: 'NOT COMPLETED', updatedAt: null },
+      activities: { status: '0 ENTRIES', updatedAt: null },
+      loan: { status: 'NOT COMPLETED', updatedAt: null },
+    };
+    setSectionStates(freshStates);
+    try {
+      await clearMilkSectionData(socName, repMonth);
+      await saveMilkSectionData(socName, repMonth, 'mpcs_loan', null);
+      await saveSectionStates(socName, repMonth, freshStates);
+      await saveMilkSectionStates(socName, repMonth, {
+        evidence: { status: 'NOT CAPTURED', updatedAt: null, validUntil: null },
+        operations: { status: 'NOT STARTED', updatedAt: null },
+        activities: { status: 'NOT STARTED', updatedAt: null },
+        compliance: { status: 'NOT STARTED', updatedAt: null },
+      });
+      await saveMasterStateToStorage({
+        withdrawal: '', balance: '', sales: '', deposit: '', totalTurnover: '', salesRemarks: '',
+        totalIncome: '', totalExpenses: '', netSurplusDeficit: '',
+        businessPerformanceData: {}, activityItems: [], __localOnly: true,
+      }, socName);
+      await refreshMilkSectionStatuses();
+    } catch (e) {
+      console.warn('Post-submit reset failed:', e);
+    }
+  };
+
   const updateSectionState = async (sectionKey, updates) => {
     const newState = {
       ...sectionStates,
@@ -1075,6 +1118,10 @@ export default function App() {
       // handleSelectSociety instead — the one place that actually reflects
       // the inspector's deliberate choice.
 
+      // Local-only saves (post-submit reset) must not reach the cloud: the
+      // submitted row has to keep the values that were just sealed.
+      if (overrides.__localOnly) return;
+
       // ── Cloud Sync to Backend on Every Master Data Save ──
       // Queued so concurrent saves from different screens can't race each
       // other's Supabase find-existing-then-insert/update calls and let an
@@ -1322,10 +1369,10 @@ export default function App() {
 
   useEffect(() => {
     const email = session?.user?.email;
-    if (!email) { setOfficerRegistryName(''); return undefined; }
+    if (!email) { setOfficerRegistryName(''); setOfficerRegistryRole(''); return undefined; }
     let cancelled = false;
-    supabase.from('officer_registry').select('name').eq('email', email).maybeSingle()
-      .then(({ data }) => { if (!cancelled && data?.name) setOfficerRegistryName(data.name); })
+    supabase.from('officer_registry').select('name, role').eq('email', email).maybeSingle()
+      .then(({ data }) => { if (cancelled) return; if (data?.name) setOfficerRegistryName(data.name); if (data?.role) setOfficerRegistryRole(data.role); })
       .catch(() => {});
     return () => { cancelled = true; };
   }, [session?.user?.email]);
@@ -1869,6 +1916,28 @@ export default function App() {
     const socName = recordItem?.society_name || recordItem?.center_name || recordItem?.center || selectedSociety?.name || centerName?.trim() || 'Institution Name Not Set';
     const repMonth = recordItem?.reporting_month || recordItem?.month || reportingMonth?.trim() || getCurrentMonthLabel();
 
+    // Records → View PDF opens the single stored copy (never regenerates, so
+    // no extra files); it is gone once the 7-day purge has run.
+    if (recordOverride) {
+      const stored = await loadReportHtml(socName, repMonth);
+      if (!stored) {
+        Alert.alert('PDF no longer available', `Report PDFs are kept for ${REPORT_RETENTION_DAYS} days after submission and then permanently deleted.`);
+        return;
+      }
+      if (Platform.OS === 'web') {
+        setPdfPreviewHtml(stored);
+      } else {
+        try {
+          Alert.alert('Download your PDF', `Save or share it now — it will be permanently deleted ${REPORT_RETENTION_DAYS} days after submission.`);
+          const printResult = await Print.printToFileAsync({ html: stored });
+          if (printResult?.uri && await Sharing.isAvailableAsync()) {
+            await Sharing.shareAsync(printResult.uri, { UTI: '.pdf', mimeType: 'application/pdf' });
+          }
+        } catch (e) { console.warn('Mobile PDF exception:', e); }
+      }
+      return;
+    }
+
     // --- DECLARE activeCenterName & activeReportingMonth BEFORE use (TDZ fix) ---
     const activeCenterName = socName;
     const activeReportingMonth = repMonth;
@@ -1901,7 +1970,8 @@ export default function App() {
     const activeLitres = opsData?.litres ? String(opsData.litres) : (recordItem?.litres ? String(recordItem.litres) : (litres && !isNaN(parseFloat(litres)) ? litres : '0'));
     const activeBalance = opsData?.balance ? String(opsData.balance) : (recordItem?.bank_balance || recordItem?.balance ? String(recordItem.bank_balance || recordItem.balance) : (balance && !isNaN(parseFloat(balance)) ? balance : '0'));
     const activeWithdrawal = opsData?.withdrawal ? String(opsData.withdrawal) : (recordItem?.annual_turnover || recordItem?.withdrawal ? String(recordItem.annual_turnover || recordItem.withdrawal) : (withdrawal || '0'));
-    const activeReportedBy = evData?.reportedBy ? evData.reportedBy : (recordItem?.reported_by || recordItem?.officer || userProfile?.fullName || reportedBy?.trim() || 'Cooperative Inspector');
+    const activeReportedBy = getUserDisplayName() || evData?.reportedBy || recordItem?.reported_by || recordItem?.officer || reportedBy?.trim() || 'Cooperative Inspector';
+    const activeDesignation = officerRegistryRole || 'Cooperative Inspector (CI)';
 
     // form_data is only populated for MPCS rows, and Supabase can return it
     // either as a parsed object or (depending on the query path) a raw JSON
@@ -2055,14 +2125,14 @@ export default function App() {
       ? (recordItem?.remaining_due || recordFormData?.remainingDue || 0)
       : (isMilk ? (compData?.loanOutstanding || '') : remainingDue);
     const pdfAuditDate = recordOverride
-      ? (isMilk ? 'N/A' : (recordItem?.audit_done || 'N/A'))
-      : (isMilk ? masterAuditDate : auditDate);
+      ? (isMilk ? 'N/A' : (recordItem?.audit_done || recordFormData?.complianceData?.auditDate || 'N/A'))
+      : (isMilk ? (masterAuditDate || 'Pending') : (complianceData?.auditDate || 'Pending'));
     const pdfAuditYear = recordOverride
-      ? (isMilk ? '' : (recordItem?.audit_year || ''))
-      : (isMilk ? masterAuditYear : auditYear);
+      ? (isMilk ? '' : (recordItem?.audit_year || recordFormData?.complianceData?.auditYear || ''))
+      : (isMilk ? masterAuditYear : (complianceData?.auditYear || ''));
     const pdfAgmDate = recordOverride
-      ? (isMilk ? 'N/A' : (recordFormData?.agmDate || recordFormData?.agmDone || 'N/A'))
-      : (isMilk ? masterAgmDate : agmDate);
+      ? (isMilk ? 'N/A' : (recordFormData?.complianceData?.agmDate || recordFormData?.agmDate || recordFormData?.agmDone || 'N/A'))
+      : (isMilk ? (masterAgmDate || 'Pending') : (complianceData?.agmDate || 'Pending'));
 
     // ─── Row data for the report tables (built once, rendered via .map below) ───
     const generalInfoRows = [
@@ -2379,7 +2449,7 @@ export default function App() {
               <div class="sign-col">
                 <div class="heading">Reported By</div>
                 <div class="row"><div class="k">Name</div><div class="v">:&nbsp; ${escapeHtml(activeReportedBy)}</div></div>
-                <div class="row"><div class="k">Designation</div><div class="v">:&nbsp; Cooperative Inspector (CI)</div></div>
+                <div class="row"><div class="k">Designation</div><div class="v">:&nbsp; ${escapeHtml(activeDesignation)}</div></div>
                 <div class="row"><div class="k">Date &amp; Time</div><div class="v">:&nbsp; ${escapeHtml(pdfTimestamp)}</div></div>
               </div>
             </div>
@@ -2525,6 +2595,7 @@ export default function App() {
       let isOfflineSaved = false;
       let isCloudSaved = false;
       let sbError = null;
+      let sealPhotoUrl = null;
 
       if (!isConnected) {
           const queued = await queueSubmission(activeView === 'MPCS' ? 'MPCS' : 'MILK_PCS', submissionData);
@@ -2633,9 +2704,20 @@ export default function App() {
              isOfflineSaved = true;
           } else {
              isCloudSaved = true;
+             sealPhotoUrl = uploadedPhotoUrl;
              showToast('✅ Submission successfully inserted to Admin database!');
           }
           }
+      }
+
+      // One stored report per society+month (re-sealing overwrites it); the
+      // daily purge job removes it 7 days after the last upload. Prefer the
+      // uploaded photo URL over the inline base64 so the file stays small.
+      if (isCloudSaved) {
+        const storedHtml = (sealPhotoUrl && pdfImageSrc?.startsWith('data:'))
+          ? htmlContent.split(pdfImageSrc).join(sealPhotoUrl)
+          : htmlContent;
+        await saveReportHtml(activeCenterName, activeReportingMonth, storedHtml);
       }
 
       const profileData = { centerName, district, reportedBy, mSc, fSc, mSt, fSt, mObc, fObc, mGen, fGen, hasLoan, loanName, loanAmount };
@@ -2677,12 +2759,13 @@ export default function App() {
       // leaving the inspector on whatever section/review screen they sealed
       // from, which read as the submission not having actually gone anywhere.
       if (!recordOverride && (isCloudSaved || isOfflineSaved)) {
+        await resetMonthlyAfterSubmit(activeCenterName, activeReportingMonth);
         setCurrentMobileScreen('HOME');
         setActiveBottomTab('home');
       }
 
       if (isCloudSaved) {
-        Alert.alert('Success', '✅ Submission successfully uploaded to the Admin Database.');
+        Alert.alert('Success', `✅ Submission uploaded to the Admin Database.\n\nYour PDF is in Records — download it within ${REPORT_RETENTION_DAYS} days, after which it is permanently deleted.`);
       } else if (isOfflineSaved) {
         Alert.alert('Offline Mode', '⚠️ Saved Offline: Data cached locally. Will sync later.');
       }
@@ -3500,9 +3583,9 @@ export default function App() {
                             evidence: { status: 'CAPTURED ✓', validUntil, timestamp, location }
                           });
                           updateSectionState('evidence', { status: 'CAPTURED ✓', validUntil });
-                          setCurrentMobileScreen('MPCS_REVIEW');
+                          setCurrentMobileScreen('HOME');
                         }}
-                        onBack={() => setCurrentMobileScreen('MPCS_REVIEW')}
+                        onBack={() => setCurrentMobileScreen('HOME')}
                       activeTab="home"
                       onTabPress={(tab) => {
                         setActiveBottomTab(tab);
@@ -3537,9 +3620,9 @@ export default function App() {
                             salesRemarks
                           });
                           updateSectionState('sales', { status: 'COMPLETED ✓' });
-                          setCurrentMobileScreen('MPCS_REVIEW');
+                          setCurrentMobileScreen('HOME');
                         }}
-                        onBack={() => setCurrentMobileScreen('MPCS_REVIEW')}
+                        onBack={() => setCurrentMobileScreen('HOME')}
                       activeTab="home"
                       onTabPress={(tab) => {
                         setActiveBottomTab(tab);
@@ -3587,9 +3670,9 @@ export default function App() {
                             netSurplusDeficit: diff,
                           });
                           updateSectionState('business', { status: 'COMPLETED ✓' });
-                          setCurrentMobileScreen('MPCS_REVIEW');
+                          setCurrentMobileScreen('HOME');
                         }}
-                        onBack={() => setCurrentMobileScreen('MPCS_REVIEW')}
+                        onBack={() => setCurrentMobileScreen('HOME')}
                       activeTab="home"
                       onTabPress={(tab) => {
                         setActiveBottomTab(tab);
@@ -3644,7 +3727,7 @@ export default function App() {
                           updateSectionState('activities', { status: 'COMPLETED ✓' });
                           setCurrentMobileScreen('MPCS_REVIEW');
                         }}
-                        onBack={() => setCurrentMobileScreen('MPCS_REVIEW')}
+                        onBack={() => setCurrentMobileScreen('HOME')}
                       activeTab="home"
                       onTabPress={(tab) => {
                         setActiveBottomTab(tab);
@@ -3741,9 +3824,9 @@ export default function App() {
                         }}
                         onSaveNext={() => {
                           updateSectionState('loan', { status: 'COMPLETED ✓' });
-                          setCurrentMobileScreen('MPCS_REVIEW');
+                          setCurrentMobileScreen('HOME');
                         }}
-                        onBack={() => setCurrentMobileScreen('MPCS_REVIEW')}
+                        onBack={() => setCurrentMobileScreen('HOME')}
                         onOpenLoanSetup={() => {
                           // "Set it" is a Yes answer by itself — without this
                           // the Loan Setup screen (which no longer has its
@@ -3860,6 +3943,11 @@ export default function App() {
                   <MaterialIcons name="close" size={24} color={COLORS.emerald} />
                 </TouchableOpacity>
               </View>
+            </View>
+            <View style={{ backgroundColor: '#FEF3C7', paddingVertical: 8, paddingHorizontal: 14 }}>
+              <Text style={{ color: '#92400E', fontSize: 12, fontWeight: '600' }}>
+                Download this PDF now (Print / Save PDF). Stored reports are permanently deleted {REPORT_RETENTION_DAYS} days after submission.
+              </Text>
             </View>
             <iframe id="pdf-preview-frame" srcDoc={pdfPreviewHtml} style={{ flex: 1, border: 'none', width: '100%', height: '100%' }} />
           </SafeAreaView>

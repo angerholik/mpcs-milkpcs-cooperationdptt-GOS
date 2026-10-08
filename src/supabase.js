@@ -588,3 +588,39 @@ export async function saveMpcsCscTransaction(societyName, { transactionDate, ser
 export async function deleteMpcsCscTransaction(transactionId) {
   return deleteById('mpcs_csc_transactions', transactionId, 'deleteMpcsCscTransaction');
 }
+
+// ─── Stored report (one per society + month, auto-purged after 7 days) ─────
+// The purge-expired-reports edge function (daily pg_cron) deletes objects
+// whose last upload is older than 7 days; re-sealing a month overwrites the
+// same path, so there is never more than one stored report per record.
+export const REPORT_RETENTION_DAYS = 7;
+const reportPath = (society, month) => {
+  const safe = (s) => String(s || 'x').toLowerCase().replace(/[^a-z0-9]+/g, '_').slice(0, 80);
+  return `${safe(society)}/${safe(month)}.html`;
+};
+
+export async function saveReportHtml(society, month, html) {
+  try {
+    const { error } = await supabase.storage
+      .from('report-pdfs')
+      .upload(reportPath(society, month), new TextEncoder().encode(html), { contentType: 'text/html', upsert: true });
+    if (error) console.warn('Report save warning:', error.message);
+    return !error;
+  } catch (e) {
+    console.warn('Report save exception:', e);
+    return false;
+  }
+}
+
+// Returns the stored HTML, or null when it was never saved / has expired.
+export async function loadReportHtml(society, month) {
+  try {
+    const { data, error } = await supabase.storage.from('report-pdfs').createSignedUrl(reportPath(society, month), 60);
+    if (error || !data?.signedUrl) return null;
+    const res = await fetch(data.signedUrl);
+    return res.ok ? await res.text() : null;
+  } catch (e) {
+    console.warn('Report load exception:', e);
+    return null;
+  }
+}
