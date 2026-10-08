@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, Pressable, ScrollView, TextIn
 import { MaterialIcons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import ScreenHeader from './ScreenHeader';
+import InboxCard from './InboxCard';
 import { webCapWidth } from '../utils/webStyles';
 
 // Web-only: approximates the reference's mix-blend-mode: luminosity treatment
@@ -76,7 +77,10 @@ export default function MyInstitutionsScreen({
   onRemoveInstitution,
   onSelectSociety,
   onProceedToDashboard,
-  onLogout
+  onLogout,
+  inboxUnread = 0,
+  inboxLatest,
+  onOpenInbox,
 }) {
   const isCi = role === 'CI';
   const [modalVisible, setModalVisible] = useState(false);
@@ -188,6 +192,12 @@ export default function MyInstitutionsScreen({
           </Pressable>
         </View>
       </View>
+
+        {inboxUnread > 0 ? (
+          <View style={{ marginBottom: 14 }}>
+            <InboxCard unreadCount={inboxUnread} latest={inboxLatest} onPress={onOpenInbox} />
+          </View>
+        ) : null}
 
         {/* Add Institution CTA — CI only. ACI/PA cannot add institutions at
             all (they only ever act on institutions a CI assigned to them),

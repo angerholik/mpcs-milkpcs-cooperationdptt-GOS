@@ -516,8 +516,13 @@ export default function App() {
   // UI State
   const [isSealing, setIsSealing] = useState(false);
   const [toastMsg, setToastMsg] = useState(null);
-  const [activeAlert, setActiveAlert] = useState(null);
   const [alertHistory, setAlertHistory] = useState([]);
+  const [lastReadAlertAt, setLastReadAlertAt] = useState(null); // legacy "read up to" marker
+  const [readAlertIds, setReadAlertIds] = useState([]);
+  // Inbox: a message stays unread (and the Inbox card stays on screen) until it
+  // is opened or marked read; read state is per message and kept on the device.
+  const unreadAlerts = alertHistory.filter((m) => !readAlertIds.includes(m.id) && !(lastReadAlertAt && new Date(m.created_at) <= new Date(lastReadAlertAt)));
+  const activeAlert = unreadAlerts[0] || null;
 
   // Operational Ledger States
   const [reportingMonth, setReportingMonth] = useState(getCurrentMonthLabel());
@@ -1685,6 +1690,19 @@ export default function App() {
   useEffect(() => {
     getQueueStatus().then(setPendingSyncCount);
 
+    // Messages are kept on the device too, so the bulletin list still works
+    // offline and after the popup has been acknowledged.
+    (async () => {
+      try {
+        const cached = await AsyncStorage.getItem('@alert_history');
+        if (cached) setAlertHistory((prev) => (prev.length ? prev : JSON.parse(cached)));
+        const readAt = await AsyncStorage.getItem('@last_read_alert_at');
+        if (readAt) setLastReadAlertAt(readAt);
+        const ids = await AsyncStorage.getItem('@read_alert_ids');
+        if (ids) setReadAlertIds(JSON.parse(ids));
+      } catch (e) {}
+    })();
+
     const fetchAlerts = async () => {
         try {
             const { data, error } = await supabase
@@ -1695,11 +1713,7 @@ export default function App() {
             
             if (data && data.length > 0) {
                 setAlertHistory(data);
-                // Check if the latest alert is unread
-                const lastId = await AsyncStorage.getItem('@last_read_alert');
-                if (data[0].id !== lastId) {
-                    setActiveAlert(data[0]);
-                }
+                AsyncStorage.setItem('@alert_history', JSON.stringify(data)).catch(() => {});
             }
         } catch(e) {}
     };
@@ -1729,7 +1743,6 @@ export default function App() {
     const channel = supabase
       .channel('broadcast-channel')
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'broadcast_alerts' }, payload => {
-          setActiveAlert(payload.new);
           setAlertHistory(prev => [payload.new, ...prev]);
       })
       .subscribe();
@@ -1739,11 +1752,25 @@ export default function App() {
         clearInterval(interval);
         supabase.removeChannel(channel);
     };
-  }, [isSyncing]);
+  // Re-runs on login too, so a broadcast sent while the user was signed out is
+  // fetched immediately instead of up to 30s later.
+  }, [isSyncing, session?.user?.email]);
 
-  const dismissAlert = async (id) => {
-      await AsyncStorage.setItem('@last_read_alert', id);
-      setActiveAlert(null);
+  const persistReadIds = (ids) => AsyncStorage.setItem('@read_alert_ids', JSON.stringify(ids)).catch(() => {});
+  const markAlertRead = (id) => {
+    setReadAlertIds((prev) => {
+      if (prev.includes(id)) return prev;
+      const next = [...prev, id];
+      persistReadIds(next);
+      return next;
+    });
+  };
+  const markAllAlertsRead = () => {
+    setReadAlertIds((prev) => {
+      const next = Array.from(new Set([...prev, ...alertHistory.map((m) => m.id)]));
+      persistReadIds(next);
+      return next;
+    });
   };
 
   const captureImage = async () => {
@@ -2721,6 +2748,9 @@ export default function App() {
             <View style={styles.mobileShellWrapper}>
               <View style={styles.mobileDeviceFrame}>
                 <MyInstitutionsScreen
+                  inboxUnread={unreadAlerts.length}
+                  inboxLatest={activeAlert}
+                  onOpenInbox={() => setShowHistory(true)}
                   user={userProfile}
                   role={getUserRole()}
                   displayName={getUserDisplayName()}
@@ -2969,7 +2999,9 @@ export default function App() {
                         masterDataUpdated={masterDataTimestamps}
                         lastUpdated=""
                         activeAlert={activeAlert}
-                        onDismissAlert={dismissAlert}
+                        inboxUnread={unreadAlerts.length}
+                        inboxLatest={activeAlert}
+                        onOpenInbox={() => setShowHistory(true)}
                         selectedSociety={selectedSociety}
                         institutionsList={institutionsList}
                         onSelectSociety={handleSelectSociety}
@@ -3349,6 +3381,7 @@ export default function App() {
                           (activityItems.length > 0 ? 1 : 0)
                         }
                         totalCount={5}
+                        activitiesCount={activityItems.length}
                         evidenceStatus={
                           (sectionStates?.evidence?.validUntil && new Date() >= new Date(sectionStates.evidence.validUntil)) ? 'EXPIRED' : (sectionStates?.evidence?.status || 'NOT CAPTURED')
                         }
@@ -3361,7 +3394,9 @@ export default function App() {
                         masterDataUpdated={masterDataTimestamps}
                         lastUpdated=""
                         activeAlert={activeAlert}
-                        onDismissAlert={dismissAlert}
+                        inboxUnread={unreadAlerts.length}
+                        inboxLatest={activeAlert}
+                        onOpenInbox={() => setShowHistory(true)}
                         selectedSociety={selectedSociety}
                         institutionsList={institutionsList}
                         onSelectSociety={handleSelectSociety}
@@ -3721,29 +3756,45 @@ export default function App() {
               <View style={styles.bulletinBoard}>
                  <View style={styles.bulletinHeader}>
                     <View>
-                      <Text style={styles.bulletinTitle}>Station Bulletins</Text>
-                      <Text style={styles.bulletinSub}>Official HQ Directives Log</Text>
+                      <Text style={styles.bulletinTitle}>Inbox</Text>
+                      <Text style={styles.bulletinSub}>{unreadAlerts.length > 0 ? `${unreadAlerts.length} unread · Messages from HQ` : 'All caught up · Messages from HQ'}</Text>
                     </View>
-                    <TouchableOpacity onPress={() => setShowHistory(false)} style={styles.modalCloseBtn}>
-                       <MaterialIcons name="close" size={24} color={COLORS.emerald} />
-                    </TouchableOpacity>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
+                      {unreadAlerts.length > 0 && (
+                        <TouchableOpacity onPress={markAllAlertsRead}>
+                          <Text style={{ fontSize: 12, fontWeight: '800', color: '#7B1420' }}>Mark all read</Text>
+                        </TouchableOpacity>
+                      )}
+                      <TouchableOpacity onPress={() => setShowHistory(false)} style={styles.modalCloseBtn}>
+                         <MaterialIcons name="close" size={24} color="#7B1420" />
+                      </TouchableOpacity>
+                    </View>
                  </View>
                  <ScrollView style={{padding: 20}} showsVerticalScrollIndicator={false}>
                     {alertHistory.length === 0 ? (
                       <View style={{alignItems:'center', marginTop:100}}>
                         <MaterialIcons name="inventory" size={48} color="#E2E8F0" />
-                        <Text style={{textAlign:'center', color:'#94A3B8', marginTop:12, fontWeight:'600'}}>No departmental messages yet.</Text>
+                        <Text style={{textAlign:'center', color:'#94A3B8', marginTop:12, fontWeight:'600'}}>No messages from HQ yet.</Text>
                       </View>
                     ) : (
-                      alertHistory.map((item, idx) => (
-                         <View key={idx} style={styles.bulletinItem}>
-                            <View style={styles.bulletinMeta}>
-                               <Text style={styles.bulletinTime}>{new Date(item.created_at).toLocaleDateString('en-IN', {day:'numeric', month:'short', hour:'2-digit', minute:'2-digit'})}</Text>
-                               {idx === 0 && <View style={styles.newBadge}><Text style={styles.newBadgeText}>NEW</Text></View>}
-                            </View>
-                            <Text style={styles.bulletinMsg}>{item.message}</Text>
-                         </View>
-                      ))
+                      alertHistory.map((item, idx) => {
+                         const unread = unreadAlerts.some((m) => m.id === item.id);
+                         return (
+                           <TouchableOpacity
+                             key={item.id || idx}
+                             activeOpacity={0.85}
+                             onPress={() => markAlertRead(item.id)}
+                             style={[styles.bulletinItem, unread && { backgroundColor: '#FFFFFF', borderColor: '#7B1420', borderLeftWidth: 4 }, !unread && { opacity: 0.8 }]}
+                           >
+                              <View style={styles.bulletinMeta}>
+                                 <Text style={styles.bulletinTime}>{new Date(item.created_at).toLocaleString('en-IN', {day:'numeric', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit'})}</Text>
+                                 {unread && <View style={styles.newBadge}><Text style={styles.newBadgeText}>UNREAD</Text></View>}
+                              </View>
+                              <Text style={[styles.bulletinMsg, unread && { fontWeight: '700', color: '#0F172A' }]}>{item.message}</Text>
+                              {unread && <Text style={{ marginTop: 8, fontSize: 11, color: '#94A3B8', fontWeight: '600' }}>Tap to mark as read</Text>}
+                           </TouchableOpacity>
+                         );
+                      })
                     )}
                     <View style={{height:40}} />
                  </ScrollView>
@@ -4592,7 +4643,7 @@ const styles = StyleSheet.create({
   bulletinTitle: {
     fontSize: 20,
     fontWeight: '900',
-    color: COLORS.emerald,
+    color: '#7B1420',
   },
   bulletinSub: {
     fontSize: 11,
@@ -4602,7 +4653,7 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
   },
   bulletinItem: {
-    backgroundColor: '#F8F5F2',
+    backgroundColor: '#F8FAFC',
     padding: 16,
     borderRadius: 16,
     marginBottom: 12,

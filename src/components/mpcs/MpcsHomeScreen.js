@@ -5,6 +5,7 @@ import { webCapWidth } from '../../utils/webStyles';
 import BottomNav from '../BottomNav';
 import PressScale from '../PressScale';
 import HomeShortcuts from '../HomeShortcuts';
+import InboxCard from '../InboxCard';
 import ScreenHeader from '../ScreenHeader';
 import { getMpcsDailyTransactions, getMpcsCscTransactions } from '../../supabase';
 
@@ -115,6 +116,7 @@ const PARAM_STYLE = {
   MPCS_SALES: { icon: 'wallet-outline', bg: COLORS.emerald50, border: COLORS.emerald200, fg: COLORS.emerald600 },
   MPCS_BUSINESS: { icon: 'chart-bar', bg: COLORS.emerald50, border: COLORS.emerald200, fg: COLORS.emerald600 },
   MPCS_LOAN_STATUS: { icon: 'bank-outline', bg: COLORS.slate100, border: 'rgba(226,232,240,0.8)', fg: COLORS.slate500 },
+  MPCS_ACTIVITIES: { icon: 'format-list-checks', bg: COLORS.sky50, border: COLORS.sky100, fg: COLORS.sky700 },
 };
 
 // Same 2.5s ease-in-out pulse as the reference's `animate-pulse-subtle`
@@ -153,8 +155,12 @@ export default function HomeScreen({
   businessStatus = "NOT COMPLETED",
   loanIsActive = false,
   loanStatus = "NOT APPLICABLE",
+  activitiesCount = 0,
   masterDataUpdated = {},
   activeAlert,
+  inboxUnread = 0,
+  inboxLatest,
+  onOpenInbox,
   selectedSociety,
   onNavigateScreen,
   onManageInstitutions,
@@ -212,13 +218,19 @@ export default function HomeScreen({
     setLedgersRefreshing(false);
   };
 
+  const loanPending = loanIsActive && !loanStatus?.startsWith('COMPLETED');
+  const activitiesDone = activitiesCount > 0;
   const nextAction = (!isEvidenceCaptured(evidenceStatus) && !evidenceStatus?.includes('Valid'))
     ? { icon: 'camera-outline', title: 'Digital Evidence', desc: 'Capture geo-tagged live photo & premises snapshot required for physical verification.', screen: 'MPCS_EVIDENCE', id: 'MPCS_EVIDENCE' }
     : !salesStatus?.startsWith('COMPLETED')
       ? { icon: 'wallet-outline', title: 'Monthly Sales / Deposit', desc: 'Record daily sales and verify bank deposits.', screen: 'MPCS_SALES', id: 'MPCS_SALES' }
       : !businessStatus?.startsWith('COMPLETED')
         ? { icon: 'chart-bar', title: 'Business Performance', desc: 'Record gross income and operational expenditure.', screen: 'MPCS_BUSINESS', id: 'MPCS_BUSINESS' }
-        : { icon: 'file-check-outline', title: 'Review & Submit Return', desc: 'All monthly parameters are ready for final submission.', screen: 'MPCS_REVIEW', id: 'MPCS_REVIEW' };
+        : loanPending
+          ? { icon: 'bank-outline', title: 'Loan Status', desc: "Report this month's loan recovery.", screen: 'MPCS_LOAN_STATUS', id: 'MPCS_LOAN_STATUS' }
+          : !activitiesDone
+            ? { icon: 'format-list-checks', title: 'Activities & Events', desc: 'Log meetings, trainings and events held this month.', screen: 'MPCS_ACTIVITIES', id: 'MPCS_ACTIVITIES' }
+            : { icon: 'file-check-outline', title: 'Review & Submit Return', desc: 'All monthly parameters are ready for final submission.', screen: 'MPCS_REVIEW', id: 'MPCS_REVIEW' };
   const nextActionStyle = PARAM_STYLE[nextAction.id] || { bg: COLORS.brand50, border: COLORS.brand100, fg: COLORS.brand700 };
 
   const monthlyParams = [
@@ -226,6 +238,7 @@ export default function HomeScreen({
     { id: 'MPCS_SALES', title: 'Sales & Deposit', desc: 'Ledger & accounts reconciled', done: salesStatus?.startsWith('COMPLETED'), na: false },
     { id: 'MPCS_BUSINESS', title: 'Business Performance', desc: 'Gross income & expenditure', done: businessStatus?.startsWith('COMPLETED'), na: false },
     { id: 'MPCS_LOAN_STATUS', title: 'Loan Status', desc: loanIsActive ? 'Awaiting credit sign-off' : 'No active loan', done: loanIsActive && loanStatus?.startsWith('COMPLETED'), na: !loanIsActive },
+    { id: 'MPCS_ACTIVITIES', title: 'Activities & Events', desc: activitiesDone ? `${activitiesCount} ${activitiesCount === 1 ? 'entry' : 'entries'} logged` : 'Meetings, trainings and events', done: activitiesDone, na: false },
   ];
 
 
@@ -266,6 +279,8 @@ export default function HomeScreen({
 
       <ScrollView style={styles.scrollContent} contentContainerStyle={[styles.scrollInner, webCapWidth]} showsVerticalScrollIndicator={false}>
 
+        <InboxCard unreadCount={inboxUnread} latest={inboxLatest} onPress={onOpenInbox} />
+
         <HomeShortcuts
           items={[
             { title: 'Master data', sub: `${['instProfile', 'demographics', 'compliance', 'financials', 'dividend', 'shareCapital', 'loan', 'csc'].filter((k) => masterDataUpdated[k]).length} of 8 recorded`, icon: 'database-cog-outline', bg: COLORS.brand50, border: COLORS.brand100, fg: COLORS.brand700, onPress: () => onNavigateScreen && onNavigateScreen('MPCS_MASTER_DATA') },
@@ -273,17 +288,6 @@ export default function HomeScreen({
           ]}
         />
 
-        {alertVisible && activeAlert ? (
-          <View style={styles.alertCard}>
-            <View style={styles.alertIconBox}>
-              <MaterialCommunityIcons name="alert-outline" size={16} color={COLORS.amber800} />
-            </View>
-            <Text style={styles.alertText}>{activeAlert?.message || activeAlert?.text}</Text>
-            <Pressable onPress={() => setAlertVisible(false)} hitSlop={8} style={styles.alertCloseBtn}>
-              <MaterialCommunityIcons name="close" size={16} color={COLORS.amber800} />
-            </Pressable>
-          </View>
-        ) : null}
 
           <>
             <View style={styles.card}>

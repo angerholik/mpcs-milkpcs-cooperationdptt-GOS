@@ -5,6 +5,7 @@ import { webCapWidth } from '../utils/webStyles';
 import BottomNav from './BottomNav';
 import PressScale from './PressScale';
 import HomeShortcuts from './HomeShortcuts';
+import InboxCard from './InboxCard';
 import ScreenHeader from './ScreenHeader';
 
 // Milk PCS Home — same layout and tokens as MpcsHomeScreen so both modules
@@ -133,6 +134,9 @@ export default function HomeScreen({
   loanIsActive = false,
   masterDataUpdated = {},
   activeAlert,
+  inboxUnread = 0,
+  inboxLatest,
+  onOpenInbox,
   selectedSociety,
   onManageInstitutions,
   onNavigateScreen,
@@ -199,6 +203,8 @@ export default function HomeScreen({
 
       <ScrollView style={styles.scrollContent} contentContainerStyle={[styles.scrollInner, webCapWidth]} showsVerticalScrollIndicator={false}>
 
+        <InboxCard unreadCount={inboxUnread} latest={inboxLatest} onPress={onOpenInbox} />
+
         <HomeShortcuts
           items={[
             { title: 'Master data', sub: `${['instProfile', 'complianceAudit', 'demographics', 'loanSetup'].filter((k) => masterDataUpdated[k]).length} of 4 recorded`, icon: 'database-cog-outline', bg: COLORS.brand50, border: COLORS.brand100, fg: COLORS.brand700, onPress: () => onNavigateScreen && onNavigateScreen('MILK_MASTER_DATA') },
@@ -206,17 +212,6 @@ export default function HomeScreen({
           ]}
         />
 
-        {alertVisible && activeAlert ? (
-          <View style={styles.alertCard}>
-            <View style={styles.alertIconBox}>
-              <MaterialCommunityIcons name="alert-outline" size={16} color={COLORS.amber800} />
-            </View>
-            <Text style={styles.alertText}>{activeAlert?.message || activeAlert?.text}</Text>
-            <Pressable onPress={() => setAlertVisible(false)} hitSlop={8} style={styles.alertCloseBtn}>
-              <MaterialCommunityIcons name="close" size={16} color={COLORS.amber800} />
-            </Pressable>
-          </View>
-        ) : null}
 
           <>
             <View style={styles.card}>
