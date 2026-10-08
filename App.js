@@ -716,6 +716,33 @@ export default function App() {
   // always resolves to undefined and silently falls back to a generic
   // placeholder, which then can never match this officer's real name in
   // reconstructInstitutionsFromCloud's name-based lookup.
+  // Progress counts only tasks that apply: Loan Status is excluded entirely
+  // (not counted as done) while the society has no active loan, so a fresh
+  // month starts at 0%, not at an automatic 20%/25%.
+  const milkProgress = () => {
+    const loanActive = !!(masterHasLoan && !masterLoanCleared);
+    const s = milkSectionStates;
+    const done =
+      (((s?.evidence?.status?.includes('CAPTURED') && !s?.evidence?.status?.includes('NOT')) || s?.evidence?.status?.includes('Valid')) ? 1 : 0) +
+      (s?.operations?.status?.includes('COMPLETED') ? 1 : 0) +
+      ((s?.activities?.status?.includes('ENTRIES') || s?.activities?.status?.includes('COMPLETED')) ? 1 : 0) +
+      ((loanActive && s?.compliance?.status?.includes('COMPLETED')) ? 1 : 0);
+    const total = 3 + (loanActive ? 1 : 0);
+    return { done, total, percent: Math.round((done / total) * 100) };
+  };
+  const mpcsProgress = () => {
+    const loanActive = !!(loanData?.hasLoan && !loanData?.loanCleared);
+    const s = sectionStates;
+    const done =
+      (((s?.evidence?.status?.includes('CAPTURED') && !s?.evidence?.status?.includes('NOT')) || s?.evidence?.status?.includes('Valid')) ? 1 : 0) +
+      (s?.sales?.status?.startsWith('COMPLETED') ? 1 : 0) +
+      (s?.business?.status?.startsWith('COMPLETED') ? 1 : 0) +
+      (activityItems.length > 0 ? 1 : 0) +
+      ((loanActive && s?.loan?.status?.startsWith('COMPLETED')) ? 1 : 0);
+    const total = 4 + (loanActive ? 1 : 0);
+    return { done, total, percent: Math.round((done / total) * 100) };
+  };
+
   const getUserDisplayName = () => {
     return userProfile?.user_metadata?.fullName || userProfile?.user_metadata?.inspectorName || userProfile?.fullName || officerRegistryName || '';
   };
@@ -2999,21 +3026,9 @@ export default function App() {
                         selectedSociety={selectedSociety}
                         reportingMonth={reportingMonth || ''}
                         reportStatus={((milkSectionStates?.evidence?.status?.includes('CAPTURED') && !milkSectionStates?.evidence?.status?.includes('NOT')) && milkSectionStates?.operations?.status?.includes('COMPLETED') && (milkSectionStates?.activities?.status?.includes('ENTRIES') || milkSectionStates?.activities?.status?.includes('COMPLETED')) && (!(masterHasLoan && !masterLoanCleared) || milkSectionStates?.compliance?.status?.includes('COMPLETED'))) ? 'MONTHLY PARAMS OK' : 'DRAFT'}
-                        progressPercent={
-                          Math.round(
-                            ((((milkSectionStates?.evidence?.status?.includes('CAPTURED') && !milkSectionStates?.evidence?.status?.includes('NOT')) || milkSectionStates?.evidence?.status?.includes('Valid')) ? 25 : 0) +
-                            (milkSectionStates?.operations?.status?.includes('COMPLETED') ? 25 : 0) +
-                            ((milkSectionStates?.activities?.status?.includes('ENTRIES') || milkSectionStates?.activities?.status?.includes('COMPLETED')) ? 25 : 0) +
-                            (!(masterHasLoan && !masterLoanCleared) || milkSectionStates?.compliance?.status?.includes('COMPLETED') ? 25 : 0))
-                          )
-                        }
-                        completedCount={
-                          (((milkSectionStates?.evidence?.status?.includes('CAPTURED') && !milkSectionStates?.evidence?.status?.includes('NOT')) || milkSectionStates?.evidence?.status?.includes('Valid')) ? 1 : 0) +
-                          (milkSectionStates?.operations?.status?.includes('COMPLETED') ? 1 : 0) +
-                          ((milkSectionStates?.activities?.status?.includes('ENTRIES') || milkSectionStates?.activities?.status?.includes('COMPLETED')) ? 1 : 0) +
-                          ((!(masterHasLoan && !masterLoanCleared) || milkSectionStates?.compliance?.status?.includes('COMPLETED')) ? 1 : 0)
-                        }
-                        totalCount={4}
+                        progressPercent={milkProgress().percent}
+                        completedCount={milkProgress().done}
+                        totalCount={milkProgress().total}
                         evidenceStatus={(milkSectionStates?.evidence?.validUntil && new Date() >= new Date(milkSectionStates.evidence.validUntil)) ? 'EXPIRED' : (milkSectionStates?.evidence?.status || 'NOT CAPTURED')}
                         operationsStatus={milkSectionStates?.operations?.status || 'NOT STARTED'}
                         activitiesStatus={milkSectionStates?.activities?.status || 'NOT STARTED'}
@@ -3387,24 +3402,10 @@ export default function App() {
                         district={selectedSociety?.district || district || ''}
                         reportingMonth={reportingMonth || ''}
                         reportStatus={((sectionStates?.evidence?.status?.includes('CAPTURED') && !sectionStates?.evidence?.status?.includes('NOT')) && sectionStates?.sales?.status?.startsWith('COMPLETED') && sectionStates?.business?.status?.startsWith('COMPLETED')) ? 'MONTHLY PARAMS OK' : 'DRAFT'}
-                        progressPercent={
-                          Math.round(
-                            (((((sectionStates?.evidence?.status?.includes('CAPTURED') && !sectionStates?.evidence?.status?.includes('NOT')) || sectionStates?.evidence?.status?.includes('Valid')) ? 1 : 0) +
-                            (sectionStates?.sales?.status?.startsWith('COMPLETED') ? 1 : 0) +
-                            (sectionStates?.business?.status?.startsWith('COMPLETED') ? 1 : 0) +
-                            (!(loanData?.hasLoan && !loanData?.loanCleared) || sectionStates?.loan?.status?.startsWith('COMPLETED') ? 1 : 0) +
-                            (activityItems.length > 0 ? 1 : 0)) / 5) * 100
-                          )
-                        }
                         hasSubmittedMonthlyParams={false} // Disable global lock
-                        completedCount={
-                          (((sectionStates?.evidence?.status?.includes('CAPTURED') && !sectionStates?.evidence?.status?.includes('NOT')) || sectionStates?.evidence?.status?.includes('Valid')) ? 1 : 0) +
-                          (sectionStates?.sales?.status?.startsWith('COMPLETED') ? 1 : 0) +
-                          (sectionStates?.business?.status?.startsWith('COMPLETED') ? 1 : 0) +
-                          ((!(loanData?.hasLoan && !loanData?.loanCleared) || sectionStates?.loan?.status?.startsWith('COMPLETED')) ? 1 : 0) +
-                          (activityItems.length > 0 ? 1 : 0)
-                        }
-                        totalCount={5}
+                        progressPercent={mpcsProgress().percent}
+                        completedCount={mpcsProgress().done}
+                        totalCount={mpcsProgress().total}
                         activitiesCount={activityItems.length}
                         evidenceStatus={
                           (sectionStates?.evidence?.validUntil && new Date() >= new Date(sectionStates.evidence.validUntil)) ? 'EXPIRED' : (sectionStates?.evidence?.status || 'NOT CAPTURED')

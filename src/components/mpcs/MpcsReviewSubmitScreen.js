@@ -98,8 +98,10 @@ export default function MpcsReviewSubmitScreen({
     },
   ];
 
-  const completedCount = sections.filter(sec => sec.isComplete).length;
-  const totalCount = sections.length;
+  // Loan status doesn't apply (and isn't counted) when there is no active loan.
+  const counted = sections.filter(sec => !(sec.screenKey === 'MPCS_LOAN_STATUS' && !loanIsActive));
+  const completedCount = counted.filter(sec => sec.isComplete).length;
+  const totalCount = counted.length;
   const allSectionsComplete = completedCount === totalCount;
   const pendingCount = totalCount - completedCount;
 
@@ -145,7 +147,7 @@ export default function MpcsReviewSubmitScreen({
           </View>
         </View>
         <View style={styles.segmentRow}>
-          {sections.map((_, i) => (
+          {counted.map((_, i) => (
             <View key={i} style={[styles.segment, i < completedCount && styles.segmentDone]} />
           ))}
         </View>
