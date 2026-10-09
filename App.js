@@ -34,6 +34,7 @@ import ActivitiesScreen from './src/components/ActivitiesScreen';
 import ProfileSummaryScreen from './src/components/ProfileSummaryScreen';
 import ComplianceScreen from './src/components/ComplianceScreen';
 import ReviewSubmitScreen from './src/components/ReviewSubmitScreen';
+import { downloadHtmlAsPdf } from './src/utils/htmlToPdf';
 import RecordsScreen from './src/components/RecordsScreen';
 import MoreScreen from './src/components/MoreScreen';
 import SyncStatusScreen from './src/components/SyncStatusScreen';
@@ -3931,9 +3932,10 @@ export default function App() {
               <View style={{ flexDirection: 'row', gap: 10 }}>
                 <TouchableOpacity
                   style={styles.pdfPreviewPrintBtn}
-                  onPress={() => {
+                  onPress={async () => {
                     const frame = document.getElementById('pdf-preview-frame');
-                    if (frame?.contentWindow) frame.contentWindow.print();
+                    const ok = await downloadHtmlAsPdf(pdfPreviewHtml, 'CORE-Monthly-Report.pdf', frame);
+                    if (!ok) frame?.contentWindow?.print();
                   }}
                 >
                   <MaterialIcons name="print" size={18} color={COLORS.emerald} />

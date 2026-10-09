@@ -1,3 +1,4 @@
+import { downloadHtmlAsPdf } from '../utils/htmlToPdf';
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, Platform, ActivityIndicator } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
@@ -280,11 +281,13 @@ export default function RecordsScreen({
         </html>`;
 
       if (Platform.OS === 'web') {
-        const printWin = window.open('', '_blank');
-        if (printWin) {
-          printWin.document.write(htmlContent);
-          printWin.document.close();
-          setTimeout(() => { printWin.focus(); printWin.print(); }, 300);
+        if (!(await downloadHtmlAsPdf(htmlContent, 'CORE-Records.pdf'))) {
+          const printWin = window.open('', '_blank');
+          if (printWin) {
+            printWin.document.write(htmlContent);
+            printWin.document.close();
+            setTimeout(() => { printWin.focus(); printWin.print(); }, 300);
+          }
         }
       } else {
         const printResult = await Print.printToFileAsync({ html: htmlContent });
