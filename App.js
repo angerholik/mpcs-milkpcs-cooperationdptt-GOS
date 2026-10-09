@@ -3933,9 +3933,8 @@ export default function App() {
                 <TouchableOpacity
                   style={styles.pdfPreviewPrintBtn}
                   onPress={async () => {
-                    const frame = document.getElementById('pdf-preview-frame');
-                    const ok = await downloadHtmlAsPdf(pdfPreviewHtml, 'CORE-Monthly-Report.pdf', frame);
-                    if (!ok) frame?.contentWindow?.print();
+                    const ok = await downloadHtmlAsPdf(pdfPreviewHtml, 'CORE-Monthly-Report.pdf');
+                    if (!ok) document.getElementById('pdf-preview-frame')?.contentWindow?.print();
                   }}
                 >
                   <MaterialIcons name="print" size={18} color={COLORS.emerald} />
