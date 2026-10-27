@@ -1002,6 +1002,8 @@ function useSocietyMembers(societyName, societyType) {
 
 // Per-member data-quality checks, so the admin can see at a glance which roster
 // entries look incomplete or suspicious instead of reading every row.
+// The app stores SHA-256('') when a member has no Aadhaar (the column is NOT NULL).
+const EMPTY_AADHAAR_HASH = 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855';
 function memberIssues(m) {
   const issues = [];
   const name = (m.member_name || '').trim();
@@ -1009,7 +1011,7 @@ function memberIssues(m) {
   const mobile = (m.mobile_number || '').replace(/\D/g, '');
   if (!mobile) issues.push('No mobile');
   else if (!/^[6-9]\d{9}$/.test(mobile.slice(-10)) || mobile.length < 10) issues.push('Invalid mobile');
-  if (!m.aadhaar_hash) issues.push('No Aadhaar');
+  if (!m.aadhaar_hash || m.aadhaar_hash === EMPTY_AADHAAR_HASH) issues.push('No Aadhaar');
   if (!m.ward_name) issues.push('No ward');
   return issues;
 }
