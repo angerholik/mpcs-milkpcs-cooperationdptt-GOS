@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { View, Text, StyleSheet, TextInput, ScrollView, Platform, Pressable, ActivityIndicator, Alert } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import BottomNav from '../BottomNav';
@@ -69,6 +69,8 @@ export default function MpcsMembersScreen({
   const [search, setSearch] = useState('');
   const [form, setForm] = useState(emptyForm);
   const [editingId, setEditingId] = useState(null);
+  const scrollRef = useRef(null);
+  const formYRef = useRef(0);
   const [resolvingMember, setResolvingMember] = useState(null);
   const [resolutionNote, setResolutionNote] = useState('');
   const [resolving, setResolving] = useState(false);
@@ -134,6 +136,8 @@ export default function MpcsMembersScreen({
       wardName: m.ward_name || '',
       address: m.address || '',
     });
+    // Bring the edit form into view — it sits below the whole member list.
+    setTimeout(() => scrollRef.current?.scrollTo({ y: Math.max(formYRef.current - 12, 0), animated: true }), 50);
   };
 
   const handleCancelEdit = () => {
@@ -189,6 +193,7 @@ export default function MpcsMembersScreen({
       />
 
       <ScrollView
+        ref={scrollRef}
         style={styles.scrollContent}
         contentContainerStyle={[styles.scrollInner, webCapWidth]}
         showsVerticalScrollIndicator={false}
@@ -261,7 +266,7 @@ export default function MpcsMembersScreen({
           </>
         )}
 
-        <Text style={styles.sectionLabel}>{editingId ? 'EDIT MEMBER' : 'ADD MEMBER SHEET'}</Text>
+        <Text style={styles.sectionLabel} onLayout={(e) => { formYRef.current = e.nativeEvent.layout.y; }}>{editingId ? 'EDIT MEMBER' : 'ADD MEMBER SHEET'}</Text>
         <View style={styles.card}>
           <View style={styles.fieldGroup}>
             <Text style={styles.fieldLabel}>Full name</Text>
