@@ -188,9 +188,14 @@ export async function saveMilkPcsSubmission(params) {
         query = query.eq('reporting_month', cleanMonth);
       }
 
-      const { data: existingRows } = await query
+      const { data: existingRows, error: lookupError } = await query
         .order('created_at', { ascending: false })
         .limit(1);
+      // A failed lookup is not "no record" — inserting here made duplicate rows.
+      if (lookupError) {
+        console.error('[CORE] Milk existing-record lookup failed, not inserting:', lookupError.message);
+        return { data: null, error: lookupError };
+      }
 
       if (existingRows && existingRows.length > 0) {
         existingId = existingRows[0].id;
@@ -301,32 +306,30 @@ export async function saveMpcsSubmission(formData) {
     const cleanSociety = (row.society_name || '').trim();
     const cleanRegNo = (row.registration_number || '').trim();
     let existingId = null;
+    const hasRegNo = !!cleanRegNo && cleanRegNo !== 'N/A' && cleanRegNo.length > 3;
+    const hasName = !!cleanSociety && cleanSociety !== 'MPCS Society';
 
-    if (cleanRegNo && cleanRegNo !== 'N/A' && cleanRegNo.length > 3) {
-      const { data: existingRows } = await supabase
-        .from('mpcs_submissions')
-        .select('id')
-        .eq('registration_number', cleanRegNo)
-        .order('created_at', { ascending: false })
-        .limit(1);
-
-      if (existingRows && existingRows.length > 0) {
-        existingId = existingRows[0].id;
-      }
+    // A failed lookup must NOT be read as "no record exists" — that used to
+    // insert a duplicate row for the same society/month whenever a request
+    // blipped. Return the error instead; callers queue the save for retry.
+    const byName = hasName
+      ? await supabase.from('mpcs_submissions').select('id, registration_number').ilike('society_name', cleanSociety).order('created_at', { ascending: false }).limit(20)
+      : { data: [], error: null };
+    const byReg = hasRegNo
+      ? await supabase.from('mpcs_submissions').select('id').eq('registration_number', cleanRegNo).order('created_at', { ascending: false }).limit(1)
+      : { data: [], error: null };
+    const lookupError = byName.error || byReg.error;
+    if (lookupError) {
+      console.error('[CORE] MPCS existing-record lookup failed, not inserting:', lookupError.message);
+      return { data: null, error: lookupError };
     }
-
-    if (!existingId && cleanSociety && cleanSociety !== 'MPCS Society') {
-      const { data: existingRows } = await supabase
-        .from('mpcs_submissions')
-        .select('id')
-        .ilike('society_name', cleanSociety)
-        .order('created_at', { ascending: false })
-        .limit(1);
-
-      if (existingRows && existingRows.length > 0) {
-        existingId = existingRows[0].id;
-      }
-    }
+    // Prefer the row matching name AND registration number, then registration
+    // number alone, then the newest row for the name. A first save made before
+    // the registration number existed is stored as 'N/A', so the name match is
+    // what lets the later save with the real number update that row.
+    const nameRows = byName.data || [];
+    const regId = byReg.data?.[0]?.id;
+    existingId = nameRows.find(r => r.id === regId)?.id || regId || nameRows[0]?.id || null;
 
     let data, error;
     if (existingId) {
