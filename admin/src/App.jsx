@@ -985,7 +985,7 @@ function useSocietyMembers(societyName, societyType) {
     setLoading(true);
     supabase
       .from('member_registry')
-      .select('id, member_name, mobile_number, ward_name, address, created_at')
+      .select('id, member_name, mobile_number, ward_name, address, created_at, aadhaar_hash, flagged, flag_reason')
       .eq('society_type', societyType)
       .ilike('society_name', societyName.trim())
       .order('created_at', { ascending: false })
@@ -1000,23 +1000,91 @@ function useSocietyMembers(societyName, societyType) {
   return { members, loading };
 }
 
+// Per-member data-quality checks, so the admin can see at a glance which roster
+// entries look incomplete or suspicious instead of reading every row.
+function memberIssues(m) {
+  const issues = [];
+  const name = (m.member_name || '').trim();
+  if (name.length < 3 || /\d/.test(name)) issues.push('Check name');
+  const mobile = (m.mobile_number || '').replace(/\D/g, '');
+  if (!mobile) issues.push('No mobile');
+  else if (!/^[6-9]\d{9}$/.test(mobile.slice(-10)) || mobile.length < 10) issues.push('Invalid mobile');
+  if (!m.aadhaar_hash) issues.push('No Aadhaar');
+  if (!m.ward_name) issues.push('No ward');
+  return issues;
+}
+
 function MemberRosterSection({ members, loading }) {
+  const [q, setQ] = useState('');
+  const [onlyIssues, setOnlyIssues] = useState(false);
+  const [showAll, setShowAll] = useState(false);
   if (loading) return <div style={{fontSize:'12px', color:'#94A3B8'}}>Loading members…</div>;
   if (!members || members.length === 0) {
     return <div style={{fontSize:'12px', color:'#94A3B8', fontStyle:'italic'}}>No members registered yet.</div>;
   }
+  const rows = members.map(m => ({ m, issues: memberIssues(m) }));
+  const complete = rows.filter(r => r.issues.length === 0).length;
+  const flagged = rows.filter(r => r.m.flagged).length;
+  const needle = q.trim().toLowerCase();
+  const filtered = rows.filter(({ m, issues }) =>
+    (!onlyIssues || issues.length > 0 || m.flagged) &&
+    (!needle || [m.member_name, m.ward_name, m.mobile_number, m.address].some(v => (v || '').toLowerCase().includes(needle))));
+  const LIMIT = 8;
+  const visible = showAll || needle ? filtered : filtered.slice(0, LIMIT);
+  const chip = (bg, fg, text, key) => (
+    <span key={key} style={{fontSize:'10px', fontWeight:700, padding:'2px 7px', borderRadius:'10px', background:bg, color:fg, whiteSpace:'nowrap'}}>{text}</span>
+  );
+  const stat = (label, value, color) => (
+    <div style={{flex:'1 1 90px', padding:'10px 12px', background:'#F8FAFC', border:'1px solid #E2E8F0', borderRadius:'10px'}}>
+      <div style={{fontSize:'18px', fontWeight:800, color}}>{value}</div>
+      <div style={{fontSize:'10px', fontWeight:700, color:'#64748B', textTransform:'uppercase', letterSpacing:'0.5px'}}>{label}</div>
+    </div>
+  );
   return (
-    <div style={{display:'flex', flexDirection:'column', gap:'8px'}}>
-      {members.map(m => (
-        <div key={m.id} style={{display:'flex', justifyContent:'space-between', alignItems:'flex-start', gap:'12px', padding:'10px 12px', background:'#F8FAFC', borderRadius:'8px', border:'1px solid #E2E8F0'}}>
-          <div style={{minWidth:0}}>
-            <div style={{fontWeight:800, fontSize:'13px', color:'#0F172A'}}>{m.member_name}</div>
-            <div style={{fontSize:'11px', color:'#64748B', marginTop:'2px'}}>{[m.ward_name, m.mobile_number].filter(Boolean).join(' · ') || '—'}</div>
-            {m.address && <div style={{fontSize:'11px', color:'#94A3B8', marginTop:'2px'}}>{m.address}</div>}
-          </div>
-          <div style={{fontSize:'10px', color:'#94A3B8', whiteSpace:'nowrap'}}>{m.created_at ? new Date(m.created_at).toLocaleDateString('en-IN') : ''}</div>
+    <div>
+      <div style={{display:'flex', gap:'8px', flexWrap:'wrap', marginBottom:'12px'}}>
+        {stat('Members', members.length, '#0F172A')}
+        {stat('Complete', complete, '#15803D')}
+        {stat('Need review', members.length - complete, members.length - complete ? '#B45309' : '#15803D')}
+        {flagged > 0 && stat('Flagged', flagged, '#B91C1C')}
+      </div>
+      <div style={{display:'flex', gap:'8px', marginBottom:'10px', flexWrap:'wrap'}}>
+        <input value={q} onChange={e => setQ(e.target.value)} placeholder="Search name, ward, mobile…"
+          style={{flex:'1 1 200px', padding:'8px 12px', fontSize:'12px', border:'1px solid #E2E8F0', borderRadius:'8px', outline:'none'}} />
+        <button type="button" onClick={() => setOnlyIssues(v => !v)}
+          style={{padding:'8px 12px', fontSize:'12px', fontWeight:700, borderRadius:'8px', cursor:'pointer',
+            border:'1px solid ' + (onlyIssues ? '#B45309' : '#E2E8F0'), background: onlyIssues ? '#FFF7ED' : '#fff', color: onlyIssues ? '#B45309' : '#475569'}}>
+          Needs review only
+        </button>
+      </div>
+      <div style={{border:'1px solid #E2E8F0', borderRadius:'10px', overflow:'hidden'}}>
+        <div style={{display:'grid', gridTemplateColumns:'28px 1.4fr 1fr 1fr 1.3fr 80px', gap:'8px', padding:'8px 12px', background:'#F1F5F9', fontSize:'10px', fontWeight:800, color:'#64748B', textTransform:'uppercase', letterSpacing:'0.5px'}}>
+          <span>#</span><span>Member</span><span>Ward</span><span>Mobile</span><span>Checks</span><span style={{textAlign:'right'}}>Added</span>
         </div>
-      ))}
+        {visible.length === 0 && <div style={{padding:'14px', fontSize:'12px', color:'#94A3B8', fontStyle:'italic'}}>No members match.</div>}
+        {visible.map(({ m, issues }, i) => (
+          <div key={m.id} style={{display:'grid', gridTemplateColumns:'28px 1.4fr 1fr 1fr 1.3fr 80px', gap:'8px', alignItems:'center', padding:'9px 12px', borderTop:'1px solid #EEF2F6', fontSize:'12px', background: m.flagged ? '#FEF2F2' : '#fff'}}>
+            <span style={{color:'#94A3B8'}}>{i + 1}</span>
+            <div style={{minWidth:0}}>
+              <div style={{fontWeight:800, color:'#0F172A', overflow:'hidden', textOverflow:'ellipsis'}}>{m.member_name || '—'}</div>
+              {m.address && <div style={{fontSize:'10px', color:'#94A3B8', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap'}}>{m.address}</div>}
+            </div>
+            <span style={{color:'#475569'}}>{m.ward_name || '—'}</span>
+            <span style={{color:'#475569'}}>{m.mobile_number || '—'}</span>
+            <div style={{display:'flex', gap:'4px', flexWrap:'wrap'}}>
+              {m.flagged && chip('#FEE2E2', '#B91C1C', m.flag_reason ? 'Flagged: ' + m.flag_reason : 'Flagged', 'f')}
+              {issues.length === 0 && !m.flagged ? chip('#E7F3EA', '#15803D', '✓ Complete', 'ok') : issues.map(t => chip('#FFF7ED', '#B45309', t, t))}
+            </div>
+            <span style={{fontSize:'10px', color:'#94A3B8', textAlign:'right'}}>{m.created_at ? new Date(m.created_at).toLocaleDateString('en-IN') : ''}</span>
+          </div>
+        ))}
+      </div>
+      {!needle && filtered.length > LIMIT && (
+        <button type="button" onClick={() => setShowAll(v => !v)}
+          style={{marginTop:'10px', padding:'8px 14px', fontSize:'12px', fontWeight:700, color:'#7B1420', background:'#fff', border:'1px solid #E2E8F0', borderRadius:'8px', cursor:'pointer'}}>
+          {showAll ? 'Show fewer' : `Show all ${filtered.length} members`}
+        </button>
+      )}
     </div>
   );
 }
