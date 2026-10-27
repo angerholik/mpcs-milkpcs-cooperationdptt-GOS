@@ -3082,6 +3082,14 @@ export default function App() {
                       (parseInt(mObc) || 0) + (parseInt(fObc) || 0) +
                       (parseInt(mGen) || 0) + (parseInt(fGen) || 0)
                     }
+                    masterDataUpdated={masterDataTimestamps}
+                    pendingSyncCount={pendingSyncCount}
+                    isSyncing={isSyncing}
+                    onViewSyncStatus={() => {
+                      setMasterDataViewReturnTab('profile');
+                      setCurrentMobileScreen('SYNC_STATUS');
+                      setActiveBottomTab('home');
+                    }}
                     onEditMasterData={() => {
                       setMasterDataViewReturnTab('profile');
                       setCurrentMobileScreen('MILK_MASTER_DATA');

@@ -5,23 +5,31 @@ import { webCapWidth } from '../utils/webStyles';
 import BottomNav from './BottomNav';
 import ScreenHeader from './ScreenHeader';
 
+// Same palette as MpcsMasterDataListScreen / MpcsMasterDataScreen / the
+// transaction screens — flat maroon header, cream page, white bordered
+// cards. This screen used to run its own gradient+photo header and a
+// slate/emerald color scale left over from an earlier design pass; brought
+// in line so Profile doesn't look like a different app from Master Data.
 const COLORS = {
-  surface: '#ffffff',
-  slate800: '#1e293b',
-  slate700: '#334155',
-  slate500: '#64748b',
-  slate400: '#94a3b8',
-  slate200: '#e2e8f0',
-  slate100: '#f1f5f9',
-  slate50: '#f8fafc',
-  primary: '#7a1a1f',
-  emerald700: '#047857',
-  emerald50: '#ecfdf5',
-  amber900: '#78350f',
-  amber50: '#fffbeb',
+  maroon: '#7B1420',
+  bg: '#F4F5F7',
+  surface: '#FFFFFF',
+  ink: '#1E1B18',
+  slate600: '#57534E',
+  slate500: '#78716C',
+  slate400: '#A8A29E',
+  border: '#E7E2DA',
+  green700: '#15803D',
+  greenBg: '#E7F3EA',
+  amber50: '#FFF7ED',
+  amber700: '#B45309',
 };
 
 const FONT_FAMILY = 'Manrope';
+
+// The stamp keys App.js writes for Milk PCS Master Data (profile, demographics,
+// audit/AGM, loan setup) — this only counts completeness, no editing logic.
+const MASTER_DATA_KEYS = ['instProfile', 'demographics', 'complianceAudit', 'loanSetup'];
 
 // Read-only glance view for the Profile tab — one card, no editing. Editing
 // happens in Master Data (the "Save & Continue" chain), which this screen
@@ -40,7 +48,11 @@ export default function ProfileSummaryScreen({
   agmStatus = "",
   agmDate = "",
   totalMembers = 0,
+  masterDataUpdated = {},
+  pendingSyncCount = 0,
+  isSyncing = false,
   onEditMasterData,
+  onViewSyncStatus,
   activeTab,
   onTabPress,
   onNotifyPress,
@@ -48,6 +60,40 @@ export default function ProfileSummaryScreen({
   unreadCount = 0,
 }) {
   const complianceIsDone = (status) => (status || '').toLowerCase() === 'completed';
+
+  const recordedCount = MASTER_DATA_KEYS.filter(k => masterDataUpdated?.[k]).length;
+  const masterDataComplete = recordedCount === MASTER_DATA_KEYS.length;
+  const auditDone = complianceIsDone(auditStatus);
+  const agmDone = complianceIsDone(agmStatus);
+  const complianceComplete = auditDone && agmDone;
+  const syncClear = pendingSyncCount === 0 && !isSyncing;
+
+  const actionItems = [
+    {
+      key: 'master',
+      icon: 'clipboard-list-outline',
+      title: 'Master data',
+      subtitle: masterDataComplete ? `All ${MASTER_DATA_KEYS.length} records saved` : `${recordedCount} of ${MASTER_DATA_KEYS.length} records saved`,
+      done: masterDataComplete,
+      onPress: onEditMasterData,
+    },
+    {
+      key: 'compliance',
+      icon: 'gavel',
+      title: 'Compliance',
+      subtitle: `Audit ${auditDone ? 'done' : 'pending'} · AGM ${agmDone ? 'done' : 'pending'}`,
+      done: complianceComplete,
+      onPress: onEditMasterData,
+    },
+    {
+      key: 'sync',
+      icon: 'cloud-sync-outline',
+      title: 'Offline sync',
+      subtitle: isSyncing ? 'Syncing now…' : syncClear ? 'Everything synced' : `${pendingSyncCount} submission${pendingSyncCount === 1 ? '' : 's'} waiting to sync`,
+      done: syncClear,
+      onPress: onViewSyncStatus,
+    },
+  ];
 
   return (
     <View style={styles.container}>
@@ -65,16 +111,35 @@ export default function ProfileSummaryScreen({
         contentContainerStyle={[styles.scrollInner, webCapWidth]}
         showsVerticalScrollIndicator={false}
       >
+        <Text style={styles.sectionLabel}>Needs your attention</Text>
         <View style={styles.card}>
-          <View style={styles.cardHeaderRow}>
-            <View style={styles.cardIconBox}>
-              <MaterialCommunityIcons name="office-building-outline" size={18} color={COLORS.primary} />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.cardHeaderTitle}>{centerName || "Milk PCS Unit"}</Text>
-              <Text style={styles.cardHeaderSub}>Society Identification</Text>
-            </View>
-          </View>
+          {actionItems.map((item, i) => (
+            <TouchableOpacity
+              key={item.key}
+              style={[styles.actionRow, i !== actionItems.length - 1 && styles.actionRowBorder]}
+              onPress={item.onPress}
+              activeOpacity={item.onPress ? 0.7 : 1}
+              disabled={!item.onPress}
+            >
+              <View style={[styles.actionIconBox, item.done && styles.actionIconBoxDone]}>
+                <MaterialCommunityIcons name={item.icon} size={17} color={item.done ? COLORS.green700 : COLORS.maroon} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.actionTitle}>{item.title}</Text>
+                <Text style={styles.actionSubtitle}>{item.subtitle}</Text>
+              </View>
+              {item.done ? (
+                <MaterialCommunityIcons name="check-circle" size={18} color={COLORS.green700} />
+              ) : item.onPress ? (
+                <MaterialCommunityIcons name="chevron-right" size={20} color={COLORS.slate400} />
+              ) : null}
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        <Text style={styles.sectionLabel}>Society identification</Text>
+        <View style={styles.card}>
+          <Text style={styles.cardHeaderTitle}>{centerName || "Milk PCS Unit"}</Text>
 
           <View style={styles.infoGrid}>
             <View style={styles.infoCol}>
@@ -89,7 +154,7 @@ export default function ProfileSummaryScreen({
 
           <View style={styles.divider} />
 
-          <Text style={styles.sectionLabel}>KEY PERSONNEL CONTACT</Text>
+          <Text style={styles.subsectionLabel}>KEY PERSONNEL CONTACT</Text>
           <View style={styles.infoGrid}>
             <View style={styles.infoCol}>
               <Text style={styles.infoLabel}>PRESIDENT</Text>
@@ -105,12 +170,12 @@ export default function ProfileSummaryScreen({
 
           <View style={styles.divider} />
 
-          <Text style={styles.sectionLabel}>COMPLIANCE RECORD</Text>
+          <Text style={styles.subsectionLabel}>COMPLIANCE RECORD</Text>
           <View style={styles.infoGrid}>
             <View style={styles.infoCol}>
               <Text style={styles.infoLabel}>LATEST AUDIT</Text>
-              <View style={[styles.statusPill, complianceIsDone(auditStatus) ? styles.statusPillDone : styles.statusPillPending]}>
-                <Text style={[styles.statusPillText, complianceIsDone(auditStatus) ? styles.statusPillTextDone : styles.statusPillTextPending]}>
+              <View style={[styles.statusPill, auditDone ? styles.statusPillDone : styles.statusPillPending]}>
+                <Text style={[styles.statusPillText, auditDone ? styles.statusPillTextDone : styles.statusPillTextPending]}>
                   {auditStatus || "Pending"}
                 </Text>
               </View>
@@ -118,14 +183,15 @@ export default function ProfileSummaryScreen({
             </View>
             <View style={styles.infoCol}>
               <Text style={styles.infoLabel}>LATEST AGM</Text>
-              <View style={[styles.statusPill, complianceIsDone(agmStatus) ? styles.statusPillDone : styles.statusPillPending]}>
-                <Text style={[styles.statusPillText, complianceIsDone(agmStatus) ? styles.statusPillTextDone : styles.statusPillTextPending]}>
+              <View style={[styles.statusPill, agmDone ? styles.statusPillDone : styles.statusPillPending]}>
+                <Text style={[styles.statusPillText, agmDone ? styles.statusPillTextDone : styles.statusPillTextPending]}>
                   {agmStatus || "Pending"}
                 </Text>
               </View>
               {!!agmDate && <Text style={styles.infoSub}>{agmDate}</Text>}
             </View>
           </View>
+
         </View>
 
         <TouchableOpacity style={styles.editBtn} onPress={onEditMasterData} activeOpacity={0.85}>
@@ -141,143 +207,42 @@ export default function ProfileSummaryScreen({
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F4F5F7', position: 'relative', overflow: 'hidden' },
-  avatarText: {
-    color: '#FFFFFF',
-    fontSize: 10,
-    fontWeight: '800',
-    fontFamily: FONT_FAMILY,
-  },
-  moduleTag: {
-    color: 'rgba(255,255,255,0.7)',
-    fontFamily: FONT_FAMILY,
-    fontSize: 8,
-    fontWeight: '800',
-    letterSpacing: 1.2,
-    marginBottom: 2,
-  },
-  screenTitleHeader: {
-    color: '#FFFFFF',
-    fontFamily: FONT_FAMILY,
-    fontSize: 16,
-    fontWeight: '800',
-    letterSpacing: -0.16,
-  },
+  container: { flex: 1, backgroundColor: COLORS.bg },
+
+
   scrollContent: { flex: 1 },
-  scrollInner: {
-    padding: 12,
-    gap: 12,
-    paddingBottom: 110,
-  },
-  card: {
-    backgroundColor: COLORS.surface,
-    borderRadius: 16,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: 'rgba(226,232,240,0.6)',
-    shadowColor: '#0f172a',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.08,
-    shadowRadius: 20,
-    elevation: 3,
-  },
-  cardHeaderRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    marginBottom: 14,
-  },
-  cardIconBox: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    backgroundColor: COLORS.slate50,
-    borderWidth: 1,
-    borderColor: COLORS.slate100,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  cardHeaderTitle: {
-    fontFamily: FONT_FAMILY,
-    fontSize: 15,
-    fontWeight: '800',
-    color: COLORS.slate800,
-    letterSpacing: -0.16,
-  },
-  cardHeaderSub: {
-    fontFamily: FONT_FAMILY,
-    fontSize: 11,
-    fontWeight: '600',
-    color: COLORS.slate400,
-    marginTop: 1,
-  },
-  sectionLabel: {
-    fontFamily: FONT_FAMILY,
-    fontSize: 9,
-    fontWeight: '800',
-    color: COLORS.slate400,
-    letterSpacing: 1.2,
-    marginBottom: 10,
-  },
-  divider: {
-    height: 1,
-    backgroundColor: COLORS.slate100,
-    marginVertical: 14,
-  },
-  infoGrid: {
-    flexDirection: 'row',
-    gap: 12,
-  },
+  scrollInner: { padding: 16, paddingBottom: 110, gap: 10 },
+
+  sectionLabel: { fontFamily: FONT_FAMILY, fontSize: 12, fontWeight: '800', color: COLORS.slate500, letterSpacing: 0.6, textTransform: 'uppercase' },
+
+  card: { backgroundColor: COLORS.surface, borderRadius: 18, borderWidth: 1, borderColor: COLORS.border, padding: 16, marginBottom: 14 },
+
+  actionRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12 },
+  actionRowBorder: { borderBottomWidth: 1, borderBottomColor: COLORS.border },
+  actionIconBox: { width: 36, height: 36, borderRadius: 10, backgroundColor: COLORS.amber50, alignItems: 'center', justifyContent: 'center' },
+  actionIconBoxDone: { backgroundColor: COLORS.greenBg },
+  actionTitle: { fontFamily: FONT_FAMILY, fontSize: 14, fontWeight: '800', color: COLORS.ink },
+  actionSubtitle: { fontFamily: FONT_FAMILY, fontSize: 12, fontWeight: '500', color: COLORS.slate500, marginTop: 2 },
+
+  cardHeaderTitle: { fontFamily: FONT_FAMILY, fontSize: 16, fontWeight: '800', color: COLORS.ink, marginBottom: 14 },
+
+  subsectionLabel: { fontFamily: FONT_FAMILY, fontSize: 10, fontWeight: '800', color: COLORS.slate400, letterSpacing: 0.8, marginBottom: 10 },
+
+  divider: { height: 1, backgroundColor: COLORS.border, marginVertical: 14 },
+
+  infoGrid: { flexDirection: 'row', gap: 12 },
   infoCol: { flex: 1 },
-  infoLabel: {
-    fontFamily: FONT_FAMILY,
-    fontSize: 8,
-    fontWeight: '800',
-    color: COLORS.slate400,
-    letterSpacing: 1.2,
-    marginBottom: 3,
-  },
-  infoValue: {
-    fontFamily: FONT_FAMILY,
-    fontSize: 13,
-    fontWeight: '700',
-    color: COLORS.slate800,
-  },
-  infoSub: {
-    fontFamily: FONT_FAMILY,
-    fontSize: 11,
-    fontWeight: '500',
-    color: COLORS.slate500,
-    marginTop: 2,
-  },
-  statusPill: {
-    alignSelf: 'flex-start',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 20,
-  },
-  statusPillDone: { backgroundColor: COLORS.emerald50 },
+  infoLabel: { fontFamily: FONT_FAMILY, fontSize: 11, fontWeight: '800', color: COLORS.slate500, letterSpacing: 0.5, marginBottom: 3 },
+  infoValue: { fontFamily: FONT_FAMILY, fontSize: 14, fontWeight: '700', color: COLORS.ink },
+  infoSub: { fontFamily: FONT_FAMILY, fontSize: 12, fontWeight: '500', color: COLORS.slate500, marginTop: 2 },
+
+  statusPill: { alignSelf: 'flex-start', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 20 },
+  statusPillDone: { backgroundColor: COLORS.greenBg },
   statusPillPending: { backgroundColor: COLORS.amber50 },
-  statusPillText: {
-    fontFamily: FONT_FAMILY,
-    fontSize: 10,
-    fontWeight: '800',
-  },
-  statusPillTextDone: { color: COLORS.emerald700 },
-  statusPillTextPending: { color: COLORS.amber900 },
-  editBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    backgroundColor: COLORS.primary,
-    borderRadius: 14,
-    paddingVertical: 14,
-  },
-  editBtnText: {
-    fontFamily: FONT_FAMILY,
-    fontSize: 13,
-    fontWeight: '800',
-    color: '#ffffff',
-  },
+  statusPillText: { fontFamily: FONT_FAMILY, fontSize: 10, fontWeight: '800' },
+  statusPillTextDone: { color: COLORS.green700 },
+  statusPillTextPending: { color: COLORS.amber700 },
+
+  editBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: COLORS.maroon, borderRadius: 12, paddingVertical: 14 },
+  editBtnText: { fontFamily: FONT_FAMILY, fontSize: 14, fontWeight: '800', color: '#ffffff' },
 });
