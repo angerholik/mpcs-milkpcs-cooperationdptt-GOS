@@ -1016,81 +1016,40 @@ function memberIssues(m) {
   return issues;
 }
 
-function MemberRosterSection({ members, loading }) {
-  const [q, setQ] = useState('');
-  const [onlyIssues, setOnlyIssues] = useState(false);
-  const [showAll, setShowAll] = useState(false);
+// Compact member summary for the detail popups — the full roster lives in the
+// Member Registry tab, so the popup only shows counts and a way to jump there.
+function MemberSummary({ members, loading, onOpen }) {
   if (loading) return <div style={{fontSize:'12px', color:'#94A3B8'}}>Loading members…</div>;
-  if (!members || members.length === 0) {
-    return <div style={{fontSize:'12px', color:'#94A3B8', fontStyle:'italic'}}>No members registered yet.</div>;
-  }
-  const rows = members.map(m => ({ m, issues: memberIssues(m) }));
-  const complete = rows.filter(r => r.issues.length === 0).length;
-  const flagged = rows.filter(r => r.m.flagged).length;
-  const needle = q.trim().toLowerCase();
-  const filtered = rows.filter(({ m, issues }) =>
-    (!onlyIssues || issues.length > 0 || m.flagged) &&
-    (!needle || [m.member_name, m.ward_name, m.mobile_number, m.address].some(v => (v || '').toLowerCase().includes(needle))));
-  const LIMIT = 8;
-  const visible = showAll || needle ? filtered : filtered.slice(0, LIMIT);
-  const chip = (bg, fg, text, key) => (
-    <span key={key} style={{fontSize:'10px', fontWeight:700, padding:'2px 7px', borderRadius:'10px', background:bg, color:fg, whiteSpace:'nowrap'}}>{text}</span>
-  );
-  const stat = (label, value, color) => (
-    <div style={{flex:'1 1 90px', padding:'10px 12px', background:'#F8FAFC', border:'1px solid #E2E8F0', borderRadius:'10px'}}>
-      <div style={{fontSize:'18px', fontWeight:800, color}}>{value}</div>
-      <div style={{fontSize:'10px', fontWeight:700, color:'#64748B', textTransform:'uppercase', letterSpacing:'0.5px'}}>{label}</div>
+  const list = members || [];
+  const needReview = list.filter(m => memberIssues(m).length > 0).length;
+  const flagged = list.filter(m => m.flagged).length;
+  const tile = (label, value, color) => (
+    <div style={{flex:'1 1 100px', padding:'12px 14px', borderRadius:'12px', background:'#fff', border:'1px solid #E2E8F0', borderTop:`3px solid ${color}`}}>
+      <div style={{fontSize:'22px', fontWeight:800, color:'#0F172A', lineHeight:1.1}}>{value}</div>
+      <div style={{marginTop:'4px', fontSize:'10px', fontWeight:700, color:'#64748B', textTransform:'uppercase', letterSpacing:'0.6px'}}>{label}</div>
     </div>
   );
   return (
     <div>
-      <div style={{display:'flex', gap:'8px', flexWrap:'wrap', marginBottom:'12px'}}>
-        {stat('Members', members.length, '#0F172A')}
-        {stat('Complete', complete, '#15803D')}
-        {stat('Need review', members.length - complete, members.length - complete ? '#B45309' : '#15803D')}
-        {flagged > 0 && stat('Flagged', flagged, '#B91C1C')}
+      <div style={{display:'flex', gap:'10px', flexWrap:'wrap'}}>
+        {tile('Registered', list.length, '#0F766E')}
+        {tile('Complete', list.length - needReview, '#15803D')}
+        {tile('Need review', needReview, needReview ? '#B45309' : '#15803D')}
+        {flagged > 0 && tile('Flagged', flagged, '#B91C1C')}
       </div>
-      <div style={{display:'flex', gap:'8px', marginBottom:'10px', flexWrap:'wrap'}}>
-        <input value={q} onChange={e => setQ(e.target.value)} placeholder="Search name, ward, mobile…"
-          style={{flex:'1 1 200px', padding:'8px 12px', fontSize:'12px', border:'1px solid #E2E8F0', borderRadius:'8px', outline:'none'}} />
-        <button type="button" onClick={() => setOnlyIssues(v => !v)}
-          style={{padding:'8px 12px', fontSize:'12px', fontWeight:700, borderRadius:'8px', cursor:'pointer',
-            border:'1px solid ' + (onlyIssues ? '#B45309' : '#E2E8F0'), background: onlyIssues ? '#FFF7ED' : '#fff', color: onlyIssues ? '#B45309' : '#475569'}}>
-          Needs review only
-        </button>
-      </div>
-      <div style={{border:'1px solid #E2E8F0', borderRadius:'10px', overflow:'hidden'}}>
-        {visible.length === 0 && <div style={{padding:'14px', fontSize:'12px', color:'#94A3B8', fontStyle:'italic'}}>No members match.</div>}
-        {visible.map(({ m, issues }, i) => (
-          <div key={m.id} style={{padding:'10px 12px', borderTop: i ? '1px solid #EEF2F6' : 'none', background: m.flagged ? '#FEF2F2' : '#fff'}}>
-            <div style={{display:'flex', justifyContent:'space-between', gap:'10px', alignItems:'baseline'}}>
-              <div style={{fontWeight:800, fontSize:'13px', color:'#0F172A', minWidth:0, wordBreak:'break-word'}}>
-                <span style={{color:'#94A3B8', fontWeight:600, marginRight:'6px'}}>{i + 1}.</span>{m.member_name || '—'}
-              </div>
-              <span style={{fontSize:'10px', color:'#94A3B8', whiteSpace:'nowrap'}}>{m.created_at ? new Date(m.created_at).toLocaleDateString('en-IN') : ''}</span>
-            </div>
-            <div style={{fontSize:'11px', color:'#64748B', marginTop:'3px', wordBreak:'break-word'}}>
-              {[m.ward_name, m.mobile_number, m.address].filter(Boolean).join(' · ') || 'No ward, mobile or address on record'}
-            </div>
-            <div style={{display:'flex', gap:'4px', flexWrap:'wrap', marginTop:'6px'}}>
-              {m.flagged && chip('#FEE2E2', '#B91C1C', m.flag_reason ? 'Flagged: ' + m.flag_reason : 'Flagged', 'f')}
-              {issues.length === 0 && !m.flagged ? chip('#E7F3EA', '#15803D', '✓ Complete', 'ok') : issues.map(t => chip('#FFF7ED', '#B45309', t, t))}
-            </div>
-          </div>
-        ))}
-      </div>
-      {!needle && filtered.length > LIMIT && (
-        <button type="button" onClick={() => setShowAll(v => !v)}
-          style={{marginTop:'10px', padding:'8px 14px', fontSize:'12px', fontWeight:700, color:'#7B1420', background:'#fff', border:'1px solid #E2E8F0', borderRadius:'8px', cursor:'pointer'}}>
-          {showAll ? 'Show fewer' : `Show all ${filtered.length} members`}
+      {onOpen && list.length > 0 && (
+        <button type="button" onClick={onOpen}
+          style={{marginTop:'12px', padding:'9px 14px', fontSize:'12px', fontWeight:700, color:'#7B1420', background:'#fff', border:'1px solid #E2E8F0', borderRadius:'10px', cursor:'pointer'}}>
+          View all members in Member Registry →
         </button>
       )}
+      {list.length === 0 && <div style={{fontSize:'12px', color:'#94A3B8', fontStyle:'italic', marginTop:'2px'}}>No members registered yet.</div>}
     </div>
   );
 }
 
 // ─── MilkDetailModal ──────────────────────────────────────────────────────────
-function MilkDetailModal({ row, onClose, submitter }) {
+function MilkDetailModal({ row, onClose, submitter, onOpenMembers }) {
   const { members, loading: membersLoading } = useSocietyMembers(row?.center_name, 'MILK');
   if (!row) return null;
   const totalMale   = [row.m_sc,row.m_st,row.m_obc,row.m_gen].reduce((s,v)=>s+(parseInt(v)||0),0);
@@ -1278,7 +1237,7 @@ function MilkDetailModal({ row, onClose, submitter }) {
           {/* Registered Members — persistent roster from member_registry, not
               part of this monthly submission (see MemberDataScreen on mobile) */}
           <Sec title={`VIII. Registered Members (${members.length})`}>
-            <MemberRosterSection members={members} loading={membersLoading} />
+            <MemberSummary members={members} loading={membersLoading} onOpen={onOpenMembers && (() => onOpenMembers('MILK', row.center_name))} />
           </Sec>
         </div>
       </div>
@@ -1287,7 +1246,7 @@ function MilkDetailModal({ row, onClose, submitter }) {
 }
 
 // ─── MPCSDetailModal ──────────────────────────────────────────────────────────
-function MPCSDetailModal({ row, onClose }) {
+function MPCSDetailModal({ row, onClose, onOpenMembers }) {
   const { members, loading: membersLoading } = useSocietyMembers(row?.society_name, 'MPCS');
   if (!row) return null;
   let fd = row.form_data || {};
@@ -1299,7 +1258,12 @@ function MPCSDetailModal({ row, onClose }) {
   const Sec = ({ title, children }) => (
     <div style={{marginBottom:'28px'}}>
       <div style={{display:'flex', alignItems:'center', gap:'10px', marginBottom:'14px'}}>
-        <span style={{fontSize:'12px', fontWeight:800, color:'var(--emerald-deep)', textTransform:'uppercase', letterSpacing:'1px', whiteSpace:'nowrap'}}>{title}</span>
+        {(() => { const m = /^([A-Z]|[IVX]+)\.\s+(.*)$/.exec(title); return m ? (
+          <>
+            <span style={{width:'24px', height:'24px', borderRadius:'8px', background:'var(--emerald-pale)', color:'var(--emerald-deep)', fontSize:'11px', fontWeight:900, display:'inline-flex', alignItems:'center', justifyContent:'center', flexShrink:0}}>{m[1]}</span>
+            <span style={{fontSize:'12px', fontWeight:800, color:'#0F172A', textTransform:'uppercase', letterSpacing:'0.8px', whiteSpace:'nowrap'}}>{m[2]}</span>
+          </>
+        ) : <span style={{fontSize:'12px', fontWeight:800, color:'var(--emerald-deep)', textTransform:'uppercase', letterSpacing:'1px', whiteSpace:'nowrap'}}>{title}</span>; })()}
         <span style={{flex:1, height:'1px', background:'linear-gradient(to right, var(--emerald-pale), transparent)'}}/>
       </div>
       {children}
@@ -1526,7 +1490,7 @@ function MPCSDetailModal({ row, onClose }) {
               <D l="Dividend Paid?" v={fd['6.1'] || fd.dividendData?.dividendPolicy || 'No'} />
               {(fd['6.1'] === 'Yes' || fd.dividendData?.dividendPolicy === 'Paid' || fd.dividendData?.dividendRate) && (
                 <>
-                  <D l="Dividend Rate" v={fd['6.2'] || fd.dividendData?.dividendRate ? `${fd['6.2'] || fd.dividendData?.dividendRate}%` : null} />
+                  <D l="Dividend Rate" v={fd['6.2'] || fd.dividendData?.dividendRate ? `${String(fd['6.2'] || fd.dividendData?.dividendRate).replace(/\s*%+\s*$/, '')}%` : null} />
                   <D l="Dividend Amount" v={fd['6.3'] || fd.dividendData?.dividendAmount} money />
                   <D l="Distribution Date" v={fd['6.4'] || fd.dividendData?.distributionDate} />
                 </>
@@ -1814,7 +1778,7 @@ function MPCSDetailModal({ row, onClose }) {
           {/* Registered Members — persistent roster from member_registry, not
               part of this monthly return (see MemberDataScreen on mobile) */}
           <Sec title={`P. Registered Members (${members.length})`}>
-            <MemberRosterSection members={members} loading={membersLoading} />
+            <MemberSummary members={members} loading={membersLoading} onOpen={onOpenMembers && (() => onOpenMembers('MPCS', row.society_name))} />
           </Sec>
 
           <div style={{marginTop:'32px', textAlign:'center', paddingTop: '20px', borderTop: '1px solid #E2E8F0'}}>
@@ -2740,6 +2704,7 @@ function Dashboard({ onLogout, session, officerRole }) {
   // Member Registry state — persistent roster, separate from monthly submissions
   const [memberRows, setMemberRows] = useState([]);
   const [memberSearchQ, setMemberSearchQ] = useState('');
+  const [openMembersSignal, setOpenMembersSignal] = useState(0);
   const [memberTypeFilter, setMemberTypeFilter] = useState('');
   const [memberSocietyFilter, setMemberSocietyFilter] = useState('');
   const [memberWardFilter, setMemberWardFilter] = useState('');
@@ -3495,6 +3460,14 @@ function Dashboard({ onLogout, session, officerRole }) {
   const mpcsAuthorityOptions = [...new Set(scopedMpcsRows.map(r=>r.registration_authority).filter(Boolean))].sort();
 
   const memberSocietyOptions = [...new Set(scopedMemberRows.map(r=>r.society_name).filter(Boolean))].sort();
+  // Jump from a society popup to the Member Registry, pre-filtered to that society.
+  const openMembersFor = (type, name) => {
+    setMpcsSelected(null); setMilkSelected(null);
+    setMemberSearchQ(''); setMemberWardFilter('');
+    setMemberTypeFilter(type); setMemberSocietyFilter(name);
+    setActiveTab('MEMBERS');
+    setOpenMembersSignal(n => n + 1);
+  };
   const memberWardOptions = [...new Set(scopedMemberRows.map(r=>r.ward_name).filter(Boolean))].sort();
 
   const memberFiltered = useMemo(() => {
@@ -3959,14 +3932,15 @@ function Dashboard({ onLogout, session, officerRole }) {
             reportPaged, reportPage, reportPageSize, reportTotalPages, reportPageClamped, setReportPage,
             downloadReportCSV,
           }}
+          openMembersSignal={openMembersSignal}
           usersRegistry={{
             scopedOfficers, scopedHierarchyMapping,
             setAssignAciPrefillUnit, setAssignDelegateRole, setAssignDelegatePrefillAssignee, setShowAssignAciModal,
             openReassignDelegate, handleRevokeDelegate, setScopeOfficer,
           }}
         />
-        {mpcsSelected && <MPCSDetailModal row={mpcsSelected} onClose={()=>setMpcsSelected(null)}/>}
-        {milkSelected && <MilkDetailModal row={milkSelected} onClose={()=>setMilkSelected(null)} submitter={resolveSubmitter(milkSelected, '—')}/>}
+        {mpcsSelected && <MPCSDetailModal row={mpcsSelected} onClose={()=>setMpcsSelected(null)} onOpenMembers={openMembersFor}/>}
+        {milkSelected && <MilkDetailModal row={milkSelected} onClose={()=>setMilkSelected(null)} submitter={resolveSubmitter(milkSelected, '—')} onOpenMembers={openMembersFor}/>}
         {showAssignAciModal && (
           <AssignAciModal
             mpcsRows={mpcsRows}
@@ -5312,8 +5286,8 @@ function Dashboard({ onLogout, session, officerRole }) {
         </div>
       </main>
 
-      {milkSelected && <MilkDetailModal row={milkSelected} onClose={()=>setMilkSelected(null)} submitter={resolveSubmitter(milkSelected, '—')}/>}
-      {mpcsSelected && <MPCSDetailModal row={mpcsSelected} onClose={()=>setMpcsSelected(null)}/>}
+      {milkSelected && <MilkDetailModal row={milkSelected} onClose={()=>setMilkSelected(null)} submitter={resolveSubmitter(milkSelected, '—')} onOpenMembers={openMembersFor}/>}
+      {mpcsSelected && <MPCSDetailModal row={mpcsSelected} onClose={()=>setMpcsSelected(null)} onOpenMembers={openMembersFor}/>}
       {showAddMilkModal && <AddMilkReportModal onClose={()=>setShowAddMilkModal(false)} onSave={handleSaveMilkReport} />}
       {showAddMpcsModal && <AddMpcsSocietyModal onClose={()=>setShowAddMpcsModal(false)} onSave={handleSaveMpcsSociety} />}
       {showScheduleAuditModal && <ScheduleAuditModal mpcsRows={mpcsRows} onClose={()=>setShowScheduleAuditModal(false)} onSave={handleScheduleAudit} />}

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { COLOR, FONT } from './tokens';
 import './mobile.css';
 import AppBar from './components/AppBar';
@@ -18,10 +18,12 @@ import UsersRolesScreen from './screens/UsersRolesScreen';
 // Dashboard (App.jsx) instead of the desktop JSX when useIsMobileViewport()
 // is true — everything here is presentation only; all data comes from
 // Dashboard's already-computed state via props.
-export default function MobileApp({ session, userRole, onLogout, onOpenProfile, onOpenNotifications, dashboard, mpcsRegistry, milkRegistry, memberRegistry, loanBenRegistry, reportsRegistry, usersRegistry }) {
+export default function MobileApp({ session, userRole, onLogout, onOpenProfile, onOpenNotifications, dashboard, mpcsRegistry, milkRegistry, memberRegistry, loanBenRegistry, reportsRegistry, usersRegistry, openMembersSignal }) {
   const [tab, setTab] = useState('HOME');
   const [record, setRecord] = useState('MPCS');
   const [drawerOpen, setDrawerOpen] = useState(false);
+  // The society popup's "View all members" link bumps this counter to jump to Records → Members.
+  useEffect(() => { if (openMembersSignal) { setTab('RECORDS'); setRecord('MEMBERS'); } }, [openMembersSignal]);
 
   const fullName = session?.user?.user_metadata?.fullName || session?.user?.email || '?';
   const unreadCount = dashboard.recentActivities?.length || 0;
