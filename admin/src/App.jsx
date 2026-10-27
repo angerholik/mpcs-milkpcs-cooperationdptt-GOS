@@ -1058,24 +1058,22 @@ function MemberRosterSection({ members, loading }) {
         </button>
       </div>
       <div style={{border:'1px solid #E2E8F0', borderRadius:'10px', overflow:'hidden'}}>
-        <div style={{display:'grid', gridTemplateColumns:'28px 1.4fr 1fr 1fr 1.3fr 80px', gap:'8px', padding:'8px 12px', background:'#F1F5F9', fontSize:'10px', fontWeight:800, color:'#64748B', textTransform:'uppercase', letterSpacing:'0.5px'}}>
-          <span>#</span><span>Member</span><span>Ward</span><span>Mobile</span><span>Checks</span><span style={{textAlign:'right'}}>Added</span>
-        </div>
         {visible.length === 0 && <div style={{padding:'14px', fontSize:'12px', color:'#94A3B8', fontStyle:'italic'}}>No members match.</div>}
         {visible.map(({ m, issues }, i) => (
-          <div key={m.id} style={{display:'grid', gridTemplateColumns:'28px 1.4fr 1fr 1fr 1.3fr 80px', gap:'8px', alignItems:'center', padding:'9px 12px', borderTop:'1px solid #EEF2F6', fontSize:'12px', background: m.flagged ? '#FEF2F2' : '#fff'}}>
-            <span style={{color:'#94A3B8'}}>{i + 1}</span>
-            <div style={{minWidth:0}}>
-              <div style={{fontWeight:800, color:'#0F172A', overflow:'hidden', textOverflow:'ellipsis'}}>{m.member_name || '—'}</div>
-              {m.address && <div style={{fontSize:'10px', color:'#94A3B8', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap'}}>{m.address}</div>}
+          <div key={m.id} style={{padding:'10px 12px', borderTop: i ? '1px solid #EEF2F6' : 'none', background: m.flagged ? '#FEF2F2' : '#fff'}}>
+            <div style={{display:'flex', justifyContent:'space-between', gap:'10px', alignItems:'baseline'}}>
+              <div style={{fontWeight:800, fontSize:'13px', color:'#0F172A', minWidth:0, wordBreak:'break-word'}}>
+                <span style={{color:'#94A3B8', fontWeight:600, marginRight:'6px'}}>{i + 1}.</span>{m.member_name || '—'}
+              </div>
+              <span style={{fontSize:'10px', color:'#94A3B8', whiteSpace:'nowrap'}}>{m.created_at ? new Date(m.created_at).toLocaleDateString('en-IN') : ''}</span>
             </div>
-            <span style={{color:'#475569'}}>{m.ward_name || '—'}</span>
-            <span style={{color:'#475569'}}>{m.mobile_number || '—'}</span>
-            <div style={{display:'flex', gap:'4px', flexWrap:'wrap'}}>
+            <div style={{fontSize:'11px', color:'#64748B', marginTop:'3px', wordBreak:'break-word'}}>
+              {[m.ward_name, m.mobile_number, m.address].filter(Boolean).join(' · ') || 'No ward, mobile or address on record'}
+            </div>
+            <div style={{display:'flex', gap:'4px', flexWrap:'wrap', marginTop:'6px'}}>
               {m.flagged && chip('#FEE2E2', '#B91C1C', m.flag_reason ? 'Flagged: ' + m.flag_reason : 'Flagged', 'f')}
               {issues.length === 0 && !m.flagged ? chip('#E7F3EA', '#15803D', '✓ Complete', 'ok') : issues.map(t => chip('#FFF7ED', '#B45309', t, t))}
             </div>
-            <span style={{fontSize:'10px', color:'#94A3B8', textAlign:'right'}}>{m.created_at ? new Date(m.created_at).toLocaleDateString('en-IN') : ''}</span>
           </div>
         ))}
       </div>
@@ -1329,6 +1327,13 @@ function MPCSDetailModal({ row, onClose }) {
         </div>
         
         <div className="modal-body" style={{maxHeight:'75vh', overflowY:'auto', padding: '32px'}}>
+
+          <div className="kpi-strip">
+            <div className="kpi-tile"><div className="k">Reporting month</div><div className="v">{row.reporting_month || fd.reportingMonth || '—'}</div></div>
+            <div className="kpi-tile"><div className="k">Members</div><div className="v">{row.total_members || fd.totalMembers || 0}</div></div>
+            <div className="kpi-tile"><div className="k">Turnover</div><div className="v money">{fmtRs(row.annual_turnover || fd.totalTurnover || 0)}</div></div>
+            <div className="kpi-tile"><div className="k">Bank balance</div><div className="v money">{fmtRs(row.bank_balance || fd.balance || 0)}</div></div>
+          </div>
 
           {/* A. Cooperative Society Details */}
           <Sec title="A. Cooperative Society Details">

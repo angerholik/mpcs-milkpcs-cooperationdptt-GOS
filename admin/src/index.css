@@ -464,12 +464,7 @@ button { cursor: pointer; font-family: inherit; border: none; outline: none; tra
 .detail-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: 1px;
-  background: #E2E8F0;
-  border: 1px solid #E2E8F0;
-  border-radius: 10px;
-  overflow: hidden;
-  box-shadow: var(--shadow-subtle);
+  gap: 10px;
 }
 
 .detail-item {
@@ -477,12 +472,33 @@ button { cursor: pointer; font-family: inherit; border: none; outline: none; tra
   flex-direction: column;
   gap: 5px;
   background: #FFFFFF;
-  padding: 14px 16px;
-  transition: background 0.15s ease;
+  border: 1px solid #E2E8F0;
+  border-radius: 10px;
+  padding: 12px 14px;
+  min-width: 0;
+  word-break: break-word;
+  transition: background 0.15s ease, border-color 0.15s ease;
 }
+
+.kpi-strip {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 10px;
+  margin-bottom: 26px;
+}
+.kpi-tile {
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #F8FAFC, #F1F5F9);
+  border: 1px solid #E2E8F0;
+}
+.kpi-tile .k { font-size: 10px; font-weight: 800; letter-spacing: 0.7px; text-transform: uppercase; color: #64748B; }
+.kpi-tile .v { margin-top: 4px; font-size: 18px; font-weight: 800; color: #0F172A; }
+.kpi-tile .v.money { color: #7B1420; }
 
 .detail-item:hover {
   background: #FAFBFC;
+  border-color: #CBD5E1;
 }
 
 .detail-item .lbl {
