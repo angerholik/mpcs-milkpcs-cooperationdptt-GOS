@@ -1615,24 +1615,22 @@ function MPCSDetailModal({ row, onClose, onOpenMembers }) {
             </div>
           </Sec>
 
-          {/* K. CAC Monthly Transactions */}
-          <Sec title="K. CAC Monthly Transactions">
+          {/* K. CSC Monthly Transactions */}
+          <Sec title="K. CSC Monthly Transactions">
             {(() => {
               const cscObj = fd.cscTransData || {};
               const isCscActive = cscObj.isCscActive !== undefined ? cscObj.isCscActive : (fd['9.7z'] === 'Yes');
               const txList = Array.isArray(cscObj.transactions) ? cscObj.transactions : (Array.isArray(fd.transactions) ? fd.transactions : []);
 
               if (txList.length > 0) {
-                const totalCount = txList.reduce((acc, t) => acc + (parseInt(t.count) || 0), 0);
                 const totalVolume = txList.reduce((acc, t) => acc + (parseFloat((t.amount || '0').toString().replace(/,/g, '')) || 0), 0);
                 const totalComm = txList.reduce((acc, t) => acc + (parseFloat((t.commission || '0').toString().replace(/,/g, '')) || 0), 0);
-                const grandIncome = totalVolume + totalComm;
 
                 return (
                   <div>
                     <div style={{display: 'flex', justifyContent: 'space-between', marginBottom: '12px', fontSize: '12px', fontWeight: '700', color: '#1E293B'}}>
-                      <span>CAC Status: <strong style={{color: isCscActive ? '#047857' : '#DC2626'}}>{isCscActive ? 'ACTIVE' : 'INACTIVE'}</strong></span>
-                      <span>Total Submissions: <strong>{txList.length} Entries</strong></span>
+                      <span>CSC Status: <strong style={{color: isCscActive ? '#047857' : '#DC2626'}}>{isCscActive ? 'ACTIVE' : 'INACTIVE'}</strong></span>
+                      <span>Entries: <strong>{txList.length}</strong></span>
                     </div>
                     <div style={{overflowX: 'auto'}}>
                       <table style={{width: '100%', borderCollapse: 'collapse', fontSize: '12px'}}>
@@ -1640,38 +1638,27 @@ function MPCSDetailModal({ row, onClose, onOpenMembers }) {
                           <tr style={{background: '#F8FAFC'}}>
                             <th style={{textAlign: 'left', padding: '8px', border: '1px solid #E2E8F0'}}>Date</th>
                             <th style={{textAlign: 'left', padding: '8px', border: '1px solid #E2E8F0'}}>Service Category</th>
-                            <th style={{textAlign: 'center', padding: '8px', border: '1px solid #E2E8F0'}}>Count</th>
-                            <th style={{textAlign: 'right', padding: '8px', border: '1px solid #E2E8F0'}}>Amount (₹)</th>
+                            <th style={{textAlign: 'right', padding: '8px', border: '1px solid #E2E8F0'}}>Total Amount (₹)</th>
                             <th style={{textAlign: 'right', padding: '8px', border: '1px solid #E2E8F0'}}>Commission (₹)</th>
-                            <th style={{textAlign: 'right', padding: '8px', border: '1px solid #E2E8F0'}}>Total Income (₹)</th>
                           </tr>
                         </thead>
                         <tbody>
                           {txList.map((tx, idx) => {
                             const amt = parseFloat((tx.amount || '0').toString().replace(/,/g, '')) || 0;
                             const comm = parseFloat((tx.commission || '0').toString().replace(/,/g, '')) || 0;
-                            const inc = tx.totalIncome ? parseFloat((tx.totalIncome || '0').toString().replace(/,/g, '')) : (amt + comm);
                             return (
                               <tr key={tx.id || idx}>
                                 <td style={{padding: '8px', border: '1px solid #E2E8F0'}}>{tx.date || '—'}</td>
                                 <td style={{padding: '8px', border: '1px solid #E2E8F0', fontWeight: '600'}}>{tx.type || '—'}</td>
-                                <td style={{padding: '8px', border: '1px solid #E2E8F0', textAlign: 'center'}}>{tx.count || 0}</td>
                                 <td style={{padding: '8px', border: '1px solid #E2E8F0', textAlign: 'right'}}>₹ {amt.toLocaleString('en-IN')}</td>
-                                <td style={{padding: '8px', border: '1px solid #E2E8F0', textAlign: 'right'}}>₹ {comm.toLocaleString('en-IN')}</td>
-                                <td style={{padding: '8px', border: '1px solid #E2E8F0', textAlign: 'right', fontWeight: '700', color: '#047857'}}>
-                                  ₹ {inc.toLocaleString('en-IN')}
-                                </td>
+                                <td style={{padding: '8px', border: '1px solid #E2E8F0', textAlign: 'right', fontWeight: '700', color: '#047857'}}>₹ {comm.toLocaleString('en-IN')}</td>
                               </tr>
                             );
                           })}
                           <tr style={{background: 'var(--emerald-pale)', fontWeight: '900'}}>
-                            <td colSpan={2} style={{padding: '8px', border: '1px solid #E2E8F0'}}>TOTAL CAC TRANSACTIONS</td>
-                            <td style={{padding: '8px', border: '1px solid #E2E8F0', textAlign: 'center'}}>{totalCount}</td>
+                            <td colSpan={2} style={{padding: '8px', border: '1px solid #E2E8F0'}}>TOTAL ({txList.length} {txList.length === 1 ? 'entry' : 'entries'})</td>
                             <td style={{padding: '8px', border: '1px solid #E2E8F0', textAlign: 'right'}}>₹ {totalVolume.toLocaleString('en-IN')}</td>
-                            <td style={{padding: '8px', border: '1px solid #E2E8F0', textAlign: 'right'}}>₹ {totalComm.toLocaleString('en-IN')}</td>
-                            <td style={{padding: '8px', border: '1px solid #E2E8F0', textAlign: 'right', color: 'var(--emerald-deep)'}}>
-                              ₹ {grandIncome.toLocaleString('en-IN')}
-                            </td>
+                            <td style={{padding: '8px', border: '1px solid #E2E8F0', textAlign: 'right', color: 'var(--emerald-deep)'}}>₹ {totalComm.toLocaleString('en-IN')}</td>
                           </tr>
                         </tbody>
                       </table>
@@ -3213,10 +3200,8 @@ function Dashboard({ onLogout, session, officerRole }) {
         { label: 'Date', get: r => r.transaction_date ? new Date(r.transaction_date).toLocaleDateString('en-IN') : '—' },
         { label: 'Society', get: r => r.society_name || '—' },
         { label: 'Service Type', get: r => r.service_type || '—' },
-        { label: 'No. of Transactions', get: r => r.transaction_count ?? '—' },
-        { label: 'Amount', get: r => r.amount != null ? `₹${Number(r.amount).toLocaleString('en-IN')}` : '—' },
-        { label: 'Commission', get: r => r.commission != null ? `₹${Number(r.commission).toLocaleString('en-IN')}` : '—' },
-        { label: 'Total Income', get: r => (r.amount != null || r.commission != null) ? `₹${(Number(r.amount || 0) + Number(r.commission || 0)).toLocaleString('en-IN')}` : '—' },
+        { label: 'Total Amount', get: r => r.amount != null ? `₹${Number(r.amount).toLocaleString('en-IN')}` : '—' },
+        { label: 'Commission (Society Income)', get: r => r.commission != null ? `₹${Number(r.commission).toLocaleString('en-IN')}` : '—' },
       ];
     } else if (reportCategory === 'MPCS Daily Transactions') {
       rows = scopedDailyTransRows.filter(r => inRange(r.transaction_date) && (!reportEntity || r.society_name === reportEntity));
