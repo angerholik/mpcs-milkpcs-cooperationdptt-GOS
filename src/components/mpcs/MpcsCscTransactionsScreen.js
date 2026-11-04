@@ -156,7 +156,6 @@ export default function MpcsCscTransactionsScreen({
   const totalAmount = visibleTransactions.reduce((s, t) => s + (parseFloat(t.amount) || 0), 0);
   const totalCommission = visibleTransactions.reduce((s, t) => s + (parseFloat(t.commission) || 0), 0);
 
-  const entryIncome = (parseFloat(txCommission) || 0);
 
   return (
     <View style={styles.container}>
@@ -254,7 +253,7 @@ export default function MpcsCscTransactionsScreen({
 
               <View style={styles.row}>
                 <View style={styles.fieldHalf}>
-                  <Text style={styles.fieldLabel}>Total customer money</Text>
+                  <Text style={styles.fieldLabel}>Total amount</Text>
                   <View style={styles.inputBox}>
                     <Text style={styles.currencyPrefix}>₹</Text>
                     <TextInput
@@ -281,20 +280,6 @@ export default function MpcsCscTransactionsScreen({
                     />
                   </View>
                 </View>
-              </View>
-
-              <View style={styles.calcCard}>
-                <View style={styles.calcRow}>
-                  <Text style={styles.calcRowLabel}>Society income from this entry</Text>
-                  {txCommission ? (
-                    <Text style={styles.calcRowValue}>₹{formatWhole(entryIncome)}</Text>
-                  ) : (
-                    <Text style={styles.calcRowPlaceholder}>Enter a commission</Text>
-                  )}
-                </View>
-                <Text style={styles.calcHint}>
-                  Only the commission counts as the society's income. The customers' money is theirs and is noted separately.
-                </Text>
               </View>
 
               <Pressable
@@ -326,7 +311,7 @@ export default function MpcsCscTransactionsScreen({
                       <View style={{ flex: 1 }}>
                         <Text style={styles.listRowTitle}>{tx.service_type}</Text>
                         <Text style={styles.listRowSub}>
-                          {formatIsoToDMY(tx.transaction_date)} · ₹{formatWhole(tx.amount)} customer money{parseInt(tx.transaction_count) > 1 ? ` · ${tx.transaction_count} transactions (older entry)` : ''}
+                          {formatIsoToDMY(tx.transaction_date)} · ₹{formatWhole(tx.amount)} total amount{parseInt(tx.transaction_count) > 1 ? ` · ${tx.transaction_count} transactions (older entry)` : ''}
                         </Text>
                       </View>
                       <View style={{ alignItems: 'flex-end' }}>
@@ -358,7 +343,7 @@ export default function MpcsCscTransactionsScreen({
                   </View>
                 </View>
                 <Text style={styles.footerCaption}>
-                  ₹{formatWhole(totalAmount)} of customer money across {totalTxCount} transaction{totalTxCount === 1 ? '' : 's'}.
+                  ₹{formatWhole(totalAmount)} total amount across {totalTxCount} transaction{totalTxCount === 1 ? '' : 's'}.
                 </Text>
               </>
             )}
@@ -505,45 +490,6 @@ const styles = StyleSheet.create({
     color: COLORS.ink,
   },
   chipTextActive: { color: '#ffffff' },
-
-  calcCard: {
-    backgroundColor: COLORS.undoBg,
-    borderRadius: 14,
-    padding: 14,
-    gap: 6,
-  },
-  calcRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  calcRowLabel: {
-    fontFamily: FONT_FAMILY,
-    fontSize: 14,
-    fontWeight: '700',
-    color: COLORS.ink,
-    flex: 1,
-    marginRight: 8,
-  },
-  calcRowValue: {
-    fontFamily: FONT_FAMILY,
-    fontSize: 17,
-    fontWeight: '800',
-    color: COLORS.ink,
-  },
-  calcRowPlaceholder: {
-    fontFamily: FONT_FAMILY,
-    fontSize: 13,
-    fontWeight: '500',
-    color: COLORS.slate500,
-  },
-  calcHint: {
-    fontFamily: FONT_FAMILY,
-    fontSize: 11,
-    fontWeight: '500',
-    color: COLORS.slate500,
-    lineHeight: 16,
-  },
 
   addBtn: {
     backgroundColor: COLORS.maroon,
