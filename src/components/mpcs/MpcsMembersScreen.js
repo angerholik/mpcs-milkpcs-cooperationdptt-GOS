@@ -69,6 +69,7 @@ export default function MpcsMembersScreen({
   const [search, setSearch] = useState('');
   const [form, setForm] = useState(emptyForm);
   const [editingId, setEditingId] = useState(null);
+  const [showForm, setShowForm] = useState(false);
   const scrollRef = useRef(null);
   const formYRef = useRef(0);
   const [resolvingMember, setResolvingMember] = useState(null);
@@ -123,6 +124,7 @@ export default function MpcsMembersScreen({
     }
     setForm(emptyForm);
     setEditingId(null);
+    setShowForm(false);
     loadMembers();
     if (onMemberDataChanged) onMemberDataChanged();
   };
@@ -142,6 +144,7 @@ export default function MpcsMembersScreen({
 
   const handleCancelEdit = () => {
     setEditingId(null);
+    setShowForm(false);
     setForm(emptyForm);
   };
 
@@ -219,6 +222,110 @@ export default function MpcsMembersScreen({
           </View>
         )}
 
+        {editingId || showForm ? (
+          <>
+          <Text style={styles.sectionLabel} onLayout={(e) => { formYRef.current = e.nativeEvent.layout.y; }}>{editingId ? 'EDIT MEMBER' : 'ADD MEMBER SHEET'}</Text>
+          <View style={styles.card}>
+            <View style={styles.fieldGroup}>
+              <Text style={styles.fieldLabel}>Full name</Text>
+              <View style={styles.inputBox}>
+                <TextInput
+                  style={styles.textInput}
+                  value={form.memberName}
+                  onChangeText={setField('memberName')}
+                  placeholder="e.g. Karma Bhutia"
+                  placeholderTextColor={COLORS.slate500}
+                />
+              </View>
+            </View>
+
+            <View style={styles.fieldGroup}>
+              <Text style={styles.fieldLabel}>Aadhaar number</Text>
+              <View style={styles.inputBox}>
+                <TextInput
+                  style={styles.textInput}
+                  value={form.aadhaarNumber}
+                  onChangeText={(v) => setField('aadhaarNumber')(v.replace(/[^0-9]/g, '').slice(0, 12))}
+                  placeholder="1234 5678 9012"
+                  placeholderTextColor={COLORS.slate500}
+                  keyboardType="numeric"
+                  maxLength={12}
+                />
+              </View>
+              <Text style={styles.helperText}>
+                Stored on the society record and visible to the registrar. Leave blank if the member does not have one.
+              </Text>
+            </View>
+
+            <View style={styles.row}>
+              <View style={styles.fieldHalf}>
+                <Text style={styles.fieldLabel}>Ward</Text>
+                <View style={styles.inputBox}>
+                  <TextInput
+                    style={styles.textInput}
+                    value={form.wardName}
+                    onChangeText={setField('wardName')}
+                    placeholder="e.g. Ward 3"
+                    placeholderTextColor={COLORS.slate500}
+                  />
+                </View>
+              </View>
+              <View style={styles.fieldHalf}>
+                <Text style={styles.fieldLabel}>Mobile</Text>
+                <View style={styles.inputBox}>
+                  <TextInput
+                    style={styles.textInput}
+                    value={form.mobileNumber}
+                    onChangeText={setField('mobileNumber')}
+                    placeholder="+91 98000 00000"
+                    placeholderTextColor={COLORS.slate500}
+                    keyboardType="phone-pad"
+                  />
+                </View>
+              </View>
+            </View>
+
+            <View style={styles.fieldGroup}>
+              <Text style={styles.fieldLabel}>Address</Text>
+              <TextInput
+                style={styles.textArea}
+                value={form.address}
+                onChangeText={setField('address')}
+                placeholder="House no., locality…"
+                placeholderTextColor={COLORS.slate500}
+                multiline
+              />
+            </View>
+
+            <View style={styles.row}>
+              {(editingId || showForm) && (
+                <Pressable style={styles.backOutlineBtn} onPress={handleCancelEdit}>
+                  <Text style={styles.backOutlineText}>Cancel</Text>
+                </Pressable>
+              )}
+              <Pressable
+                style={({ pressed }) => [styles.addBtn, !canSave && styles.addBtnDisabled, pressed && canSave && { opacity: 0.9 }, (editingId || showForm) && { flex: 2 }]}
+                onPress={handleSave}
+                disabled={!canSave}
+              >
+                {saving ? (
+                  <ActivityIndicator color={canSave ? '#ffffff' : COLORS.slate500} size="small" />
+                ) : (
+                  <Text style={[styles.addBtnText, !canSave && { color: COLORS.slate500 }]}>
+                    {editingId ? 'Update member' : 'Save member'}
+                  </Text>
+                )}
+              </Pressable>
+            </View>
+          </View>
+          </>
+        ) : (
+          <Pressable style={styles.addMemberBtn} onPress={() => setShowForm(true)}>
+            <MaterialCommunityIcons name="account-plus-outline" size={18} color="#ffffff" />
+            <Text style={styles.addBtnText}>Add member</Text>
+          </Pressable>
+        )}
+
         {loading ? (
           <View style={{ paddingVertical: 30, alignItems: 'center' }}>
             <ActivityIndicator color={COLORS.maroon} />
@@ -228,7 +335,7 @@ export default function MpcsMembersScreen({
             <Text style={styles.emptyTitle}>{members.length === 0 ? 'No members registered yet' : 'No matches'}</Text>
             <Text style={styles.emptyDesc}>
               {members.length === 0
-                ? "Members added below stay on record permanently — they aren't part of the monthly return."
+                ? "Members you add stay on record permanently — they aren't part of the monthly return."
                 : 'Try a different name or ward.'}
             </Text>
           </View>
@@ -266,100 +373,6 @@ export default function MpcsMembersScreen({
           </>
         )}
 
-        <Text style={styles.sectionLabel} onLayout={(e) => { formYRef.current = e.nativeEvent.layout.y; }}>{editingId ? 'EDIT MEMBER' : 'ADD MEMBER SHEET'}</Text>
-        <View style={styles.card}>
-          <View style={styles.fieldGroup}>
-            <Text style={styles.fieldLabel}>Full name</Text>
-            <View style={styles.inputBox}>
-              <TextInput
-                style={styles.textInput}
-                value={form.memberName}
-                onChangeText={setField('memberName')}
-                placeholder="e.g. Karma Bhutia"
-                placeholderTextColor={COLORS.slate500}
-              />
-            </View>
-          </View>
-
-          <View style={styles.fieldGroup}>
-            <Text style={styles.fieldLabel}>Aadhaar number</Text>
-            <View style={styles.inputBox}>
-              <TextInput
-                style={styles.textInput}
-                value={form.aadhaarNumber}
-                onChangeText={(v) => setField('aadhaarNumber')(v.replace(/[^0-9]/g, '').slice(0, 12))}
-                placeholder="1234 5678 9012"
-                placeholderTextColor={COLORS.slate500}
-                keyboardType="numeric"
-                maxLength={12}
-              />
-            </View>
-            <Text style={styles.helperText}>
-              Stored on the society record and visible to the registrar. Leave blank if the member does not have one.
-            </Text>
-          </View>
-
-          <View style={styles.row}>
-            <View style={styles.fieldHalf}>
-              <Text style={styles.fieldLabel}>Ward</Text>
-              <View style={styles.inputBox}>
-                <TextInput
-                  style={styles.textInput}
-                  value={form.wardName}
-                  onChangeText={setField('wardName')}
-                  placeholder="e.g. Ward 3"
-                  placeholderTextColor={COLORS.slate500}
-                />
-              </View>
-            </View>
-            <View style={styles.fieldHalf}>
-              <Text style={styles.fieldLabel}>Mobile</Text>
-              <View style={styles.inputBox}>
-                <TextInput
-                  style={styles.textInput}
-                  value={form.mobileNumber}
-                  onChangeText={setField('mobileNumber')}
-                  placeholder="+91 98000 00000"
-                  placeholderTextColor={COLORS.slate500}
-                  keyboardType="phone-pad"
-                />
-              </View>
-            </View>
-          </View>
-
-          <View style={styles.fieldGroup}>
-            <Text style={styles.fieldLabel}>Address</Text>
-            <TextInput
-              style={styles.textArea}
-              value={form.address}
-              onChangeText={setField('address')}
-              placeholder="House no., locality…"
-              placeholderTextColor={COLORS.slate500}
-              multiline
-            />
-          </View>
-
-          <View style={styles.row}>
-            {editingId && (
-              <Pressable style={styles.backOutlineBtn} onPress={handleCancelEdit}>
-                <Text style={styles.backOutlineText}>Cancel</Text>
-              </Pressable>
-            )}
-            <Pressable
-              style={({ pressed }) => [styles.addBtn, !canSave && styles.addBtnDisabled, pressed && canSave && { opacity: 0.9 }, editingId && { flex: 2 }]}
-              onPress={handleSave}
-              disabled={!canSave}
-            >
-              {saving ? (
-                <ActivityIndicator color={canSave ? '#ffffff' : COLORS.slate500} size="small" />
-              ) : (
-                <Text style={[styles.addBtnText, !canSave && { color: COLORS.slate500 }]}>
-                  {editingId ? 'Update member' : 'Save member'}
-                </Text>
-              )}
-            </Pressable>
-          </View>
-        </View>
       </ScrollView>
 
       {resolvingMember && (
@@ -682,6 +695,10 @@ const styles = StyleSheet.create({
     lineHeight: 16,
   },
 
+  addMemberBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+    backgroundColor: COLORS.maroon, borderRadius: 12, paddingVertical: 14,
+  },
   addBtn: {
     flex: 1,
     backgroundColor: COLORS.maroon,
