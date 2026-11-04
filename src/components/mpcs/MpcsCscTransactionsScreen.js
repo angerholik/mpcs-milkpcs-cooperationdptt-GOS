@@ -51,7 +51,7 @@ function formatWhole(val) {
   return Math.round(n).toLocaleString('en-IN');
 }
 
-const SERVICE_TYPES = ['Banking / Aadhaar', 'Certificates', 'Bill payment', 'Phone recharge', 'Insurance'];
+const SERVICE_TYPES = ['Banking / Aadhaar', 'Certificates', 'Bill payment', 'Phone recharge', 'Flight ticket', 'Train ticket', 'Insurance'];
 
 // CSC transactions can happen any day — this is a continuous running ledger
 // per society in its own table, not draft state tied to a monthly
