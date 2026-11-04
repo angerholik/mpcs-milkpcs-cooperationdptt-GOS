@@ -75,7 +75,6 @@ export default function MpcsCscTransactionsScreen({
   const [txDate, setTxDate] = useState('');
   const [txType, setTxType] = useState('');
   const [showOtherInput, setShowOtherInput] = useState(false);
-  const [txCount, setTxCount] = useState('');
   const [txAmount, setTxAmount] = useState('');
   const [txCommission, setTxCommission] = useState('');
 
@@ -114,7 +113,7 @@ export default function MpcsCscTransactionsScreen({
     const { error } = await saveMpcsCscTransaction(societyName, {
       transactionDate: formatDMYToIso(txDate),
       serviceType: txType,
-      count: txCount,
+      count: 1, // every entry is one transaction
       amount: txAmount,
       commission: txCommission,
     });
@@ -124,7 +123,7 @@ export default function MpcsCscTransactionsScreen({
       if (Platform.OS === 'web') alert(msg); else Alert.alert('Save Failed', msg);
       return;
     }
-    setTxDate(''); setTxType(''); setShowOtherInput(false); setTxCount(''); setTxAmount(''); setTxCommission('');
+    setTxDate(''); setTxType(''); setShowOtherInput(false); setTxAmount(''); setTxCommission('');
     loadTransactions();
   };
 
@@ -153,7 +152,7 @@ export default function MpcsCscTransactionsScreen({
   };
 
   const visibleTransactions = transactions.filter((t) => t.id !== pendingDelete?.id);
-  const totalTxCount = visibleTransactions.reduce((s, t) => s + (parseInt(t.transaction_count) || 0), 0);
+  const totalTxCount = visibleTransactions.reduce((s, t) => s + (parseInt(t.transaction_count) || 1), 0);
   const totalAmount = visibleTransactions.reduce((s, t) => s + (parseFloat(t.amount) || 0), 0);
   const totalCommission = visibleTransactions.reduce((s, t) => s + (parseFloat(t.commission) || 0), 0);
 
@@ -217,19 +216,6 @@ export default function MpcsCscTransactionsScreen({
                         placeholderTextColor={COLORS.slate500}
                       />
                     )}
-                  </View>
-                </View>
-                <View style={styles.fieldHalf}>
-                  <Text style={styles.fieldLabel}>How many</Text>
-                  <View style={styles.inputBox}>
-                    <TextInput
-                      style={styles.textInput}
-                      value={txCount}
-                      onChangeText={setTxCount}
-                      placeholder="0"
-                      placeholderTextColor={COLORS.slate500}
-                      keyboardType="numeric"
-                    />
                   </View>
                 </View>
               </View>
@@ -340,7 +326,7 @@ export default function MpcsCscTransactionsScreen({
                       <View style={{ flex: 1 }}>
                         <Text style={styles.listRowTitle}>{tx.service_type}</Text>
                         <Text style={styles.listRowSub}>
-                          {formatIsoToDMY(tx.transaction_date)} · {tx.transaction_count || 0} transactions · ₹{formatWhole(tx.amount)} customer money
+                          {formatIsoToDMY(tx.transaction_date)} · ₹{formatWhole(tx.amount)} customer money{parseInt(tx.transaction_count) > 1 ? ` · ${tx.transaction_count} transactions (older entry)` : ''}
                         </Text>
                       </View>
                       <View style={{ alignItems: 'flex-end' }}>
@@ -372,7 +358,7 @@ export default function MpcsCscTransactionsScreen({
                   </View>
                 </View>
                 <Text style={styles.footerCaption}>
-                  ₹{formatWhole(totalAmount)} of customer money across {totalTxCount} transactions.
+                  ₹{formatWhole(totalAmount)} of customer money across {totalTxCount} transaction{totalTxCount === 1 ? '' : 's'}.
                 </Text>
               </>
             )}
