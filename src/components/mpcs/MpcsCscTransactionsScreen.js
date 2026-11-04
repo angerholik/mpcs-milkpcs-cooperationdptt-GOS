@@ -307,7 +307,7 @@ export default function MpcsCscTransactionsScreen({
               <>
                 <View style={styles.listCard}>
                   {visibleTransactions.map((tx) => (
-                    <View key={tx.id} style={styles.listRow}>
+                    <View key={tx.id} style={[styles.listRow, menuOpenId === tx.id && styles.listRowMenuOpen]}>
                       <View style={{ flex: 1 }}>
                         <Text style={styles.listRowTitle}>{tx.service_type}</Text>
                         <Text style={styles.listRowSub}>
@@ -547,7 +547,6 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     borderWidth: 1,
     borderColor: COLORS.border,
-    overflow: 'hidden',
   },
   listRow: {
     flexDirection: 'row',
@@ -583,6 +582,8 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     color: COLORS.slate500,
   },
+  // The open row must paint above the rows after it, or its menu is hidden behind them.
+  listRowMenuOpen: { zIndex: 20, position: 'relative' },
   rowMenuBtn: {
     width: 28,
     height: 28,
