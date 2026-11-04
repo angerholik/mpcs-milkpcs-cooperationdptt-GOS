@@ -10,7 +10,7 @@ import { queueSubmission } from '../../utils/syncManager';
 // section "4 · Daily ledger", screens 7e/7d "CSC transactions" —
 // "State said once; dependent fields dimmed" (the active-CSC check lives
 // on the Master Data CSC Details screen, not duplicated here) and
-// "Commission is the income; value handled is separate."
+// "Commission is the income; customers' money is separate."
 const COLORS = {
   maroon: '#7B1420',
   bg: '#F4F5F7',
@@ -51,7 +51,7 @@ function formatWhole(val) {
   return Math.round(n).toLocaleString('en-IN');
 }
 
-const SERVICE_TYPES = ['Banking / Aadhaar', 'Certificates', 'Bill payment', 'Insurance'];
+const SERVICE_TYPES = ['Banking / Aadhaar', 'Certificates', 'Bill payment', 'Phone recharge', 'Insurance'];
 
 // CSC transactions can happen any day — this is a continuous running ledger
 // per society in its own table, not draft state tied to a monthly
@@ -268,7 +268,7 @@ export default function MpcsCscTransactionsScreen({
 
               <View style={styles.row}>
                 <View style={styles.fieldHalf}>
-                  <Text style={styles.fieldLabel}>Value handled</Text>
+                  <Text style={styles.fieldLabel}>Total customer money</Text>
                   <View style={styles.inputBox}>
                     <Text style={styles.currencyPrefix}>₹</Text>
                     <TextInput
@@ -307,7 +307,7 @@ export default function MpcsCscTransactionsScreen({
                   )}
                 </View>
                 <Text style={styles.calcHint}>
-                  Commission only. Value handled belongs to customers and is recorded separately.
+                  Only the commission counts as the society's income. The customers' money is theirs and is noted separately.
                 </Text>
               </View>
 
@@ -340,7 +340,7 @@ export default function MpcsCscTransactionsScreen({
                       <View style={{ flex: 1 }}>
                         <Text style={styles.listRowTitle}>{tx.service_type}</Text>
                         <Text style={styles.listRowSub}>
-                          {formatIsoToDMY(tx.transaction_date)} · {tx.transaction_count || 0} transactions · ₹{formatWhole(tx.amount)} handled
+                          {formatIsoToDMY(tx.transaction_date)} · {tx.transaction_count || 0} transactions · ₹{formatWhole(tx.amount)} customer money
                         </Text>
                       </View>
                       <View style={{ alignItems: 'flex-end' }}>
@@ -372,7 +372,7 @@ export default function MpcsCscTransactionsScreen({
                   </View>
                 </View>
                 <Text style={styles.footerCaption}>
-                  ₹{formatWhole(totalAmount)} handled across {totalTxCount} transactions.
+                  ₹{formatWhole(totalAmount)} of customer money across {totalTxCount} transactions.
                 </Text>
               </>
             )}
