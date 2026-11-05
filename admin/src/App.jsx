@@ -3139,7 +3139,7 @@ function Dashboard({ onLogout, session, officerRole }) {
     else if (reportCategory === 'MPCS Member List') names = scopedMemberRows.filter(m => (m.society_type || '').toUpperCase() === 'MPCS').map(m => m.society_name);
     else if (reportCategory === 'Milk PCS Member List') names = scopedMemberRows.filter(m => (m.society_type || '').toUpperCase() === 'MILK').map(m => m.society_name);
     else if (reportCategory === 'Audit & Compliance Audit Log') names = [...scopedMpcsRows.map(r => r.society_name), ...scopedMilkRows.map(r => r.center_name)];
-    else if (reportCategory === 'CSC Transactions') names = scopedCscTransRows.map(r => r.society_name);
+    else if (reportCategory === 'CSC Transactions' || reportCategory === 'CSC Monthly Summary') names = scopedCscTransRows.map(r => r.society_name);
     else if (reportCategory === 'MPCS Daily Transactions') names = scopedDailyTransRows.map(r => r.society_name);
     else names = [];
     return [...new Set(names.filter(Boolean))].sort();
@@ -3202,6 +3202,30 @@ function Dashboard({ onLogout, session, officerRole }) {
         { label: 'Service Type', get: r => r.service_type || '—' },
         { label: 'Total Amount', get: r => r.amount != null ? `₹${Number(r.amount).toLocaleString('en-IN')}` : '—' },
         { label: 'Commission (Society Income)', get: r => r.commission != null ? `₹${Number(r.commission).toLocaleString('en-IN')}` : '—' },
+      ];
+    } else if (reportCategory === 'CSC Monthly Summary') {
+      // One row per society per month: transaction count, services used,
+      // summed amount and summed commission.
+      const groups = {};
+      scopedCscTransRows
+        .filter(r => inRange(r.transaction_date) && (!reportEntity || r.society_name === reportEntity))
+        .forEach(r => {
+          const month = r.transaction_date.slice(0, 7);
+          const g = groups[`${r.society_name}|${month}`] ||= { society: r.society_name, month, count: 0, amount: 0, commission: 0, services: new Set() };
+          g.count += 1;
+          g.amount += Number(r.amount) || 0;
+          g.commission += Number(r.commission) || 0;
+          if (r.service_type) g.services.add(r.service_type);
+        });
+      rows = Object.values(groups).sort((a, b) => b.month.localeCompare(a.month) || (a.society || '').localeCompare(b.society || ''));
+      const inr = n => `₹${n.toLocaleString('en-IN')}`;
+      columns = [
+        { label: 'Month', get: r => new Date(`${r.month}-01`).toLocaleDateString('en-IN', { month: 'long', year: 'numeric' }) },
+        { label: 'Society', get: r => r.society || '—' },
+        { label: 'Services', get: r => [...r.services].join(', ') || '—' },
+        { label: 'No. of Transactions', get: r => r.count },
+        { label: 'Total Amount', get: r => inr(r.amount) },
+        { label: 'Total Commission', get: r => inr(r.commission) },
       ];
     } else if (reportCategory === 'MPCS Daily Transactions') {
       rows = scopedDailyTransRows.filter(r => inRange(r.transaction_date) && (!reportEntity || r.society_name === reportEntity));
@@ -4262,6 +4286,7 @@ function Dashboard({ onLogout, session, officerRole }) {
                     <option>Audit & Compliance Audit Log</option>
                     <option>Official Inspectors Registry</option>
                     <option>CSC Transactions</option>
+                    <option>CSC Monthly Summary</option>
                     <option>MPCS Daily Transactions</option>
                   </select>
                 </div>

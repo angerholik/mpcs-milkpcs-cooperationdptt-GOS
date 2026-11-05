@@ -11,6 +11,7 @@ const CATEGORIES = [
   { label: 'Audit & Compliance Audit Log', icon: 'shieldCheck', ink: COLOR.maroon, tint: COLOR.roseTint },
   { label: 'Official Inspectors Registry', icon: 'bank', ink: COLOR.green, tint: COLOR.greenTint },
   { label: 'CSC Transactions', icon: 'monitor', ink: COLOR.blue, tint: COLOR.blueTint },
+  { label: 'CSC Monthly Summary', icon: 'monitor', ink: COLOR.blue, tint: COLOR.blueTint },
   { label: 'MPCS Daily Transactions', icon: 'book', ink: COLOR.maroon, tint: COLOR.roseTint },
 ];
 
