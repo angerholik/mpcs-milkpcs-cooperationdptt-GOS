@@ -37,14 +37,9 @@ const formatAadhaar = (num) => {
   return `${digits.slice(0, 4)} ${digits.slice(4, 8)} ${digits.slice(8, 12)}`;
 };
 
-const initialsOf = (name) => (name || '').trim().split(/\s+/).map((p) => p[0]).join('').slice(0, 2).toUpperCase() || '—';
-
-const joinedLabel = (isoString) => {
-  if (!isoString) return '—';
-  const d = new Date(isoString);
-  if (isNaN(d.getTime())) return '—';
-  return d.toLocaleDateString('en-IN', { month: 'short', year: 'numeric' });
-};
+// One-line summary of what we actually know about a member (ward, mobile, else address).
+const memberSummary = (m) =>
+  [m.ward_name, m.mobile_number].filter(Boolean).join(' · ') || m.address || 'No ward or mobile yet';
 
 const notify = (title, message) => {
   if (Platform.OS === 'web') window.alert(`${title}\n\n${message}`);
@@ -342,16 +337,16 @@ export default function MpcsMembersScreen({
         ) : (
           <>
             <View style={styles.listCard}>
-              {filtered.map((m) => {
+              {filtered.map((m, idx) => {
                 return (
                 <Pressable key={m.id} style={styles.listRow} onPress={() => setViewingMember(m)}>
                   <View style={styles.avatar}>
-                    <Text style={styles.avatarText}>{initialsOf(m.member_name)}</Text>
+                    <Text style={styles.avatarText}>{idx + 1}</Text>
                   </View>
                   <View style={{ flex: 1 }}>
                     <Text style={styles.listRowTitle} numberOfLines={1}>{m.member_name}</Text>
                     <Text style={styles.listRowSub}>
-                      {m.ward_name || 'No ward'} · joined {joinedLabel(m.created_at)}
+                      {memberSummary(m)}
                     </Text>
                     {m.flagged && (
                       <Pressable onPress={() => { setResolvingMember(m); setResolutionNote(''); }} hitSlop={6}>
@@ -409,11 +404,11 @@ export default function MpcsMembersScreen({
           <View style={styles.sheet}>
             <View style={styles.detailHeaderRow}>
               <View style={styles.avatar}>
-                <Text style={styles.avatarText}>{initialsOf(viewingMember.member_name)}</Text>
+                <Text style={styles.avatarText}>{Math.max(filtered.findIndex((x) => x.id === viewingMember.id), 0) + 1}</Text>
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={styles.sheetTitle}>{viewingMember.member_name}</Text>
-                <Text style={styles.sheetDesc}>{viewingMember.ward_name || 'No ward'} · joined {joinedLabel(viewingMember.created_at)}</Text>
+                <Text style={styles.sheetDesc}>{memberSummary(viewingMember)}</Text>
               </View>
             </View>
 
