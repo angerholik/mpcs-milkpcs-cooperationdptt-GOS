@@ -52,6 +52,8 @@ const QUICK_RANGES = [
   },
 ];
 
+const PREVIEW_LIMIT = 20;
+
 const fmtDisplayDate = (iso) => {
   if (!iso) return '—';
   const [y, m, d] = iso.split('-');
@@ -208,15 +210,27 @@ export default function ReportsScreen({
         </div>
         <button
           type="button"
-          onClick={handleDownload}
-          disabled={downloading}
+          onClick={generateReport}
           style={{
             marginTop: 14, width: '100%', background: COLOR.maroon, border: 'none', borderRadius: 12,
             padding: 15, fontFamily: FONT.heading, fontSize: 13.5, fontWeight: 600, color: '#fff',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+          }}
+        >
+          {iconEl('doc', '#fff', 16)}
+          Generate Report
+        </button>
+        <button
+          type="button"
+          onClick={handleDownload}
+          disabled={downloading}
+          style={{
+            marginTop: 10, width: '100%', background: COLOR.inset, border: `1px solid ${COLOR.hairline}`, borderRadius: 12,
+            padding: 15, fontFamily: FONT.heading, fontSize: 13.5, fontWeight: 600, color: COLOR.ink900,
             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, opacity: downloading ? 0.7 : 1,
           }}
         >
-          {iconEl('download', '#fff', 16)}
+          {iconEl('download', COLOR.ink900, 16)}
           {downloading ? 'Generating…' : 'Download CSV'}
         </button>
         <div style={{ fontSize: 11.5, color: COLOR.mutedLight, marginTop: 10, textAlign: 'center' }}>
@@ -227,6 +241,29 @@ export default function ReportsScreen({
               : `${resultCount} record${resultCount === 1 ? '' : 's'} exported.`}
         </div>
       </Card>
+
+      {resultCount !== null && resultCount > 0 && (
+        <>
+          <div style={{ fontSize: 9.5, fontWeight: 700, letterSpacing: '.12em', color: COLOR.mutedLight }}>
+            RESULTS · {resultCount} RECORD{resultCount === 1 ? '' : 'S'}
+          </div>
+          {generatedReport.rows.slice(0, PREVIEW_LIMIT).map((row, i) => (
+            <Card key={i} style={{ padding: 14, display: 'flex', flexDirection: 'column', gap: 7 }}>
+              {generatedReport.columns.slice(0, 8).map((col) => (
+                <div key={col.label} style={{ display: 'flex', justifyContent: 'space-between', gap: 12, fontSize: 12.5 }}>
+                  <span style={{ color: COLOR.muted, flex: '0 0 auto' }}>{col.label}</span>
+                  <span style={{ color: COLOR.ink900, fontWeight: 500, textAlign: 'right', minWidth: 0, overflowWrap: 'anywhere' }}>{String(col.get(row))}</span>
+                </div>
+              ))}
+            </Card>
+          ))}
+          {resultCount > PREVIEW_LIMIT && (
+            <div style={{ fontSize: 11.5, color: COLOR.mutedLight, textAlign: 'center' }}>
+              Showing first {PREVIEW_LIMIT} of {resultCount}. Download CSV for all records.
+            </div>
+          )}
+        </>
+      )}
     </>
   );
 }
