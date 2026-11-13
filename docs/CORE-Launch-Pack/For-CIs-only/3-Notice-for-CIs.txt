@@ -1,0 +1,9 @@
+*CORE: extra steps for CIs* 🔑
+
+CIs also use the admin app, to review reports and assign institutions to your ACI and PA:
+https://admin-ten-rho-87.vercel.app
+(sign in with the same email and password)
+
+📎 The CI Guide is attached. It covers registering your institutions and assigning them to ACI / PA.
+
+Help: *[Name]*, *[Phone]*

@@ -1,0 +1,15 @@
+*CORE is now live* 🎉
+
+The Department of Cooperation's new monthly reporting app for MPCS and Milk PCS is open from today.
+
+📲 *Field app (CI, ACI, PA):*
+https://core-cooperationdptt-gos.vercel.app
+
+👉 Open it, add it to your home screen, tap *Register here* and sign up with your official email.
+
+ACI/PA: your CI will assign your institutions to you.
+
+📎 The Inspector Guide is attached. Please read it before filing your first report.
+
+Please file your first report for *[Month]* by *[Date]*.
+Help: *[Name]*, *[Phone]*
