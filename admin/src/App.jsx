@@ -515,21 +515,6 @@ export const downloadReportCSV = (columns, rows, filename) => {
 };
 
 // ─── Inline SVG ───────────────────────────────────────────────────────────────
-// Officer popovers sit inside .table-responsive (overflow-x:auto), which also clips
-// vertically, so an absolutely-positioned popover on the last rows was cut off.
-// Pin it to the viewport next to its trigger and flip above when there is no room below.
-const popoverPlacement = (rect, align) => {
-  if (!rect) return { position: 'fixed', top: 80, left: 80 };
-  const flipUp = window.innerHeight - rect.bottom < 280 && rect.top > window.innerHeight - rect.bottom;
-  const vertical = flipUp
-    ? { bottom: window.innerHeight - rect.top + 4 }
-    : { top: rect.bottom + 4 };
-  const horizontal = align === 'right'
-    ? { right: Math.max(8, window.innerWidth - rect.right) }
-    : { left: Math.min(rect.left, window.innerWidth - 276) };
-  return { position: 'fixed', maxHeight: '70vh', overflowY: 'auto', ...vertical, ...horizontal };
-};
-
 const Icon = ({ d, size=18, color='currentColor', sw=2 }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none"
        stroke={color} strokeWidth={sw} strokeLinecap="round" strokeLinejoin="round">
@@ -4415,7 +4400,7 @@ function Dashboard({ onLogout, session, officerRole }) {
               {/* Officer Directory Table */}
               <div style={{marginTop:'20px'}}>
                 <h3 style={{fontSize:'15px', fontWeight:800, color:'#0F172A', marginBottom:'12px'}}>📋 Registered District Officers</h3>
-                <div className="table-responsive">
+                <div className="table-responsive" style={openOfficerPopover ? {overflow:'visible'} : undefined}>
                   <table className="data-table">
                     <thead>
                       <tr>
@@ -4468,6 +4453,10 @@ function Dashboard({ onLogout, session, officerRole }) {
                         const avatar = officerAvatarStyle(off.name);
                         const officerCode = `OF-${String(idx + 1).padStart(3, '0')}`;
                         const institutionsOpen = openOfficerPopover?.id === (off.id || idx) && openOfficerPopover?.type === 'institutions';
+                        // Last rows open upward so the popover isn't pushed past the bottom of the table.
+                        const popoverVertical = officersPaged.length > 4 && pageIdx >= officersPaged.length - 3
+                          ? { bottom: '100%', marginBottom: '4px' }
+                          : { top: '100%', marginTop: '4px' };
                         const actionsOpen = openOfficerPopover?.id === (off.id || idx) && openOfficerPopover?.type === 'actions';
                         const canAssignScope = isCiOfficer && userRole === 'System Admin';
                         const hasAnyAction = canAssignScope || !isCiOfficer;
@@ -4492,7 +4481,7 @@ function Dashboard({ onLogout, session, officerRole }) {
                                   type="button"
                                   className="btn-ghost"
                                   style={{padding:'4px 8px', fontSize:'12px', fontWeight:700, display:'inline-flex', alignItems:'center', gap:'4px'}}
-                                  onClick={(e) => setOpenOfficerPopover(institutionsOpen ? null : { id: off.id || idx, type: 'institutions', rect: e.currentTarget.getBoundingClientRect() })}
+                                  onClick={() => setOpenOfficerPopover(institutionsOpen ? null : { id: off.id || idx, type: 'institutions' })}
                                 >
                                   {displayAssignments.length} institution{displayAssignments.length > 1 ? 's' : ''} <span style={{fontSize:'10px'}}>▾</span>
                                 </button>
@@ -4500,7 +4489,7 @@ function Dashboard({ onLogout, session, officerRole }) {
                               {institutionsOpen && (
                                 <>
                                   <div style={{position:'fixed', inset:0, zIndex:40}} onClick={() => setOpenOfficerPopover(null)} />
-                                  <div style={{...popoverPlacement(openOfficerPopover.rect, 'left'), width:'260px', background:'#FFFFFF', border:'1px solid #E2E8F0', borderRadius:'10px', boxShadow:'0 10px 24px rgba(15,23,42,0.12)', zIndex:41, padding:'14px'}}>
+                                  <div style={{position:'absolute', ...popoverVertical, left:0, width:'260px', background:'#FFFFFF', border:'1px solid #E2E8F0', borderRadius:'10px', boxShadow:'0 10px 24px rgba(15,23,42,0.12)', zIndex:41, padding:'14px'}}>
                                     <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'10px'}}>
                                       <div style={{fontSize:'13px', fontWeight:800, color:'#0F172A'}}>Assigned Institutions</div>
                                       <button type="button" className="icon-btn" style={{width:'20px', height:'20px'}} onClick={() => setOpenOfficerPopover(null)}>
@@ -4523,14 +4512,14 @@ function Dashboard({ onLogout, session, officerRole }) {
                             <td style={{verticalAlign:'top', paddingTop:'14px'}}><span className="badge badge-green">ACTIVE</span></td>
                             <td style={{verticalAlign:'top', paddingTop:'14px', position:'relative', textAlign:'center'}}>
                               {hasAnyAction ? (
-                                <button type="button" className="btn-ghost" style={{width:'28px', height:'28px', padding:0, fontSize:'14px', fontWeight:900, display:'inline-flex', alignItems:'center', justifyContent:'center'}} onClick={(e) => setOpenOfficerPopover(actionsOpen ? null : { id: off.id || idx, type: 'actions', rect: e.currentTarget.getBoundingClientRect() })}>
+                                <button type="button" className="btn-ghost" style={{width:'28px', height:'28px', padding:0, fontSize:'14px', fontWeight:900, display:'inline-flex', alignItems:'center', justifyContent:'center'}} onClick={() => setOpenOfficerPopover(actionsOpen ? null : { id: off.id || idx, type: 'actions' })}>
                                   ⋮
                                 </button>
                               ) : <span style={{color:'#CBD5E1', fontSize:'11px'}}>—</span>}
                               {actionsOpen && (
                                 <>
                                   <div style={{position:'fixed', inset:0, zIndex:40}} onClick={() => setOpenOfficerPopover(null)} />
-                                  <div style={{...popoverPlacement(openOfficerPopover.rect, 'right'), minWidth:'200px', background:'#FFFFFF', border:'1px solid #E2E8F0', borderRadius:'8px', boxShadow:'0 10px 24px rgba(15,23,42,0.12)', zIndex:41, padding:'6px', display:'flex', flexDirection:'column', gap:'2px'}}>
+                                  <div style={{position:'absolute', ...popoverVertical, right:0, minWidth:'200px', background:'#FFFFFF', border:'1px solid #E2E8F0', borderRadius:'8px', boxShadow:'0 10px 24px rgba(15,23,42,0.12)', zIndex:41, padding:'6px', display:'flex', flexDirection:'column', gap:'2px'}}>
                                     {/* Jurisdiction scope is an Admin-only grant (officer_registry write
                                         stays System-Admin-only in RLS) — hidden for a CI viewer so this
                                         tab's now-reachable-by-CI actions don't include a menu item that
