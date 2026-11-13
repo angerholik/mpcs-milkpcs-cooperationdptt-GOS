@@ -278,6 +278,18 @@ let cloudSyncQueue = Promise.resolve();
 
 const isDoneStatus = (s) => s === 'Completed' || s === 'Done';
 
+// One printed line per logged activity, in the order the log form asks for it:
+// "1. Category: Others | No. of Participants: 2 | Summary/Resolution: Shop audit".
+// Entries carry { type, title, desc, participants }; each entry is one live record, so no meeting total.
+const formatActivityLine = (a, i) => {
+  const parts = [
+    `Category: ${a.type || a.title || '—'}`,
+    `No. of Participants: ${a.participants || '0'}`,
+    `Summary/Resolution: ${a.desc || a.text || a.description || '—'}`,
+  ];
+  return `${i + 1}. ${parts.join(' | ')}`;
+};
+
 export default function App() {
   const [fontsLoaded, fontError] = useFonts({
     Manrope: Manrope_400Regular,
@@ -2008,21 +2020,21 @@ export default function App() {
     let activities = '';
     if (actsData && actsData.activityList) {
       activities = actsData.activityList.length > 0
-        ? actsData.activityList.map((a, i) => `${i + 1}. ${a.title || JSON.stringify(a)}`).join('\n')
+        ? actsData.activityList.map(formatActivityLine).join('\n')
         : '';
     } else if (recordOverride && !isMilk && Array.isArray(recordFormData?.activityItems) && recordFormData.activityItems.length > 0) {
       // Milk PCS stores this as a real `activities` column (recordItem?.activities
       // below); MPCS has none — its structured log lives inside
       // form_data.activityItems, written by MpcsActivitiesLogScreen (see
       // submissionData further down), which the record-view path never checked.
-      activities = recordFormData.activityItems.map((a, i) => `${i + 1}. ${a.text || a.description || a.title || JSON.stringify(a)}`).join('\n');
+      activities = recordFormData.activityItems.map(formatActivityLine).join('\n');
     } else if (recordItem?.activities) {
       activities = typeof recordItem.activities === 'string' ? recordItem.activities : JSON.stringify(recordItem.activities);
     } else if (recordOverride && !isMilk && recordFormData?.activities) {
       activities = typeof recordFormData.activities === 'string' ? recordFormData.activities : JSON.stringify(recordFormData.activities);
     } else {
       activities = activityItems.length > 0
-        ? activityItems.map((a, i) => `${i + 1}. ${a.text || a.description || a.title || JSON.stringify(a)}`).join('\n')
+        ? activityItems.map(formatActivityLine).join('\n')
         : '';
     }
 

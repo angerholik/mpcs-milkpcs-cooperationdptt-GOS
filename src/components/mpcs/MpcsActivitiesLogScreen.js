@@ -27,7 +27,6 @@ export default function MpcsActivitiesLogScreen({
   unreadCount = 0,
 }) {
   const [activeCategory, setActiveCategory] = useState('Meetings');
-  const [meetingsCount, setMeetingsCount] = useState('');
   const [participantsCount, setParticipantsCount] = useState('');
   const [summary, setSummary] = useState('');
 
@@ -39,7 +38,6 @@ export default function MpcsActivitiesLogScreen({
       id: Date.now().toString(),
       type: activeCategory,
       title: `${activeCategory} Session`,
-      count: meetingsCount || '1',
       participants: participantsCount || '0',
       desc: summary,
     };
@@ -94,14 +92,7 @@ export default function MpcsActivitiesLogScreen({
           </View>
         </View>
 
-        <View style={styles.row}>
-          <View style={{ flex: 1 }}>
-            <WizardField label={`Total ${activeCategory.toLowerCase()}`} value={meetingsCount} onChangeText={setMeetingsCount} keyboardType="numeric" />
-          </View>
-          <View style={{ flex: 1 }}>
-            <WizardField label="Participants" value={participantsCount} onChangeText={setParticipantsCount} keyboardType="numeric" />
-          </View>
-        </View>
+        <WizardField label="No. of Participants" value={participantsCount} onChangeText={setParticipantsCount} keyboardType="numeric" />
 
         <WizardField
           label="Summary / resolutions"
@@ -131,8 +122,8 @@ export default function MpcsActivitiesLogScreen({
                   <MaterialCommunityIcons name={CATEGORY_ICONS[item.type] || 'calendar'} size={18} color="#7B1420" />
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.listTitle}>{item.type} · {item.count}</Text>
-                  <Text style={styles.listSub}>{item.participants} participants</Text>
+                  <Text style={styles.listTitle}>{item.type}</Text>
+                  <Text style={styles.listSub}>{item.participants} participant{String(item.participants) === '1' ? '' : 's'}</Text>
                   <Text style={styles.listDesc}>{item.desc}</Text>
                 </View>
                 <Pressable onPress={() => handleDeleteActivity(item.id)} hitSlop={8}>
