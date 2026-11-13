@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>CORE — Guide for Cooperative Inspectors (CI)</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  @page { size: A4; margin: 12mm; }
+  * { box-sizing: border-box; }
+  body { font-family: Inter, -apple-system, "Segoe UI", Arial, sans-serif; color: #1f1f1f; font-size: 9.6pt; line-height: 1.32; margin: 0 auto; max-width: 190mm; padding: 12px; }
+  header { border-bottom: 3px solid #2E2868; padding-bottom: 6px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: flex-end; }
+  h1 { margin: 0; font-size: 20pt; color: #2E2868; letter-spacing: .04em; }
+  header small { color: #555; text-align: right; font-size: 9pt; }
+  h2 { font-size: 11pt; color: #7C1C1C; margin: 7px 0 3px; }
+  ol, ul { margin: 0; padding-left: 18px; }
+  li { margin-bottom: 2px; }
+  .url { background: #F8F5F2; border: 1px solid #e3d9cf; border-radius: 6px; padding: 6px 10px; font-weight: 700; margin: 4px 0; }
+  .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 0 18px; }
+  .note { background: #FFF6E5; border-left: 4px solid #C9A65A; padding: 6px 10px; margin-top: 8px; border-radius: 4px; }
+  table { border-collapse: collapse; width: 100%; font-size: 9.5pt; margin-top: 4px; }
+  td, th { border: 1px solid #ddd; padding: 3px 6px; text-align: left; vertical-align: top; }
+  th { background: #F8F5F2; }
+  footer { margin-top: 10px; border-top: 1px solid #ccc; padding-top: 6px; font-size: 9.5pt; color: #444; }
+  @media (max-width: 640px) { .cols { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>CORE ADMIN</h1>
+    <div>Guide for Cooperative Inspectors (CI) — assigning MPCS and Milk PCS to ACI / PA</div>
+  </div>
+  <small>Department of Cooperation<br>Government of Sikkim</small>
+</header>
+
+<h2>What you can do as a CI</h2>
+<table>
+  <tr><th>Role</th><th>Field app</th><th>CORE ADMIN</th></tr>
+  <tr><td><b>CI</b></td><td>Yes — register your institutions, file reports</td><td><b>Yes</b> — review reports, assign institutions to ACI / PA</td></tr>
+  <tr><td>ACI / PA</td><td>Yes — only the institutions you assign to them</td><td>No</td></tr>
+</table>
+<ul style="margin-top:4px">
+  <li>You see only your own institutions and your own ACI / PA. You cannot see or change another CI's.</li>
+  <li>One institution can be given to more than one ACI or PA. Each one only sees what is assigned to them.</li>
+</ul>
+
+<div class="cols">
+<div>
+<h2>Step 1 — Register your institution (field app)</h2>
+<ol>
+  <li>Open <b>https://core-cooperationdptt-gos.vercel.app</b> and sign in.</li>
+  <li>Open <b>My Institutions</b> (menu → <b>+ Add / Manage My Institutions</b>) and tap the <b>Add</b> button.</li>
+  <li>Choose <b>MPCS Society</b> or <b>Milk PCS Unit</b>, enter the name, registration number and address, and save.</li>
+  <li>It now appears in your list and is yours to assign.</li>
+</ol>
+
+<h2>Step 2 — ACI / PA register themselves</h2>
+<ul>
+  <li>Every ACI and PA registers in the field app (<b>Register here</b>). They appear in your <b>Users &amp; Roles</b> list straight away. No Admin approval is needed, and you do not create accounts.</li>
+  <li>Until you assign them an institution, they can sign in but see no institutions.</li>
+</ul>
+
+<h2>Who sees whom</h2>
+<ul>
+  <li><b>You (CI):</b> yourself, your own ACI / PA, and every ACI / PA that no CI has taken yet. You never see another CI.</li>
+  <li><b>Once a CI assigns an ACI / PA</b> to an institution, they belong to that CI and disappear from every other CI's list.</li>
+  <li><b>If a CI revokes</b> all of an officer's institutions, that officer returns to the shared pool for all CIs.</li>
+  <li><b>System Admin:</b> sees everyone and which CI assigned which ACI / PA (Governance Tree).</li>
+</ul>
+</div>
+<div>
+<h2>Step 3 — Assign an institution (CORE ADMIN)</h2>
+<div class="url">https://admin-ten-rho-87.vercel.app</div>
+<ol>
+  <li>Sign in with your usual CI email and password.</li>
+  <li>Open <b>Users &amp; Roles</b>.</li>
+  <li>Tap <b>Assign ACI to Unit</b> or <b>Assign PA to Unit</b>.</li>
+  <li>Select the <b>MPCS / Milk unit</b>, then select the <b>officer</b>.</li>
+  <li>Confirm. A message says the officer is now assigned to that unit.</li>
+</ol>
+<p style="margin:4px 0 0"><b>Shortcut:</b> in the officer's row, tap <b>⋮</b> → <b>Assign institution</b> (it names the officer for you). On a phone, use <b>Assign another institution</b> on the officer's card.</p>
+
+<h2>Change or remove an assignment</h2>
+<ul>
+  <li><b>Reassign Unit</b> — hands that institution to a different ACI / PA.</li>
+  <li><b>Revoke</b> — removes their access to it straight away. You can assign it again later.</li>
+  <li><b>View Governance Tree</b> — shows who has which institution.</li>
+</ul>
+</div>
+</div>
+
+<div class="note"><b>Check it worked:</b> ask the ACI / PA to open the field app → <b>View My Institutions</b>. The institution should be listed, and they can now file its monthly report. If the list is empty, ask them to sign out and sign in again.</div>
+
+<footer>
+  <b>Support:</b> [Name] &nbsp;|&nbsp; [Phone / WhatsApp] &nbsp;|&nbsp; [Email] &nbsp;&nbsp;&nbsp; <b>Hours:</b> [e.g. Mon–Sat, 10 am – 5 pm]
+</footer>
+</body>
+</html>

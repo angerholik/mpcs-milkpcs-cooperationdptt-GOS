@@ -2716,7 +2716,6 @@ function Dashboard({ onLogout, session, officerRole }) {
   const [showScheduleAuditModal, setShowScheduleAuditModal] = useState(false);
   const [showNotificationsDrawer, setShowNotificationsDrawer] = useState(false);
   const [showProfileModal, setShowProfileModal] = useState(false);
-  const [showSupportModal, setShowSupportModal] = useState(false);
   const [yearFilter, setYearFilter] = useState('This Year');
 
   // 🌲 Hierarchy & ACI Assignment State — loaded from the unit_assignments
@@ -4123,25 +4122,18 @@ function Dashboard({ onLogout, session, officerRole }) {
           </div>
 
           <div>
-            {!showCollapsedUI && (
-              <div className="support-card" style={{cursor:'pointer', marginBottom:'10px'}} onClick={() => { setShowSupportModal(true); setMobileNavOpen(false); }}>
-                <Icon d={I.info} size={20} color="#7F1D1D"/>
-                <div>
-                  <div style={{fontSize:'12px', fontWeight:700, color:'#0F172A'}}>Need Help?</div>
-                  <div style={{fontSize:'10px', color:'#64748B'}}>Contact Support</div>
-                </div>
-              </div>
-            )}
-            <div
+            <button
+              type="button"
               className="sidebar-collapse-toggle hide-mobile"
               onClick={toggleSidebarCollapsed}
               title={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+              aria-label={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
             >
-              <span style={{display:'inline-flex', transform: sidebarCollapsed ? 'rotate(180deg)' : 'none'}}>
-                <Icon d={I.chevronsLeft} size={16} color="#64748B" sw={2}/>
+              {!sidebarCollapsed && <span className="sidebar-collapse-label">Hide menu</span>}
+              <span className="sidebar-collapse-knob" style={{transform: sidebarCollapsed ? 'rotate(180deg)' : 'none'}}>
+                <Icon d={I.chevronsLeft} size={14} sw={2.2}/>
               </span>
-              {!sidebarCollapsed && <span>Collapse</span>}
-            </div>
+            </button>
           </div>
         </aside>
           );
@@ -5320,7 +5312,6 @@ function Dashboard({ onLogout, session, officerRole }) {
           onClose={()=>setShowProfileModal(false)}
         />
       )}
-      {showSupportModal && <SupportModal onClose={()=>setShowSupportModal(false)} />}
       {showAssignAciModal && (
         <AssignAciModal
           mpcsRows={mpcsRows}
@@ -5714,30 +5705,6 @@ function InspectorProfileModal({ session, userRole, assignedUnits, onClose }) {
           <div style={{fontSize:'12px', display:'flex', flexDirection:'column', gap:'8px', background:'#F8FAFC', padding:'14px', borderRadius:'6px', border:'1px solid #E2E8F0'}}>
             <div><span style={{color:'#64748B'}}>Email:</span> <strong>{session?.user?.email || '—'}</strong></div>
             <div><span style={{color:'#64748B'}}>Department:</span> <strong>Department of Cooperation, Govt. of Sikkim</strong></div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ─── SupportModal ─────────────────────────────────────────────────────────────
-function SupportModal({ onClose }) {
-  return (
-    <div className="modal-overlay" onClick={e=>e.target===e.currentTarget&&onClose()}>
-      <div className="modal-box fade-in" style={{maxWidth:'480px'}}>
-        <div className="modal-header">
-          <div>
-            <div style={{fontSize:'11px', color:'#7F1D1D', fontWeight:800, textTransform:'uppercase', letterSpacing:'1.5px'}}>Help Desk</div>
-            <h2 style={{fontSize:'18px', fontWeight:900}}>District Support & Contact</h2>
-          </div>
-          <button className="modal-close" onClick={onClose}><Icon d={I.close} size={18}/></button>
-        </div>
-        <div className="modal-body" style={{padding:'24px', fontSize:'13px', display:'flex', flexDirection:'column', gap:'12px'}}>
-          <div style={{padding:'14px', background:'#F8FAFC', borderRadius:'10px', border:'1px solid #E2E8F0'}}>
-            <strong>💻 Technical Support Team</strong>
-            <p style={{color:'#64748B', marginTop:'2px'}}>Email: angerholik@gmail.com</p>
-            <p style={{color:'#64748B', marginTop:'2px'}}>Phone: +91 75858 94742</p>
           </div>
         </div>
       </div>
